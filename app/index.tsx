@@ -6,6 +6,9 @@ import { Colors } from '../src/utils/constants';
 export default function Home() {
   const router = useRouter();
   const startWorkout = useWorkoutStore((s) => s.startWorkout);
+  const { activeWorkoutId, exercises } = useWorkoutStore();
+
+  const hasActiveWorkout = activeWorkoutId && exercises.length > 0;
 
   const handleStart = () => {
     startWorkout();
@@ -22,6 +25,31 @@ export default function Home() {
         Guided Results & Intelligent Training
       </Text>
 
+      {hasActiveWorkout && (
+        <View
+          style={{
+            backgroundColor: Colors.surface,
+            padding: 12,
+            borderRadius: 12,
+            marginBottom: 16,
+          }}
+        >
+          <Text style={{ color: Colors.text, fontSize: 16 }}>
+            Resume your workout?
+          </Text>
+
+          <Text style={{ color: Colors.muted, marginTop: 4 }}>
+            You left off mid-session
+          </Text>
+
+          <Pressable
+            onPress={() => router.push('/workout')}
+            style={{ marginTop: 10 }}
+          >
+            <Text style={{ color: Colors.accent }}>Continue Workout →</Text>
+          </Pressable>
+        </View>
+      )}
       <Pressable
         onPress={handleStart}
         style={{

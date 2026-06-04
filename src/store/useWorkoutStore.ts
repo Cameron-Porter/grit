@@ -34,9 +34,16 @@ export const useWorkoutStore = create<WorkoutState>()(
       exercises: [],
 
       startWorkout: () =>
-        set({
-          activeWorkoutId: Date.now().toString(),
-          exercises: [],
+        set((state) => {
+          // if already has active workout → DO NOT overwrite
+          if (state.activeWorkoutId && state.exercises.length > 0) {
+            return state;
+          }
+
+          return {
+            activeWorkoutId: Date.now().toString(),
+            exercises: [],
+          };
         }),
 
       endWorkout: () =>
