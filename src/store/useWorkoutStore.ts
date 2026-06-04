@@ -1,5 +1,7 @@
-import { WorkoutState } from '@/types/workout';
+import { Exercise, WorkoutState } from '@/types/workout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { supabase } from '../api/supabase';
@@ -31,17 +33,30 @@ export const useWorkoutStore = create<WorkoutState>()(
           isSaving: false,
         }),
 
-      addExercise: (name) =>
+      addExercise: (
+        name: string,
+        muscleGroup?: string,
+        equipment: string = 'Bodyweight',
+      ) => {
         set((state) => ({
           exercises: [
             ...state.exercises,
             {
-              id: Date.now().toString(),
+              id: uuidv4(), // or however you are generating IDs
               name,
-              sets: [],
-            },
+              muscleGroup,
+              equipment, // ✅ Now explicitly included to satisfy TypeScript
+              sets: [], // ✅ Empty array for sets to start
+            } as Exercise, // ✅ Cast it as Exercise so TS doesn't infer sets as never[]
           ],
-        })),
+        }));
+      },
+
+      removeExercise: (exerciseId: string) => {
+        set((state) => ({
+          exercises: state.exercises.filter((ex) => ex.id !== exerciseId),
+        }));
+      },
 
       addSet: (exerciseId) =>
         set((state) => ({

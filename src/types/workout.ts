@@ -4,7 +4,7 @@ export type WorkoutSet = {
   completed: boolean;
 };
 
-type WorkoutSetRow = {
+export type WorkoutSetRow = {
   workout_id: string;
   exercise_name: string;
   reps: number;
@@ -17,6 +17,7 @@ export type Exercise = {
   name: string;
   muscleGroup?: string;
   sets: WorkoutSet[];
+  equipment: string;
 };
 
 export type Props = {
@@ -29,6 +30,7 @@ export type Props = {
 
   onToggleComplete: () => void;
   onRemove?: () => void;
+  onMenuPress?: () => void;
 };
 
 export type WorkoutState = {
@@ -39,7 +41,7 @@ export type WorkoutState = {
   startWorkout: () => void;
   endWorkout: () => void;
 
-  addExercise: (name: string) => void;
+  addExercise: (name: string, muscleGroup?: string, equipment?: string) => void;
   addSet: (exerciseId: string) => void;
 
   updateSet: (
@@ -49,6 +51,6 @@ export type WorkoutState = {
   ) => void;
 
   removeSet: (exerciseId: string, setIndex: number) => void;
-
+  removeExercise: (exerciseId: string) => void;
   finishWorkout: () => Promise<void>;
 };

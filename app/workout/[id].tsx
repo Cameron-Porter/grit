@@ -2,11 +2,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { supabase } from '../../src/api/supabase';
+import { WorkoutSetRow } from '../../src/types/workout';
 import { Colors } from '../../src/utils/constants';
 
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams();
-  const [sets, setSets] = useState<Set[]>([]);
+  const [sets, setSets] = useState<WorkoutSetRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,7 +33,7 @@ export default function WorkoutDetail() {
   };
 
   // Group by exercise
-  const grouped = sets.reduce((acc: Record<string, Set[]>, set) => {
+  const grouped = sets.reduce((acc: Record<string, WorkoutSetRow[]>, set) => {
     if (!acc[set.exercise_name]) acc[set.exercise_name] = [];
     acc[set.exercise_name].push(set);
     return acc;
