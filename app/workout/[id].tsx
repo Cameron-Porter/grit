@@ -4,13 +4,6 @@ import { ScrollView, Text, View } from 'react-native';
 import { supabase } from '../../src/api/supabase';
 import { Colors } from '../../src/utils/constants';
 
-type Set = {
-  exercise_name: string;
-  reps: number;
-  weight: number;
-  set_index: number;
-};
-
 export default function WorkoutDetail() {
   const { id } = useLocalSearchParams();
   const [sets, setSets] = useState<Set[]>([]);
