@@ -4,6 +4,7 @@ export type WorkoutSet = {
   completed: boolean;
   skipped?: boolean;
   type?: 'Regular' | 'M' | 'MM';
+  rir?: number;
 };
 
 export type WorkoutSetRow = {
@@ -61,7 +62,7 @@ export type WorkoutState = {
   queueSoreness: (muscleGroup: string, soreness: string) => void;
 
   addExercise: (name: string, muscleGroup?: string, equipment?: string) => void;
-  addSet: (exerciseId: string, defaultWeight?: number) => void;
+  addSet: (exerciseId: string, defaultWeight?: number, defaultRir?: number) => void;
 
   updateSet: (
     exerciseId: string,
@@ -80,7 +81,16 @@ export type WorkoutState = {
   startFromProgramDay: (
     dayId: string | null,
     programName: string | null,
-    exercises: { name: string; muscleGroup: string; equipment: string }[],
+    exercises: {
+      name: string;
+      muscleGroup: string;
+      equipment: string;
+      targetSets?: number;
+      targetRepsMin?: number;
+      targetRepsMax?: number;
+      targetWeight?: number;
+      rir?: number;
+    }[],
     weekNumber?: number | null,
     dayNumber?: number | null,
     dayLabel?: string | null,

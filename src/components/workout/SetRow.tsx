@@ -154,8 +154,8 @@ export default function SetRow({
             <TextInput
               value={String(set.reps || '')}
               keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor={Colors.muted}
+              placeholder={set.rir !== undefined ? `${set.rir} RIR` : '0'}
+              placeholderTextColor={set.rir !== undefined ? Colors.primary : Colors.muted}
               onChangeText={(text) => {
                 const clean = text.replace(/[^0-9]/g, '');
                 onRepsChange(parseInt(clean, 10) || 0);

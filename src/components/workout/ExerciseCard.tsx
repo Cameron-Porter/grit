@@ -216,7 +216,11 @@ export default function ExerciseCard({
             <Pressable
               onPress={() => {
                 const isBodyweight = exercise.equipment === 'Bodyweight';
-                onAddSet(exercise.id, isBodyweight && bodyWeight ? bodyWeight : undefined);
+                const lastSet = exercise.sets[exercise.sets.length - 1];
+                const defaultWeight = isBodyweight
+                  ? (bodyWeight ?? lastSet?.weight)
+                  : lastSet?.weight;
+                onAddSet(exercise.id, defaultWeight, lastSet?.rir);
               }}
               style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10 }}
             >

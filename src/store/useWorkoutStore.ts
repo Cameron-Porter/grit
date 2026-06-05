@@ -111,11 +111,22 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
       },
 
-      addSet: (exerciseId, defaultWeight = 0) =>
+      addSet: (exerciseId, defaultWeight = 0, defaultRir?) =>
         set((state) => ({
           exercises: state.exercises.map((ex) =>
             ex.id === exerciseId
-              ? { ...ex, sets: [...ex.sets, { reps: 8, weight: defaultWeight, completed: false }] }
+              ? {
+                  ...ex,
+                  sets: [
+                    ...ex.sets,
+                    {
+                      reps: defaultRir !== undefined ? 0 : 8,
+                      weight: defaultWeight,
+                      completed: false,
+                      ...(defaultRir !== undefined ? { rir: defaultRir } : {}),
+                    },
+                  ],
+                }
               : ex,
           ),
         })),
@@ -188,7 +199,14 @@ export const useWorkoutStore = create<WorkoutState>()(
               name: t.name,
               muscleGroup: t.muscleGroup,
               equipment: t.equipment,
-              sets: [],
+              sets: t.targetSets
+                ? Array.from({ length: t.targetSets }, () => ({
+                    reps: 0,
+                    weight: t.targetWeight ?? 0,
+                    completed: false,
+                    rir: t.rir ?? 3,
+                  }))
+                : [],
             })),
           };
         });

@@ -12,6 +12,8 @@ export interface Program {
   days_per_week: number;
   is_current: boolean;
   created_at: string;
+  focus: string | null;
+  muscle_priorities: Record<string, 'emphasize' | 'grow' | 'maintain'> | null;
 }
 
 export interface ProgramDay {
@@ -32,6 +34,20 @@ export interface ProgramExercise {
   equipment: string | null;
   sort_order: number;
   target_sets: number;
+  target_reps_min: number | null;
+  target_reps_max: number | null;
+  target_weight: number | null;
+  rir: number | null;
+}
+
+export interface ProgramDayTarget {
+  exercise_name: string;
+  target_sets: number;
+  target_reps_min: number;
+  target_reps_max: number;
+  target_weight: number;
+  rir: number;
+  ai_rationale: string | null;
 }
 
 export async function getPrograms(): Promise<Program[]> {
@@ -48,11 +64,20 @@ export async function createProgram(
   totalWeeks: number,
   daysPerWeek: number,
   dayLabels?: string[],
+  focus?: string,
+  musclePriorities?: Record<string, string>,
 ): Promise<Program> {
   const userId = await getUserId();
   const { data: program, error: progError } = await supabase
     .from("programs")
-    .insert({ name, total_weeks: totalWeeks, days_per_week: daysPerWeek, user_id: userId })
+    .insert({
+      name,
+      total_weeks: totalWeeks,
+      days_per_week: daysPerWeek,
+      user_id: userId,
+      focus: focus ?? 'hypertrophy',
+      muscle_priorities: musclePriorities ?? {},
+    })
     .select()
     .single();
   if (progError) throw progError;
@@ -183,6 +208,50 @@ export async function markDayComplete(dayId: string): Promise<void> {
     .update({ completed: true, completed_at: new Date().toISOString() })
     .eq("id", dayId);
   if (error) throw error;
+}
+
+export async function getProgramWeekCompletedDays(programId: string, weekNumber: number): Promise<ProgramDay[]> {
+  const { data } = await supabase
+    .from("program_days")
+    .select("*")
+    .eq("program_id", programId)
+    .eq("week_number", weekNumber)
+    .eq("completed", true)
+    .order("day_number");
+  return (data ?? []) as ProgramDay[];
+}
+
+export async function updateProgramExerciseTargets(
+  exerciseId: string,
+  targets: { target_sets: number; target_reps_min: number; target_reps_max: number; target_weight: number; rir: number },
+): Promise<void> {
+  await supabase.from("program_exercises").update(targets).eq("id", exerciseId);
+}
+
+export async function getProgramDayTargets(programDayId: string): Promise<ProgramDayTarget[]> {
+  const { data } = await supabase
+    .from("program_day_targets")
+    .select("exercise_name, target_sets, target_reps_min, target_reps_max, target_weight, rir, ai_rationale")
+    .eq("program_day_id", programDayId);
+  return (data ?? []) as ProgramDayTarget[];
+}
+
+export async function saveProgramDayTargets(
+  programDayId: string,
+  targets: { exerciseName: string; sets: number; repsMin: number; repsMax: number; weightLbs: number; rir: number; rationale?: string }[],
+): Promise<void> {
+  if (!targets.length) return;
+  const rows = targets.map((t) => ({
+    program_day_id: programDayId,
+    exercise_name: t.exerciseName,
+    target_sets: t.sets,
+    target_reps_min: t.repsMin,
+    target_reps_max: t.repsMax,
+    target_weight: t.weightLbs,
+    rir: t.rir,
+    ai_rationale: t.rationale ?? null,
+  }));
+  await supabase.from("program_day_targets").upsert(rows, { onConflict: "program_day_id,exercise_name" });
 }
 
 // Returns true if any of the given exercises were logged in a previous completed workout

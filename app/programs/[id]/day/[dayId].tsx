@@ -6,12 +6,17 @@ import { getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/
 import {
   addProgramExercise,
   getProgramDay,
+  getProgramDayTargets,
   getProgramExercises,
+  getProgramWeekCompletedDays,
   getTemplateDayExercises,
   ProgramDay,
+  ProgramDayTarget,
   ProgramExercise,
   removeProgramExercise,
+  saveProgramDayTargets,
 } from '../../../../src/api/programs';
+import { ExerciseWeeklyData, generateProgressiveOverload } from '../../../../src/api/gemini';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
 import { useWorkoutStore } from '../../../../src/store/useWorkoutStore';
@@ -52,9 +57,11 @@ export default function ProgramDayScreen() {
 
   const [day, setDay] = useState<ProgramDay | null>(null);
   const [exercises, setExercises] = useState<ProgramExercise[]>([]);
+  const [dayTargets, setDayTargets] = useState<ProgramDayTarget[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [history, setHistory] = useState<WorkoutDayHistory | null>(null);
   const [loading, setLoading] = useState(true);
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   const isTemplate = !day || day.week_number === 1;
 
@@ -79,7 +86,113 @@ export default function ProgramDayScreen() {
       setHistory(h);
     }
 
+    // For week 2+ upcoming days, load or generate progressive overload targets
+    if (!dayData.completed && dayData.week_number > 1) {
+      const existing = await getProgramDayTargets(dayId);
+      if (existing.length > 0) {
+        setDayTargets(existing);
+      } else {
+        generateAITargets(dayData, exerciseData);
+      }
+    }
+
     setLoading(false);
+  };
+
+  const generateAITargets = async (dayData: ProgramDay, exerciseData: ProgramExercise[]) => {
+    setGeneratingAI(true);
+    try {
+      // Fetch program context (focus, priorities, total_weeks)
+      const { supabase } = await import('../../../../src/api/supabase');
+      const { data: programRow } = await supabase
+        .from('programs')
+        .select('focus, muscle_priorities, total_weeks')
+        .eq('id', id)
+        .single();
+      const focus = (programRow as any)?.focus ?? 'hypertrophy';
+      const musclePriorities = (programRow as any)?.muscle_priorities ?? {};
+      const totalWeeks = (programRow as any)?.total_weeks ?? 0;
+
+      // Fetch ALL completed days from the previous week
+      const prevWeekDays = await getProgramWeekCompletedDays(id, dayData.week_number - 1);
+      if (!prevWeekDays.length) { setGeneratingAI(false); return; }
+
+      // Fetch workout history for every completed day last week
+      const prevWeekHistories = await Promise.all(
+        prevWeekDays.map(async (d) => ({
+          dayId: d.id,
+          dayLabel: d.label ?? `Day ${d.day_number}`,
+          history: await getWorkoutForProgramDay(d.id).catch(() => null),
+        })),
+      );
+
+      // For each exercise in today's plan, collect ALL last-week sessions
+      // that trained the same muscle group (accounts for twice-a-week frequency)
+      const exerciseWeeklyData: ExerciseWeeklyData[] = exerciseData.map((ex) => {
+        const muscleGroup = ex.muscle_group ?? '';
+
+        const sessions = prevWeekHistories
+          .filter((h) =>
+            h.history?.exercises.some(
+              (e) => e.muscleGroup?.toLowerCase() === muscleGroup.toLowerCase(),
+            ),
+          )
+          .map((h) => {
+            // Collect sets for this specific exercise (or all sets for the muscle group if not found)
+            const matchingExercise = h.history!.exercises.find(
+              (e) => e.name === ex.exercise_name,
+            );
+            const muscleExercises = h.history!.exercises.filter(
+              (e) => e.muscleGroup?.toLowerCase() === muscleGroup.toLowerCase(),
+            );
+            const sets = (matchingExercise ?? muscleExercises[0])?.sets.map((s) => ({
+              weight: s.weight,
+              reps: s.reps,
+              completed: s.completed,
+            })) ?? [];
+
+            const fb = h.history!.feedback.find(
+              (f) => f.muscleGroup?.toLowerCase() === muscleGroup.toLowerCase(),
+            );
+            return {
+              dayLabel: h.dayLabel,
+              sets,
+              feedback: fb
+                ? {
+                    pump: fb.pump,
+                    jointPain: fb.jointPain,
+                    volume: fb.volume,
+                    soreness: (fb as any).soreness ?? null,
+                  }
+                : null,
+            };
+          });
+
+        return { exerciseName: ex.exercise_name, muscleGroup, sessions };
+      });
+
+      // Only generate for exercises that have at least one prior session
+      const withHistory = exerciseWeeklyData.filter((e) => e.sessions.length > 0);
+      if (!withHistory.length) { setGeneratingAI(false); return; }
+
+      const targets = await generateProgressiveOverload(
+        focus,
+        musclePriorities,
+        dayData.week_number,
+        totalWeeks,
+        withHistory,
+      );
+
+      if (targets.length > 0) {
+        await saveProgramDayTargets(dayId, targets);
+        const saved = await getProgramDayTargets(dayId);
+        setDayTargets(saved);
+      }
+    } catch (e) {
+      console.error('AI target generation failed:', e);
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const handleAddExercise = async (name: string, muscleGroup: string, equipment: string) => {
@@ -97,7 +210,20 @@ export default function ProgramDayScreen() {
     startFromProgramDay(
       dayId,
       null,
-      exercises.map((e) => ({ name: e.exercise_name, muscleGroup: e.muscle_group ?? '', equipment: e.equipment ?? 'Bodyweight' })),
+      exercises.map((e) => {
+        // Week 2+ uses program_day_targets; week 1 uses program_exercises targets
+        const aiTarget = dayTargets.find((t) => t.exercise_name === e.exercise_name);
+        return {
+          name: e.exercise_name,
+          muscleGroup: e.muscle_group ?? '',
+          equipment: e.equipment ?? 'Bodyweight',
+          targetSets: aiTarget?.target_sets ?? e.target_sets ?? undefined,
+          targetRepsMin: aiTarget?.target_reps_min ?? e.target_reps_min ?? undefined,
+          targetRepsMax: aiTarget?.target_reps_max ?? e.target_reps_max ?? undefined,
+          targetWeight: aiTarget?.target_weight ?? e.target_weight ?? undefined,
+          rir: aiTarget?.rir ?? e.rir ?? undefined,
+        };
+      }),
       day?.week_number ?? null,
       day?.day_number ?? null,
       day?.label ?? null,
@@ -195,8 +321,18 @@ export default function ProgramDayScreen() {
               </View>
             )}
 
+            {/* AI generating indicator */}
+            {generatingAI && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, padding: 12, backgroundColor: `${Colors.primary}18`, borderRadius: 10 }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '600' }}>Gemini generating progressive overload plan…</Text>
+              </View>
+            )}
+
             {exercises.map((item) => {
               const badgeColor = item.muscle_group ? (MuscleGroupColors[item.muscle_group] ?? Colors.primary) : Colors.primary;
+              const aiTarget = dayTargets.find((t) => t.exercise_name === item.exercise_name);
+              const hasAI = !!aiTarget;
               return (
                 <View key={item.id} style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
                   {item.muscle_group && (
@@ -207,15 +343,45 @@ export default function ProgramDayScreen() {
                       </Text>
                     </View>
                   )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                      <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment ?? 'Bodyweight'}</Text>
+                  <View style={{ padding: 14 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
+                        <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment ?? 'Bodyweight'}</Text>
+                      </View>
+                      {isTemplate && (
+                        <Pressable onPress={() => handleRemove(item.id)} style={{ padding: 6 }}>
+                          <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.error} />
+                        </Pressable>
+                      )}
                     </View>
-                    {isTemplate && (
-                      <Pressable onPress={() => handleRemove(item.id)} style={{ padding: 6 }}>
-                        <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.error} />
-                      </Pressable>
+                    {/* AI target summary */}
+                    {hasAI && (
+                      <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        <View style={{ backgroundColor: `${Colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <MaterialCommunityIcons name="robot-outline" size={10} color={Colors.primary} />
+                          <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700' }}>
+                            {aiTarget.target_sets}×{aiTarget.target_reps_min}–{aiTarget.target_reps_max} @ {aiTarget.rir} RIR
+                            {aiTarget.target_weight > 0 ? `  ·  ${aiTarget.target_weight} lbs` : ''}
+                          </Text>
+                        </View>
+                        {aiTarget.ai_rationale ? (
+                          <Text style={{ color: Colors.muted, fontSize: 11, flex: 1, marginTop: 2 }} numberOfLines={2}>
+                            {aiTarget.ai_rationale}
+                          </Text>
+                        ) : null}
+                      </View>
+                    )}
+                    {/* Week-1 AI target summary (from program_exercises) */}
+                    {!hasAI && item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
+                      <View style={{ marginTop: 8 }}>
+                        <View style={{ backgroundColor: `${Colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <MaterialCommunityIcons name="robot-outline" size={10} color={Colors.primary} />
+                          <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700' }}>
+                            {item.target_sets}×{item.target_reps_min}–{item.target_reps_max} @ {item.rir ?? 3} RIR
+                          </Text>
+                        </View>
+                      </View>
                     )}
                   </View>
                 </View>
