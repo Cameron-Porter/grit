@@ -38,6 +38,11 @@ export type Props = {
 
 export type WorkoutState = {
   activeWorkoutId: string | null;
+  activeProgramDayId: string | null;
+  activeProgramName: string | null;
+  activeProgramWeek: number | null;
+  activeProgramDayNumber: number | null;
+  activeProgramDayLabel: string | null;
   exercises: Exercise[];
   isSaving: boolean;
 
@@ -45,7 +50,7 @@ export type WorkoutState = {
   endWorkout: () => void;
 
   addExercise: (name: string, muscleGroup?: string, equipment?: string) => void;
-  addSet: (exerciseId: string) => void;
+  addSet: (exerciseId: string, defaultWeight?: number) => void;
 
   updateSet: (
     exerciseId: string,
@@ -61,5 +66,12 @@ export type WorkoutState = {
   skipSets: (exerciseId: string) => void;
   setExerciseNote: (exerciseId: string, note: string) => void;
   finishWorkout: () => Promise<void>;
-  startFromProgramDay: (exercises: { name: string; muscleGroup: string; equipment: string }[]) => void;
+  startFromProgramDay: (
+    dayId: string | null,
+    programName: string | null,
+    exercises: { name: string; muscleGroup: string; equipment: string }[],
+    weekNumber?: number | null,
+    dayNumber?: number | null,
+    dayLabel?: string | null,
+  ) => void;
 };

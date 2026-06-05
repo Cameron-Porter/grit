@@ -1,19 +1,32 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { saveFeedback } from '../src/api/feedback';
+import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
+import { getNextProgramWorkout } from '../src/api/programs';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
 import FeedbackModal from '../src/components/workout/FeedbackModal';
 import NoteModal from '../src/components/workout/NoteModal';
+import PRPopup from '../src/components/workout/PRPopup';
 import SetMenuModal from '../src/components/workout/SetMenuModal';
+import { useProfileStore } from '../src/store/useProfileStore';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
-import { Exercise } from '../src/types/workout';
+import { Exercise, WorkoutSet } from '../src/types/workout';
 import { Colors } from '../src/utils/constants';
+
+interface PRState {
+  exerciseName: string;
+  weight: number;
+  reps: number | null;
+  isBodyweight?: boolean;
+}
 
 export default function ActiveWorkout() {
   const router = useRouter();
   const {
+    activeWorkoutId,
     exercises,
     addExercise,
     removeExercise,
@@ -27,16 +40,46 @@ export default function ActiveWorkout() {
     skipSet,
     skipSets,
     setExerciseNote,
+    startFromProgramDay,
+    activeProgramName,
+    activeProgramWeek,
+    activeProgramDayNumber,
+    activeProgramDayLabel,
   } = useWorkoutStore();
+
+  const bodyWeight = useProfileStore((s) => s.bodyWeight);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
   const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null);
+  const [prPopup, setPrPopup] = useState<PRState | null>(null);
   const [activeSetData, setActiveSetData] = useState<{
     exerciseId: string;
     setIndex: number;
   } | null>(null);
+
+  // Track which muscles have already received feedback this session
+  const feedbackShownFor = useRef<Set<string>>(new Set());
+
+  // Cache PRs locally: exerciseName → value (weight for weighted, reps for bodyweight)
+  // Bodyweight exercises use key format: `${name}:reps`
+  const prCache = useRef<Map<string, number>>(new Map());
+
+  // Load PRs when exercises change (new exercise added)
+  useEffect(() => {
+    exercises.forEach((ex) => {
+      const isBodyweight = ex.equipment === 'Bodyweight';
+      const cacheKey = isBodyweight ? `${ex.name}:reps` : ex.name;
+      if (!prCache.current.has(cacheKey)) {
+        getPRForExercise(ex.name).then((pr) => {
+          if (pr) {
+            prCache.current.set(cacheKey, isBodyweight ? (pr.reps ?? 0) : pr.weight);
+          }
+        });
+      }
+    });
+  }, [exercises.length]);
 
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
   const doneSets = exercises.reduce(
@@ -48,15 +91,87 @@ export default function ActiveWorkout() {
   const onFinishWorkout = async () => {
     try {
       await finishWorkout();
-      router.replace('/log');
+      const next = await getNextProgramWorkout();
+      if (next && next.exercises.length > 0) {
+        startFromProgramDay(
+          next.day.id,
+          next.program.name,
+          next.exercises.map((e) => ({
+            name: e.exercise_name,
+            muscleGroup: e.muscle_group ?? '',
+            equipment: e.equipment ?? 'Bodyweight',
+          })),
+          next.day.week_number,
+          next.day.day_number,
+          next.day.label,
+        );
+        router.replace('/workout');
+      } else {
+        router.replace('/home');
+      }
     } catch (e) {
       console.error(e);
+      router.replace('/home');
     }
   };
 
   const canFinish =
     exercises.length > 0 &&
     exercises.every((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed || s.skipped));
+
+  // Called instead of updateSet directly — checks for feedback trigger + PR
+  const handleUpdateSet = (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => {
+    updateSet(exerciseId, setIndex, data);
+
+    const exercise = exercises.find((ex) => ex.id === exerciseId);
+    if (!exercise) return;
+
+    // PR check: if completing a set with a weight value
+    if (data.completed === true) {
+      const weight = data.weight ?? exercise.sets[setIndex]?.weight ?? 0;
+      const reps = data.reps ?? exercise.sets[setIndex]?.reps ?? null;
+      if (weight > 0) {
+        const currentPR = prCache.current.get(exercise.name) ?? 0;
+        if (weight > currentPR) {
+          prCache.current.set(exercise.name, weight);
+          upsertPR(exercise.name, weight, reps);
+          setPrPopup({ exerciseName: exercise.name, weight, reps });
+        }
+      }
+    }
+
+    // Feedback trigger: check if all sets for this muscle group are done
+    const isCompletionAction = data.completed === true || data.skipped === true;
+    if (!isCompletionAction) return;
+
+    const muscle = exercise.muscleGroup;
+    if (!muscle || feedbackShownFor.current.has(muscle)) return;
+
+    const muscleExercises = exercises.filter((ex) => ex.muscleGroup === muscle);
+
+    // Simulate the update on the current state
+    const allDone = muscleExercises.every((ex) =>
+      ex.sets.length > 0 &&
+      ex.sets.every((s, i) => {
+        if (ex.id === exerciseId && i === setIndex) {
+          return (data.completed || s.completed) || (data.skipped || s.skipped);
+        }
+        return s.completed || !!s.skipped;
+      }),
+    );
+
+    const atLeastOneCompleted = muscleExercises.some((ex) =>
+      ex.sets.some((s, i) => {
+        if (ex.id === exerciseId && i === setIndex) return data.completed === true || s.completed;
+        return s.completed;
+      }),
+    );
+
+    if (allDone && atLeastOneCompleted) {
+      feedbackShownFor.current.add(muscle);
+      setFeedbackMuscle(muscle);
+    }
+  };
 
   const chunkedExercises = exercises.reduce((acc, current, index) => {
     if (index === 0) {
@@ -92,13 +207,7 @@ export default function ActiveWorkout() {
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       {/* Progress bar — absolute top */}
       <View style={{ height: 3, backgroundColor: Colors.surface2, width: '100%' }}>
-        <View
-          style={{
-            height: 3,
-            backgroundColor: Colors.primary,
-            width: `${progress * 100}%`,
-          }}
-        />
+        <View style={{ height: 3, backgroundColor: Colors.primary, width: `${progress * 100}%` }} />
       </View>
 
       {/* Header */}
@@ -108,7 +217,7 @@ export default function ActiveWorkout() {
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <Text style={{ color: Colors.text, fontSize: 24, fontWeight: '700' }}>
-            Active Workout
+            {activeProgramDayLabel ?? (activeProgramDayNumber ? `Day ${activeProgramDayNumber}` : 'Workout')}
           </Text>
           {totalSets > 0 && (
             <Text style={{ color: Colors.muted, fontSize: 13 }}>
@@ -116,7 +225,11 @@ export default function ActiveWorkout() {
             </Text>
           )}
         </View>
-        <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>Today's session</Text>
+        <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
+          {activeProgramName
+            ? `${activeProgramName}${activeProgramWeek != null ? ` · Week ${activeProgramWeek}` : ''}`
+            : 'Free Workout'}
+        </Text>
       </View>
 
       {/* Scrollable content */}
@@ -124,7 +237,9 @@ export default function ActiveWorkout() {
         {exercises.length === 0 && (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
             <Text style={{ color: Colors.muted, fontSize: 16 }}>No exercises yet</Text>
-            <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>Tap "+ Add Exercise" to get started</Text>
+            <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
+              Tap "+ Add Exercise" to get started
+            </Text>
           </View>
         )}
 
@@ -132,7 +247,7 @@ export default function ActiveWorkout() {
           <ExerciseCard
             key={`chunk-${idx}-${group[0]?.id}`}
             exerciseGroup={group}
-            onUpdateSet={updateSet}
+            onUpdateSet={handleUpdateSet}
             onRemoveSet={removeSet}
             onAddSet={addSet}
             onExerciseMenuPress={(id) => setActiveExerciseId(id)}
@@ -195,9 +310,7 @@ export default function ActiveWorkout() {
       <ExercisePicker
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onSelect={(name, muscleGroup, equipment) => {
-          addExercise(name, muscleGroup, equipment);
-        }}
+        onSelect={(name, muscleGroup, equipment) => addExercise(name, muscleGroup, equipment)}
       />
 
       <ExerciseMenuModal
@@ -206,9 +319,7 @@ export default function ActiveWorkout() {
         onRemove={() => activeExerciseId && removeExercise(activeExerciseId)}
         onMoveUp={() => activeExerciseId && moveExerciseUp(activeExerciseId)}
         onMoveDown={() => activeExerciseId && moveExerciseDown(activeExerciseId)}
-        onSkipSets={() => {
-          if (activeExerciseId) skipSets(activeExerciseId);
-        }}
+        onSkipSets={() => activeExerciseId && skipSets(activeExerciseId)}
         onNewNote={() => {
           if (activeExerciseId) {
             setNoteExerciseId(activeExerciseId);
@@ -256,8 +367,23 @@ export default function ActiveWorkout() {
         visible={!!feedbackMuscle}
         muscleGroup={feedbackMuscle ?? ''}
         onClose={() => setFeedbackMuscle(null)}
-        onSave={() => setFeedbackMuscle(null)}
+        onSave={(data) => {
+          if (feedbackMuscle) {
+            saveFeedback(activeWorkoutId, feedbackMuscle, data.jointPain, data.pump, data.volume);
+          }
+          setFeedbackMuscle(null);
+        }}
       />
+
+      {/* PR celebration popup */}
+      {prPopup && (
+        <PRPopup
+          exerciseName={prPopup.exerciseName}
+          weight={prPopup.weight}
+          reps={prPopup.reps}
+          onDismiss={() => setPrPopup(null)}
+        />
+      )}
     </View>
   );
 }

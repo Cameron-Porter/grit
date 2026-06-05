@@ -11,10 +11,11 @@ interface ExerciseCardProps {
   exerciseGroup: Exercise[];
   onUpdateSet: (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => void;
   onRemoveSet: (exerciseId: string, setIndex: number) => void;
-  onAddSet: (exerciseId: string) => void;
+  onAddSet: (exerciseId: string, defaultWeight?: number) => void;
   onExerciseMenuPress: (exerciseId: string) => void;
   onSetMenuPress: (exerciseId: string, setIndex: number) => void;
   onSaveNote: (exerciseId: string, note: string) => void;
+  bodyWeight?: number;
 }
 
 function HistoryPanel({ exerciseName }: { exerciseName: string }) {
@@ -54,6 +55,7 @@ export default function ExerciseCard({
   onExerciseMenuPress,
   onSetMenuPress,
   onSaveNote,
+  bodyWeight,
 }: ExerciseCardProps) {
   const primaryMuscle = exerciseGroup[0]?.muscleGroup;
   const badgeColor = primaryMuscle
@@ -154,7 +156,13 @@ export default function ExerciseCard({
             ))}
 
             {/* Add Set */}
-            <Pressable onPress={() => onAddSet(exercise.id)} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10 }}>
+            <Pressable
+              onPress={() => {
+                const isBodyweight = exercise.equipment === 'Bodyweight';
+                onAddSet(exercise.id, isBodyweight && bodyWeight ? bodyWeight : undefined);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10 }}
+            >
               <MaterialCommunityIcons name="plus" size={16} color={Colors.primary} style={{ marginRight: 4 }} />
               <Text style={{ color: Colors.primary, fontWeight: '600', fontSize: 14 }}>Add Set</Text>
             </Pressable>

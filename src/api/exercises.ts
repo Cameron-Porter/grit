@@ -6,6 +6,7 @@ export interface ExerciseRow {
   muscle_group: string;
   equipment: string;
   is_custom: boolean;
+  description: string | null;
 }
 
 export async function getExercises(): Promise<ExerciseRow[]> {

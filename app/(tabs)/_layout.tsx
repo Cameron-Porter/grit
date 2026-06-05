@@ -1,8 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { Colors } from '../../src/utils/constants';
 
 export default function TabsLayout() {
+  const router = useRouter();
+  const { activeWorkoutId, exercises } = useWorkoutStore();
+  const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
+
   return (
     <Tabs
       screenOptions={{
@@ -28,6 +33,14 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="dumbbell" size={size} color={color} />
           ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            if (hasActiveWorkout) {
+              e.preventDefault();
+              router.push('/workout');
+            }
+          },
         }}
       />
       <Tabs.Screen

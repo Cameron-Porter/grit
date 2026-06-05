@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { getWorkouts } from '../../src/api/history';
 import { Colors } from '../../src/utils/constants';
@@ -9,9 +9,11 @@ export default function History() {
   const [workouts, setWorkouts] = useState<any[]>([]);
   const router = useRouter();
 
-  useEffect(() => {
-    load();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, []),
+  );
 
   const load = async () => {
     try {
@@ -36,37 +38,44 @@ export default function History() {
             <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>Completed workouts will appear here</Text>
           </View>
         )}
-        {workouts.map((w) => (
-          <Pressable
-            key={w.id}
-            onPress={() =>
-              router.push({
-                pathname: '/workout/[id]',
-                params: { id: w.id },
-              })
-            }
-            style={({ pressed }) => ({
-              backgroundColor: Colors.surface,
-              padding: 16,
-              borderRadius: 14,
-              marginBottom: 10,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <View>
-              <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>
-                {w.name ?? 'Workout'}
-              </Text>
-              <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 3 }}>
-                {new Date(w.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.muted} />
-          </Pressable>
-        ))}
+        {workouts.map((w) => {
+          const title = w.program_name ?? w.name ?? 'Workout';
+          const isProgramWorkout = !!w.program_name;
+          return (
+            <Pressable
+              key={w.id}
+              onPress={() => router.push({ pathname: '/workout/[id]', params: { id: w.id } })}
+              style={({ pressed }) => ({
+                backgroundColor: Colors.surface,
+                padding: 16,
+                borderRadius: 14,
+                marginBottom: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <View style={{ flex: 1, marginRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                  {isProgramWorkout && (
+                    <MaterialCommunityIcons name="calendar-check" size={14} color={Colors.primary} />
+                  )}
+                  <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>{title}</Text>
+                </View>
+                <Text style={{ color: Colors.muted, fontSize: 13 }}>
+                  {new Date(w.completed_at ?? w.created_at).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.muted} />
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </View>
   );
