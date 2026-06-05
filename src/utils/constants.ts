@@ -17,3 +17,20 @@ export const Colors = {
   warning: '#F59E0B',
   error: '#EF4444',
 };
+
+export const MuscleGroupColors: Record<string, string> = {
+  Chest: '#EC4899',
+  Triceps: '#F472B6',
+  Back: '#14B8A6',
+  Biceps: '#2DD4BF',
+  Shoulders: '#A855F7',
+  Forearms: '#6366F1',
+  Legs: '#22C55E',
+  Quads: '#22C55E',
+  Hamstrings: '#84CC16',
+  Glutes: '#F97316',
+  Calves: '#06B6D4',
+  Abs: '#8B5CF6',
+  Arms: '#2DD4BF',
+  Core: '#8B5CF6',
+};

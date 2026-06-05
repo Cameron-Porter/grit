@@ -4,7 +4,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 export default function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="workout" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="programs/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="programs/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+        <Stack.Screen name="programs/[id]/day/[dayId]" options={{ headerShown: false }} />
+      </Stack>
     </GestureHandlerRootView>
   );
 }

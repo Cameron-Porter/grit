@@ -2,6 +2,7 @@ export type WorkoutSet = {
   reps: number;
   weight: number;
   completed: boolean;
+  type?: 'Regular' | 'M' | 'MM';
 };
 
 export type WorkoutSetRow = {
@@ -53,4 +54,5 @@ export type WorkoutState = {
   removeSet: (exerciseId: string, setIndex: number) => void;
   removeExercise: (exerciseId: string) => void;
   finishWorkout: () => Promise<void>;
+  startFromProgramDay: (exercises: { name: string; muscleGroup: string; equipment: string }[]) => void;
 };

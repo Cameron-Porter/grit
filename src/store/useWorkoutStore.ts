@@ -103,6 +103,23 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
+      startFromProgramDay: (exerciseTemplates) => {
+        set((state) => {
+          // Don't overwrite an in-progress workout
+          if (state.activeWorkoutId && state.exercises.length > 0) return state;
+          return {
+            activeWorkoutId: Date.now().toString(),
+            exercises: exerciseTemplates.map((t) => ({
+              id: uuidv4(),
+              name: t.name,
+              muscleGroup: t.muscleGroup,
+              equipment: t.equipment,
+              sets: [],
+            })),
+          };
+        });
+      },
+
       finishWorkout: async () => {
         const state = get();
 
