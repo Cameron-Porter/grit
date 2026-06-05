@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 
+const getUserId = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+};
+
 export interface PersonalRecord {
   id: string;
   exercise_name: string;
@@ -53,9 +58,10 @@ export async function upsertPR(
       if (error) console.error("upsertPR update:", error);
     }
   } else {
+    const userId = await getUserId();
     const { error } = await supabase
       .from("personal_records")
-      .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now });
+      .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now, user_id: userId });
     if (error) console.error("upsertPR insert:", error);
   }
 }

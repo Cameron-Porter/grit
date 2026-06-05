@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { getLastSessionSets } from '../../api/history';
+import { getExerciseSessionHistory, HistorySessionEntry } from '../../api/history';
 import { Exercise, WorkoutSet } from '../../types/workout';
 import { Colors, MuscleGroupColors } from '../../utils/constants';
 import NoteModal from './NoteModal';
@@ -19,29 +19,86 @@ interface ExerciseCardProps {
 }
 
 function HistoryPanel({ exerciseName }: { exerciseName: string }) {
-  const [sets, setSets] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<HistorySessionEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getLastSessionSets(exerciseName)
-      .then((data) => setSets(data || []))
-      .catch(() => setSets([]))
+    getExerciseSessionHistory(exerciseName)
+      .then((data) => setSessions(data))
+      .catch(() => setSessions([]))
       .finally(() => setLoading(false));
   }, [exerciseName]);
 
-  return (
-    <View style={{ backgroundColor: Colors.surface2, borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 8 }}>
-      <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-        Last Session
-      </Text>
-      {loading && <Text style={{ color: Colors.muted, fontSize: 13 }}>Loading...</Text>}
-      {!loading && sets.length === 0 && (
-        <Text style={{ color: Colors.muted, fontSize: 13 }}>No previous data</Text>
-      )}
-      {!loading && sets.map((s, i) => (
-        <Text key={i} style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
-          Set {s.set_index + 1}: {s.weight} lbs × {s.reps} reps
+  if (loading) {
+    return (
+      <View style={{ backgroundColor: Colors.surface2, borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 8 }}>
+        <Text style={{ color: Colors.muted, fontSize: 13 }}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <View style={{ backgroundColor: Colors.surface2, borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 8 }}>
+        <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>
+          Exercise History
         </Text>
+        <Text style={{ color: Colors.muted, fontSize: 13 }}>No previous data</Text>
+      </View>
+    );
+  }
+
+  // Group sessions by program name
+  const grouped = new Map<string, HistorySessionEntry[]>();
+  sessions.forEach((s) => {
+    const key = s.programName ?? 'Free Workout';
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(s);
+  });
+
+  return (
+    <View style={{ backgroundColor: Colors.surface2, borderRadius: 8, marginHorizontal: 16, marginBottom: 8, overflow: 'hidden' }}>
+      <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6 }}>
+        <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          Exercise History
+        </Text>
+      </View>
+
+      {Array.from(grouped.entries()).map(([programName, programSessions]) => (
+        <View key={programName} style={{ marginBottom: 4 }}>
+          {/* Program header */}
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1A1F26' }}>
+            <Text style={{ color: Colors.text, fontSize: 12, fontWeight: '700' }}>
+              {programName}
+              {programSessions[0]?.programTotalWeeks
+                ? ` — ${programSessions[0].programTotalWeeks} wks`
+                : ''}
+            </Text>
+          </View>
+
+          {programSessions.map((session, si) => (
+            <View key={si} style={{ paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: si > 0 ? 1 : 0, borderTopColor: '#252525' }}>
+              {/* Week/Day + date */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '700' }}>
+                  {session.weekNumber != null && session.dayNumber != null
+                    ? `Week ${session.weekNumber} · Day ${session.dayNumber}`
+                    : 'Free Workout'}
+                </Text>
+                <Text style={{ color: Colors.muted, fontSize: 11 }}>
+                  {new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </Text>
+              </View>
+
+              {/* Sets */}
+              {session.sets.map((s, i) => (
+                <Text key={i} style={{ color: Colors.muted, fontSize: 13, marginBottom: 2 }}>
+                  <Text style={{ color: Colors.text, fontWeight: '600' }}>{s.weight} lbs × {s.reps} reps</Text>
+                </Text>
+              ))}
+            </View>
+          ))}
+        </View>
       ))}
     </View>
   );

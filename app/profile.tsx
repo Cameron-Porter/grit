@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { getExercises } from '../src/api/exercises';
 import {
   createManualPR,
   getAllPRs,
@@ -20,6 +21,7 @@ import {
 } from '../src/api/personalRecords';
 import LineChart from '../src/components/LineChart';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
+import { useProfileStore } from '../src/store/useProfileStore';
 import { Colors, MuscleGroupColors } from '../src/utils/constants';
 
 const MUSCLE_GROUPS = [
@@ -45,11 +47,13 @@ const MUSCLE_EXERCISES: Record<string, string[]> = {
 export default function Profile() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const { bodyWeight, bodyWeightLog, setBodyWeight } = useProfileStore();
 
   const [selectedMuscle, setSelectedMuscle] = useState('Chest');
   const [selectedExercise, setSelectedExercise] = useState(MUSCLE_EXERCISES['Chest'][0]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [chartLoading, setChartLoading] = useState(false);
+  const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
   const [addPRVisible, setAddPRVisible] = useState(false);
@@ -59,8 +63,21 @@ export default function Profile() {
   const [prReps, setPRReps] = useState('');
   const [prSaving, setPRSaving] = useState(false);
 
+  // Body weight input
+  const [bwInput, setBwInput] = useState(bodyWeight != null ? String(bodyWeight) : '');
+  const [bwSaved, setBwSaved] = useState(false);
+
   useEffect(() => { loadPRs(); }, []);
   useEffect(() => { loadChart(); }, [selectedExercise]);
+  useEffect(() => {
+    getExercises().then((all) => {
+      const map: Record<string, string> = {};
+      all.forEach((ex) => { map[ex.name] = ex.equipment; });
+      setEquipmentMap(map);
+    });
+  }, []);
+
+  const isBodyweightExercise = equipmentMap[selectedExercise] === 'Bodyweight';
 
   const loadPRs = async () => {
     try { setPRs(await getAllPRs()); } catch { setPRs([]); }
@@ -79,6 +96,14 @@ export default function Profile() {
     if (exs.length > 0) setSelectedExercise(exs[0]);
   };
 
+  const handleSaveBW = () => {
+    const val = parseFloat(bwInput);
+    if (isNaN(val) || val <= 0) return;
+    setBodyWeight(val);
+    setBwSaved(true);
+    setTimeout(() => setBwSaved(false), 2000);
+  };
+
   const handleSavePR = async () => {
     if (!prExerciseName.trim() || !prWeight.trim() || prSaving) return;
     setPRSaving(true);
@@ -95,6 +120,13 @@ export default function Profile() {
 
   const chartWidth = width - 32;
 
+  // Build body weight chart data from log
+  const bwChartData = bodyWeightLog.map(({ date, weight }) => ({
+    label: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    maxWeight: weight,
+    maxReps: 0,
+  }));
+
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -105,6 +137,54 @@ export default function Profile() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+
+        {/* ── BODY WEIGHT ── */}
+        <View style={{ padding: 16, paddingBottom: 0 }}>
+          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
+            Body Weight
+          </Text>
+
+          <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
+                  Current Weight (lbs)
+                </Text>
+                <TextInput
+                  value={bwInput}
+                  onChangeText={setBwInput}
+                  placeholder="e.g. 175"
+                  placeholderTextColor={Colors.muted}
+                  keyboardType="decimal-pad"
+                  style={{ backgroundColor: '#0B0F14', color: Colors.text, borderRadius: 10, padding: 12, fontSize: 18, fontWeight: '700' }}
+                />
+              </View>
+              <Pressable
+                onPress={handleSaveBW}
+                style={{ marginTop: 22, paddingHorizontal: 18, paddingVertical: 13, backgroundColor: bwSaved ? Colors.success : Colors.primary, borderRadius: 10 }}
+              >
+                <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 14 }}>
+                  {bwSaved ? '✓ Saved' : 'Save'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {bodyWeight != null && (
+              <Text style={{ color: Colors.muted, fontSize: 13 }}>
+                Current: <Text style={{ color: Colors.text, fontWeight: '700' }}>{bodyWeight} lbs</Text>
+                {' · '}used as default weight for bodyweight exercises
+              </Text>
+            )}
+          </View>
+
+          {bwChartData.length >= 2 && (
+            <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+              <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>Weight Trend</Text>
+              <Text style={{ color: Colors.muted, fontSize: 12, marginBottom: 16 }}>Body weight over time (lbs)</Text>
+              <LineChart data={bwChartData} width={chartWidth - 32} height={160} metric="weight" />
+            </View>
+          )}
+        </View>
 
         {/* ── PROGRESS ── */}
         <View style={{ padding: 16 }}>
@@ -147,13 +227,20 @@ export default function Profile() {
 
           <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16 }}>
             <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{selectedExercise}</Text>
-            <Text style={{ color: Colors.muted, fontSize: 12, marginBottom: 16 }}>Max weight per session (lbs)</Text>
+            <Text style={{ color: Colors.muted, fontSize: 12, marginBottom: 16 }}>
+              {isBodyweightExercise ? 'Max reps per session' : 'Max weight per session (lbs)'}
+            </Text>
             {chartLoading ? (
               <View style={{ height: 200, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: Colors.muted }}>Loading...</Text>
               </View>
             ) : (
-              <LineChart data={chartData} width={chartWidth - 32} height={200} />
+              <LineChart
+                data={chartData}
+                width={chartWidth - 32}
+                height={200}
+                metric={isBodyweightExercise ? 'reps' : 'weight'}
+              />
             )}
           </View>
         </View>
@@ -180,26 +267,38 @@ export default function Profile() {
               <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 4 }}>Add one, or they auto-track during workouts</Text>
             </View>
           ) : (
-            prs.map((pr) => (
-              <View
-                key={pr.id}
-                style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
-              >
-                <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${Colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                  <Text style={{ fontSize: 18 }}>🏆</Text>
+            prs.map((pr) => {
+              const isBodyweightPR = equipmentMap[pr.exercise_name] === 'Bodyweight';
+              return (
+                <View
+                  key={pr.id}
+                  style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${Colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Text style={{ fontSize: 18 }}>🏆</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
+                    <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
+                      {new Date(pr.achieved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    {isBodyweightPR ? (
+                      <>
+                        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '—'}</Text>
+                        <Text style={{ color: Colors.muted, fontSize: 12 }}>reps</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
+                        <Text style={{ color: Colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` × ${pr.reps}` : ''}</Text>
+                      </>
+                    )}
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
-                  <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
-                    {new Date(pr.achieved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
-                  <Text style={{ color: Colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` × ${pr.reps}` : ''}</Text>
-                </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -214,7 +313,6 @@ export default function Profile() {
             <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
             <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700', marginBottom: 20 }}>Add Personal Record</Text>
 
-            {/* Exercise selector — uses ExercisePicker */}
             <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Exercise</Text>
             <Pressable
               onPress={() => setExercisePickerVisible(true)}
@@ -272,7 +370,6 @@ export default function Profile() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Exercise picker for PR exercise selection */}
       <ExercisePicker
         visible={exercisePickerVisible}
         onClose={() => setExercisePickerVisible(false)}

@@ -126,16 +126,29 @@ export default function ActiveWorkout() {
     const exercise = exercises.find((ex) => ex.id === exerciseId);
     if (!exercise) return;
 
-    // PR check: if completing a set with a weight value
+    // PR check: if completing a set
     if (data.completed === true) {
-      const weight = data.weight ?? exercise.sets[setIndex]?.weight ?? 0;
-      const reps = data.reps ?? exercise.sets[setIndex]?.reps ?? null;
-      if (weight > 0) {
-        const currentPR = prCache.current.get(exercise.name) ?? 0;
-        if (weight > currentPR) {
-          prCache.current.set(exercise.name, weight);
-          upsertPR(exercise.name, weight, reps);
-          setPrPopup({ exerciseName: exercise.name, weight, reps });
+      const isBodyweight = exercise.equipment === 'Bodyweight';
+      if (isBodyweight) {
+        const reps = data.reps ?? exercise.sets[setIndex]?.reps ?? 0;
+        const cacheKey = `${exercise.name}:reps`;
+        const currentPRReps = prCache.current.get(cacheKey) ?? 0;
+        if (reps > currentPRReps) {
+          prCache.current.set(cacheKey, reps);
+          const weight = data.weight ?? exercise.sets[setIndex]?.weight ?? bodyWeight ?? 0;
+          upsertPR(exercise.name, weight, reps, true);
+          setPrPopup({ exerciseName: exercise.name, weight, reps, isBodyweight: true });
+        }
+      } else {
+        const weight = data.weight ?? exercise.sets[setIndex]?.weight ?? 0;
+        const reps = data.reps ?? exercise.sets[setIndex]?.reps ?? null;
+        if (weight > 0) {
+          const currentPR = prCache.current.get(exercise.name) ?? 0;
+          if (weight > currentPR) {
+            prCache.current.set(exercise.name, weight);
+            upsertPR(exercise.name, weight, reps);
+            setPrPopup({ exerciseName: exercise.name, weight, reps });
+          }
         }
       }
     }
@@ -255,6 +268,7 @@ export default function ActiveWorkout() {
               setActiveSetData({ exerciseId: id, setIndex: index })
             }
             onSaveNote={(id, note) => setExerciseNote(id, note)}
+            bodyWeight={bodyWeight ?? undefined}
           />
         ))}
 
@@ -381,6 +395,7 @@ export default function ActiveWorkout() {
           exerciseName={prPopup.exerciseName}
           weight={prPopup.weight}
           reps={prPopup.reps}
+          isBodyweight={prPopup.isBodyweight}
           onDismiss={() => setPrPopup(null)}
         />
       )}

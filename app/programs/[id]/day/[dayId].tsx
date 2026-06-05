@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import {
   addProgramExercise,
   getProgramDay,
@@ -11,11 +11,30 @@ import {
   ProgramExercise,
   removeProgramExercise,
 } from '../../../../src/api/programs';
+import { getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/history';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import { useWorkoutStore } from '../../../../src/store/useWorkoutStore';
 import { Colors, MuscleGroupColors } from '../../../../src/utils/constants';
 
 const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const pumpColor = (v: string) => {
+  if (v === 'Amazing') return '#2DD4BF';
+  if (v === 'Moderate') return Colors.primary;
+  return Colors.muted;
+};
+const painColor = (v: string) => {
+  if (v === 'None') return '#22C55E';
+  if (v === 'Low') return '#84CC16';
+  if (v === 'Moderate') return '#F59E0B';
+  return '#EF4444';
+};
+const volumeColor = (v: string) => {
+  if (v === 'Just right') return '#22C55E';
+  if (v === 'Pushed limits') return Colors.primary;
+  if (v === 'Not enough') return '#F97316';
+  return '#EF4444';
+};
 
 export default function ProgramDayScreen() {
   const { id, dayId } = useLocalSearchParams<{ id: string; dayId: string }>();
@@ -25,6 +44,8 @@ export default function ProgramDayScreen() {
   const [day, setDay] = useState<ProgramDay | null>(null);
   const [exercises, setExercises] = useState<ProgramExercise[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [history, setHistory] = useState<WorkoutDayHistory | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const isTemplate = !day || day.week_number === 1;
 
@@ -39,20 +60,25 @@ export default function ProgramDayScreen() {
     if (!dayData) return;
 
     if (dayData.week_number === 1) {
-      // Week 1: load exercises for this specific day
       const data = await getProgramExercises(dayId);
       setExercises(data);
     } else {
-      // Week 2+: load from the Week 1 template
       const data = await getTemplateDayExercises(id, dayData.day_number);
       setExercises(data);
+    }
+
+    if (dayData.completed) {
+      setHistoryLoading(true);
+      getWorkoutForProgramDay(dayId)
+        .then((h) => setHistory(h))
+        .catch(() => setHistory(null))
+        .finally(() => setHistoryLoading(false));
     }
   };
 
   const handleAddExercise = async (name: string, muscleGroup: string, equipment: string) => {
-    // Always write to the week 1 day (template)
     const templateDayId = isTemplate ? dayId : null;
-    if (!templateDayId) return; // shouldn't be reachable (picker hidden for week > 1)
+    if (!templateDayId) return;
     await addProgramExercise(templateDayId, name, muscleGroup, equipment, exercises.length);
     load();
   };
@@ -63,7 +89,6 @@ export default function ProgramDayScreen() {
   };
 
   const handleStartWorkout = () => {
-    // Read program name from the program list in the parent screen id param
     startFromProgramDay(
       dayId,
       null,
@@ -105,52 +130,147 @@ export default function ProgramDayScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={exercises}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, paddingBottom: 140 }}
-        ListEmptyComponent={
-          <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <MaterialCommunityIcons name="dumbbell" size={40} color={Colors.surface2} />
-            <Text style={{ color: Colors.muted, marginTop: 10, fontSize: 15 }}>No exercises yet</Text>
-            {isTemplate && (
-              <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
-                Tap + to add — these will repeat every week
-              </Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
+        {/* Exercise list */}
+        <View style={{ padding: 16 }}>
+          {exercises.length === 0 && (
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <MaterialCommunityIcons name="dumbbell" size={40} color={Colors.surface2} />
+              <Text style={{ color: Colors.muted, marginTop: 10, fontSize: 15 }}>No exercises yet</Text>
+              {isTemplate && (
+                <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
+                  Tap + to add — these will repeat every week
+                </Text>
+              )}
+            </View>
+          )}
+
+          {exercises.map((item) => {
+            const badgeColor = item.muscle_group
+              ? (MuscleGroupColors[item.muscle_group] ?? Colors.primary)
+              : Colors.primary;
+            return (
+              <View key={item.id} style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+                {item.muscle_group && (
+                  <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}28`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
+                    <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
+                    <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                      {item.muscle_group}
+                    </Text>
+                  </View>
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
+                    <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
+                      {item.equipment ?? 'Bodyweight'}
+                    </Text>
+                  </View>
+                  {isTemplate && (
+                    <Pressable onPress={() => handleRemove(item.id)} style={{ padding: 6 }}>
+                      <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.error} />
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Completed workout history */}
+        {day?.completed && (
+          <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
+              Workout Log
+            </Text>
+
+            {historyLoading && (
+              <Text style={{ color: Colors.muted, fontSize: 14 }}>Loading...</Text>
+            )}
+
+            {!historyLoading && history && (
+              <>
+                <Text style={{ color: Colors.muted, fontSize: 13, marginBottom: 12 }}>
+                  Completed {new Date(history.completedAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                </Text>
+
+                {/* Sets per exercise */}
+                {history.exercises.map((ex) => (
+                  <View key={ex.name} style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+                    <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
+                      <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>{ex.name}</Text>
+                    </View>
+                    <View style={{ padding: 12 }}>
+                      <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                        <Text style={{ width: 36, color: Colors.muted, fontSize: 11, fontWeight: '700' }}>#</Text>
+                        <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 }}>WEIGHT</Text>
+                        <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 }}>REPS</Text>
+                      </View>
+                      {ex.sets.filter((s) => s.completed).map((s, j) => (
+                        <View key={j} style={{ flexDirection: 'row', paddingVertical: 5, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
+                          <Text style={{ width: 36, color: Colors.muted, fontSize: 13 }}>{j + 1}</Text>
+                          <Text style={{ flex: 1, textAlign: 'center', color: Colors.text, fontSize: 14, fontWeight: '600' }}>{s.weight}</Text>
+                          <Text style={{ flex: 1, textAlign: 'center', color: Colors.text, fontSize: 14, fontWeight: '600' }}>{s.reps}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+
+                {/* Feedback tags per muscle group */}
+                {history.feedback.length > 0 && (
+                  <View style={{ marginTop: 4 }}>
+                    <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
+                      Session Feedback
+                    </Text>
+                    {history.feedback.map((fb, i) => {
+                      const badgeColor = MuscleGroupColors[fb.muscleGroup] ?? Colors.primary;
+                      return (
+                        <View key={i} style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 12, marginBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                            <View style={{ backgroundColor: `${badgeColor}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                              <Text style={{ color: badgeColor, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>
+                                {fb.muscleGroup}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                            {fb.pump && (
+                              <View style={{ backgroundColor: `${pumpColor(fb.pump)}22`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: `${pumpColor(fb.pump)}44` }}>
+                                <Text style={{ color: pumpColor(fb.pump), fontSize: 12, fontWeight: '700' }}>
+                                  Pump: {fb.pump}
+                                </Text>
+                              </View>
+                            )}
+                            {fb.jointPain && fb.jointPain !== 'None' && (
+                              <View style={{ backgroundColor: `${painColor(fb.jointPain)}22`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: `${painColor(fb.jointPain)}44` }}>
+                                <Text style={{ color: painColor(fb.jointPain), fontSize: 12, fontWeight: '700' }}>
+                                  Pain: {fb.jointPain}
+                                </Text>
+                              </View>
+                            )}
+                            {fb.volume && (
+                              <View style={{ backgroundColor: `${volumeColor(fb.volume)}22`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: `${volumeColor(fb.volume)}44` }}>
+                                <Text style={{ color: volumeColor(fb.volume), fontSize: 12, fontWeight: '700' }}>
+                                  Vol: {fb.volume}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </>
+            )}
+
+            {!historyLoading && !history && (
+              <Text style={{ color: Colors.muted, fontSize: 13 }}>No workout log found for this day.</Text>
             )}
           </View>
-        }
-        renderItem={({ item }) => {
-          const badgeColor = item.muscle_group
-            ? (MuscleGroupColors[item.muscle_group] ?? Colors.primary)
-            : Colors.primary;
-          return (
-            <View style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
-              {item.muscle_group && (
-                <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}28`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
-                  <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
-                  <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                    {item.muscle_group}
-                  </Text>
-                </View>
-              )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                  <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
-                    {item.equipment ?? 'Bodyweight'}
-                  </Text>
-                </View>
-                {isTemplate && (
-                  <Pressable onPress={() => handleRemove(item.id)} style={{ padding: 6 }}>
-                    <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.error} />
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          );
-        }}
-      />
+        )}
+      </ScrollView>
 
       {/* Footer actions */}
       <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2, gap: 10 }}>

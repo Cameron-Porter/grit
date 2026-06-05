@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 
+const getUserId = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+};
+
 export interface Program {
   id: string;
   name: string;
@@ -30,10 +35,10 @@ export interface ProgramExercise {
 }
 
 export async function getPrograms(): Promise<Program[]> {
-  const { data, error } = await supabase
-    .from("programs")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const userId = await getUserId();
+  const query = supabase.from("programs").select("*").order("created_at", { ascending: false });
+  if (userId) query.eq("user_id", userId);
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
@@ -44,9 +49,10 @@ export async function createProgram(
   daysPerWeek: number,
   dayLabels?: string[],
 ): Promise<Program> {
+  const userId = await getUserId();
   const { data: program, error: progError } = await supabase
     .from("programs")
-    .insert({ name, total_weeks: totalWeeks, days_per_week: daysPerWeek })
+    .insert({ name, total_weeks: totalWeeks, days_per_week: daysPerWeek, user_id: userId })
     .select()
     .single();
   if (progError) throw progError;

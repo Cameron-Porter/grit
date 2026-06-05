@@ -1,10 +1,42 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useAuthStore } from '../src/store/useAuthStore';
 
 export default function Layout() {
+  const router = useRouter();
+  const segments = useSegments();
+  const { user, initialized, initialize } = useAuthStore();
+
+  useEffect(() => {
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    if (!initialized) return;
+    const inAuthGroup = segments[0] === 'login';
+    if (!user && !inAuthGroup) {
+      router.replace('/login');
+    } else if (user && inAuthGroup) {
+      router.replace('/home');
+    }
+  }, [user, initialized]);
+
+  // Hold a blank screen until auth state is known — prevents flashing
+  // to /login before the stored session is loaded from storage.
+  if (!initialized) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="workout" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
         <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />

@@ -7,6 +7,11 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { markDayComplete } from '../api/programs';
 import { supabase } from '../api/supabase';
 
+const getUserId = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+};
+
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
@@ -172,8 +177,11 @@ export const useWorkoutStore = create<WorkoutState>()(
         try {
           const workoutId = crypto.randomUUID();
 
+          const userId = await getUserId();
+
           const { error: workoutError } = await supabase.from('workouts').insert({
             id: workoutId,
+            user_id: userId,
             name: state.activeProgramName ?? 'Workout',
             program_name: state.activeProgramName,
             program_day_id: state.activeProgramDayId,
