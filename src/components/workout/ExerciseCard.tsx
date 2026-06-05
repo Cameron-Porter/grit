@@ -4,6 +4,7 @@ import { Pressable, Text, View } from 'react-native';
 import { getLastSessionSets } from '../../api/history';
 import { Exercise, WorkoutSet } from '../../types/workout';
 import { Colors, MuscleGroupColors } from '../../utils/constants';
+import NoteModal from './NoteModal';
 import SetRow from './SetRow';
 
 interface ExerciseCardProps {
@@ -13,6 +14,7 @@ interface ExerciseCardProps {
   onAddSet: (exerciseId: string) => void;
   onExerciseMenuPress: (exerciseId: string) => void;
   onSetMenuPress: (exerciseId: string, setIndex: number) => void;
+  onSaveNote: (exerciseId: string, note: string) => void;
 }
 
 function HistoryPanel({ exerciseName }: { exerciseName: string }) {
@@ -51,6 +53,7 @@ export default function ExerciseCard({
   onAddSet,
   onExerciseMenuPress,
   onSetMenuPress,
+  onSaveNote,
 }: ExerciseCardProps) {
   const primaryMuscle = exerciseGroup[0]?.muscleGroup;
   const badgeColor = primaryMuscle
@@ -58,10 +61,15 @@ export default function ExerciseCard({
     : Colors.primary;
 
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
+  const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
 
   const toggleHistory = (exerciseId: string) => {
     setHistoryOpen((prev) => ({ ...prev, [exerciseId]: !prev[exerciseId] }));
   };
+
+  const noteExercise = noteExerciseId
+    ? exerciseGroup.find((ex) => ex.id === noteExerciseId)
+    : null;
 
   return (
     <View style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
@@ -89,7 +97,7 @@ export default function ExerciseCard({
           <View key={exercise.id} style={{ marginTop: index > 0 ? 20 : 6, marginBottom: index === exerciseGroup.length - 1 ? 0 : 10 }}>
 
             {/* Exercise title row */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, marginBottom: 4 }}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
                 <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
@@ -110,6 +118,17 @@ export default function ExerciseCard({
               </Pressable>
             </View>
 
+            {/* Pinned note */}
+            {exercise.note ? (
+              <Pressable
+                onPress={() => setNoteExerciseId(exercise.id)}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#1E2A2A', borderRadius: 8, padding: 10, gap: 8 }}
+              >
+                <MaterialCommunityIcons name="note-text-outline" size={14} color={Colors.primary} style={{ marginTop: 1 }} />
+                <Text style={{ color: Colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
+              </Pressable>
+            ) : null}
+
             {/* Last session panel */}
             {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
 
@@ -124,7 +143,7 @@ export default function ExerciseCard({
             {/* Set rows */}
             {exercise.sets.map((set, setIndex) => (
               <SetRow
-                key={`${exercise.id}-${setIndex}-${set.completed}`}
+                key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
                 set={set}
                 onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
                 onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
@@ -143,6 +162,20 @@ export default function ExerciseCard({
           </View>
         ))}
       </View>
+
+      {/* Note Modal (local to card) */}
+      {noteExercise && (
+        <NoteModal
+          visible={!!noteExerciseId}
+          exerciseName={noteExercise.name}
+          initialNote={noteExercise.note ?? ''}
+          onClose={() => setNoteExerciseId(null)}
+          onSave={(note) => {
+            onSaveNote(noteExercise.id, note);
+            setNoteExerciseId(null);
+          }}
+        />
+      )}
     </View>
   );
 }

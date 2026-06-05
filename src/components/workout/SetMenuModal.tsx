@@ -7,6 +7,7 @@ interface SetMenuModalProps {
   currentType?: 'Regular' | 'M' | 'MM';
   onClose: () => void;
   onDelete: () => void;
+  onSkip: () => void;
   onUpdateType: (type: 'Regular' | 'M' | 'MM') => void;
 }
 
@@ -15,6 +16,7 @@ export default function SetMenuModal({
   currentType = 'Regular',
   onClose,
   onDelete,
+  onSkip,
   onUpdateType,
 }: SetMenuModalProps) {
   return (
@@ -39,7 +41,7 @@ export default function SetMenuModal({
           <MenuAction
             icon='fast-forward-outline'
             text='Skip set'
-            onPress={onClose}
+            onPress={() => { onSkip(); onClose(); }}
           />
           <MenuAction
             icon='trash-can-outline'

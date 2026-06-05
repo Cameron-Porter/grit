@@ -4,6 +4,8 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
+import FeedbackModal from '../src/components/workout/FeedbackModal';
+import NoteModal from '../src/components/workout/NoteModal';
 import SetMenuModal from '../src/components/workout/SetMenuModal';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
 import { Exercise } from '../src/types/workout';
@@ -15,26 +17,33 @@ export default function ActiveWorkout() {
     exercises,
     addExercise,
     removeExercise,
+    moveExerciseUp,
+    moveExerciseDown,
     addSet,
     updateSet,
     finishWorkout,
     isSaving,
     removeSet,
+    skipSet,
+    skipSets,
+    setExerciseNote,
   } = useWorkoutStore();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
+  const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
+  const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null);
   const [activeSetData, setActiveSetData] = useState<{
     exerciseId: string;
     setIndex: number;
   } | null>(null);
 
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
-  const completedSets = exercises.reduce(
-    (sum, ex) => sum + ex.sets.filter((s) => s.completed).length,
+  const doneSets = exercises.reduce(
+    (sum, ex) => sum + ex.sets.filter((s) => s.completed || s.skipped).length,
     0,
   );
-  const progress = totalSets > 0 ? completedSets / totalSets : 0;
+  const progress = totalSets > 0 ? doneSets / totalSets : 0;
 
   const onFinishWorkout = async () => {
     try {
@@ -47,7 +56,7 @@ export default function ActiveWorkout() {
 
   const canFinish =
     exercises.length > 0 &&
-    exercises.every((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed));
+    exercises.every((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed || s.skipped));
 
   const chunkedExercises = exercises.reduce((acc, current, index) => {
     if (index === 0) {
@@ -66,6 +75,14 @@ export default function ActiveWorkout() {
     }
     return acc;
   }, [] as Exercise[][]);
+
+  const activeExercise = activeExerciseId
+    ? exercises.find((ex) => ex.id === activeExerciseId)
+    : null;
+
+  const noteExercise = noteExerciseId
+    ? exercises.find((ex) => ex.id === noteExerciseId)
+    : null;
 
   const activeSetType = activeSetData
     ? exercises.find((ex) => ex.id === activeSetData.exerciseId)?.sets[activeSetData.setIndex]?.type
@@ -95,7 +112,7 @@ export default function ActiveWorkout() {
           </Text>
           {totalSets > 0 && (
             <Text style={{ color: Colors.muted, fontSize: 13 }}>
-              {completedSets}/{totalSets} sets
+              {doneSets}/{totalSets} sets
             </Text>
           )}
         </View>
@@ -122,6 +139,7 @@ export default function ActiveWorkout() {
             onSetMenuPress={(id, index) =>
               setActiveSetData({ exerciseId: id, setIndex: index })
             }
+            onSaveNote={(id, note) => setExerciseNote(id, note)}
           />
         ))}
 
@@ -186,6 +204,23 @@ export default function ActiveWorkout() {
         visible={!!activeExerciseId}
         onClose={() => setActiveExerciseId(null)}
         onRemove={() => activeExerciseId && removeExercise(activeExerciseId)}
+        onMoveUp={() => activeExerciseId && moveExerciseUp(activeExerciseId)}
+        onMoveDown={() => activeExerciseId && moveExerciseDown(activeExerciseId)}
+        onSkipSets={() => {
+          if (activeExerciseId) skipSets(activeExerciseId);
+        }}
+        onNewNote={() => {
+          if (activeExerciseId) {
+            setNoteExerciseId(activeExerciseId);
+            setActiveExerciseId(null);
+          }
+        }}
+        onJointPain={() => {
+          if (activeExercise?.muscleGroup) {
+            setFeedbackMuscle(activeExercise.muscleGroup);
+            setActiveExerciseId(null);
+          }
+        }}
       />
 
       <SetMenuModal
@@ -195,10 +230,33 @@ export default function ActiveWorkout() {
         onDelete={() =>
           activeSetData && removeSet(activeSetData.exerciseId, activeSetData.setIndex)
         }
+        onSkip={() =>
+          activeSetData && skipSet(activeSetData.exerciseId, activeSetData.setIndex)
+        }
         onUpdateType={(newType) =>
           activeSetData &&
           updateSet(activeSetData.exerciseId, activeSetData.setIndex, { type: newType })
         }
+      />
+
+      {noteExercise && (
+        <NoteModal
+          visible={!!noteExerciseId}
+          exerciseName={noteExercise.name}
+          initialNote={noteExercise.note ?? ''}
+          onClose={() => setNoteExerciseId(null)}
+          onSave={(note) => {
+            setExerciseNote(noteExercise.id, note);
+            setNoteExerciseId(null);
+          }}
+        />
+      )}
+
+      <FeedbackModal
+        visible={!!feedbackMuscle}
+        muscleGroup={feedbackMuscle ?? ''}
+        onClose={() => setFeedbackMuscle(null)}
+        onSave={() => setFeedbackMuscle(null)}
       />
     </View>
   );

@@ -50,45 +50,58 @@ export default function SetRow({
     transform: [{ translateX: translateX.value }],
   }));
 
+  // Only show each background on the correct swipe side
+  const deleteStyle = useAnimatedStyle(() => ({
+    opacity: translateX.value < -8 ? 1 : 0,
+  }));
+
+  const completeStyle = useAnimatedStyle(() => ({
+    opacity: translateX.value > 8 ? 1 : 0,
+  }));
+
+  if (set.skipped) {
+    return (
+      <View style={{ marginBottom: 6, paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', opacity: 0.4 }}>
+        <View style={{ width: 40 }} />
+        <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 13, fontStyle: 'italic' }}>—</Text>
+        <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 13, fontStyle: 'italic' }}>—</Text>
+        <View style={{ width: 60, alignItems: 'center' }}>
+          <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>SKIP</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={{ position: 'relative', marginBottom: 6, overflow: 'hidden' }}>
-      {/* Swipe Left Action Reveal (Delete) */}
-      <View
-        style={{
+      {/* Delete background — only visible on left swipe */}
+      <Animated.View
+        style={[deleteStyle, {
           position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0,
+          left: 0, right: 0, top: 0, bottom: 0,
           backgroundColor: Colors.error,
           justifyContent: 'center',
-          paddingRight: 16,
+          alignItems: 'flex-end',
+          paddingRight: 20,
           borderRadius: 6,
-        }}
+        }]}
       >
-        <Text
-          style={{ color: 'white', textAlign: 'right', fontWeight: 'bold' }}
-        >
-          Delete
-        </Text>
-      </View>
+        <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Delete</Text>
+      </Animated.View>
 
-      {/* Swipe Right Action Reveal (Complete) */}
-      <View
-        style={{
+      {/* Complete background — only visible on right swipe */}
+      <Animated.View
+        style={[completeStyle, {
           position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0,
+          left: 0, right: 0, top: 0, bottom: 0,
           backgroundColor: Colors.primary,
           justifyContent: 'center',
-          paddingLeft: 16,
+          paddingLeft: 20,
           borderRadius: 6,
-        }}
+        }]}
       >
-        <Text style={{ color: 'white', fontWeight: 'bold' }}>Complete</Text>
-      </View>
+        <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Complete</Text>
+      </Animated.View>
 
       <GestureDetector gesture={panGesture}>
         <Animated.View
@@ -106,25 +119,17 @@ export default function SetRow({
           {/* Row Options Menu Trigger */}
           <Pressable
             onPress={onMenuPress}
-            style={{
-              width: 40,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            style={{ width: 40, alignItems: 'center', justifyContent: 'center' }}
           >
-            <MaterialCommunityIcons
-              name='dots-vertical'
-              size={22}
-              color={Colors.muted || '#A0A0A0'}
-            />
+            <MaterialCommunityIcons name="dots-vertical" size={22} color={Colors.muted} />
           </Pressable>
 
-          {/* Weight Input Box */}
+          {/* Weight Input */}
           <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
             <TextInput
               value={String(set.weight || '')}
-              keyboardType='numeric'
-              placeholder='0'
+              keyboardType="numeric"
+              placeholder="0"
               placeholderTextColor={Colors.muted}
               onChangeText={(text) => onWeightChange(Number(text || 0))}
               style={{
@@ -141,12 +146,12 @@ export default function SetRow({
             />
           </View>
 
-          {/* Reps Input Box */}
+          {/* Reps Input */}
           <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
             <TextInput
               value={String(set.reps || '')}
-              keyboardType='numeric'
-              placeholder='0'
+              keyboardType="numeric"
+              placeholder="0"
               placeholderTextColor={Colors.muted}
               onChangeText={(text) => onRepsChange(Number(text || 0))}
               style={{
@@ -163,7 +168,7 @@ export default function SetRow({
             />
           </View>
 
-          {/* Log Checkbox Column */}
+          {/* Log Checkbox */}
           <View style={{ width: 60, alignItems: 'center' }}>
             <Pressable onPress={onToggleComplete}>
               <View
@@ -171,19 +176,13 @@ export default function SetRow({
                   width: 30,
                   height: 30,
                   borderRadius: 6,
-                  backgroundColor: set.completed
-                    ? Colors.primary || '#00A896'
-                    : '#1E1E1E',
+                  backgroundColor: set.completed ? Colors.primary : '#1E1E1E',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
                 {set.completed && (
-                  <MaterialCommunityIcons
-                    name='check'
-                    size={18}
-                    color='white'
-                  />
+                  <MaterialCommunityIcons name="check" size={18} color="white" />
                 )}
               </View>
             </Pressable>

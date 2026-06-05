@@ -2,6 +2,7 @@ export type WorkoutSet = {
   reps: number;
   weight: number;
   completed: boolean;
+  skipped?: boolean;
   type?: 'Regular' | 'M' | 'MM';
 };
 
@@ -19,6 +20,7 @@ export type Exercise = {
   muscleGroup?: string;
   sets: WorkoutSet[];
   equipment: string;
+  note?: string;
 };
 
 export type Props = {
@@ -53,6 +55,11 @@ export type WorkoutState = {
 
   removeSet: (exerciseId: string, setIndex: number) => void;
   removeExercise: (exerciseId: string) => void;
+  moveExerciseUp: (exerciseId: string) => void;
+  moveExerciseDown: (exerciseId: string) => void;
+  skipSet: (exerciseId: string, setIndex: number) => void;
+  skipSets: (exerciseId: string) => void;
+  setExerciseNote: (exerciseId: string, note: string) => void;
   finishWorkout: () => Promise<void>;
   startFromProgramDay: (exercises: { name: string; muscleGroup: string; equipment: string }[]) => void;
 };

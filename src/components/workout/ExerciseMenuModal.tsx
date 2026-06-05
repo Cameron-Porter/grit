@@ -6,67 +6,52 @@ interface ExerciseMenuModalProps {
   visible: boolean;
   onClose: () => void;
   onRemove: () => void;
-  // Add other callbacks (onMoveDown, onReplace, etc.) as you build those features
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onSkipSets: () => void;
+  onNewNote: () => void;
+  onJointPain: () => void;
 }
 
 export default function ExerciseMenuModal({
   visible,
   onClose,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  onSkipSets,
+  onNewNote,
+  onJointPain,
 }: ExerciseMenuModalProps) {
+  const handle = (cb: () => void) => () => {
+    cb();
+    onClose();
+  };
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType='fade'
+      animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable
-        style={styles.overlay}
-        onPress={onClose}
-      >
+      <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.menuContainer}>
           <Text style={styles.header}>Exercise</Text>
 
-          <MenuButton
-            icon='note-plus-outline'
-            text='New note'
-            onPress={onClose}
-          />
-          <MenuButton
-            icon='arrow-down'
-            text='Move down'
-            onPress={onClose}
-          />
-          <MenuButton
-            icon='swap-horizontal'
-            text='Replace'
-            onPress={onClose}
-          />
-          <MenuButton
-            icon='medical-bag'
-            text='Joint pain'
-            onPress={onClose}
-          />
-          <MenuButton
-            icon='plus'
-            text='Add set'
-            onPress={onClose}
-          />
-          <MenuButton
-            icon='fast-forward-outline'
-            text='Skip sets'
-            onPress={onClose}
-          />
+          <MenuButton icon="arrow-up" text="Move up" onPress={handle(onMoveUp)} />
+          <MenuButton icon="arrow-down" text="Move down" onPress={handle(onMoveDown)} />
+          <MenuButton icon="note-plus-outline" text="New note" onPress={handle(onNewNote)} />
+          <MenuButton icon="fast-forward-outline" text="Skip sets" onPress={handle(onSkipSets)} />
+          <MenuButton icon="medical-bag" text="Joint pain" onPress={handle(onJointPain)} />
+
+          <View style={styles.divider} />
 
           <MenuButton
-            icon='trash-can-outline'
-            text='Remove exercise'
+            icon="trash-can-outline"
+            text="Remove exercise"
             color={Colors.error || '#FF4A4A'}
-            onPress={() => {
-              onRemove();
-              onClose();
-            }}
+            onPress={handle(onRemove)}
           />
         </View>
       </Pressable>
@@ -74,18 +59,9 @@ export default function ExerciseMenuModal({
   );
 }
 
-// Reusable button for the menu list
 const MenuButton = ({ icon, text, color = Colors.text, onPress }: any) => (
-  <Pressable
-    style={styles.menuButton}
-    onPress={onPress}
-  >
-    <MaterialCommunityIcons
-      name={icon}
-      size={20}
-      color={color}
-      style={{ width: 28 }}
-    />
+  <Pressable style={styles.menuButton} onPress={onPress}>
+    <MaterialCommunityIcons name={icon} size={20} color={color} style={{ width: 28 }} />
     <Text style={{ color, fontSize: 16, fontWeight: '500' }}>{text}</Text>
   </Pressable>
 );
@@ -120,4 +96,5 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
+  divider: { height: 1, backgroundColor: '#333', marginVertical: 4 },
 });

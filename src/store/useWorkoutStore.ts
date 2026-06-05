@@ -15,11 +15,9 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       startWorkout: () =>
         set((state) => {
-          // Prevent wiping out an existing workout
           if (state.activeWorkoutId && state.exercises.length > 0) {
             return state;
           }
-
           return {
             activeWorkoutId: Date.now().toString(),
             exercises: [],
@@ -42,12 +40,12 @@ export const useWorkoutStore = create<WorkoutState>()(
           exercises: [
             ...state.exercises,
             {
-              id: uuidv4(), // or however you are generating IDs
+              id: uuidv4(),
               name,
               muscleGroup,
-              equipment, // ✅ Now explicitly included to satisfy TypeScript
-              sets: [], // ✅ Empty array for sets to start
-            } as Exercise, // ✅ Cast it as Exercise so TS doesn't infer sets as never[]
+              equipment,
+              sets: [],
+            } as Exercise,
           ],
         }));
       },
@@ -56,6 +54,26 @@ export const useWorkoutStore = create<WorkoutState>()(
         set((state) => ({
           exercises: state.exercises.filter((ex) => ex.id !== exerciseId),
         }));
+      },
+
+      moveExerciseUp: (exerciseId: string) => {
+        set((state) => {
+          const idx = state.exercises.findIndex((ex) => ex.id === exerciseId);
+          if (idx <= 0) return state;
+          const next = [...state.exercises];
+          [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+          return { exercises: next };
+        });
+      },
+
+      moveExerciseDown: (exerciseId: string) => {
+        set((state) => {
+          const idx = state.exercises.findIndex((ex) => ex.id === exerciseId);
+          if (idx < 0 || idx >= state.exercises.length - 1) return state;
+          const next = [...state.exercises];
+          [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+          return { exercises: next };
+        });
       },
 
       addSet: (exerciseId) =>
@@ -83,8 +101,8 @@ export const useWorkoutStore = create<WorkoutState>()(
             ex.id === exerciseId
               ? {
                   ...ex,
-                  sets: ex.sets.map((set, i) =>
-                    i === setIndex ? { ...set, ...data } : set,
+                  sets: ex.sets.map((s, i) =>
+                    i === setIndex ? { ...s, ...data } : s,
                   ),
                 }
               : ex,
@@ -103,9 +121,43 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
+      skipSet: (exerciseId, setIndex) =>
+        set((state) => ({
+          exercises: state.exercises.map((ex) =>
+            ex.id === exerciseId
+              ? {
+                  ...ex,
+                  sets: ex.sets.map((s, i) =>
+                    i === setIndex ? { ...s, skipped: true, completed: false } : s,
+                  ),
+                }
+              : ex,
+          ),
+        })),
+
+      skipSets: (exerciseId) =>
+        set((state) => ({
+          exercises: state.exercises.map((ex) =>
+            ex.id === exerciseId
+              ? {
+                  ...ex,
+                  sets: ex.sets.map((s) =>
+                    s.completed ? s : { ...s, skipped: true, completed: false },
+                  ),
+                }
+              : ex,
+          ),
+        })),
+
+      setExerciseNote: (exerciseId, note) =>
+        set((state) => ({
+          exercises: state.exercises.map((ex) =>
+            ex.id === exerciseId ? { ...ex, note } : ex,
+          ),
+        })),
+
       startFromProgramDay: (exerciseTemplates) => {
         set((state) => {
-          // Don't overwrite an in-progress workout
           if (state.activeWorkoutId && state.exercises.length > 0) return state;
           return {
             activeWorkoutId: Date.now().toString(),
@@ -134,7 +186,6 @@ export const useWorkoutStore = create<WorkoutState>()(
         try {
           const workoutId = crypto.randomUUID();
 
-          // Save workout header
           const { error: workoutError } = await supabase
             .from('workouts')
             .insert({
@@ -147,15 +198,14 @@ export const useWorkoutStore = create<WorkoutState>()(
             throw workoutError;
           }
 
-          // Flatten exercise sets
           const workoutSets = state.exercises.flatMap((exercise) =>
-            exercise.sets.map((set, index) => ({
+            exercise.sets.map((s, index) => ({
               workout_id: workoutId,
               exercise_name: exercise.name,
               set_index: index,
-              reps: set.reps,
-              weight: set.weight,
-              completed: set.completed,
+              reps: s.reps,
+              weight: s.weight,
+              completed: s.completed,
             })),
           );
 
@@ -169,7 +219,6 @@ export const useWorkoutStore = create<WorkoutState>()(
             }
           }
 
-          // Clear local draft after successful save
           set({
             activeWorkoutId: null,
             exercises: [],
@@ -177,11 +226,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           });
         } catch (error) {
           console.error('Failed to save workout:', error);
-
-          set({
-            isSaving: false,
-          });
-
+          set({ isSaving: false });
           throw error;
         }
       },
@@ -189,7 +234,6 @@ export const useWorkoutStore = create<WorkoutState>()(
     {
       name: 'grit-workout-storage',
       storage: createJSONStorage(() => AsyncStorage),
-
       partialize: (state) => ({
         activeWorkoutId: state.activeWorkoutId,
         exercises: state.exercises,
