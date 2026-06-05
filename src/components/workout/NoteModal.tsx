@@ -69,6 +69,7 @@ export default function NoteModal({
             placeholderTextColor={Colors.muted}
             multiline
             numberOfLines={4}
+            maxLength={250}
             style={{
               backgroundColor: '#252525',
               borderRadius: 10,
@@ -77,10 +78,13 @@ export default function NoteModal({
               fontSize: 15,
               minHeight: 100,
               textAlignVertical: 'top',
-              marginBottom: 16,
+              marginBottom: 8,
             }}
             autoFocus
           />
+          <Text style={{ color: Colors.muted, fontSize: 12, textAlign: 'right', marginBottom: 16 }}>
+            {text.length}/250
+          </Text>
 
           {/* Actions */}
           <View style={{ flexDirection: 'row', gap: 10 }}>

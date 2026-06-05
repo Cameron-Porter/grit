@@ -1,13 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { saveFeedback } from '../src/api/feedback';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
-import { getNextProgramWorkout } from '../src/api/programs';
+import { checkMuscleGroupPreviouslyTrained, getNextProgramWorkout } from '../src/api/programs';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
 import FeedbackModal from '../src/components/workout/FeedbackModal';
+import SorenessModal from '../src/components/workout/SorenessModal';
 import NoteModal from '../src/components/workout/NoteModal';
 import PRPopup from '../src/components/workout/PRPopup';
 import SetMenuModal from '../src/components/workout/SetMenuModal';
@@ -40,7 +40,11 @@ export default function ActiveWorkout() {
     skipSet,
     skipSets,
     setExerciseNote,
+    queueFeedback,
+    queueSoreness,
+    pendingFeedback,
     startFromProgramDay,
+    activeProgramDayId,
     activeProgramName,
     activeProgramWeek,
     activeProgramDayNumber,
@@ -53,14 +57,18 @@ export default function ActiveWorkout() {
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
   const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null);
+  const [pendingFeedbackGroups, setPendingFeedbackGroups] = useState<string[]>([]);
+  const [finishPending, setFinishPending] = useState(false);
+  const [sorenessMuscle, setSorenessMuscle] = useState<string | null>(null);
   const [prPopup, setPrPopup] = useState<PRState | null>(null);
   const [activeSetData, setActiveSetData] = useState<{
     exerciseId: string;
     setIndex: number;
   } | null>(null);
 
-  // Track which muscles have already received feedback this session
+  // Track which muscles have already received feedback / soreness check this session
   const feedbackShownFor = useRef<Set<string>>(new Set());
+  const sorenessShownFor = useRef<Set<string>>(new Set());
 
   // Cache PRs locally: exerciseName → value (weight for weighted, reps for bodyweight)
   // Bodyweight exercises use key format: `${name}:reps`
@@ -88,7 +96,7 @@ export default function ActiveWorkout() {
   );
   const progress = totalSets > 0 ? doneSets / totalSets : 0;
 
-  const onFinishWorkout = async () => {
+  const doFinish = async () => {
     try {
       await finishWorkout();
       const next = await getNextProgramWorkout();
@@ -115,9 +123,53 @@ export default function ActiveWorkout() {
     }
   };
 
+  const onFinishWorkout = async () => {
+    // Collect muscle groups with at least one completed set
+    const musclesWithSets = [...new Set(
+      exercises
+        .filter((ex) => ex.muscleGroup && ex.sets.some((s) => s.completed))
+        .map((ex) => ex.muscleGroup!),
+    )];
+    // A muscle is "covered" only if full end-of-session feedback was collected (not just soreness)
+    const covered = new Set(
+      pendingFeedback.filter((f) => f.pump && f.volume && f.jointPain).map((f) => f.muscleGroup),
+    );
+    const uncovered = musclesWithSets.filter((mg) => !covered.has(mg));
+
+    if (uncovered.length > 0) {
+      setPendingFeedbackGroups(uncovered.slice(1));
+      setFeedbackMuscle(uncovered[0]);
+      setFinishPending(true);
+      return;
+    }
+
+    await doFinish();
+  };
+
+  // Advances through the feedback queue; saves data if provided.
+  // Called from both mid-workout natural completion and the finish-time collection flow.
+  const handleFeedbackAdvance = (data?: { jointPain: string; pump: string; volume: string }) => {
+    if (data && feedbackMuscle) {
+      queueFeedback(feedbackMuscle, data.jointPain, data.pump, data.volume);
+    }
+
+    if (pendingFeedbackGroups.length > 0) {
+      const [next, ...rest] = pendingFeedbackGroups;
+      setPendingFeedbackGroups(rest);
+      setFeedbackMuscle(next);
+    } else if (finishPending) {
+      setFinishPending(false);
+      setFeedbackMuscle(null);
+      doFinish();
+    } else {
+      setFeedbackMuscle(null);
+    }
+  };
+
   const canFinish =
     exercises.length > 0 &&
-    exercises.every((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed || s.skipped));
+    exercises.some((ex) => ex.sets.some((s) => s.completed)) &&
+    exercises.every((ex) => ex.sets.every((s) => s.completed || s.skipped));
 
   // Called instead of updateSet directly — checks for feedback trigger + PR
   const handleUpdateSet = (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => {
@@ -125,6 +177,28 @@ export default function ActiveWorkout() {
 
     const exercise = exercises.find((ex) => ex.id === exerciseId);
     if (!exercise) return;
+
+    // Soreness check: fire on the very first completed set of a muscle group in this session
+    if (data.completed === true) {
+      const muscle = exercise.muscleGroup;
+      if (muscle && activeProgramDayId && !sorenessShownFor.current.has(muscle)) {
+        const isFirstSetForMuscle = !exercises
+          .filter((ex) => ex.muscleGroup === muscle)
+          .some((ex) =>
+            ex.sets.some((s, i) => !(ex.id === exerciseId && i === setIndex) && s.completed),
+          );
+        if (isFirstSetForMuscle) {
+          sorenessShownFor.current.add(muscle);
+          const namesForMuscle = exercises
+            .filter((ex) => ex.muscleGroup === muscle)
+            .map((ex) => ex.name);
+          checkMuscleGroupPreviouslyTrained(activeProgramDayId, namesForMuscle)
+            .then((wasTrainedBefore) => {
+              if (wasTrainedBefore) setSorenessMuscle(muscle);
+            });
+        }
+      }
+    }
 
     // PR check: if completing a set
     if (data.completed === true) {
@@ -377,16 +451,20 @@ export default function ActiveWorkout() {
         />
       )}
 
+      <SorenessModal
+        visible={!!sorenessMuscle}
+        muscleGroup={sorenessMuscle ?? ''}
+        onSave={(soreness) => {
+          if (sorenessMuscle) queueSoreness(sorenessMuscle, soreness);
+          setSorenessMuscle(null);
+        }}
+      />
+
       <FeedbackModal
         visible={!!feedbackMuscle}
         muscleGroup={feedbackMuscle ?? ''}
-        onClose={() => setFeedbackMuscle(null)}
-        onSave={(data) => {
-          if (feedbackMuscle) {
-            saveFeedback(activeWorkoutId, feedbackMuscle, data.jointPain, data.pump, data.volume);
-          }
-          setFeedbackMuscle(null);
-        }}
+        onClose={() => handleFeedbackAdvance()}
+        onSave={(data) => handleFeedbackAdvance(data)}
       />
 
       {/* PR celebration popup */}

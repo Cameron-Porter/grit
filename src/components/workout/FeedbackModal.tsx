@@ -104,16 +104,10 @@ export default function FeedbackModal({
             />
 
             {/* Actions */}
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-              <Pressable
-                onPress={onClose}
-                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#252525', alignItems: 'center' }}
-              >
-                <Text style={{ color: Colors.muted, fontWeight: '600', fontSize: 15 }}>Skip</Text>
-              </Pressable>
+            <View style={{ marginTop: 8 }}>
               <Pressable
                 onPress={handleSave}
-                style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' }}
+                style={{ padding: 16, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' }}
               >
                 <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 15 }}>Save Feedback</Text>
               </Pressable>

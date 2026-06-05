@@ -22,6 +22,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       activeProgramDayNumber: null,
       activeProgramDayLabel: null,
       exercises: [],
+      pendingFeedback: [],
       isSaving: false,
 
       startWorkout: () =>
@@ -47,8 +48,33 @@ export const useWorkoutStore = create<WorkoutState>()(
           activeProgramDayNumber: null,
           activeProgramDayLabel: null,
           exercises: [],
+          pendingFeedback: [],
           isSaving: false,
         }),
+
+      queueFeedback: (muscleGroup, jointPain, pump, volume) =>
+        set((state) => ({
+          pendingFeedback: [
+            ...state.pendingFeedback.filter((f) => f.muscleGroup !== muscleGroup),
+            {
+              ...(state.pendingFeedback.find((f) => f.muscleGroup === muscleGroup) ?? {}),
+              muscleGroup, jointPain, pump, volume,
+            },
+          ],
+        })),
+
+      queueSoreness: (muscleGroup, soreness) =>
+        set((state) => ({
+          pendingFeedback: [
+            ...state.pendingFeedback.filter((f) => f.muscleGroup !== muscleGroup),
+            {
+              ...(state.pendingFeedback.find((f) => f.muscleGroup === muscleGroup) ?? {
+                muscleGroup, jointPain: '', pump: '', volume: '',
+              }),
+              soreness,
+            },
+          ],
+        })),
 
       addExercise: (name, muscleGroup, equipment = 'Bodyweight') => {
         set((state) => ({
@@ -194,6 +220,9 @@ export const useWorkoutStore = create<WorkoutState>()(
             exercise.sets.map((s, index) => ({
               workout_id: workoutId,
               exercise_name: exercise.name,
+              muscle_group: exercise.muscleGroup ?? null,
+              equipment: exercise.equipment ?? null,
+              note: exercise.note ?? null,
               set_index: index,
               reps: s.reps,
               weight: s.weight,
@@ -206,9 +235,22 @@ export const useWorkoutStore = create<WorkoutState>()(
             if (setsError) throw setsError;
           }
 
+          // Flush feedback collected during the session — must happen after workout row exists
+          if (state.pendingFeedback.length > 0) {
+            const feedbackRows = state.pendingFeedback.map((f) => ({
+              workout_id: workoutId,
+              muscle_group: f.muscleGroup,
+              joint_pain: f.jointPain || null,
+              pump: f.pump || null,
+              volume: f.volume || null,
+              soreness: f.soreness ?? null,
+            }));
+            await supabase.from('workout_feedback').insert(feedbackRows).then(null, () => {});
+          }
+
           // Mark program day complete
           if (state.activeProgramDayId) {
-            await markDayComplete(state.activeProgramDayId).catch(() => {});
+            await markDayComplete(state.activeProgramDayId).then(null, () => {});
           }
 
           set({
@@ -219,6 +261,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             activeProgramDayNumber: null,
             activeProgramDayLabel: null,
             exercises: [],
+            pendingFeedback: [],
             isSaving: false,
           });
         } catch (error) {
@@ -239,6 +282,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         activeProgramDayNumber: state.activeProgramDayNumber,
         activeProgramDayLabel: state.activeProgramDayLabel,
         exercises: state.exercises,
+        pendingFeedback: state.pendingFeedback,
       }),
     },
   ),

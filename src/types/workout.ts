@@ -36,6 +36,14 @@ export type Props = {
   onMenuPress?: () => void;
 };
 
+export type PendingFeedback = {
+  muscleGroup: string;
+  jointPain: string;
+  pump: string;
+  volume: string;
+  soreness?: string;
+};
+
 export type WorkoutState = {
   activeWorkoutId: string | null;
   activeProgramDayId: string | null;
@@ -44,10 +52,13 @@ export type WorkoutState = {
   activeProgramDayNumber: number | null;
   activeProgramDayLabel: string | null;
   exercises: Exercise[];
+  pendingFeedback: PendingFeedback[];
   isSaving: boolean;
 
   startWorkout: () => void;
   endWorkout: () => void;
+  queueFeedback: (muscleGroup: string, jointPain: string, pump: string, volume: string) => void;
+  queueSoreness: (muscleGroup: string, soreness: string) => void;
 
   addExercise: (name: string, muscleGroup?: string, equipment?: string) => void;
   addSet: (exerciseId: string, defaultWeight?: number) => void;

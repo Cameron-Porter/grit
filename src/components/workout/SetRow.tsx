@@ -128,10 +128,13 @@ export default function SetRow({
           <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
             <TextInput
               value={String(set.weight || '')}
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
               placeholder="0"
               placeholderTextColor={Colors.muted}
-              onChangeText={(text) => onWeightChange(Number(text || 0))}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                onWeightChange(parseFloat(clean) || 0);
+              }}
               style={{
                 backgroundColor: '#1E1E1E',
                 color: Colors.text,
@@ -150,10 +153,13 @@ export default function SetRow({
           <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
             <TextInput
               value={String(set.reps || '')}
-              keyboardType="numeric"
+              keyboardType="number-pad"
               placeholder="0"
               placeholderTextColor={Colors.muted}
-              onChangeText={(text) => onRepsChange(Number(text || 0))}
+              onChangeText={(text) => {
+                const clean = text.replace(/[^0-9]/g, '');
+                onRepsChange(parseInt(clean, 10) || 0);
+              }}
               style={{
                 backgroundColor: '#1E1E1E',
                 color: Colors.text,

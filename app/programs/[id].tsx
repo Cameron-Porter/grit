@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { getProgramDays, getPrograms, Program, ProgramDay } from '../../src/api/programs';
 import { Colors } from '../../src/utils/constants';
 
@@ -14,27 +14,30 @@ export default function ProgramDetail() {
   const router = useRouter();
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     load();
   }, [id]);
 
   const load = async () => {
+    setLoading(true);
     const [programs, programDays] = await Promise.all([
       getPrograms(),
       getProgramDays(id),
     ]);
     setProgram(programs.find((p) => p.id === id) ?? null);
     setDays(programDays);
+    setLoading(false);
   };
 
   const getDayForCell = (week: number, dayNum: number) =>
     days.find((d) => d.week_number === week && d.day_number === dayNum);
 
-  if (!program) {
+  if (loading || !program) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: Colors.muted }}>Loading...</Text>
+        <ActivityIndicator color={Colors.primary} />
       </View>
     );
   }

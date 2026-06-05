@@ -170,6 +170,9 @@ export interface WorkoutDayHistory {
   completedAt: string;
   exercises: {
     name: string;
+    muscleGroup: string | null;
+    equipment: string | null;
+    note: string | null;
     sets: { weight: number; reps: number; completed: boolean; set_index: number }[];
   }[];
   feedback: {
@@ -194,7 +197,7 @@ export async function getWorkoutForProgramDay(programDayId: string): Promise<Wor
   const [{ data: sets }, { data: feedback }] = await Promise.all([
     supabase
       .from("workout_sets")
-      .select("exercise_name, weight, reps, set_index, completed")
+      .select("exercise_name, muscle_group, equipment, note, weight, reps, set_index, completed")
       .eq("workout_id", workout.id)
       .order("exercise_name")
       .order("set_index"),
@@ -204,20 +207,34 @@ export async function getWorkoutForProgramDay(programDayId: string): Promise<Wor
       .eq("workout_id", workout.id),
   ]);
 
-  // Group sets by exercise
-  const exerciseMap = new Map<string, { weight: number; reps: number; completed: boolean; set_index: number }[]>();
+  // Group sets by exercise, carrying muscle_group and note from the first row
+  const exerciseMap = new Map<string, {
+    muscleGroup: string | null;
+    equipment: string | null;
+    note: string | null;
+    sets: { weight: number; reps: number; completed: boolean; set_index: number }[];
+  }>();
   (sets ?? []).forEach((s) => {
-    const existing = exerciseMap.get(s.exercise_name) ?? [];
-    existing.push({ weight: s.weight, reps: s.reps, completed: s.completed, set_index: s.set_index });
-    exerciseMap.set(s.exercise_name, existing);
+    if (!exerciseMap.has(s.exercise_name)) {
+      exerciseMap.set(s.exercise_name, {
+        muscleGroup: s.muscle_group ?? null,
+        equipment: s.equipment ?? null,
+        note: s.note ?? null,
+        sets: [],
+      });
+    }
+    exerciseMap.get(s.exercise_name)!.sets.push({ weight: s.weight, reps: s.reps, completed: s.completed, set_index: s.set_index });
   });
 
   return {
     workoutId: workout.id,
     completedAt: workout.completed_at,
-    exercises: Array.from(exerciseMap.entries()).map(([name, exSets]) => ({
+    exercises: Array.from(exerciseMap.entries()).map(([name, ex]) => ({
       name,
-      sets: exSets.sort((a, b) => a.set_index - b.set_index),
+      muscleGroup: ex.muscleGroup,
+      equipment: ex.equipment,
+      note: ex.note,
+      sets: ex.sets.sort((a, b) => a.set_index - b.set_index),
     })),
     feedback: (feedback ?? []).map((f) => ({
       muscleGroup: f.muscle_group,

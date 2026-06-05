@@ -1,12 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { getWorkouts } from '../../src/api/history';
 import { Colors } from '../../src/utils/constants';
 
 export default function History() {
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -14,11 +15,14 @@ export default function History() {
   }, []);
 
   const load = async () => {
+    setLoading(true);
     try {
       const data = await getWorkouts();
       setWorkouts(data || []);
     } catch {
       setWorkouts([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -28,6 +32,11 @@ export default function History() {
         <Text style={{ color: Colors.text, fontSize: 28, fontWeight: '700' }}>History</Text>
       </View>
 
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.primary} />
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={{ padding: 16 }}>
         {workouts.length === 0 && (
           <View style={{ alignItems: 'center', marginTop: 60 }}>
@@ -68,6 +77,7 @@ export default function History() {
           </Pressable>
         ))}
       </ScrollView>
+      )}
     </View>
   );
 }

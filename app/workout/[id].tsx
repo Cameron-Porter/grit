@@ -1,102 +1,96 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { supabase } from '../../src/api/supabase';
-import { WorkoutSetRow } from '../../src/types/workout';
+import ReadOnlyExerciseCard, { ReadOnlyExercise } from '../../src/components/workout/ReadOnlyExerciseCard';
 import { Colors } from '../../src/utils/constants';
 
 export default function WorkoutDetail() {
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const [sets, setSets] = useState<WorkoutSetRow[]>([]);
+  const [exercises, setExercises] = useState<ReadOnlyExercise[]>([]);
+  const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWorkout();
+    load();
   }, []);
 
-  const loadWorkout = async () => {
+  const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('workout_sets')
-      .select('*')
-      .eq('workout_id', id);
 
-    if (error) {
-      console.log(error);
-      setLoading(false);
-      return;
-    }
+    const [{ data: sets }, { data: workoutRows }] = await Promise.all([
+      supabase
+        .from('workout_sets')
+        .select('exercise_name, muscle_group, equipment, note, weight, reps, set_index, completed')
+        .eq('workout_id', id)
+        .order('exercise_name')
+        .order('set_index'),
+      supabase
+        .from('workouts')
+        .select('completed_at')
+        .eq('id', id)
+        .single(),
+    ]);
 
-    setSets(data || []);
+    setCompletedAt(workoutRows?.completed_at ?? null);
+
+    // Group sets by exercise, carrying metadata from first row
+    const map = new Map<string, ReadOnlyExercise>();
+    (sets ?? []).forEach((s) => {
+      if (!map.has(s.exercise_name)) {
+        map.set(s.exercise_name, {
+          name: s.exercise_name,
+          muscleGroup: s.muscle_group ?? null,
+          equipment: s.equipment ?? null,
+          note: s.note ?? null,
+          sets: [],
+        });
+      }
+      map.get(s.exercise_name)!.sets.push({
+        weight: s.weight,
+        reps: s.reps,
+        completed: s.completed,
+      });
+    });
+
+    setExercises(Array.from(map.values()));
     setLoading(false);
   };
 
-  const grouped = sets.reduce((acc: Record<string, WorkoutSetRow[]>, set) => {
-    if (!acc[set.exercise_name]) acc[set.exercise_name] = [];
-    acc[set.exercise_name].push(set);
-    return acc;
-  }, {});
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16 }}>
-          <Pressable onPress={() => router.replace('/log')} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <MaterialCommunityIcons name="arrow-left" size={20} color={Colors.primary} />
-            <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: '600', marginLeft: 4 }}>History</Text>
-          </Pressable>
-        </View>
-        <Text style={{ color: Colors.muted, padding: 16 }}>Loading workout...</Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: Colors.background }} contentContainerStyle={{ paddingBottom: 40 }}>
-      {/* Header with back */}
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
-        <Pressable onPress={() => router.replace('/log')} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <Pressable onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
           <MaterialCommunityIcons name="arrow-left" size={20} color={Colors.primary} />
           <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: '600', marginLeft: 4 }}>History</Text>
         </Pressable>
-        <Text style={{ color: Colors.text, fontSize: 24, fontWeight: '700' }}>Workout Details</Text>
-        <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
-          {Object.keys(grouped).length} exercise{Object.keys(grouped).length !== 1 ? 's' : ''}
-        </Text>
+        <Text style={{ color: Colors.text, fontSize: 24, fontWeight: '700' }}>Workout</Text>
+        {completedAt && (
+          <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
+            {new Date(completedAt).toLocaleDateString('en-US', {
+              weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+            })}
+          </Text>
+        )}
       </View>
 
-      <View style={{ padding: 16 }}>
-        {Object.keys(grouped).map((exerciseName) => {
-          const exerciseSets = grouped[exerciseName].sort((a, b) => a.set_index - b.set_index);
-          return (
-            <View
-              key={exerciseName}
-              style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 12, overflow: 'hidden' }}
-            >
-              <View style={{ padding: 14 }}>
-                <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '700', marginBottom: 10 }}>
-                  {exerciseName}
-                </Text>
-                {/* Column headers */}
-                <View style={{ flexDirection: 'row', marginBottom: 6 }}>
-                  <Text style={{ width: 40, color: Colors.muted, fontSize: 11, fontWeight: '700' }}>#</Text>
-                  <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>WEIGHT</Text>
-                  <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>REPS</Text>
-                </View>
-                {exerciseSets.map((s, i) => (
-                  <View key={i} style={{ flexDirection: 'row', paddingVertical: 6, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
-                    <Text style={{ width: 40, color: Colors.muted, fontSize: 14 }}>{s.set_index + 1}</Text>
-                    <Text style={{ flex: 1, textAlign: 'center', color: Colors.text, fontSize: 15, fontWeight: '600' }}>{s.weight}</Text>
-                    <Text style={{ flex: 1, textAlign: 'center', color: Colors.text, fontSize: 15, fontWeight: '600' }}>{s.reps}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          );
-        })}
-      </View>
-    </ScrollView>
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          {exercises.map((ex) => (
+            <ReadOnlyExerciseCard key={ex.name} exercise={ex} />
+          ))}
+          {exercises.length === 0 && (
+            <Text style={{ color: Colors.muted, textAlign: 'center', marginTop: 40 }}>No sets recorded.</Text>
+          )}
+        </ScrollView>
+      )}
+    </View>
   );
 }

@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { deleteProgram, getPrograms, setCurrentProgram } from '../../src/api/programs';
 import { Colors } from '../../src/utils/constants';
 
@@ -9,17 +9,21 @@ export default function Programs() {
   const router = useRouter();
   const [programs, setPrograms] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     load();
   }, []);
 
   const load = async () => {
+    setLoading(true);
     try {
       const data = await getPrograms();
       setPrograms(data || []);
     } catch {
       setPrograms([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +52,11 @@ export default function Programs() {
         </Pressable>
       </View>
 
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={Colors.primary} />
+        </View>
+      ) : (
       <FlatList
         data={programs}
         keyExtractor={(item) => item.id}
@@ -116,6 +125,7 @@ export default function Programs() {
           </Pressable>
         )}
       />
+      )}
     </View>
   );
 }

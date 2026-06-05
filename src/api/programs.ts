@@ -184,3 +184,46 @@ export async function markDayComplete(dayId: string): Promise<void> {
     .eq("id", dayId);
   if (error) throw error;
 }
+
+// Returns true if any of the given exercises were logged in a previous completed workout
+// of the same program. Uses exercise names (not muscle_group) so it works even if
+// workout_sets.muscle_group was NULL for older rows.
+export async function checkMuscleGroupPreviouslyTrained(
+  programDayId: string,
+  exerciseNames: string[],
+): Promise<boolean> {
+  if (!exerciseNames.length) return false;
+
+  const { data: day } = await supabase
+    .from("program_days")
+    .select("program_id")
+    .eq("id", programDayId)
+    .single();
+
+  if (!day) return false;
+
+  const { data: otherDays } = await supabase
+    .from("program_days")
+    .select("id")
+    .eq("program_id", day.program_id)
+    .eq("completed", true)
+    .neq("id", programDayId);
+
+  if (!otherDays?.length) return false;
+
+  const { data: workouts } = await supabase
+    .from("workouts")
+    .select("id")
+    .in("program_day_id", otherDays.map((d) => d.id));
+
+  if (!workouts?.length) return false;
+
+  const { data: sets } = await supabase
+    .from("workout_sets")
+    .select("id")
+    .in("workout_id", workouts.map((w) => w.id))
+    .in("exercise_name", exerciseNames)
+    .limit(1);
+
+  return (sets?.length ?? 0) > 0;
+}
