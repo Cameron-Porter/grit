@@ -131,13 +131,21 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
-      updateSet: (exerciseId, setIndex, data) =>
+      updateSet: (exerciseId, setIndex, data, autoMatchWeight = false) =>
         set((state) => ({
-          exercises: state.exercises.map((ex) =>
-            ex.id === exerciseId
-              ? { ...ex, sets: ex.sets.map((s, i) => (i === setIndex ? { ...s, ...data } : s)) }
-              : ex,
-          ),
+          exercises: state.exercises.map((ex) => {
+            if (ex.id !== exerciseId) return ex;
+            const oldWeight = ex.sets[setIndex]?.weight;
+            return {
+              ...ex,
+              sets: ex.sets.map((s, i) => {
+                if (i === setIndex) return { ...s, ...data };
+                if (autoMatchWeight && data.weight !== undefined && i > setIndex && s.weight === oldWeight)
+                  return { ...s, weight: data.weight };
+                return s;
+              }),
+            };
+          }),
         })),
 
       removeSet: (exerciseId, setIndex) =>

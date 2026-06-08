@@ -1,19 +1,50 @@
-const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '';
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
+const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
 
 async function callGemini(prompt: string): Promise<string> {
+  const key = (process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '').trim();
+  if (!key) throw new Error('EXPO_PUBLIC_GEMINI_API_KEY is not set');
   const res = await fetch(ENDPOINT, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: 'application/json', temperature: 0.3 },
     }),
   });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini ${res.status}: ${errText}`);
+  }
   const json = await res.json();
-  return json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
+  const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
+  return text;
 }
+
+// Persona matched to program focus for domain-appropriate coaching voice
+function getPersona(focus: string): string {
+  switch (focus) {
+    case 'hypertrophy':
+      return 'You are an elite IFBB pro bodybuilding coach with 20+ years specializing in maximum hypertrophy using RP methodology.';
+    case 'strength':
+      return 'You are a head strength & conditioning coach with 20+ years training Olympic weightlifters and elite powerlifters.';
+    case 'powerbuilding':
+      return 'You are a top-tier powerbuilding coach who programs for competitive powerlifters who also train for maximum muscle size.';
+    case 'general':
+      return 'You are a head CrossFit affiliate coach and certified S&C specialist focused on well-rounded athleticism and functional fitness.';
+    case 'maintenance':
+      return 'You are a veteran sports scientist and S&C coach specializing in muscle preservation, injury prevention, and training longevity.';
+    default:
+      return 'You are an expert certified strength & conditioning specialist (CSCS) and personal trainer.';
+  }
+}
+
+// Compact priority string: "Chest:emphasize,Back:grow"
+function priorityStr(p: Record<string, string>): string {
+  const entries = Object.entries(p);
+  return entries.length ? entries.map(([m, v]) => `${m}:${v}`).join(',') : 'all:grow';
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ExerciseTarget {
   exerciseName: string;
@@ -28,67 +59,15 @@ export interface ProgressiveOverloadTarget extends ExerciseTarget {
   rationale: string;
 }
 
-// ── Starter sets ──────────────────────────────────────────────────────────────
-
-export async function generateStarterSets(
-  focus: string,
-  musclePriorities: Record<string, string>,
-  exercises: { name: string; muscleGroup: string; equipment: string }[],
-): Promise<ExerciseTarget[]> {
-  const priorityLines = Object.entries(musclePriorities)
-    .map(([mg, p]) => `  ${mg}: ${p}`)
-    .join('\n') || '  (none specified — treat all muscles as Grow)';
-
-  const exerciseLines = exercises
-    .map((e) => `  - ${e.name} (${e.muscleGroup}, ${e.equipment})`)
-    .join('\n');
-
-  const prompt = `You are an expert hypertrophy coach using RP (Renaissance Periodization) methodology.
-
-Generate week-1 starter sets for a new training program.
-
-Program focus: ${focus}
-Muscle priorities:
-${priorityLines}
-
-Priority guide:
-- Emphasize: max growth, push volume high when the athlete is recovering well (+1–2 sets vs Grow)
-- Grow: minimum effective volume for steady growth
-- Maintain: just enough to preserve muscle, free up recovery resources (2–3 sets, higher reps 15–20)
-
-Focus rep ranges:
-- Hypertrophy: 8–15 reps, moderate load
-- Strength: 3–6 reps, heavy load
-- General Fitness: 10–15 reps
-- Powerbuilding: mix 4–6 heavy + 8–12 hypertrophy sets
-- Maintenance: 10–15 reps, lower total sets
-
-Rules:
-- Week 1 is always conservative: RIR = 3 (3 reps left in the tank)
-- weightLbs = 0 for week 1 (athlete fills in their own working weight)
-- sets range: 2–5 per exercise depending on priority
-
-Exercises for this training day:
-${exerciseLines}
-
-Return a JSON array ONLY (no markdown, no explanation):
-[{"exerciseName":"...","sets":3,"repsMin":8,"repsMax":12,"weightLbs":0,"rir":3}]`;
-
-  try {
-    const raw = await callGemini(prompt);
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+export interface SplitDay {
+  dayIndex: number;
+  splitName: string;
+  exercises: { name: string; muscleGroup: string; equipment: string }[];
 }
-
-// ── Progressive overload ──────────────────────────────────────────────────────
 
 export interface ExerciseWeeklyData {
   exerciseName: string;
   muscleGroup: string;
-  // All sessions that trained this exercise (or same muscle) last week, in day order
   sessions: {
     dayLabel: string;
     sets: { weight: number; reps: number; completed: boolean }[];
@@ -96,10 +75,99 @@ export interface ExerciseWeeklyData {
       pump: string | null;
       jointPain: string | null;
       volume: string | null;
-      soreness: string | null; // soreness reported at the START of that session
+      soreness: string | null;
     } | null;
   }[];
 }
+
+// ── Workout split ─────────────────────────────────────────────────────────────
+
+export async function generateWorkoutSplit(
+  focus: string,
+  musclePriorities: Record<string, string>,
+  daysPerWeek: number,
+  dayLabels: string[],
+): Promise<SplitDay[]> {
+  const repRange =
+    focus === 'strength' ? '3-6' :
+    focus === 'powerbuilding' ? '4-6 + 8-12 mix' :
+    focus === 'general' ? '10-15' : '8-15';
+
+  const prompt =
+`${getPersona(focus)}
+
+Design a ${daysPerWeek}-day training split for: ${dayLabels.join(', ')}.
+Focus:${focus} | Priorities:${priorityStr(musclePriorities)}
+Rep target:${repRange}
+
+Rules:
+- Best-fit split for ${daysPerWeek} days (PPL/UL/FB/etc.)
+- emphasize=more days+exercises; maintain=1-2 ex,15-20 reps; grow=standard MEV
+- 4-6 exercises/day; equipment: Barbell/Dumbbells/Cable/Machine/Bodyweight
+- No same muscle consecutive days when avoidable
+- Common exercise names (e.g."Barbell Bench Press","Lat Pulldown")
+- EXERCISE ORDER within each day (strictly follow to prevent injury):
+  1. Compound multi-joint first (squat/deadlift/bench/row/press)
+  2. Secondary compounds second (incline press/RDL/pulldown)
+  3. Isolation movements last (curls/lateral raises/flyes/extensions)
+  4. Never pre-fatigue a stabilizer before its primary compound (e.g. no lateral raises before overhead press, no flyes before bench, no leg curls before RDL)
+  5. Chest before triceps; Back before biceps; Quads before hamstrings; Shoulders last on push days
+
+JSON only, no markdown:
+[{"dayIndex":0,"splitName":"Push","exercises":[{"name":"Barbell Bench Press","muscleGroup":"Chest","equipment":"Barbell"}]}]
+dayIndex is 0-based matching the day order above.`;
+
+  try {
+    const raw = await callGemini(prompt);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    throw e;
+  }
+}
+
+// ── Starter sets ──────────────────────────────────────────────────────────────
+
+export async function generateStarterSets(
+  focus: string,
+  musclePriorities: Record<string, string>,
+  exercises: { name: string; muscleGroup: string; equipment: string }[],
+): Promise<ExerciseTarget[]> {
+  const repRange =
+    focus === 'strength' ? '3-6' :
+    focus === 'powerbuilding' ? 'heavy:4-6+hypertrophy:8-12' :
+    focus === 'general' || focus === 'maintenance' ? '10-15' : '8-15';
+
+  const exList = exercises.map((e) => `${e.name}(${e.muscleGroup},${e.equipment})`).join('; ');
+
+  const prompt =
+`${getPersona(focus)}
+
+Week-1 starter sets. Focus:${focus} | Priorities:${priorityStr(musclePriorities)}
+
+MANDATORY set counts — never go below these minimums:
+- emphasize: MINIMUM 4 sets, target 5 sets (high priority muscle, maximize stimulus)
+- grow: MINIMUM 3 sets, target 4 sets (standard hypertrophy volume)
+- maintain: MINIMUM 2 sets, maximum 3 sets (preservation only)
+- default (unspecified): MINIMUM 3 sets
+
+Reps:${repRange} | All week-1: RIR=3, weightLbs=0 (athlete fills their own working weight)
+
+Exercises (muscle group determines priority from the list above): ${exList}
+
+JSON only:
+[{"exerciseName":"...","sets":4,"repsMin":8,"repsMax":12,"weightLbs":0,"rir":3}]`;
+
+  try {
+    const raw = await callGemini(prompt);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    throw e;
+  }
+}
+
+// ── Progressive overload ──────────────────────────────────────────────────────
 
 export async function generateProgressiveOverload(
   focus: string,
@@ -110,66 +178,42 @@ export async function generateProgressiveOverload(
 ): Promise<ProgressiveOverloadTarget[]> {
   const targetRir = Math.max(1, 4 - weekNumber);
 
-  const priorityLines = Object.entries(musclePriorities)
-    .map(([mg, p]) => `  ${mg}: ${p}`)
-    .join('\n') || '  (none specified)';
-
-  const historyLines = exerciseData.map((ex) => {
-    const sessionLines = ex.sessions.map((s) => {
-      const setStr = s.sets
-        .filter((set) => set.completed)
-        .map((set) => `${set.weight}lbs × ${set.reps}`)
-        .join(', ') || 'no completed sets';
+  const history = exerciseData.map((ex) => {
+    const sessions = ex.sessions.map((s) => {
+      const sets = s.sets.filter((x) => x.completed).map((x) => `${x.weight}×${x.reps}`).join(',') || 'none';
       const fb = s.feedback;
       const fbStr = fb
-        ? `pump: ${fb.pump ?? '?'}, joint pain: ${fb.jointPain ?? '?'}, volume: ${fb.volume ?? '?'}, soreness before session: ${fb.soreness ?? 'unknown'}`
+        ? `pump:${fb.pump??'?'} pain:${fb.jointPain??'?'} vol:${fb.volume??'?'} soreness:${fb.soreness??'?'}`
         : 'no feedback';
-      return `    [${s.dayLabel}] ${setStr} | ${fbStr}`;
-    }).join('\n');
+      return `[${s.dayLabel}] ${sets} | ${fbStr}`;
+    }).join(' / ');
+    const totalSets = ex.sessions.reduce((n, s) => n + s.sets.filter((x) => x.completed).length, 0);
+    return `${ex.exerciseName}(${ex.muscleGroup}) ${ex.sessions.length}sess/${totalSets}sets: ${sessions}`;
+  }).join('\n');
 
-    const totalCompletedSets = ex.sessions.reduce(
-      (sum, s) => sum + s.sets.filter((set) => set.completed).length, 0,
-    );
+  const prompt =
+`${getPersona(focus)}
 
-    return `  ${ex.exerciseName} (${ex.muscleGroup}) — ${ex.sessions.length} session(s) this week, ${totalCompletedSets} total sets:\n${sessionLines}`;
-  }).join('\n\n');
+Wk${weekNumber}/${totalWeeks}, target RIR:${targetRir}. Focus:${focus} | Priorities:${priorityStr(musclePriorities)}
 
-  const prompt = `You are an expert hypertrophy coach implementing RP (Renaissance Periodization) progressive overload.
+Last week:
+${history}
 
-Program focus: ${focus}
-Week ${weekNumber} of ${totalWeeks} — target RIR this week: ${targetRir}
-Muscle priorities:
-${priorityLines}
+Adjustment logic:
+- soreness "Still sore"→hold/reduce 1 set; "Just in time"→hold/+2.5lb; "Healed early"/"Not sore"→normal/aggressive
+- Multi-session same muscle: assess cumulative fatigue — 2nd session low volume/pump = near recovery limit
+- pump "Amazing"→push vol/intensity; pump "Low"→consider swap or reduce
+- joint pain "A lot"→-10% weight; vol "Not enough"→+1 set; vol "Too much"→-1 set
+- Weight jumps: upper+2.5-5lb, lower+5-10lb; RIR drops 1/wk toward peak
 
-IMPORTANT: Some muscle groups may have been trained MORE THAN ONCE last week.
-Account for total weekly volume and accumulated fatigue when adjusting targets.
-A muscle trained twice/week may need more conservative progression or volume management
-compared to one trained once — especially if soreness carried into the second session.
-
-Previous week's full training data:
-${historyLines}
-
-Adjustment rules:
-- Soreness "Still sore" before a session → the muscle hadn't recovered; reduce sets by 1 this week or hold weight
-- Soreness "Just in time" → hold weight or small increase (+2.5lbs upper, +5lbs lower)
-- Soreness "Healed early" or "Not sore" → normal or aggressive progression
-- Multiple sessions same muscle: evaluate cumulative fatigue across both — if second session showed lower volume/pump, the muscle is likely hitting recovery limits
-- Pump "Amazing" → muscle responding, can push volume or intensity
-- Pump "Low" across sessions → may need swap or volume adjustment
-- Joint pain "A lot" → drop weight 10%, note in rationale
-- Volume "Not enough" → add 1 set
-- Volume "Too much" → drop 1 set
-- Typical weight jumps: upper body +2.5–5lbs, lower body +5–10lbs per week
-- RIR decreases by 1 each week toward peak week
-
-Return a JSON array ONLY (no markdown, no explanation):
-[{"exerciseName":"...","sets":3,"repsMin":8,"repsMax":12,"weightLbs":65,"rir":${targetRir},"rationale":"brief reason"}]`;
+JSON only:
+[{"exerciseName":"...","sets":3,"repsMin":8,"repsMax":12,"weightLbs":65,"rir":${targetRir},"rationale":"..."}]`;
 
   try {
     const raw = await callGemini(prompt);
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+  } catch (e) {
+    throw e;
   }
 }

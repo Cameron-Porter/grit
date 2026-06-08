@@ -27,6 +27,15 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="history" options={{ href: null }} />
       <Tabs.Screen
+        name="programs"
+        options={{
+          title: 'Programs',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="calendar-multiselect" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="home"
         options={{
           title: 'Workout',
@@ -44,15 +53,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="programs"
-        options={{
-          title: 'Programs',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="calendar-multiselect" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="exercises"
         options={{
           title: 'Exercises',
@@ -64,18 +64,18 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="log"
         options={{
-          title: 'History',
+          title: 'PRs & Progress',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="chart-bar" size={size} color={color} />
+            <MaterialCommunityIcons name="trophy-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="more"
         options={{
-          title: 'More',
+          title: 'Profile',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="dots-horizontal-circle-outline" size={size} color={color} />
+            <MaterialCommunityIcons name="account-circle-outline" size={size} color={color} />
           ),
         }}
       />

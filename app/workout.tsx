@@ -52,6 +52,7 @@ export default function ActiveWorkout() {
   } = useWorkoutStore();
 
   const bodyWeight = useProfileStore((s) => s.bodyWeight);
+  const autoMatchWeight = useProfileStore((s) => s.autoMatchWeight);
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
@@ -173,7 +174,7 @@ export default function ActiveWorkout() {
 
   // Called instead of updateSet directly — checks for feedback trigger + PR
   const handleUpdateSet = (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => {
-    updateSet(exerciseId, setIndex, data);
+    updateSet(exerciseId, setIndex, data, data.weight !== undefined ? autoMatchWeight : false);
 
     const exercise = exercises.find((ex) => ex.id === exerciseId);
     if (!exercise) return;

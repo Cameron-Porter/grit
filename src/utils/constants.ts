@@ -1,8 +1,8 @@
 export const Colors = {
-  // Core backgrounds
-  background: '#0B0F14',
-  surface: '#111827',
-  surface2: '#1F2937',
+  // Core backgrounds — neutral near-blacks (no blue tint)
+  background: '#111114',
+  surface: '#1C1C1F',
+  surface2: '#28282C',
 
   // Brand (GRIT teal system)
   primary: '#14B8A6',

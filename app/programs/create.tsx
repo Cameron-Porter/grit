@@ -10,7 +10,7 @@ import {
   setCurrentProgram,
   updateProgramExerciseTargets,
 } from '../../src/api/programs';
-import { generateStarterSets } from '../../src/api/gemini';
+import { generateWorkoutSplit, generateStarterSets } from '../../src/api/gemini';
 import ExercisePicker from '../../src/components/workout/ExercisePicker';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { Colors, MuscleGroupColors } from '../../src/utils/constants';
@@ -27,11 +27,11 @@ const DEFAULT_DAYS: Record<number, number[]> = {
 };
 
 const FOCUS_OPTIONS = [
-  { value: 'hypertrophy',    label: 'Hypertrophy',    desc: 'Maximum muscle growth' },
-  { value: 'strength',       label: 'Strength',       desc: 'Heavy lifts, low reps' },
-  { value: 'general',        label: 'General Fitness', desc: 'Balanced strength & cardio' },
-  { value: 'powerbuilding',  label: 'Powerbuilding',   desc: 'Strength + hypertrophy mix' },
-  { value: 'maintenance',    label: 'Maintenance',     desc: 'Preserve muscle, low volume' },
+  { value: 'hypertrophy',   label: 'Hypertrophy',    desc: 'Maximum muscle growth' },
+  { value: 'strength',      label: 'Strength',        desc: 'Heavy lifts, low reps' },
+  { value: 'general',       label: 'General Fitness', desc: 'Balanced strength & cardio' },
+  { value: 'powerbuilding', label: 'Powerbuilding',   desc: 'Strength + hypertrophy mix' },
+  { value: 'maintenance',   label: 'Maintenance',     desc: 'Preserve muscle, low volume' },
 ];
 
 const PRIORITY_MUSCLES = [
@@ -40,7 +40,6 @@ const PRIORITY_MUSCLES = [
 ];
 
 type Priority = 'emphasize' | 'grow' | 'maintain';
-
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'emphasize', label: 'Emphasize', color: '#2DD4BF' },
   { value: 'grow',      label: 'Grow',      color: Colors.primary },
@@ -51,6 +50,7 @@ interface DayExercise {
   name: string;
   muscleGroup: string;
   equipment: string;
+  isSuggested?: boolean;
 }
 
 // Steps: 0 = settings, 1 = focus/priorities, 2..N+1 = exercises per day
@@ -67,6 +67,11 @@ export default function CreateProgram() {
   const [focus, setFocus] = useState<string>('hypertrophy');
   const [musclePriorities, setMusclePriorities] = useState<Record<string, Priority>>({});
   const [dayExercises, setDayExercises] = useState<DayExercise[][]>([]);
+  const [daySplitNames, setDaySplitNames] = useState<string[]>([]);
+  const [generatingSplit, setGeneratingSplit] = useState(false);
+  const [splitError, setSplitError] = useState<string | null>(null);
+  // null = adding, number = swapping at that index
+  const [swapIndex, setSwapIndex] = useState<number | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savingStatus, setSavingStatus] = useState('');
@@ -74,6 +79,11 @@ export default function CreateProgram() {
   useEffect(() => {
     setSelectedDays(DEFAULT_DAYS[daysPerWeek] ?? [0]);
   }, [daysPerWeek]);
+
+  const sortedSelected = [...selectedDays].sort((a, b) => a - b);
+  const exerciseStepIndex = step - 2;
+  const currentDayExercises = step >= 2 ? (dayExercises[exerciseStepIndex] ?? []) : [];
+  const currentSplitName = step >= 2 ? (daySplitNames[exerciseStepIndex] ?? '') : '';
 
   const toggleDay = (idx: number) => {
     setSelectedDays((prev) => {
@@ -90,26 +100,62 @@ export default function CreateProgram() {
     setMusclePriorities((prev) => ({ ...prev, [muscle]: p }));
   };
 
-  // Exercise steps start at step 2 (index = step - 2)
-  const exerciseStepIndex = step - 2;
-  const currentDayExercises = step >= 2 ? (dayExercises[exerciseStepIndex] ?? []) : [];
+  // ── Navigation ──
 
   const handleNextFromSettings = () => {
     if (!name.trim() || selectedDays.length !== daysPerWeek) return;
     setStep(1);
   };
 
-  const handleNextFromFocus = () => {
-    setDayExercises(Array.from({ length: daysPerWeek }, () => []));
-    setStep(2);
+  const handleNextFromFocus = async () => {
+    setGeneratingSplit(true);
+    setSplitError(null);
+    const dayLabels = sortedSelected.map((d) => WEEKDAYS_FULL[d]);
+    try {
+      const split = await generateWorkoutSplit(focus, musclePriorities, daysPerWeek, dayLabels);
+      console.log('[create] split result:', JSON.stringify(split, null, 2));
+      if (!split.length) throw new Error('Plan generation returned no data. Check your API key and network.');
+      // Normalize Gemini response — it sometimes returns snake_case or alternate key names
+      const normExercise = (e: any): DayExercise => ({
+        name: e.name ?? e.exercise_name ?? e.exerciseName ?? '',
+        muscleGroup: e.muscleGroup ?? e.muscle_group ?? e.musclegroup ?? '',
+        equipment: e.equipment ?? e.equipment_type ?? 'Barbell',
+        isSuggested: true,
+      });
+      const exercises: DayExercise[][] = Array.from({ length: daysPerWeek }, (_, i) => {
+        // Gemini may return 0-based or 1-based dayIndex; try both
+        const day = split.find((d: any) => d.dayIndex === i) ?? split.find((d: any) => d.dayIndex === i + 1) ?? split[i];
+        const exList: any[] = day?.exercises ?? day?.exercise_list ?? day?.workouts ?? [];
+        return exList.map(normExercise);
+      });
+      const names = Array.from({ length: daysPerWeek }, (_, i) => {
+        const day = split.find((d: any) => d.dayIndex === i) ?? split.find((d: any) => d.dayIndex === i + 1) ?? split[i];
+        return day?.splitName ?? day?.split_name ?? day?.name ?? day?.label ?? '';
+      });
+      setDayExercises(exercises);
+      setDaySplitNames(names);
+      setGeneratingSplit(false);
+      setStep(2);
+    } catch (e: any) {
+      setGeneratingSplit(false);
+      setSplitError(e?.message ?? 'Failed to generate plan. Try again.');
+    }
   };
 
-  const handleAddExercise = (exName: string, muscleGroup: string, equipment: string) => {
+  const handleExerciseSelect = (exName: string, muscleGroup: string, equipment: string) => {
     setDayExercises((prev) => {
       const updated = [...prev];
-      updated[exerciseStepIndex] = [...(updated[exerciseStepIndex] ?? []), { name: exName, muscleGroup, equipment }];
+      const dayList = [...(updated[exerciseStepIndex] ?? [])];
+      if (swapIndex !== null) {
+        dayList[swapIndex] = { name: exName, muscleGroup, equipment, isSuggested: false };
+      } else {
+        dayList.push({ name: exName, muscleGroup, equipment, isSuggested: false });
+      }
+      updated[exerciseStepIndex] = dayList;
       return updated;
     });
+    setSwapIndex(null);
+    setPickerOpen(false);
   };
 
   const handleRemoveExercise = (idx: number) => {
@@ -121,19 +167,17 @@ export default function CreateProgram() {
   };
 
   const handleNext = () => {
-    if (step < daysPerWeek + 1) {
-      setStep(step + 1);
-    } else {
-      handleCreate();
-    }
+    if (step < daysPerWeek + 1) setStep(step + 1);
+    else handleCreate();
   };
+
+  // ── Create ──
 
   const handleCreate = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      const sortedDays = [...selectedDays].sort((a, b) => a - b);
-      const dayLabels = sortedDays.map((d) => WEEKDAYS_FULL[d]);
+      const dayLabels = sortedSelected.map((d) => WEEKDAYS_FULL[d]);
 
       setSavingStatus('Creating program…');
       const program = await createProgram(name.trim(), totalWeeks, daysPerWeek, dayLabels, focus, musclePriorities);
@@ -144,7 +188,6 @@ export default function CreateProgram() {
         .filter((d) => d.week_number === 1)
         .sort((a, b) => a.day_number - b.day_number);
 
-      // Add exercises to each day
       for (let i = 0; i < daysPerWeek; i++) {
         const day = week1Days[i];
         if (!day) continue;
@@ -154,38 +197,38 @@ export default function CreateProgram() {
         }
       }
 
-      // Generate AI starter sets for each day in parallel
-      setSavingStatus('Generating AI training plan…');
-      const { data: allExerciseRows } = await import('../../src/api/supabase').then(({ supabase }) =>
-        supabase
-          .from('program_exercises')
-          .select('id, program_day_id, exercise_name, muscle_group, equipment')
-          .in('program_day_id', week1Days.map((d) => d.id))
-      );
+      // Generate starter-set targets for each day
+      setSavingStatus('Generating training plan…');
+      const { supabase } = await import('../../src/api/supabase');
+      const { data: allExerciseRows } = await supabase
+        .from('program_exercises')
+        .select('id, program_day_id, exercise_name, muscle_group, equipment')
+        .in('program_day_id', week1Days.map((d) => d.id));
 
-      if (allExerciseRows && allExerciseRows.length > 0) {
-        const aiCalls = week1Days.map(async (day, i) => {
-          const dayExs = (allExerciseRows as any[]).filter((r: any) => r.program_day_id === day.id);
-          if (!dayExs.length) return;
-          const targets = await generateStarterSets(
-            focus,
-            musclePriorities,
-            dayExs.map((r: any) => ({ name: r.exercise_name, muscleGroup: r.muscle_group ?? '', equipment: r.equipment ?? '' })),
-          );
-          for (const t of targets) {
-            const row = dayExs.find((r: any) => r.exercise_name === t.exerciseName);
-            if (row) {
-              await updateProgramExerciseTargets(row.id, {
-                target_sets: t.sets,
-                target_reps_min: t.repsMin,
-                target_reps_max: t.repsMax,
-                target_weight: t.weightLbs,
-                rir: t.rir,
-              });
+      if (allExerciseRows?.length) {
+        await Promise.all(
+          week1Days.map(async (day) => {
+            const dayExs = (allExerciseRows as any[]).filter((r: any) => r.program_day_id === day.id);
+            if (!dayExs.length) return;
+            const targets = await generateStarterSets(
+              focus,
+              musclePriorities,
+              dayExs.map((r: any) => ({ name: r.exercise_name, muscleGroup: r.muscle_group ?? '', equipment: r.equipment ?? '' })),
+            );
+            for (const t of targets) {
+              const row = dayExs.find((r: any) => r.exercise_name === t.exerciseName);
+              if (row) {
+                await updateProgramExerciseTargets(row.id, {
+                  target_sets: t.sets,
+                  target_reps_min: t.repsMin,
+                  target_reps_max: t.repsMax,
+                  target_weight: t.weightLbs,
+                  rir: t.rir,
+                });
+              }
             }
-          }
-        });
-        await Promise.all(aiCalls);
+          }),
+        );
       }
 
       setSavingStatus('Starting first workout…');
@@ -221,16 +264,53 @@ export default function CreateProgram() {
     }
   };
 
-  const sortedSelected = [...selectedDays].sort((a, b) => a - b);
-  const currentDayLabel = step >= 2 ? (WEEKDAYS_FULL[sortedSelected[exerciseStepIndex]] ?? `Day ${exerciseStepIndex + 1}`) : '';
   const isLastStep = step === daysPerWeek + 1;
   const progressPct = step <= 1 ? 0 : (step - 1) / daysPerWeek;
   const canAdvanceSettings = !!name.trim() && selectedDays.length === daysPerWeek;
-
   const headerTitle =
     step === 0 ? 'New Program' :
     step === 1 ? 'Training Focus' :
-    currentDayLabel;
+    currentSplitName ? `${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex]]} — ${currentSplitName}` :
+    WEEKDAYS_FULL[sortedSelected[exerciseStepIndex]] ?? `Day ${exerciseStepIndex + 1}`;
+
+  // ── Generating split overlay ──
+  if (generatingSplit || splitError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', gap: 20, padding: 40 }}>
+        {splitError ? (
+          <>
+            <MaterialCommunityIcons name="alert-circle-outline" size={48} color={Colors.error} />
+            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700', textAlign: 'center' }}>
+              Plan generation failed
+            </Text>
+            <Text style={{ color: Colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
+              {splitError}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+              <Pressable onPress={() => { setSplitError(null); setStep(1); }}
+                style={{ borderRadius: 12, borderWidth: 1, borderColor: Colors.surface2, paddingHorizontal: 20, paddingVertical: 12 }}>
+                <Text style={{ color: Colors.muted, fontWeight: '600' }}>Back</Text>
+              </Pressable>
+              <Pressable onPress={handleNextFromFocus}
+                style={{ borderRadius: 12, backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 12 }}>
+                <Text style={{ color: Colors.background, fontWeight: '700' }}>Retry</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : (
+          <>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' }}>
+              Building your plan…
+            </Text>
+            <Text style={{ color: Colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
+              Generating a personalized {daysPerWeek}-day split based on your focus and muscle priorities.
+            </Text>
+          </>
+        )}
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -240,10 +320,10 @@ export default function CreateProgram() {
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.text} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700' }}>{headerTitle}</Text>
+          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700' }} numberOfLines={1}>{headerTitle}</Text>
           {step >= 2 && (
             <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
-              Day {exerciseStepIndex + 1} of {daysPerWeek} · Add exercises
+              Day {exerciseStepIndex + 1} of {daysPerWeek} · Review & customize
             </Text>
           )}
         </View>
@@ -252,7 +332,6 @@ export default function CreateProgram() {
         )}
       </View>
 
-      {/* Progress bar */}
       {step >= 2 && (
         <View style={{ height: 2, backgroundColor: Colors.surface2 }}>
           <View style={{ height: 2, backgroundColor: Colors.primary, width: `${progressPct * 100}%` }} />
@@ -262,14 +341,10 @@ export default function CreateProgram() {
       {/* ── Step 0: Settings ── */}
       {step === 0 && (
         <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>
-            Program Name
-          </Text>
+          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Program Name</Text>
           <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Push Pull Legs"
-            placeholderTextColor={Colors.muted}
+            value={name} onChangeText={setName}
+            placeholder="e.g. Push Pull Legs" placeholderTextColor={Colors.muted}
             style={{ backgroundColor: Colors.surface, color: Colors.text, borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 28 }}
             autoFocus
           />
@@ -333,86 +408,82 @@ export default function CreateProgram() {
         </ScrollView>
       )}
 
-      {/* ── Step 1: Focus + Muscle Priorities ── */}
+      {/* ── Step 1: Focus + Priorities ── */}
       {step === 1 && (
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>
-            Program Focus
-          </Text>
-          <View style={{ gap: 8, marginBottom: 32 }}>
-            {FOCUS_OPTIONS.map((opt) => {
-              const active = focus === opt.value;
+        <>
+          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Program Focus</Text>
+            <View style={{ gap: 8, marginBottom: 32 }}>
+              {FOCUS_OPTIONS.map((opt) => {
+                const active = focus === opt.value;
+                return (
+                  <Pressable key={opt.value} onPress={() => setFocus(opt.value)}
+                    style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? Colors.primary : '#333', backgroundColor: active ? `${Colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? Colors.primary : '#555', backgroundColor: active ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                      {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.background }} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: active ? Colors.primary : Colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
+                      <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>Muscle Priorities</Text>
+            <Text style={{ color: Colors.muted, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
+              <Text style={{ color: '#2DD4BF', fontWeight: '700' }}>Emphasize</Text> — max growth, high volume when recovering well{'\n'}
+              <Text style={{ color: Colors.primary, fontWeight: '700' }}>Grow</Text> — steady growth at minimum effective volume{'\n'}
+              <Text style={{ color: Colors.muted, fontWeight: '700' }}>Maintain</Text> — preserve size, free recovery for other priorities
+            </Text>
+
+            {PRIORITY_MUSCLES.map((muscle) => {
+              const current = musclePriorities[muscle] ?? 'grow';
+              const badgeColor = MuscleGroupColors[muscle] ?? Colors.primary;
               return (
-                <Pressable key={opt.value} onPress={() => setFocus(opt.value)}
-                  style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? Colors.primary : '#333', backgroundColor: active ? `${Colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? Colors.primary : '#555', backgroundColor: active ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                    {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.background }} />}
+                <View key={muscle} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <MaterialCommunityIcons name="blur-linear" size={11} color={badgeColor} style={{ marginRight: 5 }} />
+                    <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '600' }}>{muscle}</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: active ? Colors.primary : Colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
-                    <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {PRIORITY_OPTIONS.map((p) => {
+                      const active = current === p.value;
+                      return (
+                        <Pressable key={p.value} onPress={() => setPriority(muscle, p.value)}
+                          style={{ flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, borderColor: active ? p.color : '#333', backgroundColor: active ? `${p.color}22` : 'transparent', alignItems: 'center' }}>
+                          <Text style={{ color: active ? p.color : Colors.muted, fontSize: 11, fontWeight: active ? '800' : '500' }}>{p.label}</Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
-                </Pressable>
+                </View>
               );
             })}
+          </ScrollView>
+
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
+            <Pressable onPress={handleNextFromFocus}
+              style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>Generate Plan →</Text>
+            </Pressable>
           </View>
-
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>
-            Muscle Priorities
-          </Text>
-          <Text style={{ color: Colors.muted, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
-            <Text style={{ color: '#2DD4BF', fontWeight: '700' }}>Emphasize</Text> — max growth, high volume when recovering well{'\n'}
-            <Text style={{ color: Colors.primary, fontWeight: '700' }}>Grow</Text> — steady growth at minimum effective volume{'\n'}
-            <Text style={{ color: Colors.muted, fontWeight: '700' }}>Maintain</Text> — preserve size, free recovery for other priorities
-          </Text>
-
-          {PRIORITY_MUSCLES.map((muscle) => {
-            const current = musclePriorities[muscle] ?? 'grow';
-            const badgeColor = MuscleGroupColors[muscle] ?? Colors.primary;
-            return (
-              <View key={muscle} style={{ marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <MaterialCommunityIcons name="blur-linear" size={11} color={badgeColor} style={{ marginRight: 5 }} />
-                  <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '600' }}>{muscle}</Text>
-                </View>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {PRIORITY_OPTIONS.map((p) => {
-                    const active = current === p.value;
-                    return (
-                      <Pressable key={p.value} onPress={() => setPriority(muscle, p.value)}
-                        style={{ flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, borderColor: active ? p.color : '#333', backgroundColor: active ? `${p.color}22` : 'transparent', alignItems: 'center' }}>
-                        <Text style={{ color: active ? p.color : Colors.muted, fontSize: 11, fontWeight: active ? '800' : '500' }}>{p.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-      {step === 1 && (
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
-          <Pressable onPress={handleNextFromFocus}
-            style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-            <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>
-              Set Up Training Days →
-            </Text>
-          </Pressable>
-        </View>
+        </>
       )}
 
-      {/* ── Steps 2..N+1: Exercises per day ── */}
+      {/* ── Steps 2..N+1: Review & customize each day ── */}
       {step >= 2 && (
         <View style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
             {currentDayExercises.length === 0 && (
               <View style={{ alignItems: 'center', marginTop: 32 }}>
                 <MaterialCommunityIcons name="dumbbell" size={40} color={Colors.surface2} />
-                <Text style={{ color: Colors.muted, marginTop: 10, fontSize: 15 }}>No exercises added</Text>
-                <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>Tap below to add. These repeat every week.</Text>
+                <Text style={{ color: Colors.muted, marginTop: 10, fontSize: 15 }}>No exercises</Text>
+                <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>Add exercises below.</Text>
               </View>
             )}
+
             {currentDayExercises.map((ex, idx) => {
               const badgeColor = MuscleGroupColors[ex.muscleGroup] ?? Colors.primary;
               return (
@@ -428,7 +499,15 @@ export default function CreateProgram() {
                       <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>{ex.name}</Text>
                       <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>{ex.equipment}</Text>
                     </View>
-                    <Pressable onPress={() => handleRemoveExercise(idx)} style={{ padding: 6 }}>
+                    {/* Swap */}
+                    <Pressable
+                      onPress={() => { setSwapIndex(idx); setPickerOpen(true); }}
+                      style={{ padding: 8 }}
+                    >
+                      <MaterialCommunityIcons name="swap-horizontal" size={20} color={Colors.primary} />
+                    </Pressable>
+                    {/* Remove */}
+                    <Pressable onPress={() => handleRemoveExercise(idx)} style={{ padding: 8 }}>
                       <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.error} />
                     </Pressable>
                   </View>
@@ -437,7 +516,6 @@ export default function CreateProgram() {
             })}
           </ScrollView>
 
-          {/* Footer */}
           <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2, gap: 10 }}>
             {saving ? (
               <View style={{ alignItems: 'center', paddingVertical: 12, gap: 10 }}>
@@ -446,14 +524,18 @@ export default function CreateProgram() {
               </View>
             ) : (
               <>
-                <Pressable onPress={() => setPickerOpen(true)}
-                  style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Colors.surface2, alignItems: 'center' }}>
+                <Pressable
+                  onPress={() => { setSwapIndex(null); setPickerOpen(true); }}
+                  style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Colors.surface2, alignItems: 'center' }}
+                >
                   <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 15 }}>+ Add Exercise</Text>
                 </Pressable>
                 <Pressable onPress={handleNext}
                   style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
                   <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>
-                    {isLastStep ? 'Create & Generate AI Plan →' : `Next: ${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex + 1]] ?? `Day ${exerciseStepIndex + 2}`} →`}
+                    {isLastStep
+                      ? 'Create & Start →'
+                      : `Next: ${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex + 1]] ?? `Day ${exerciseStepIndex + 2}`} →`}
                   </Text>
                 </Pressable>
               </>
@@ -462,7 +544,11 @@ export default function CreateProgram() {
         </View>
       )}
 
-      <ExercisePicker visible={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={handleAddExercise} />
+      <ExercisePicker
+        visible={pickerOpen}
+        onClose={() => { setPickerOpen(false); setSwapIndex(null); }}
+        onSelect={handleExerciseSelect}
+      />
     </View>
   );
 }

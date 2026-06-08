@@ -325,7 +325,7 @@ export default function ProgramDayScreen() {
             {generatingAI && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, padding: 12, backgroundColor: `${Colors.primary}18`, borderRadius: 10 }}>
                 <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '600' }}>Gemini generating progressive overload plan…</Text>
+                <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '600' }}>Generating progressive overload plan…</Text>
               </View>
             )}
 
@@ -359,7 +359,7 @@ export default function ProgramDayScreen() {
                     {hasAI && (
                       <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                         <View style={{ backgroundColor: `${Colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <MaterialCommunityIcons name="robot-outline" size={10} color={Colors.primary} />
+                          <MaterialCommunityIcons name="lightning-bolt" size={10} color={Colors.primary} />
                           <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700' }}>
                             {aiTarget.target_sets}×{aiTarget.target_reps_min}–{aiTarget.target_reps_max} @ {aiTarget.rir} RIR
                             {aiTarget.target_weight > 0 ? `  ·  ${aiTarget.target_weight} lbs` : ''}
@@ -376,7 +376,7 @@ export default function ProgramDayScreen() {
                     {!hasAI && item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
                       <View style={{ marginTop: 8 }}>
                         <View style={{ backgroundColor: `${Colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <MaterialCommunityIcons name="robot-outline" size={10} color={Colors.primary} />
+                          <MaterialCommunityIcons name="lightning-bolt" size={10} color={Colors.primary} />
                           <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700' }}>
                             {item.target_sets}×{item.target_reps_min}–{item.target_reps_max} @ {item.rir ?? 3} RIR
                           </Text>

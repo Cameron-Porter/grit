@@ -19,9 +19,10 @@ import {
   getExerciseProgress,
   PersonalRecord,
 } from '../src/api/personalRecords';
+import { supabase } from '../src/api/supabase';
 import LineChart from '../src/components/LineChart';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
-import { useProfileStore } from '../src/store/useProfileStore';
+import { EQUIPMENT_TYPES, useProfileStore } from '../src/store/useProfileStore';
 import { Colors, MuscleGroupColors } from '../src/utils/constants';
 
 const MUSCLE_GROUPS = [
@@ -47,7 +48,36 @@ const MUSCLE_EXERCISES: Record<string, string[]> = {
 export default function Profile() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { bodyWeight, bodyWeightLog, setBodyWeight } = useProfileStore();
+  const {
+    bodyWeight, bodyWeightLog, setBodyWeight,
+    autoMatchWeight, setAutoMatchWeight,
+    usePreferredEquipment, setUsePreferredEquipment,
+    preferredEquipment, setPreferredEquipment,
+  } = useProfileStore();
+
+  const [userProfile, setUserProfile] = useState<{ name: string; email: string; createdAt: string } | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) return;
+      setUserProfile({
+        name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'User',
+        email: user.email ?? '',
+        createdAt: user.created_at
+          ? new Date(user.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+          : '',
+      });
+    });
+  }, []);
+
+  const toggleEquipment = (type: string) => {
+    if (preferredEquipment.includes(type)) {
+      setPreferredEquipment(preferredEquipment.filter((e) => e !== type));
+    } else {
+      setPreferredEquipment([...preferredEquipment, type]);
+    }
+  };
 
   const [selectedMuscle, setSelectedMuscle] = useState('Chest');
   const [selectedExercise, setSelectedExercise] = useState(MUSCLE_EXERCISES['Chest'][0]);
@@ -137,6 +167,83 @@ export default function Profile() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+
+        {/* ── PROFILE INFO ── */}
+        {userProfile && (
+          <View style={{ margin: 16, marginBottom: 8 }}>
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Profile</Text>
+            <View style={{ backgroundColor: Colors.surface, borderRadius: 14, overflow: 'hidden' }}>
+              {[
+                { label: 'Name', value: userProfile.name },
+                { label: 'Email', value: userProfile.email },
+                { label: 'Created', value: userProfile.createdAt },
+              ].map((row, i, arr) => (
+                <View key={row.label} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: Colors.surface2 }}>
+                  <Text style={{ color: Colors.muted, fontSize: 14, width: 80 }}>{row.label}</Text>
+                  <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '600', flex: 1 }}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ── SETTINGS ── */}
+        <View style={{ marginHorizontal: 16, marginBottom: 8, marginTop: 16 }}>
+          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Settings</Text>
+
+          {/* Exercise Sets */}
+          <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+            <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Exercise Sets</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 16 }}>
+                <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 }}>Auto match weight updates</Text>
+                <Text style={{ color: Colors.muted, fontSize: 12, lineHeight: 17 }}>
+                  When you change a weight value for a set, the app will automatically apply that value to all subsequent sets that match the original weight.
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setAutoMatchWeight(!autoMatchWeight)}
+                style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: autoMatchWeight ? Colors.primary : Colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
+              >
+                <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: Colors.text, alignSelf: autoMatchWeight ? 'flex-end' : 'flex-start' }} />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Exercise Types */}
+          <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16 }}>
+            <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Exercise Types</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <View style={{ flex: 1, paddingRight: 16 }}>
+                <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 }}>Use preferred exercise types</Text>
+                <Text style={{ color: Colors.muted, fontSize: 12, lineHeight: 17 }}>By default, exercises are filtered to your saved preferences.</Text>
+              </View>
+              <Pressable
+                onPress={() => setUsePreferredEquipment(!usePreferredEquipment)}
+                style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: usePreferredEquipment ? Colors.primary : Colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
+              >
+                <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: Colors.text, alignSelf: usePreferredEquipment ? 'flex-end' : 'flex-start' }} />
+              </Pressable>
+            </View>
+            {usePreferredEquipment && (
+              <View style={{ marginTop: 12, gap: 8 }}>
+                <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Exercise type preferences</Text>
+                {EQUIPMENT_TYPES.map((type) => {
+                  const selected = preferredEquipment.includes(type);
+                  return (
+                    <Pressable key={type} onPress={() => toggleEquipment(type)}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, borderWidth: 1.5, borderColor: selected ? Colors.primary : Colors.surface2, backgroundColor: selected ? `${Colors.primary}14` : 'transparent' }}>
+                      <Text style={{ color: Colors.text, fontSize: 15 }}>{type}</Text>
+                      <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: selected ? Colors.primary : Colors.surface2, backgroundColor: selected ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                        {selected && <MaterialCommunityIcons name="check" size={13} color={Colors.background} />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </View>
+        </View>
 
         {/* ── BODY WEIGHT ── */}
         <View style={{ padding: 16, paddingBottom: 0 }}>

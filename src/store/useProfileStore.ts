@@ -7,10 +7,28 @@ export interface BodyWeightEntry {
   weight: number;
 }
 
+export const EQUIPMENT_TYPES = [
+  'Machine',
+  'Barbell',
+  'Smith Machine',
+  'Dumbbell',
+  'Cable',
+  'Freemotion',
+  'Bodyweight',
+  'Bodyweight Loadable',
+  'Machine Assistance',
+] as const;
+
 interface ProfileState {
   bodyWeight: number | null;
   bodyWeightLog: BodyWeightEntry[];
+  autoMatchWeight: boolean;
+  usePreferredEquipment: boolean;
+  preferredEquipment: string[];
   setBodyWeight: (weight: number) => void;
+  setAutoMatchWeight: (value: boolean) => void;
+  setUsePreferredEquipment: (value: boolean) => void;
+  setPreferredEquipment: (types: string[]) => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -18,6 +36,9 @@ export const useProfileStore = create<ProfileState>()(
     (set) => ({
       bodyWeight: null,
       bodyWeightLog: [],
+      autoMatchWeight: false,
+      usePreferredEquipment: false,
+      preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
       setBodyWeight: (weight) =>
         set((state) => {
           const today = new Date().toISOString().split('T')[0];
@@ -27,6 +48,9 @@ export const useProfileStore = create<ProfileState>()(
             .slice(-90);
           return { bodyWeight: weight, bodyWeightLog: newLog };
         }),
+      setAutoMatchWeight: (value) => set({ autoMatchWeight: value }),
+      setUsePreferredEquipment: (value) => set({ usePreferredEquipment: value }),
+      setPreferredEquipment: (types) => set({ preferredEquipment: types }),
     }),
     {
       name: 'grit-profile-storage',

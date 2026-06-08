@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { getExercises } from '../../api/exercises';
+import { useProfileStore } from '../../store/useProfileStore';
 import { Colors, MuscleGroupColors } from '../../utils/constants';
 
 interface ExercisePickerProps {
@@ -20,6 +21,7 @@ interface ExercisePickerProps {
 }
 
 export default function ExercisePicker({ visible, onClose, onSelect }: ExercisePickerProps) {
+  const { usePreferredEquipment, preferredEquipment } = useProfileStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [allExercises, setAllExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,11 +44,16 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
     }
   };
 
-  const filteredExercises = allExercises.filter(
-    (ex) =>
+  const filteredExercises = allExercises.filter((ex) => {
+    const matchesSearch =
       ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ex.muscle_group?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+      ex.muscle_group?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesEquipment =
+      !usePreferredEquipment ||
+      preferredEquipment.length === 0 ||
+      preferredEquipment.some((e) => e.toLowerCase() === (ex.equipment ?? '').toLowerCase());
+    return matchesSearch && matchesEquipment;
+  });
 
   return (
     <Modal

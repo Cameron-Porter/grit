@@ -68,6 +68,7 @@ export type WorkoutState = {
     exerciseId: string,
     setIndex: number,
     data: Partial<WorkoutSet>,
+    autoMatchWeight?: boolean,
   ) => void;
 
   removeSet: (exerciseId: string, setIndex: number) => void;
