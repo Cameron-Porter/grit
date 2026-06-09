@@ -4,8 +4,10 @@ import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { markDayComplete } from '../api/programs';
+import { markDayComplete, skipProgramDay } from '../api/programs';
+import { computeAndSaveProgressionTargets } from '../api/progression';
 import { supabase } from '../api/supabase';
+import { useProfileStore } from './useProfileStore';
 
 const getUserId = async (): Promise<string | null> => {
   const { data } = await supabase.auth.getUser();
@@ -82,6 +84,16 @@ export const useWorkoutStore = create<WorkoutState>()(
             ...state.exercises,
             { id: uuidv4(), name, muscleGroup, equipment, sets: [] } as Exercise,
           ],
+        }));
+      },
+
+      replaceExercise: (exerciseId, newName, newMuscleGroup, newEquipment) => {
+        set((state) => ({
+          exercises: state.exercises.map((ex) =>
+            ex.id === exerciseId
+              ? { ...ex, name: newName, muscleGroup: newMuscleGroup, equipment: newEquipment }
+              : ex,
+          ),
         }));
       },
 
@@ -195,6 +207,8 @@ export const useWorkoutStore = create<WorkoutState>()(
       startFromProgramDay: (dayId, programName, exerciseTemplates, weekNumber, dayNumber, dayLabel) => {
         set((state) => {
           if (state.activeWorkoutId && state.exercises.length > 0) return state;
+          const { bodyWeight } = useProfileStore.getState();
+          const isWeek2Plus = (weekNumber ?? 1) >= 2;
           return {
             activeWorkoutId: Date.now().toString(),
             activeProgramDayId: dayId,
@@ -208,15 +222,45 @@ export const useWorkoutStore = create<WorkoutState>()(
               muscleGroup: t.muscleGroup,
               equipment: t.equipment,
               sets: t.targetSets
-                ? Array.from({ length: t.targetSets }, () => ({
-                    reps: 0,
-                    weight: t.targetWeight ?? 0,
-                    completed: false,
-                    rir: t.rir ?? 3,
-                  }))
+                ? Array.from({ length: t.targetSets }, () => {
+                    const isBodyweight = t.equipment === 'Bodyweight';
+                    const resolvedWeight = isBodyweight
+                      ? (bodyWeight ?? t.targetWeight ?? 0)
+                      : (t.targetWeight ?? 0);
+                    const hasRir = t.rir !== undefined;
+                    // Week 2+: pre-fill the prescribed rep count so users see their target.
+                    // Week 1: leave RIR sets blank so the user discovers their starting weight.
+                    const prescribedReps = t.targetRepsMin ?? 8;
+                    return {
+                      reps: (isWeek2Plus || !hasRir) ? prescribedReps : 0,
+                      weight: resolvedWeight,
+                      completed: false,
+                      ...(hasRir ? { rir: t.rir } : {}),
+                      targetReps: prescribedReps,
+                    };
+                  })
                 : [],
             })),
           };
+        });
+      },
+
+      skipDay: async (dayId: string) => {
+        try {
+          await skipProgramDay(dayId);
+        } catch {
+          // Non-fatal — still clear workout state so the user isn't stuck
+        }
+        set({
+          activeWorkoutId: null,
+          activeProgramDayId: null,
+          activeProgramName: null,
+          activeProgramWeek: null,
+          activeProgramDayNumber: null,
+          activeProgramDayLabel: null,
+          exercises: [],
+          pendingFeedback: [],
+          isSaving: false,
         });
       },
 
@@ -253,6 +297,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               reps: s.reps,
               weight: s.weight,
               completed: s.completed,
+              rir: s.rir ?? null,
             })),
           );
 
@@ -277,6 +322,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           // Mark program day complete
           if (state.activeProgramDayId) {
             await markDayComplete(state.activeProgramDayId).then(null, () => {});
+
+            // Fire-and-forget: compute next-session targets from session history.
+            // Runs in background so the UI is not blocked. Silent on failure —
+            // worst case the user sees last-known weight instead of a new recommendation.
+            const { experienceLevel } = useProfileStore.getState();
+            computeAndSaveProgressionTargets(state.activeProgramDayId, experienceLevel)
+              .catch(() => {});
           }
 
           set({

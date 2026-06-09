@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { getExerciseSessionHistory, HistorySessionEntry } from '../../api/history';
@@ -11,14 +12,17 @@ interface ExerciseCardProps {
   exerciseGroup: Exercise[];
   onUpdateSet: (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => void;
   onRemoveSet: (exerciseId: string, setIndex: number) => void;
-  onAddSet: (exerciseId: string, defaultWeight?: number) => void;
+  onAddSet: (exerciseId: string, defaultWeight?: number, rir?: number) => void;
   onExerciseMenuPress: (exerciseId: string) => void;
   onSetMenuPress: (exerciseId: string, setIndex: number) => void;
   onSaveNote: (exerciseId: string, note: string) => void;
   bodyWeight?: number;
 }
 
+const MAX_HISTORY_SESSIONS = 5;
+
 function HistoryPanel({ exerciseName }: { exerciseName: string }) {
+  const router = useRouter();
   const [sessions, setSessions] = useState<HistorySessionEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,9 +52,12 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
     );
   }
 
-  // Group sessions by program name
+  const displayed = sessions.slice(0, MAX_HISTORY_SESSIONS);
+  const hasMore = sessions.length > MAX_HISTORY_SESSIONS;
+
+  // Group displayed sessions by program name
   const grouped = new Map<string, HistorySessionEntry[]>();
-  sessions.forEach((s) => {
+  displayed.forEach((s) => {
     const key = s.programName ?? 'Free Workout';
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(s);
@@ -66,7 +73,6 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
 
       {Array.from(grouped.entries()).map(([programName, programSessions]) => (
         <View key={programName} style={{ marginBottom: 4 }}>
-          {/* Program header */}
           <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1A1F26' }}>
             <Text style={{ color: Colors.text, fontSize: 12, fontWeight: '700' }}>
               {programName}
@@ -78,7 +84,6 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
 
           {programSessions.map((session, si) => (
             <View key={si} style={{ paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: si > 0 ? 1 : 0, borderTopColor: '#252525' }}>
-              {/* Week/Day + date */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                 <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '700' }}>
                   {session.weekNumber != null && session.dayNumber != null
@@ -89,8 +94,6 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
                   {new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Text>
               </View>
-
-              {/* Sets */}
               {session.sets.map((s, i) => (
                 <Text key={i} style={{ color: Colors.muted, fontSize: 13, marginBottom: 2 }}>
                   <Text style={{ color: Colors.text, fontWeight: '600' }}>{s.weight} lbs × {s.reps} reps</Text>
@@ -100,6 +103,18 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
           ))}
         </View>
       ))}
+
+      {hasMore && (
+        <Pressable
+          onPress={() => router.push('/(tabs)/history' as any)}
+          style={{ paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#252525', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+        >
+          <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '700' }}>
+            View full history ({sessions.length} sessions)
+          </Text>
+          <MaterialCommunityIcons name="chevron-right" size={14} color={Colors.primary} />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -200,17 +215,27 @@ export default function ExerciseCard({
             </View>
 
             {/* Set rows */}
-            {exercise.sets.map((set, setIndex) => (
-              <SetRow
-                key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
-                set={set}
-                onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
-                onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
-                onToggleComplete={() => onUpdateSet(exercise.id, setIndex, { completed: !set.completed })}
-                onRemove={() => onRemoveSet(exercise.id, setIndex)}
-                onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
-              />
-            ))}
+            {(() => {
+              const activeSetIndex = exercise.sets.findIndex(
+                (s) => !s.completed && !s.skipped,
+              );
+              return exercise.sets.map((set, setIndex) => (
+                <SetRow
+                  key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
+                  set={set}
+                  isActive={setIndex === activeSetIndex}
+                  onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
+                  onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
+                  onComplete={(autoReps) =>
+                    autoReps !== undefined
+                      ? onUpdateSet(exercise.id, setIndex, { reps: autoReps, completed: true })
+                      : onUpdateSet(exercise.id, setIndex, { completed: !set.completed })
+                  }
+                  onRemove={() => onRemoveSet(exercise.id, setIndex)}
+                  onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
+                />
+              ));
+            })()}
 
             {/* Add Set */}
             <Pressable

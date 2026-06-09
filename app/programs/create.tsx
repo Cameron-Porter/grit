@@ -8,12 +8,13 @@ import {
   getProgramDays,
   getNextProgramWorkout,
   setCurrentProgram,
-  updateProgramExerciseTargets,
 } from '../../src/api/programs';
-import { generateWorkoutSplit, generateStarterSets } from '../../src/api/gemini';
-import ExercisePicker from '../../src/components/workout/ExercisePicker';
+import { buildProgram } from '../../src/rules/programBuilder';
+import { useProfileStore } from '../../src/store/useProfileStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
-import { Colors, MuscleGroupColors } from '../../src/utils/constants';
+import type { DayPlan, ExerciseSlot, ExperienceLevel, MuscleGroup, ProgramFocus, SlotRole } from '../../src/types/program';
+import { BOTTOM_TAB_HEIGHT, Colors, MuscleGroupColors } from '../../src/utils/constants';
+import SlotExercisePicker from '../../src/components/workout/SlotExercisePicker';
 
 const WEEKDAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEEKDAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -26,7 +27,7 @@ const DEFAULT_DAYS: Record<number, number[]> = {
   6: [0, 1, 2, 3, 4, 5],
 };
 
-const FOCUS_OPTIONS = [
+const FOCUS_OPTIONS: { value: ProgramFocus; label: string; desc: string }[] = [
   { value: 'hypertrophy',   label: 'Hypertrophy',    desc: 'Maximum muscle growth' },
   { value: 'strength',      label: 'Strength',        desc: 'Heavy lifts, low reps' },
   { value: 'general',       label: 'General Fitness', desc: 'Balanced strength & cardio' },
@@ -34,7 +35,7 @@ const FOCUS_OPTIONS = [
   { value: 'maintenance',   label: 'Maintenance',     desc: 'Preserve muscle, low volume' },
 ];
 
-const PRIORITY_MUSCLES = [
+const PRIORITY_MUSCLES: MuscleGroup[] = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
   'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs',
 ];
@@ -46,33 +47,39 @@ const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'maintain',  label: 'Maintain',  color: Colors.muted },
 ];
 
-interface DayExercise {
-  name: string;
-  muscleGroup: string;
-  equipment: string;
-  isSuggested?: boolean;
-}
+const ROLE_COLORS: Record<SlotRole, string> = {
+  Primary:   Colors.primary,
+  Secondary: '#A78BFA',
+  Accessory: Colors.muted,
+};
 
 // Steps: 0 = settings, 1 = focus/priorities, 2..N+1 = exercises per day
+const EXPERIENCE_LEVELS: { value: ExperienceLevel; label: string; desc: string }[] = [
+  { value: 'beginner',     label: 'Beginner',     desc: '0–2 yrs · linear gains, machine-friendly' },
+  { value: 'intermediate', label: 'Intermediate', desc: '2–5 yrs · double progression' },
+  { value: 'advanced',     label: 'Advanced',     desc: '5+ yrs · periodized loading' },
+];
+
 export default function CreateProgram() {
   const router = useRouter();
   const startFromProgramDay = useWorkoutStore((s) => s.startFromProgramDay);
   const endWorkout = useWorkoutStore((s) => s.endWorkout);
+  const profileLevel = useProfileStore((s) => s.experienceLevel);
+  const setProfileLevel = useProfileStore((s) => s.setExperienceLevel);
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [totalWeeks, setTotalWeeks] = useState(4);
   const [daysPerWeek, setDaysPerWeek] = useState(4);
   const [selectedDays, setSelectedDays] = useState<number[]>(DEFAULT_DAYS[4]);
-  const [focus, setFocus] = useState<string>('hypertrophy');
-  const [musclePriorities, setMusclePriorities] = useState<Record<string, Priority>>({});
-  const [dayExercises, setDayExercises] = useState<DayExercise[][]>([]);
-  const [daySplitNames, setDaySplitNames] = useState<string[]>([]);
-  const [generatingSplit, setGeneratingSplit] = useState(false);
-  const [splitError, setSplitError] = useState<string | null>(null);
-  // null = adding, number = swapping at that index
-  const [swapIndex, setSwapIndex] = useState<number | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [focus, setFocus] = useState<ProgramFocus>('hypertrophy');
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>(profileLevel ?? 'intermediate');
+  const [musclePriorities, setMusclePriorities] = useState<Partial<Record<MuscleGroup, Priority>>>({});
+  const [programDays, setProgramDays] = useState<DayPlan[]>([]);
+
+  // Exercise picker state
+  const [pickerTarget, setPickerTarget] = useState<{ dayIdx: number; slotIdx: number } | null>(null);
+
   const [saving, setSaving] = useState(false);
   const [savingStatus, setSavingStatus] = useState('');
 
@@ -82,8 +89,7 @@ export default function CreateProgram() {
 
   const sortedSelected = [...selectedDays].sort((a, b) => a - b);
   const exerciseStepIndex = step - 2;
-  const currentDayExercises = step >= 2 ? (dayExercises[exerciseStepIndex] ?? []) : [];
-  const currentSplitName = step >= 2 ? (daySplitNames[exerciseStepIndex] ?? '') : '';
+  const currentDay: DayPlan | undefined = step >= 2 ? programDays[exerciseStepIndex] : undefined;
 
   const toggleDay = (idx: number) => {
     setSelectedDays((prev) => {
@@ -96,7 +102,7 @@ export default function CreateProgram() {
     });
   };
 
-  const setPriority = (muscle: string, p: Priority) => {
+  const setPriority = (muscle: MuscleGroup, p: Priority) => {
     setMusclePriorities((prev) => ({ ...prev, [muscle]: p }));
   };
 
@@ -107,63 +113,52 @@ export default function CreateProgram() {
     setStep(1);
   };
 
-  const handleNextFromFocus = async () => {
-    setGeneratingSplit(true);
-    setSplitError(null);
+  const handleNextFromFocus = () => {
     const dayLabels = sortedSelected.map((d) => WEEKDAYS_FULL[d]);
-    try {
-      const split = await generateWorkoutSplit(focus, musclePriorities, daysPerWeek, dayLabels);
-      console.log('[create] split result:', JSON.stringify(split, null, 2));
-      if (!split.length) throw new Error('Plan generation returned no data. Check your API key and network.');
-      // Normalize Gemini response — it sometimes returns snake_case or alternate key names
-      const normExercise = (e: any): DayExercise => ({
-        name: e.name ?? e.exercise_name ?? e.exerciseName ?? '',
-        muscleGroup: e.muscleGroup ?? e.muscle_group ?? e.musclegroup ?? '',
-        equipment: e.equipment ?? e.equipment_type ?? 'Barbell',
-        isSuggested: true,
-      });
-      const exercises: DayExercise[][] = Array.from({ length: daysPerWeek }, (_, i) => {
-        // Gemini may return 0-based or 1-based dayIndex; try both
-        const day = split.find((d: any) => d.dayIndex === i) ?? split.find((d: any) => d.dayIndex === i + 1) ?? split[i];
-        const exList: any[] = day?.exercises ?? day?.exercise_list ?? day?.workouts ?? [];
-        return exList.map(normExercise);
-      });
-      const names = Array.from({ length: daysPerWeek }, (_, i) => {
-        const day = split.find((d: any) => d.dayIndex === i) ?? split.find((d: any) => d.dayIndex === i + 1) ?? split[i];
-        return day?.splitName ?? day?.split_name ?? day?.name ?? day?.label ?? '';
-      });
-      setDayExercises(exercises);
-      setDaySplitNames(names);
-      setGeneratingSplit(false);
-      setStep(2);
-    } catch (e: any) {
-      setGeneratingSplit(false);
-      setSplitError(e?.message ?? 'Failed to generate plan. Try again.');
-    }
+    const generated = buildProgram({
+      name: name.trim(),
+      focus,
+      experienceLevel,
+      daysPerWeek,
+      selectedDays: dayLabels,
+      musclePriorities,
+      totalWeeks,
+    });
+    // Persist the chosen level to the user profile for future programs
+    setProfileLevel(experienceLevel);
+    setProgramDays(generated.days);
+    setStep(2);
   };
 
-  const handleExerciseSelect = (exName: string, muscleGroup: string, equipment: string) => {
-    setDayExercises((prev) => {
-      const updated = [...prev];
-      const dayList = [...(updated[exerciseStepIndex] ?? [])];
-      if (swapIndex !== null) {
-        dayList[swapIndex] = { name: exName, muscleGroup, equipment, isSuggested: false };
-      } else {
-        dayList.push({ name: exName, muscleGroup, equipment, isSuggested: false });
-      }
-      updated[exerciseStepIndex] = dayList;
-      return updated;
-    });
-    setSwapIndex(null);
-    setPickerOpen(false);
+  const handleSelectExercise = (exerciseName: string) => {
+    if (!pickerTarget) return;
+    const { dayIdx, slotIdx } = pickerTarget;
+    setProgramDays((prev) =>
+      prev.map((d, di) => {
+        if (di !== dayIdx) return d;
+        const slots = d.slots.map((slot, si) => {
+          if (si !== slotIdx) return slot;
+          return { ...slot, selectedExercise: exerciseName };
+        });
+        return { ...d, slots };
+      }),
+    );
+    // Note: setPickerTarget(null) is handled by SlotExercisePicker's onClose
   };
 
-  const handleRemoveExercise = (idx: number) => {
-    setDayExercises((prev) => {
-      const updated = [...prev];
-      updated[exerciseStepIndex] = updated[exerciseStepIndex].filter((_, i) => i !== idx);
-      return updated;
-    });
+  const handleMuscleChange = (newMuscle: MuscleGroup) => {
+    if (!pickerTarget) return;
+    const { dayIdx, slotIdx } = pickerTarget;
+    setProgramDays((prev) =>
+      prev.map((d, di) => {
+        if (di !== dayIdx) return d;
+        const slots = d.slots.map((slot, si) => {
+          if (si !== slotIdx) return slot;
+          return { ...slot, muscle: newMuscle, selectedExercise: undefined };
+        });
+        return { ...d, slots };
+      }),
+    );
   };
 
   const handleNext = () => {
@@ -180,7 +175,7 @@ export default function CreateProgram() {
       const dayLabels = sortedSelected.map((d) => WEEKDAYS_FULL[d]);
 
       setSavingStatus('Creating program…');
-      const program = await createProgram(name.trim(), totalWeeks, daysPerWeek, dayLabels, focus, musclePriorities);
+      const program = await createProgram(name.trim(), totalWeeks, daysPerWeek, dayLabels, focus, musclePriorities as Record<string, string>);
       await setCurrentProgram(program.id);
 
       const allDays = await getProgramDays(program.id);
@@ -188,47 +183,25 @@ export default function CreateProgram() {
         .filter((d) => d.week_number === 1)
         .sort((a, b) => a.day_number - b.day_number);
 
+      setSavingStatus('Saving exercises…');
       for (let i = 0; i < daysPerWeek; i++) {
-        const day = week1Days[i];
-        if (!day) continue;
-        for (let j = 0; j < (dayExercises[i] ?? []).length; j++) {
-          const ex = dayExercises[i][j];
-          await addProgramExercise(day.id, ex.name, ex.muscleGroup, ex.equipment, j);
+        const dbDay = week1Days[i];
+        const planDay = programDays[i];
+        if (!dbDay || !planDay) continue;
+        for (const slot of planDay.slots) {
+          if (!slot.selectedExercise) continue; // skip unselected slots
+          await addProgramExercise(
+            dbDay.id,
+            slot.selectedExercise,
+            slot.muscle,
+            '',   // equipment unknown until exercise picked
+            slot.sortOrder,
+            slot.sets,
+            slot.repsMin,
+            slot.repsMax,
+            slot.rir,
+          );
         }
-      }
-
-      // Generate starter-set targets for each day
-      setSavingStatus('Generating training plan…');
-      const { supabase } = await import('../../src/api/supabase');
-      const { data: allExerciseRows } = await supabase
-        .from('program_exercises')
-        .select('id, program_day_id, exercise_name, muscle_group, equipment')
-        .in('program_day_id', week1Days.map((d) => d.id));
-
-      if (allExerciseRows?.length) {
-        await Promise.all(
-          week1Days.map(async (day) => {
-            const dayExs = (allExerciseRows as any[]).filter((r: any) => r.program_day_id === day.id);
-            if (!dayExs.length) return;
-            const targets = await generateStarterSets(
-              focus,
-              musclePriorities,
-              dayExs.map((r: any) => ({ name: r.exercise_name, muscleGroup: r.muscle_group ?? '', equipment: r.equipment ?? '' })),
-            );
-            for (const t of targets) {
-              const row = dayExs.find((r: any) => r.exercise_name === t.exerciseName);
-              if (row) {
-                await updateProgramExerciseTargets(row.id, {
-                  target_sets: t.sets,
-                  target_reps_min: t.repsMin,
-                  target_reps_max: t.repsMax,
-                  target_weight: t.weightLbs,
-                  rir: t.rir,
-                });
-              }
-            }
-          }),
-        );
       }
 
       setSavingStatus('Starting first workout…');
@@ -243,11 +216,11 @@ export default function CreateProgram() {
             name: e.exercise_name,
             muscleGroup: e.muscle_group ?? '',
             equipment: e.equipment ?? 'Bodyweight',
-            targetSets: (e as any).target_sets ?? undefined,
-            targetRepsMin: (e as any).target_reps_min ?? undefined,
-            targetRepsMax: (e as any).target_reps_max ?? undefined,
-            targetWeight: (e as any).target_weight ?? undefined,
-            rir: (e as any).rir ?? undefined,
+            targetSets: e.target_sets ?? undefined,
+            targetRepsMin: e.target_reps_min ?? undefined,
+            targetRepsMax: e.target_reps_max ?? undefined,
+            targetWeight: e.target_weight ?? undefined,
+            rir: e.rir ?? undefined,
           })),
           next.day.week_number,
           next.day.day_number,
@@ -258,7 +231,6 @@ export default function CreateProgram() {
         router.replace({ pathname: '/programs/[id]', params: { id: program.id } });
       }
     } catch (e) {
-      console.error(e);
       setSaving(false);
       setSavingStatus('');
     }
@@ -270,47 +242,20 @@ export default function CreateProgram() {
   const headerTitle =
     step === 0 ? 'New Program' :
     step === 1 ? 'Training Focus' :
-    currentSplitName ? `${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex]]} — ${currentSplitName}` :
+    currentDay ? `${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex]]} — ${currentDay.splitName}` :
     WEEKDAYS_FULL[sortedSelected[exerciseStepIndex]] ?? `Day ${exerciseStepIndex + 1}`;
 
-  // ── Generating split overlay ──
-  if (generatingSplit || splitError) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', gap: 20, padding: 40 }}>
-        {splitError ? (
-          <>
-            <MaterialCommunityIcons name="alert-circle-outline" size={48} color={Colors.error} />
-            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700', textAlign: 'center' }}>
-              Plan generation failed
-            </Text>
-            <Text style={{ color: Colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
-              {splitError}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-              <Pressable onPress={() => { setSplitError(null); setStep(1); }}
-                style={{ borderRadius: 12, borderWidth: 1, borderColor: Colors.surface2, paddingHorizontal: 20, paddingVertical: 12 }}>
-                <Text style={{ color: Colors.muted, fontWeight: '600' }}>Back</Text>
-              </Pressable>
-              <Pressable onPress={handleNextFromFocus}
-                style={{ borderRadius: 12, backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 12 }}>
-                <Text style={{ color: Colors.background, fontWeight: '700' }}>Retry</Text>
-              </Pressable>
-            </View>
-          </>
-        ) : (
-          <>
-            <ActivityIndicator size="large" color={Colors.primary} />
-            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' }}>
-              Building your plan…
-            </Text>
-            <Text style={{ color: Colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
-              Generating a personalized {daysPerWeek}-day split based on your focus and muscle priorities.
-            </Text>
-          </>
-        )}
-      </View>
-    );
-  }
+  const pickerSlot: ExerciseSlot | null =
+    pickerTarget ? (programDays[pickerTarget.dayIdx]?.slots[pickerTarget.slotIdx] ?? null) : null;
+
+  // Names of exercises already selected in other slots of the same day (for variety rules)
+  const pickerAlreadySelected: string[] = pickerTarget
+    ? (programDays[pickerTarget.dayIdx]?.slots ?? [])
+        .filter((_, i) => i !== pickerTarget.slotIdx)
+        .map((s) => s.selectedExercise)
+        .filter((s): s is string => !!s)
+    : [];
+
 
   return (
     <View style={{ flex: 1, backgroundColor: Colors.background }}>
@@ -323,7 +268,7 @@ export default function CreateProgram() {
           <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700' }} numberOfLines={1}>{headerTitle}</Text>
           {step >= 2 && (
             <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
-              Day {exerciseStepIndex + 1} of {daysPerWeek} · Review & customize
+              Day {exerciseStepIndex + 1} of {daysPerWeek} · Tap a slot to pick an exercise
             </Text>
           )}
         </View>
@@ -386,6 +331,25 @@ export default function CreateProgram() {
             })}
           </View>
 
+          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Experience Level</Text>
+          <View style={{ gap: 8, marginBottom: 28 }}>
+            {EXPERIENCE_LEVELS.map((opt) => {
+              const active = experienceLevel === opt.value;
+              return (
+                <Pressable key={opt.value} onPress={() => setExperienceLevel(opt.value)}
+                  style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? Colors.primary : '#333', backgroundColor: active ? `${Colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? Colors.primary : '#555', backgroundColor: active ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                    {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.background }} />}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: active ? Colors.primary : Colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
+                    <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <View style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 16, marginBottom: 28 }}>
             <Text style={{ color: Colors.muted, fontSize: 13 }}>
               <Text style={{ color: Colors.text, fontWeight: '700' }}>{totalWeeks} weeks</Text>
@@ -433,9 +397,9 @@ export default function CreateProgram() {
 
             <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>Muscle Priorities</Text>
             <Text style={{ color: Colors.muted, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
-              <Text style={{ color: '#2DD4BF', fontWeight: '700' }}>Emphasize</Text> — max growth, high volume when recovering well{'\n'}
-              <Text style={{ color: Colors.primary, fontWeight: '700' }}>Grow</Text> — steady growth at minimum effective volume{'\n'}
-              <Text style={{ color: Colors.muted, fontWeight: '700' }}>Maintain</Text> — preserve size, free recovery for other priorities
+              <Text style={{ color: '#2DD4BF', fontWeight: '700' }}>Emphasize</Text> — max growth, high volume{'\n'}
+              <Text style={{ color: Colors.primary, fontWeight: '700' }}>Grow</Text> — steady growth at moderate volume{'\n'}
+              <Text style={{ color: Colors.muted, fontWeight: '700' }}>Maintain</Text> — preserve size, minimal volume
             </Text>
 
             {PRIORITY_MUSCLES.map((muscle) => {
@@ -463,91 +427,114 @@ export default function CreateProgram() {
             })}
           </ScrollView>
 
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
             <Pressable onPress={handleNextFromFocus}
               style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-              <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>Generate Plan →</Text>
+              <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>Build Plan →</Text>
             </Pressable>
           </View>
         </>
       )}
 
       {/* ── Steps 2..N+1: Review & customize each day ── */}
-      {step >= 2 && (
+      {step >= 2 && currentDay && (
         <View style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
-            {currentDayExercises.length === 0 && (
-              <View style={{ alignItems: 'center', marginTop: 32 }}>
-                <MaterialCommunityIcons name="dumbbell" size={40} color={Colors.surface2} />
-                <Text style={{ color: Colors.muted, marginTop: 10, fontSize: 15 }}>No exercises</Text>
-                <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>Add exercises below.</Text>
+            {/* Day summary header */}
+            <View style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>
+                  {currentDay.splitName}
+                </Text>
+                <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>
+                  {currentDay.slots.length} slots · {currentDay.totalSets} sets · ~{currentDay.estimatedMinutes} min
+                </Text>
               </View>
-            )}
+              <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+                {currentDay.primaryMuscles.map((m) => {
+                  const c = MuscleGroupColors[m] ?? Colors.primary;
+                  return (
+                    <View key={m} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: `${c}22` }}>
+                      <Text style={{ color: c, fontSize: 10, fontWeight: '800' }}>{m}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
 
-            {currentDayExercises.map((ex, idx) => {
-              const badgeColor = MuscleGroupColors[ex.muscleGroup] ?? Colors.primary;
+            {currentDay.slots.map((slot, slotIdx) => {
+              const badgeColor = MuscleGroupColors[slot.muscle] ?? Colors.primary;
+              const roleColor = ROLE_COLORS[slot.role];
+              const hasExercise = !!slot.selectedExercise;
               return (
-                <View key={idx} style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
-                  {ex.muscleGroup && (
-                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}28`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
-                      <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
-                      <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>{ex.muscleGroup}</Text>
+                <Pressable
+                  key={slot.id}
+                  onPress={() => setPickerTarget({ dayIdx: exerciseStepIndex, slotIdx })}
+                  style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}
+                >
+                  {/* Muscle + role header */}
+                  <View style={{ paddingHorizontal: 12, paddingTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: 5, backgroundColor: `${badgeColor}28` }}>
+                      <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>{slot.muscle}</Text>
                     </View>
-                  )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>{ex.name}</Text>
-                      <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>{ex.equipment}</Text>
+                    <View style={{ paddingVertical: 2, paddingHorizontal: 7, borderRadius: 5, backgroundColor: `${roleColor}22` }}>
+                      <Text style={{ color: roleColor, fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>{slot.role.toUpperCase()}</Text>
                     </View>
-                    {/* Swap */}
-                    <Pressable
-                      onPress={() => { setSwapIndex(idx); setPickerOpen(true); }}
-                      style={{ padding: 8 }}
-                    >
-                      <MaterialCommunityIcons name="swap-horizontal" size={20} color={Colors.primary} />
-                    </Pressable>
-                    {/* Remove */}
-                    <Pressable onPress={() => handleRemoveExercise(idx)} style={{ padding: 8 }}>
-                      <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.error} />
-                    </Pressable>
                   </View>
-                </View>
+
+                  {/* Exercise name or prompt */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      {hasExercise ? (
+                        <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>{slot.selectedExercise}</Text>
+                      ) : (
+                        <Text style={{ color: Colors.muted, fontSize: 14, fontStyle: 'italic' }}>Tap to select exercise</Text>
+                      )}
+                      <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
+                        {slot.sets} sets · {slot.repsMin}–{slot.repsMax} reps · RIR {slot.rir}
+                      </Text>
+                    </View>
+                    <MaterialCommunityIcons
+                      name={hasExercise ? 'swap-horizontal' : 'chevron-right'}
+                      size={20}
+                      color={hasExercise ? Colors.primary : Colors.muted}
+                    />
+                  </View>
+                </Pressable>
               );
             })}
           </ScrollView>
 
-          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2, gap: 10 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
             {saving ? (
               <View style={{ alignItems: 'center', paddingVertical: 12, gap: 10 }}>
                 <ActivityIndicator color={Colors.primary} />
                 <Text style={{ color: Colors.muted, fontSize: 14 }}>{savingStatus}</Text>
               </View>
             ) : (
-              <>
-                <Pressable
-                  onPress={() => { setSwapIndex(null); setPickerOpen(true); }}
-                  style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: Colors.surface2, alignItems: 'center' }}
-                >
-                  <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 15 }}>+ Add Exercise</Text>
-                </Pressable>
-                <Pressable onPress={handleNext}
-                  style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-                  <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>
-                    {isLastStep
-                      ? 'Create & Start →'
-                      : `Next: ${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex + 1]] ?? `Day ${exerciseStepIndex + 2}`} →`}
-                  </Text>
-                </Pressable>
-              </>
+              <Pressable onPress={handleNext}
+                style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
+                <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>
+                  {isLastStep
+                    ? 'Create & Start →'
+                    : `Next: ${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex + 1]] ?? `Day ${exerciseStepIndex + 2}`} →`}
+                </Text>
+              </Pressable>
             )}
           </View>
         </View>
       )}
 
-      <ExercisePicker
-        visible={pickerOpen}
-        onClose={() => { setPickerOpen(false); setSwapIndex(null); }}
-        onSelect={handleExerciseSelect}
+      {/* ── Exercise picker ── */}
+      <SlotExercisePicker
+        visible={!!pickerTarget}
+        slot={pickerSlot}
+        experienceLevel={experienceLevel}
+        currentSelection={pickerSlot?.selectedExercise}
+        alreadySelected={pickerAlreadySelected}
+        onSelect={handleSelectExercise}
+        onMuscleChange={handleMuscleChange}
+        onClose={() => setPickerTarget(null)}
       />
     </View>
   );

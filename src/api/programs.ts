@@ -141,6 +141,10 @@ export async function addProgramExercise(
   muscleGroup: string,
   equipment: string,
   sortOrder: number,
+  targetSets?: number,
+  targetRepsMin?: number,
+  targetRepsMax?: number,
+  rir?: number,
 ): Promise<void> {
   const { error } = await supabase.from("program_exercises").insert({
     program_day_id: dayId,
@@ -148,6 +152,10 @@ export async function addProgramExercise(
     muscle_group: muscleGroup,
     equipment,
     sort_order: sortOrder,
+    target_sets: targetSets ?? 3,
+    target_reps_min: targetRepsMin ?? null,
+    target_reps_max: targetRepsMax ?? null,
+    rir: rir ?? null,
   });
   if (error) throw error;
 }
@@ -210,6 +218,16 @@ export async function markDayComplete(dayId: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function skipProgramDay(dayId: string): Promise<void> {
+  // Marks the day as completed (so the program advances) but no sets are logged.
+  // The weekly adaptation engine treats zero-volume days as missed workouts.
+  const { error } = await supabase
+    .from("program_days")
+    .update({ completed: true, completed_at: new Date().toISOString() })
+    .eq("id", dayId);
+  if (error) throw error;
+}
+
 export async function getProgramWeekCompletedDays(programId: string, weekNumber: number): Promise<ProgramDay[]> {
   const { data } = await supabase
     .from("program_days")
@@ -226,6 +244,31 @@ export async function updateProgramExerciseTargets(
   targets: { target_sets: number; target_reps_min: number; target_reps_max: number; target_weight: number; rir: number },
 ): Promise<void> {
   await supabase.from("program_exercises").update(targets).eq("id", exerciseId);
+}
+
+export async function replaceExerciseInTemplate(
+  programDayId: string,
+  oldExerciseName: string,
+  newExerciseName: string,
+  newMuscleGroup: string,
+  newEquipment: string,
+): Promise<void> {
+  const { data: dayRow } = await supabase
+    .from("program_days")
+    .select("program_id, day_number")
+    .eq("id", programDayId)
+    .single();
+  if (!dayRow) return;
+
+  const templateExercises = await getTemplateDayExercises(dayRow.program_id, dayRow.day_number);
+  const target = templateExercises.find((e) => e.exercise_name === oldExerciseName);
+  if (!target) return;
+
+  await supabase.from("program_exercises").update({
+    exercise_name: newExerciseName,
+    muscle_group: newMuscleGroup || target.muscle_group,
+    equipment: newEquipment || target.equipment,
+  }).eq("id", target.id);
 }
 
 export async function getProgramDayTargets(programDayId: string): Promise<ProgramDayTarget[]> {
