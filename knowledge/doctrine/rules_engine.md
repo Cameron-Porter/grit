@@ -435,19 +435,15 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     {
       "if": { "field": "slot.role", "operator": "eq", "value": "Accessory" },
-      "then": { "increment": "progression.currentLoad", "by": 1.25, "unit": "lbs" }
+      "then": { "increment": "progression.currentLoad", "by": 5, "unit": "lbs" }
     },
     {
       "if": { "field": "slot.role", "operator": "eq", "value": "Secondary" },
-      "then": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs" }
+      "then": { "increment": "progression.currentLoad", "by": 5, "unit": "lbs" }
     },
     {
       "if": { "field": "slot.role", "operator": "eq", "value": "Primary" },
-      "then": {
-        "if": { "field": "muscle.recoveryClass", "operator": "eq", "value": "slow" },
-        "then": { "increment": "progression.currentLoad", "by": 5.0, "unit": "lbs" },
-        "else": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs" }
-      }
+      "then": { "increment": "progression.currentLoad", "by": 5, "unit": "lbs" }
     },
     { "set": "slot.repsMin", "value": "original_rep_range_min" },
     { "set": "progression.consecutiveStallWeeks", "value": 0 }
@@ -490,7 +486,7 @@ program.mesoBlockWeek         number  (1–n within current block)
           "then": { "increment": "progression.currentLoad", "by": 5.0, "unit": "lbs", "frequency": "every_session" }
         },
         {
-          "else": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs", "frequency": "every_session" }
+          "else": { "increment": "progression.currentLoad", "by": 5, "unit": "lbs", "frequency": "every_session" }
         }
       ]
     }
@@ -502,7 +498,7 @@ program.mesoBlockWeek         number  (1–n within current block)
 {
   "ruleId": "PR-003",
   "category": "PROGRESSION",
-  "description": "Micro-loading requirement for isolation movements: isolation exercises advance in 1.25 lb increments. Standard 2.5 lb jumps are too large for small isolation movements and cause premature technique failure.",
+  "description": "All weight increments are multiples of 5 lbs. Sets loadIncrementSize to 5 for all Accessory slots.",
   "confidence": "moderate",
   "sources": ["optimal_delt_growth.md", "training_during_fat_loss.md", "progression.md"],
   "conditions": [
@@ -510,7 +506,7 @@ program.mesoBlockWeek         number  (1–n within current block)
     { "field": "user.experienceLevel", "operator": "in", "value": ["intermediate", "advanced"] }
   ],
   "actions": [
-    { "set": "progression.loadIncrementSize", "value": 1.25, "unit": "lbs" }
+    { "set": "progression.loadIncrementSize", "value": 5, "unit": "lbs" }
   ]
 }
 ```

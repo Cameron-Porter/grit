@@ -61,13 +61,13 @@ Applied whenever a LOAD_INCREASE is triggered:
 
 | Slot Role | Muscle Recovery Class | Increment |
 |---|---|---|
-| Primary | slow (Quads, Hamstrings) | 5.0 lbs |
-| Primary | standard (Chest, Back, Glutes) | 2.5 lbs |
-| Primary | fast (Shoulders, Abs, Calves) | 2.5 lbs |
-| Secondary | any | 2.5 lbs |
-| Accessory | any | 1.25 lbs |
+| Primary | slow (Quads, Hamstrings) | 5 lbs |
+| Primary | standard (Chest, Back, Glutes) | 5 lbs |
+| Primary | fast (Shoulders, Abs, Calves) | 5 lbs |
+| Secondary | any | 5 lbs |
+| Accessory | any | 5 lbs |
 
-For metric users: 5.0 lbs → 2.5 kg, 2.5 lbs → 1.25 kg, 1.25 lbs → 0.625 kg (use fractional plates).
+All increments are multiples of 5. Users may enter any whole number manually.
 
 ---
 
@@ -191,7 +191,7 @@ TRIGGER 3 — Technique collapse:
 | Rep range | 5–10 |
 | Intensity proxy | Bar speed (no RIR) |
 | Load increment — lower compound | +5.0 lbs |
-| Load increment — upper compound | +2.5 lbs |
+| Load increment — upper compound | +5 lbs |
 | Stall threshold | 3 consecutive sessions, same load+reps |
 | Plateau resolution | 10% load reduction, restart |
 | Scheduled deload | Every 6 weeks (beginners) |
@@ -386,8 +386,8 @@ IF previous meso showed NO progression on >= 50% of Primary slots:
 | Rep range (isolation) | 10–20 |
 | Intensity proxy | Self-reported RIR (±2 accuracy) |
 | Load increment — lower compound | +5.0 lbs |
-| Load increment — upper compound | +2.5 lbs |
-| Load increment — accessory/isolation | +1.25 lbs |
+| Load increment — upper compound | +5 lbs |
+| Load increment — accessory/isolation | +5 lbs |
 | Stall threshold | 3 consecutive weeks, same load+reps |
 | Plateau resolution (fatigue) | Deload → retest |
 | Plateau resolution (accommodation) | Exercise rotation at meso boundary |
@@ -620,8 +620,8 @@ IF between 40–60% of muscles progressed:
 | Rep range (isolation) | 10–20 |
 | Intensity proxy | Self-reported RIR ±1 |
 | Load increment — lower compound | +5.0 lbs |
-| Load increment — upper compound | +2.5 lbs |
-| Load increment — isolation | +1.25 lbs |
+| Load increment — upper compound | +5 lbs |
+| Load increment — isolation | +5 lbs |
 | Stall threshold | 2 consecutive weeks (tighter than intermediate) |
 | Plateau resolution step 1 | Deload → retest |
 | Plateau resolution step 2 | SFR assessment → possible early exercise swap |
