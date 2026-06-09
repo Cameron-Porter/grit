@@ -1,9 +1,10 @@
 # G.R.I.T. Rules Engine — Deterministic Rule Candidates
 
-> Generated from: knowledge/distilled/ (24 files) + knowledge/docterine/ (6 doctrine files)
+> Generated from: knowledge/distilled/ (24 files) + knowledge/doctrine/ (8 doctrine files)
 > Sources: Israetel (RP), Nippard, Schwarzenegger/Haney
 > Purpose: Programmatic implementation reference for the G.R.I.T. workout engine
 > Format: Each rule is a self-contained logic unit with conditions and actions
+> Last updated: gap analysis applied — 11 new rules added, 6 existing rules modified
 
 ---
 
@@ -16,6 +17,7 @@ user.experienceLevel          'beginner' | 'intermediate' | 'advanced'
 user.trainingPhase            'build' | 'cut' | 'maintain'
 user.weeksSinceLastDeload     number
 user.consecutiveBadSessions   number  (sessions where load or reps regressed at same RIR)
+user.sessionsSinceLastDeload  number  (resets to 0 when deload ends; used by FM-005)
 
 muscle.id                     MuscleGroup
 muscle.priority               'emphasize' | 'grow' | 'maintain' | 'mev'
@@ -29,18 +31,24 @@ session.totalSets             number
 session.estimatedMinutes      number
 session.isDeloadWeek          boolean
 session.mesoBlockWeek         number  (1–4 within current 4-week block)
+session.veryHighFatigueSlotCount  number  (count of slots with fatigue_rating = 'very_high' this session)
 
 slot.role                     'Primary' | 'Secondary' | 'Accessory'
 slot.sets                     number
 slot.repsMin                  number
 slot.repsMax                  number
-slot.rir                      number
+slot.rir                      number  (prescribed RIR)
+slot.actualRirLogged          number?  (self-reported RIR after completing the set; null if not logged)
+slot.technicalFailure         boolean  (user-confirmed: form broke down before set end)
+slot.consecutiveTechnicalFailures  number  (consecutive sessions with technicalFailure = true at same load)
 
 progression.lastSessionReps        number
 progression.targetRepsMax          number
 progression.consecutiveStallWeeks  number
 progression.currentLoad            number
 progression.lastLoadIncrease       number  (weeks ago)
+progression.loadIncrementSize      number  (lbs; role-derived increment applied on LOAD_INCREASE)
+progression.peakLoadPreviousMeso   number  (highest load achieved on this slot in the prior mesocycle)
 
 program.weekNumber            number
 program.totalWeeks            number
@@ -245,16 +253,45 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     {
       "if": { "field": "user.experienceLevel", "operator": "eq", "value": "beginner" },
-      "then": { "multiply": "muscle.weeklyDirectSetsMin", "by": 0.8 }
+      "then": [
+        { "multiply": "muscle.weeklyDirectSetsMin", "by": 0.8 },
+        { "multiply": "muscle.weeklyDirectSetsTarget", "by": 0.8 },
+        { "multiply": "muscle.weeklyDirectSetsMax", "by": 0.8 }
+      ]
     },
     {
       "if": { "field": "user.experienceLevel", "operator": "eq", "value": "intermediate" },
-      "then": { "multiply": "muscle.weeklyDirectSetsMin", "by": 1.0 }
+      "then": [
+        { "multiply": "muscle.weeklyDirectSetsMin", "by": 1.0 },
+        { "multiply": "muscle.weeklyDirectSetsTarget", "by": 1.0 },
+        { "multiply": "muscle.weeklyDirectSetsMax", "by": 1.0 }
+      ]
     },
     {
       "if": { "field": "user.experienceLevel", "operator": "eq", "value": "advanced" },
-      "then": { "multiply": "muscle.weeklyDirectSetsMin", "by": 1.2 }
+      "then": [
+        { "multiply": "muscle.weeklyDirectSetsMin", "by": 1.2 },
+        { "multiply": "muscle.weeklyDirectSetsTarget", "by": 1.2 },
+        { "multiply": "muscle.weeklyDirectSetsMax", "by": 1.2 }
+      ]
     }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "VA-010",
+  "category": "VOLUME_ALLOCATION",
+  "description": "Hard cap at 1 exercise with fatigue_rating = very_high per session. Deadlift + barbell back squat in the same session generates systemic fatigue that outpaces any additional hypertrophic benefit and impairs recovery for 72+ hours.",
+  "confidence": "high",
+  "sources": ["exercise_taxonomy.md", "recovery.md", "quad_specialization.md"],
+  "conditions": [
+    { "field": "session.veryHighFatigueSlotCount", "operator": "gt", "value": 1 }
+  ],
+  "actions": [
+    { "trim": "slots", "strategy": "remove_second_very_high_fatigue_slot_lowest_priority_first" },
+    { "flag": "VERY_HIGH_FATIGUE_LIMIT_EXCEEDED" }
   ]
 }
 ```
@@ -393,20 +430,24 @@ program.mesoBlockWeek         number  (1–n within current block)
   "sources": ["optimal_rep_range_for_hypertrophy.md", "progression.md", "dumbbell_hypertrophy.md"],
   "conditions": [
     { "field": "progression.lastSessionReps", "operator": "gte", "value": "progression.targetRepsMax" },
-    { "field": "slot.rir", "operator": "lte", "value": 2 }
+    { "field": "slot.actualRirLogged", "operator": "lte", "formula": "slot.rir + 1" }
   ],
   "actions": [
     {
-      "if": { "field": "muscle.recoveryClass", "operator": "eq", "value": "slow" },
-      "then": { "increment": "progression.currentLoad", "by": "5.0_lbs_lower_body_compound" }
+      "if": { "field": "slot.role", "operator": "eq", "value": "Accessory" },
+      "then": { "increment": "progression.currentLoad", "by": 1.25, "unit": "lbs" }
     },
     {
-      "if": { "field": "muscle.recoveryClass", "operator": "eq", "value": "standard" },
-      "then": { "increment": "progression.currentLoad", "by": "2.5_lbs_upper_body_compound" }
+      "if": { "field": "slot.role", "operator": "eq", "value": "Secondary" },
+      "then": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs" }
     },
     {
-      "if": { "field": "muscle.recoveryClass", "operator": "eq", "value": "fast" },
-      "then": { "increment": "progression.currentLoad", "by": "1.25_lbs_isolation" }
+      "if": { "field": "slot.role", "operator": "eq", "value": "Primary" },
+      "then": {
+        "if": { "field": "muscle.recoveryClass", "operator": "eq", "value": "slow" },
+        "then": { "increment": "progression.currentLoad", "by": 5.0, "unit": "lbs" },
+        "else": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs" }
+      }
     },
     { "set": "slot.repsMin", "value": "original_rep_range_min" },
     { "set": "progression.consecutiveStallWeeks", "value": 0 }
@@ -427,13 +468,32 @@ program.mesoBlockWeek         number  (1–n within current block)
   ],
   "actions": [
     {
-      "if": { "field": "muscle.id", "operator": "in", "value": ["Quads", "Hamstrings", "Glutes"] },
-      "then": { "increment": "progression.currentLoad", "by": 5.0, "unit": "lbs", "frequency": "every_session" }
+      "if": { "field": "slot.technicalFailure", "operator": "eq", "value": true },
+      "then": [
+        { "set": "progression.autoIncrementEnabled", "value": false },
+        { "flag": "TECHNIQUE_FAILURE_HOLD" }
+      ]
     },
     {
-      "else": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs", "frequency": "every_session" }
+      "if": { "field": "slot.consecutiveTechnicalFailures", "operator": "gte", "value": 2 },
+      "then": [
+        { "decrement": "progression.currentLoad", "by": "progression.loadIncrementSize" },
+        { "set": "slot.consecutiveTechnicalFailures", "value": 0 },
+        { "flag": "LOAD_REDUCED_TECHNIQUE_RESET" }
+      ]
     },
-    { "note": "Stop linear increase when technical failure is reached before end of rep range" }
+    {
+      "if": { "field": "slot.technicalFailure", "operator": "eq", "value": false },
+      "then": [
+        {
+          "if": { "field": "muscle.id", "operator": "in", "value": ["Quads", "Hamstrings", "Glutes"] },
+          "then": { "increment": "progression.currentLoad", "by": 5.0, "unit": "lbs", "frequency": "every_session" }
+        },
+        {
+          "else": { "increment": "progression.currentLoad", "by": 2.5, "unit": "lbs", "frequency": "every_session" }
+        }
+      ]
+    }
   ]
 }
 ```
@@ -459,16 +519,35 @@ program.mesoBlockWeek         number  (1–n within current block)
 {
   "ruleId": "PR-004",
   "category": "PROGRESSION",
-  "description": "Stall detection: if reps and load have not increased for 3 consecutive weeks on the same exercise, flag as accommodation stall and recommend exercise rotation at next mesocycle boundary.",
+  "description": "Stall detection: flag when reps and load have not increased for the experience-level threshold. Advanced = 2 weeks (faster accommodation); beginner/intermediate = 3 weeks. Before recommending exercise rotation, check if fatigue masking explains the stall.",
   "confidence": "moderate",
-  "sources": ["progression.md", "optimal_chest_growth.md"],
+  "sources": ["progression.md", "optimal_chest_growth.md", "progression_framework.md"],
   "conditions": [
-    { "field": "progression.consecutiveStallWeeks", "operator": "gte", "value": 3 }
+    {
+      "if": { "field": "user.experienceLevel", "operator": "eq", "value": "advanced" },
+      "then": { "field": "progression.consecutiveStallWeeks", "operator": "gte", "value": 2 }
+    },
+    {
+      "else": { "field": "progression.consecutiveStallWeeks", "operator": "gte", "value": 3 }
+    }
   ],
   "actions": [
-    { "flag": "PROGRESSION_STALL" },
-    { "recommend": "rotate_exercise_at_next_mesocycle_boundary" },
-    { "note": "Verify stall is not fatigue-masking by checking if deload is due" }
+    {
+      "if": [
+        { "field": "user.weeksSinceLastDeload", "operator": "gte", "value": 3 },
+        { "OR": { "field": "session.mesoBlockWeek", "operator": "gte", "value": 3 } }
+      ],
+      "then": [
+        { "flag": "STALL_FATIGUE_MASKING_SUSPECTED" },
+        { "recommend": "deload_then_retest_before_rotating_exercise" }
+      ]
+    },
+    {
+      "else": [
+        { "flag": "PROGRESSION_STALL" },
+        { "recommend": "rotate_exercise_at_next_mesocycle_boundary" }
+      ]
+    }
   ]
 }
 ```
@@ -522,6 +601,70 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     { "set": "muscle.weeklyDirectSetsTarget", "value": "muscle.weeklyDirectSetsMin" },
     { "note": "New mesocycle begins fresh from MEV; volume overload resumes in weeks 2–3" }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "PR-009",
+  "category": "PROGRESSION",
+  "description": "Cross-mesocycle load carry-forward for intermediate and advanced: Week 1 of a new mesocycle starts at the highest load achieved on that slot in the previous mesocycle, not at prior Week 1 load. Prevents losing intra-meso gains at meso boundaries.",
+  "confidence": "high",
+  "sources": ["progression_framework.md", "progression.md"],
+  "conditions": [
+    { "field": "session.mesoBlockWeek", "operator": "eq", "value": 1 },
+    { "field": "program.weekNumber", "operator": "gt", "value": 4 },
+    { "field": "user.experienceLevel", "operator": "in", "value": ["intermediate", "advanced"] }
+  ],
+  "actions": [
+    {
+      "set": "slot.startingLoad",
+      "formula": "progression.peakLoadPreviousMeso",
+      "fallback": "progression.currentLoad"
+    }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "PR-010",
+  "category": "PROGRESSION",
+  "description": "Fat loss phase rep floor: during a caloric deficit, enforce repsMin >= 8 on all Primary slots. Heavy loading (5–7 reps) during a cut creates disproportionate injury risk with no additional hypertrophy benefit over the 8–12 rep range.",
+  "confidence": "high",
+  "sources": ["training_during_fat_loss.md", "progression_framework.md", "strength.md"],
+  "conditions": [
+    { "field": "user.trainingPhase", "operator": "eq", "value": "cut" },
+    { "field": "slot.role", "operator": "eq", "value": "Primary" },
+    { "field": "slot.repsMin", "operator": "lt", "value": 8 }
+  ],
+  "actions": [
+    { "set": "slot.repsMin", "operator": "clamp_min", "value": 8 }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "PR-011",
+  "category": "PROGRESSION",
+  "description": "Cross-mesocycle MEV advancement: if >= 60% of Primary muscles showed load progression in the prior mesocycle, increment MEV by 1 set per muscle for the new mesocycle. If < 40% progressed, decrement by 1 set. Gradual MEV creep matches increasing adaptation threshold.",
+  "confidence": "moderate",
+  "sources": ["progression_framework.md", "volume_landmarks.md"],
+  "conditions": [
+    { "field": "session.mesoBlockWeek", "operator": "eq", "value": 1 },
+    { "field": "program.weekNumber", "operator": "gt", "value": 4 }
+  ],
+  "actions": [
+    {
+      "if": { "field": "program.priorMesoPrimaryProgressionRate", "operator": "gte", "value": 0.60 },
+      "then": { "increment": "muscle.weeklyDirectSetsMin", "by": 1, "note": "MEV advances by 1 set when majority of muscles progressed" }
+    },
+    {
+      "if": { "field": "program.priorMesoPrimaryProgressionRate", "operator": "lt", "value": 0.40 },
+      "then": { "decrement": "muscle.weeklyDirectSetsMin", "by": 1, "clamp_min": "muscle.weeklyDirectSetsMinAbsolute" }
+    }
   ]
 }
 ```
@@ -598,6 +741,33 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     { "flag": "CONSECUTIVE_OVERLAPPING_COMPOUNDS" },
     { "recommend": "insert_non_overlapping_slot_between_or_reorder" }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "EO-005",
+  "category": "EXERCISE_ORDERING",
+  "description": "Weekly movement balance validation: flag any program week that is missing one of the four fundamental movement patterns (Push, Pull, Hinge, Squat) for 2 or more consecutive weeks. Structural imbalance increases injury risk and produces muscular development gaps.",
+  "confidence": "high",
+  "sources": ["exercise_taxonomy.md", "exercise_selection.md"],
+  "conditions": [
+    {
+      "field": "program.consecutiveWeeksMissingPattern",
+      "operator": "gte",
+      "value": 2,
+      "patterns": [
+        "Horizontal Press OR Incline Press OR Vertical Press",
+        "Horizontal Pull OR Vertical Pull",
+        "Hip Hinge",
+        "Quad Dominant"
+      ]
+    }
+  ],
+  "actions": [
+    { "flag": "MOVEMENT_PATTERN_IMBALANCE" },
+    { "recommend": "add_session_covering_missing_movement_pattern" }
   ]
 }
 ```
@@ -713,7 +883,8 @@ program.mesoBlockWeek         number  (1–n within current block)
   "confidence": "high",
   "sources": ["effective_training_principles.md", "hypertrophy.md", "consensus_principles.md"],
   "conditions": [
-    { "field": "slot.rir", "operator": "gte", "value": 4 }
+    { "field": "slot.rir", "operator": "gte", "value": 4 },
+    { "field": "session.isDeloadWeek", "operator": "eq", "value": false }
   ],
   "actions": [
     { "set": "slot.rir", "operator": "clamp_max", "value": 3 },
@@ -736,6 +907,22 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     { "flag": "EXERCISE_ROTATION_DUE" },
     { "recommend": "present_alternative_approved_exercises_for_slot" }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "ES-009",
+  "category": "EXERCISE_SELECTION",
+  "description": "Beginner exercise eligibility gate: filter exercise candidates to only those with beginner_suitable = true when user.experienceLevel = beginner. Prevents beginner Primary slots from receiving deadlifts, unassisted pull-ups, barbell squats, and barbell rows before technique prerequisites are met.",
+  "confidence": "high",
+  "sources": ["exercise_taxonomy.md", "strength.md", "training_for_muscle_growth_beginner_to_advanced.md"],
+  "conditions": [
+    { "field": "user.experienceLevel", "operator": "eq", "value": "beginner" }
+  ],
+  "actions": [
+    { "filter": "approved_exercises", "by": "exercise.beginner_suitable", "operator": "eq", "value": true }
   ]
 }
 ```
@@ -920,6 +1107,24 @@ program.mesoBlockWeek         number  (1–n within current block)
 }
 ```
 
+```json
+{
+  "ruleId": "FM-005",
+  "category": "FATIGUE_MANAGEMENT",
+  "description": "Post-deload bad session immunity: do not increment consecutiveBadSessions during the first session after a deload ends. A 5–10% performance dip immediately post-deload is expected as neuromuscular coordination and glycogen levels normalize — this is not a genuine regression signal.",
+  "confidence": "moderate",
+  "sources": ["strength.md", "progression_framework.md", "deloading_protocols.md"],
+  "conditions": [
+    { "field": "session.performanceDeltaVsPrevious", "operator": "lt", "value": 0 },
+    { "field": "user.sessionsSinceLastDeload", "operator": "lte", "value": 1 }
+  ],
+  "actions": [
+    { "block": "consecutiveBadSessions_increment" },
+    { "flag": "POST_DELOAD_PERFORMANCE_DIP_EXPECTED" }
+  ]
+}
+```
+
 ---
 
 ## Category: DELOADING
@@ -936,7 +1141,7 @@ program.mesoBlockWeek         number  (1–n within current block)
   ],
   "actions": [
     { "set": "session.isDeloadWeek", "value": true },
-    { "apply": "DL-004" }
+    { "apply": "DL-010" }
   ]
 }
 ```
@@ -955,7 +1160,7 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     { "set": "session.isDeloadWeek", "value": true },
     { "flag": "EARLY_DELOAD_TRIGGERED" },
-    { "apply": "DL-004" },
+    { "apply": "DL-010" },
     { "reset": "user.consecutiveBadSessions", "value": 0 }
   ]
 }
@@ -973,7 +1178,7 @@ program.mesoBlockWeek         number  (1–n within current block)
   ],
   "actions": [
     { "set": "muscle.weeklyDirectSetsMax", "formula": "muscle.peakMesoWeekSets * 0.50" },
-    { "set": "muscle.weeklyDirectSetsTarget", "formula": "muscle.peakMesoWeekSets * 0.50" }
+    { "set": "muscle.weeklyDirectSetsTarget", "formula": "muscle.peakMesoWeekSets * 0.50", "note": "Floor is 50%; adequate range is 50–70% of peak. Move toward 0.70 if user trained too hard during the prior deload (DL-007 violations recorded)." }
   ]
 }
 ```
@@ -1109,6 +1314,54 @@ program.mesoBlockWeek         number  (1–n within current block)
   "actions": [
     { "block": "start_new_mesocycle" },
     { "flag": "DELOAD_NOT_YET_COMPLETE" }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "DL-009",
+  "category": "DELOADING",
+  "description": "Absolute maximum interval between deloads: if weeksSinceLastDeload >= 6, trigger a mandatory deload regardless of current performance. No performance metric exempts from this ceiling. Chronic fatigue accumulation above 6 weeks outpaces all recovery systems even when performance appears stable.",
+  "confidence": "high",
+  "sources": ["progression_framework.md", "recovery.md"],
+  "conditions": [
+    { "field": "user.weeksSinceLastDeload", "operator": "gte", "value": 6 },
+    { "field": "session.isDeloadWeek", "operator": "eq", "value": false }
+  ],
+  "actions": [
+    { "set": "session.isDeloadWeek", "value": true },
+    { "flag": "MANDATORY_DELOAD_MAX_INTERVAL_REACHED" },
+    { "apply": "DL-010" }
+  ]
+}
+```
+
+```json
+{
+  "ruleId": "DL-010",
+  "category": "DELOADING",
+  "description": "Deload protocol router: select the appropriate deload protocol based on experience level and joint stress flag. Centralises protocol selection so DL-001, DL-002, and DL-009 all delegate here rather than hardcoding DL-004.",
+  "confidence": "high",
+  "sources": ["deloading_protocols.md", "progression_framework.md", "recovery.md"],
+  "conditions": [
+    { "field": "session.isDeloadWeek", "operator": "eq", "value": true }
+  ],
+  "actions": [
+    {
+      "if": [
+        { "field": "user.experienceLevel", "operator": "eq", "value": "advanced" },
+        { "AND": { "field": "user.jointStressFlag", "operator": "eq", "value": true } }
+      ],
+      "then": { "apply": "DL-005" }
+    },
+    {
+      "if": { "field": "user.trainingPhase", "operator": "eq", "value": "strength" },
+      "then": { "apply": "DL-006" }
+    },
+    {
+      "else": { "apply": "DL-004" }
+    }
   ]
 }
 ```
@@ -1295,32 +1548,38 @@ program.mesoBlockWeek         number  (1–n within current block)
 | VA-006 | Volume Allocation | High | Sets per exercise hard cap (5) |
 | VA-007 | Volume Allocation | High | Junk volume gate (RIR >= 4) |
 | VA-008 | Volume Allocation | High | Mesocycle weekly volume progression |
-| VA-009 | Volume Allocation | Moderate | Volume scaling by experience level |
+| VA-009 | Volume Allocation | Moderate | Volume scaling (MEV + MAV + MRV) by experience level |
+| VA-010 | Volume Allocation | High | Very-high fatigue exercise cap: max 1 per session |
 | FA-001 | Frequency Allocation | High | Minimum 2× per muscle per week |
 | FA-002 | Frequency Allocation | Moderate | Max frequency by recovery class |
 | FA-003 | Frequency Allocation | Moderate | Recovery class assignment per muscle |
 | FA-004 | Frequency Allocation | High | 48-hour minimum gap between same-muscle sessions |
 | FA-005 | Frequency Allocation | High | No consecutive lower-body sessions |
 | FA-006 | Frequency Allocation | High | 2× minimum during fat loss for muscle retention |
-| PR-001 | Progression | High | Double progression trigger (reps ceiling → load increase) |
-| PR-002 | Progression | High | Beginner linear progression rate |
+| PR-001 | Progression | High | Double progression trigger — role-based increment, reportedRir ≤ prescribedRir+1 |
+| PR-002 | Progression | High | Beginner linear progression with formal technical failure gate |
 | PR-003 | Progression | Moderate | Micro-loading for isolation movements (1.25 lbs) |
-| PR-004 | Progression | Moderate | Stall detection (3 consecutive weeks) |
+| PR-004 | Progression | Moderate | Stall detection — 2 weeks (advanced) / 3 weeks (others), fatigue masking check first |
 | PR-005 | Progression | High | Progression inhibition during fat loss |
 | PR-006 | Progression | Moderate | Tempo progression fallback when load blocked |
 | PR-007 | Progression | High | Meso volume baseline reset post-deload |
+| PR-009 | Progression | High | Cross-mesocycle load carry-forward (intermediate/advanced) |
+| PR-010 | Progression | High | Fat loss primary slot rep floor: repsMin >= 8 during cut |
+| PR-011 | Progression | Moderate | Cross-mesocycle MEV advancement based on prior meso progression rate |
 | EO-001 | Exercise Ordering | High | Role ordering: Primary → Secondary → Accessory |
 | EO-002 | Exercise Ordering | High | Muscle priority ordering within session |
 | EO-003 | Exercise Ordering | High | Compound before isolation within same muscle |
 | EO-004 | Exercise Ordering | Moderate | No consecutive overlapping compound movements |
+| EO-005 | Exercise Ordering | High | Weekly push/pull/hinge/squat movement balance check |
 | ES-001 | Exercise Selection | High | Primary slots: priority-1 exercises only |
 | ES-002 | Exercise Selection | High | Secondary slots: priority 1–2 exercises |
 | ES-003 | Exercise Selection | High | Accessory slots: all priority levels, prefer isolation |
 | ES-004 | Exercise Selection | High | Rep range defaults from SLOT_ROLE_CONFIGS |
 | ES-005 | Exercise Selection | Moderate | Rep range minimum 10 for small/joint-sensitive muscles |
 | ES-006 | Exercise Selection | High | Rep range hard bounds: 5 min, 30 max |
-| ES-007 | Exercise Selection | High | RIR hard floor: no slot prescribed at RIR >= 4 |
+| ES-007 | Exercise Selection | High | RIR hard floor: no slot prescribed at RIR >= 4 (non-deload sessions only) |
 | ES-008 | Exercise Selection | Moderate | Exercise rotation trigger at mesocycle boundary |
+| ES-009 | Exercise Selection | High | Beginner exercise eligibility gate (beginner_suitable filter) |
 | RM-001 | Recovery Management | High | Rest period defaults by slot role |
 | RM-002 | Recovery Management | High | Session duration soft warning (90 min) and hard cap (120 min) |
 | RM-003 | Recovery Management | High | Fat loss session volume reduction (−15%) |
@@ -1329,14 +1588,17 @@ program.mesoBlockWeek         number  (1–n within current block)
 | FM-002 | Fatigue Management | High | Reset consecutiveBadSessions on performance recovery |
 | FM-003 | Fatigue Management | Moderate | MRV approach detection via stall + volume |
 | FM-004 | Fatigue Management | High | Indirect overlap sets contribution formula |
+| FM-005 | Fatigue Management | Moderate | Post-deload bad session immunity (first session post-deload exempt) |
 | DL-001 | Deloading | High | Scheduled deload: week 4 of every mesocycle block |
 | DL-002 | Deloading | High | Early deload trigger: consecutiveBadSessions >= 2 |
-| DL-003 | Deloading | High | Deload volume minimum 50% reduction |
+| DL-003 | Deloading | High | Deload volume: 50% floor (50–70% adequate range) |
 | DL-004 | Deloading | High | Hypertrophy load retention protocol (beginner/intermediate) |
 | DL-005 | Deloading | High | Hypertrophy joint healing protocol (advanced) |
 | DL-006 | Deloading | High | Strength deload protocol (maintain reps, reduce load) |
 | DL-007 | Deloading | High | Deload RIR floor: all sets at RIR >= 4 |
 | DL-008 | Deloading | Moderate | Post-deload mesocycle lock until 5+ deload days complete |
+| DL-009 | Deloading | High | Absolute max interval: mandatory deload at 6 weeks regardless of performance |
+| DL-010 | Deloading | High | Deload protocol router (replaces hardcoded DL-004 in DL-001/DL-002) |
 | AD-001 | Adherence | High | Session length hard cap enforcement |
 | AD-002 | Adherence | Moderate | Minimum effective dose (2 slots) during disruption |
 | AD-003 | Adherence | Moderate | Fat loss floating split scheduling |
