@@ -18,6 +18,10 @@ export const Colors = {
   error: '#EF4444',
 };
 
+// Height of the persistent bottom tab bar (base, excluding safe area inset).
+// Add useSafeAreaInsets().bottom where precise device-aware padding is needed.
+export const BOTTOM_TAB_HEIGHT = 60;
+
 export const MuscleGroupColors: Record<string, string> = {
   Chest: '#EC4899',
   Triceps: '#F472B6',

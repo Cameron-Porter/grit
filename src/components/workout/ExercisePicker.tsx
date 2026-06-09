@@ -1,16 +1,17 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { getExercises } from '../../api/exercises';
+import { createCustomExercise, getExercises } from '../../api/exercises';
 import { useProfileStore } from '../../store/useProfileStore';
 import { Colors, MuscleGroupColors } from '../../utils/constants';
 
@@ -20,15 +21,188 @@ interface ExercisePickerProps {
   onSelect: (name: string, muscleGroup: string, equipment: string) => void;
 }
 
+const MUSCLE_FILTERS = [
+  'All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs',
+];
+
+// ─── Custom Exercise Form ─────────────────────────────────────────────────────
+
+interface CustomFormProps {
+  prefillName: string;
+  onSubmit: (ex: { name: string; muscle: string; equipment: string }) => void;
+  onCancel: () => void;
+}
+
+const EQUIPMENT_OPTIONS = [
+  'Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight',
+  'Bodyweight Loadable', 'Smith Machine', 'Freemotion',
+];
+
+const MUSCLE_OPTIONS = [
+  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
+  'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs', 'Forearms',
+];
+
+function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps) {
+  const [name, setName] = useState(prefillName);
+  const [muscle, setMuscle] = useState('');
+  const [equipment, setEquipment] = useState('Barbell');
+  const [submitting, setSubmitting] = useState(false);
+
+  const canSubmit = name.trim().length > 1 && muscle.length > 0;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    try {
+      await createCustomExercise(name.trim(), muscle, equipment);
+    } catch {
+      // Non-fatal — the exercise is still passed to the workout below
+    }
+    onSubmit({ name: name.trim(), muscle, equipment });
+    setSubmitting(false);
+  };
+
+  return (
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        {/* Header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
+          <Pressable onPress={onCancel} style={{ marginRight: 12, padding: 4 }}>
+            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.text} />
+          </Pressable>
+          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700', flex: 1 }}>
+            Custom Exercise
+          </Text>
+        </View>
+
+        <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }} keyboardShouldPersistTaps="handled">
+          <View style={{ backgroundColor: `${Colors.primary}15`, borderRadius: 10, padding: 12, flexDirection: 'row', gap: 10 }}>
+            <MaterialCommunityIcons name="information-outline" size={18} color={Colors.primary} style={{ marginTop: 1 }} />
+            <Text style={{ color: Colors.muted, fontSize: 13, flex: 1, lineHeight: 19 }}>
+              Custom exercises are added to your personal library immediately. They're also submitted for review to be added to the main database.
+            </Text>
+          </View>
+
+          {/* Name */}
+          <View>
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+              Exercise Name *
+            </Text>
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Incline Hammer Curl"
+              placeholderTextColor={Colors.muted}
+              style={{ backgroundColor: Colors.surface, color: Colors.text, padding: 14, borderRadius: 10, fontSize: 15 }}
+            />
+          </View>
+
+          {/* Primary Muscle */}
+          <View>
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+              Primary Muscle *
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {MUSCLE_OPTIONS.map((m) => {
+                const selected = muscle === m;
+                const c = MuscleGroupColors[m] ?? Colors.primary;
+                return (
+                  <Pressable
+                    key={m}
+                    onPress={() => setMuscle(m)}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 20,
+                      backgroundColor: selected ? `${c}30` : Colors.surface,
+                      borderWidth: 1,
+                      borderColor: selected ? c : Colors.surface2,
+                    }}
+                  >
+                    <Text style={{ color: selected ? c : Colors.muted, fontSize: 13, fontWeight: '600' }}>
+                      {m}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Equipment */}
+          <View>
+            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+              Equipment
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {EQUIPMENT_OPTIONS.map((e) => {
+                const selected = equipment === e;
+                return (
+                  <Pressable
+                    key={e}
+                    onPress={() => setEquipment(e)}
+                    style={{
+                      paddingVertical: 8,
+                      paddingHorizontal: 14,
+                      borderRadius: 20,
+                      backgroundColor: selected ? `${Colors.primary}22` : Colors.surface,
+                      borderWidth: 1,
+                      borderColor: selected ? Colors.primary : Colors.surface2,
+                    }}
+                  >
+                    <Text style={{ color: selected ? Colors.primary : Colors.muted, fontSize: 13, fontWeight: '600' }}>
+                      {e}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+
+          <Pressable
+            onPress={handleSubmit}
+            disabled={!canSubmit || submitting}
+            style={{
+              backgroundColor: canSubmit ? Colors.primary : Colors.surface2,
+              padding: 16,
+              borderRadius: 12,
+              alignItems: 'center',
+              marginTop: 8,
+            }}
+          >
+            <Text style={{ color: canSubmit ? Colors.background : Colors.muted, fontWeight: '700', fontSize: 15 }}>
+              {submitting ? 'Adding...' : 'Add to Workout'}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+// ─── Main Picker ─────────────────────────────────────────────────────────────
+
 export default function ExercisePicker({ visible, onClose, onSelect }: ExercisePickerProps) {
   const { usePreferredEquipment, preferredEquipment } = useProfileStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [allExercises, setAllExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [muscleFilter, setMuscleFilter] = useState('All');
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const searchRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (visible && allExercises.length === 0) {
       loadExercises();
+    }
+    if (visible) {
+      setShowCustomForm(false);
+      setSearchQuery('');
+      setMuscleFilter('All');
     }
   }, [visible]);
 
@@ -46,20 +220,43 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
 
   const filteredExercises = allExercises.filter((ex) => {
     const matchesSearch =
+      !searchQuery ||
       ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ex.muscle_group?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesMuscle =
+      muscleFilter === 'All' || ex.muscle_group === muscleFilter;
     const matchesEquipment =
       !usePreferredEquipment ||
       preferredEquipment.length === 0 ||
-      preferredEquipment.some((e) => e.toLowerCase() === (ex.equipment ?? '').toLowerCase());
-    return matchesSearch && matchesEquipment;
+      preferredEquipment.some((e) => e.toLowerCase() === (ex.equipment ?? '').toLowerCase()) ||
+      ex.equipment === 'Bodyweight';
+    return matchesSearch && matchesMuscle && matchesEquipment;
   });
+
+  const noResults = filteredExercises.length === 0 && !loading && searchQuery.length > 1;
+
+  if (showCustomForm) {
+    return (
+      <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowCustomForm(false)}>
+        <CustomExerciseForm
+          prefillName={searchQuery}
+          onSubmit={({ name, muscle, equipment }) => {
+            onSelect(name, muscle, equipment);
+            setShowCustomForm(false);
+            setSearchQuery('');
+            onClose();
+          }}
+          onCancel={() => setShowCustomForm(false)}
+        />
+      </Modal>
+    );
+  }
 
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="formSheet"
+      presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
@@ -67,33 +264,67 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
-          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700' }}>
-            Select Exercise
-          </Text>
-          <Pressable onPress={onClose} style={{ padding: 4 }}>
-            <MaterialCommunityIcons name="close" size={24} color={Colors.text} />
-          </Pressable>
-        </View>
+        <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+            <Text style={{ color: Colors.text, fontSize: 28, fontWeight: '700', flex: 1 }}>
+              Add Exercise
+            </Text>
+            <Pressable onPress={onClose} style={{ padding: 6 }}>
+              <MaterialCommunityIcons name="close" size={26} color={Colors.muted} />
+            </Pressable>
+          </View>
 
-        {/* Search */}
-        <View style={{ padding: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 10, paddingHorizontal: 12 }}>
-            <MaterialCommunityIcons name="magnify" size={20} color={Colors.muted} />
+          {/* Search */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 14, height: 46 }}>
+            <MaterialCommunityIcons name="magnify" size={20} color={Colors.muted} style={{ marginRight: 8 }} />
             <TextInput
+              ref={searchRef}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholder="Search exercises or muscle groups..."
+              placeholder="Search exercises..."
               placeholderTextColor={Colors.muted}
-              style={{ flex: 1, color: Colors.text, paddingVertical: 12, paddingHorizontal: 8, fontSize: 15 }}
+              style={{ flex: 1, color: Colors.text, fontSize: 16 }}
               autoFocus
+              returnKeyType="search"
             />
             {searchQuery.length > 0 && (
-              <Pressable onPress={() => setSearchQuery('')}>
+              <Pressable onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
                 <MaterialCommunityIcons name="close-circle" size={18} color={Colors.muted} />
               </Pressable>
             )}
           </View>
+        </View>
+
+        {/* Muscle filter chips */}
+        <View style={{ paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+          >
+            {MUSCLE_FILTERS.map((m) => {
+              const isSelected = muscleFilter === m;
+              const color = m === 'All' ? Colors.primary : (MuscleGroupColors[m] ?? Colors.primary);
+              return (
+                <Pressable
+                  key={m}
+                  onPress={() => setMuscleFilter(m)}
+                  style={{
+                    paddingVertical: 7,
+                    paddingHorizontal: 14,
+                    borderRadius: 20,
+                    backgroundColor: isSelected ? `${color}28` : Colors.surface,
+                    borderWidth: 1,
+                    borderColor: isSelected ? color : Colors.surface2,
+                  }}
+                >
+                  <Text style={{ color: isSelected ? color : Colors.muted, fontSize: 13, fontWeight: '600' }}>
+                    {m}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {/* List */}
@@ -101,16 +332,16 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
           data={filteredExercises}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingHorizontal: 12, paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 40 }}
           renderItem={({ item }) => {
             const badgeColor = MuscleGroupColors[item.muscle_group] ?? Colors.muted;
             return (
               <Pressable
                 style={({ pressed }) => ({
                   flexDirection: 'row',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
                   paddingVertical: 14,
+                  paddingHorizontal: 16,
                   borderBottomWidth: 1,
                   borderBottomColor: Colors.surface2,
                   opacity: pressed ? 0.6 : 1,
@@ -122,28 +353,61 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
                 }}
               >
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>
+                  <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>
                     {item.name}
                   </Text>
-                  <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
+                  <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
                     {item.equipment}
                   </Text>
                 </View>
-                <View style={{ backgroundColor: `${badgeColor}28`, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 5 }}>
-                  <Text style={{ color: badgeColor, fontSize: 11, fontWeight: '700' }}>
+                <View style={{ backgroundColor: `${badgeColor}28`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
+                  <Text style={{ color: badgeColor, fontSize: 12, fontWeight: '700' }}>
                     {item.muscle_group}
                   </Text>
                 </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.surface2} style={{ marginLeft: 8 }} />
               </Pressable>
             );
           }}
           ListEmptyComponent={
-            <View style={{ alignItems: 'center', marginTop: 40 }}>
-              <MaterialCommunityIcons name="dumbbell" size={48} color={Colors.surface2} />
-              <Text style={{ color: Colors.muted, marginTop: 12, fontSize: 15 }}>
-                {loading ? 'Loading exercises...' : 'No exercises found.'}
-              </Text>
+            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 32 }}>
+              <MaterialCommunityIcons name="dumbbell" size={52} color={Colors.surface2} />
+              {loading ? (
+                <Text style={{ color: Colors.muted, marginTop: 16, fontSize: 15 }}>Loading exercises...</Text>
+              ) : noResults ? (
+                <>
+                  <Text style={{ color: Colors.text, marginTop: 16, fontSize: 17, fontWeight: '600' }}>
+                    No results for "{searchQuery}"
+                  </Text>
+                  <Text style={{ color: Colors.muted, fontSize: 14, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+                    Can't find what you're looking for? Add it as a custom exercise.
+                  </Text>
+                  <Pressable
+                    onPress={() => setShowCustomForm(true)}
+                    style={{ marginTop: 20, backgroundColor: Colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}
+                  >
+                    <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 15 }}>
+                      + Create Custom Exercise
+                    </Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Text style={{ color: Colors.muted, marginTop: 16, fontSize: 15 }}>No exercises found.</Text>
+              )}
             </View>
+          }
+          ListFooterComponent={
+            filteredExercises.length > 0 ? (
+              <Pressable
+                onPress={() => setShowCustomForm(true)}
+                style={{ marginHorizontal: 16, marginTop: 20, marginBottom: 8, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: Colors.surface2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <MaterialCommunityIcons name="plus" size={18} color={Colors.muted} />
+                <Text style={{ color: Colors.muted, fontSize: 14, fontWeight: '600' }}>
+                  Can't find your exercise? Create custom
+                </Text>
+              </Pressable>
+            ) : null
           }
         />
       </KeyboardAvoidingView>

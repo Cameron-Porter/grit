@@ -5,6 +5,8 @@ export type WorkoutSet = {
   skipped?: boolean;
   type?: 'Regular' | 'M' | 'MM';
   rir?: number;
+  // Target rep count for this set — used to auto-fill reps on completion for non-RIR sets.
+  targetReps?: number;
 };
 
 export type WorkoutSetRow = {
@@ -13,6 +15,7 @@ export type WorkoutSetRow = {
   reps: number;
   weight: number;
   set_index: number;
+  rir?: number | null;
 };
 
 export type Exercise = {
@@ -79,6 +82,7 @@ export type WorkoutState = {
   skipSets: (exerciseId: string) => void;
   setExerciseNote: (exerciseId: string, note: string) => void;
   finishWorkout: () => Promise<void>;
+  skipDay: (dayId: string) => Promise<void>;
   startFromProgramDay: (
     dayId: string | null,
     programName: string | null,
@@ -96,4 +100,5 @@ export type WorkoutState = {
     dayNumber?: number | null,
     dayLabel?: string | null,
   ) => void;
+  replaceExercise: (exerciseId: string, newName: string, newMuscleGroup: string, newEquipment: string) => void;
 };

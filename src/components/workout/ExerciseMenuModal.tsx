@@ -11,6 +11,7 @@ interface ExerciseMenuModalProps {
   onSkipSets: () => void;
   onNewNote: () => void;
   onJointPain: () => void;
+  onReplace: () => void;
 }
 
 export default function ExerciseMenuModal({
@@ -22,6 +23,7 @@ export default function ExerciseMenuModal({
   onSkipSets,
   onNewNote,
   onJointPain,
+  onReplace,
 }: ExerciseMenuModalProps) {
   const handle = (cb: () => void) => () => {
     cb();
@@ -41,6 +43,7 @@ export default function ExerciseMenuModal({
 
           <MenuButton icon="arrow-up" text="Move up" onPress={handle(onMoveUp)} />
           <MenuButton icon="arrow-down" text="Move down" onPress={handle(onMoveDown)} />
+          <MenuButton icon="swap-horizontal" text="Replace exercise" onPress={handle(onReplace)} />
           <MenuButton icon="note-plus-outline" text="New note" onPress={handle(onNewNote)} />
           <MenuButton icon="fast-forward-outline" text="Skip sets" onPress={handle(onSkipSets)} />
           <MenuButton icon="medical-bag" text="Joint pain" onPress={handle(onJointPain)} />

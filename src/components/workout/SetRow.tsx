@@ -1,33 +1,41 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import { WorkoutSet } from '../../types/workout';
 import { Colors } from '../../utils/constants';
 
 interface SetRowProps {
   set: WorkoutSet;
+  isActive: boolean;
   onWeightChange: (val: number) => void;
   onRepsChange: (val: number) => void;
-  onToggleComplete: () => void;
+  // autoReps provided when set should be completed with auto-filled reps
+  onComplete: (autoReps?: number) => void;
   onRemove: () => void;
   onMenuPress: () => void;
 }
 
 export default function SetRow({
   set,
+  isActive,
   onWeightChange,
   onRepsChange,
-  onToggleComplete,
+  onComplete,
   onRemove,
   onMenuPress,
 }: SetRowProps) {
   const translateX = useSharedValue(0);
+  const shakeX = useSharedValue(0);
+  const [rirError, setRirError] = useState(false);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
@@ -37,7 +45,7 @@ export default function SetRow({
     .onEnd(() => {
       if (translateX.value > 100) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        onToggleComplete();
+        handleComplete();
       }
       if (translateX.value < -100) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -47,10 +55,9 @@ export default function SetRow({
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+    transform: [{ translateX: translateX.value + shakeX.value }],
   }));
 
-  // Only show each background on the correct swipe side
   const deleteStyle = useAnimatedStyle(() => ({
     opacity: translateX.value < -8 ? 1 : 0,
   }));
@@ -58,6 +65,36 @@ export default function SetRow({
   const completeStyle = useAnimatedStyle(() => ({
     opacity: translateX.value > 8 ? 1 : 0,
   }));
+
+  function handleComplete() {
+    if (set.completed) {
+      onComplete(); // uncomplete — no auto-fill
+      return;
+    }
+
+    // RIR sets require actual rep entry
+    if (set.rir !== undefined && set.reps === 0) {
+      setRirError(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      shakeX.value = withSequence(
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(-5, { duration: 50 }),
+        withTiming(5, { duration: 50 }),
+        withTiming(0, { duration: 50 }),
+      );
+      setTimeout(() => setRirError(false), 1500);
+      return;
+    }
+
+    // Non-RIR sets: auto-fill target reps if blank
+    if (set.reps === 0 && set.rir === undefined) {
+      onComplete(set.targetReps ?? 8);
+      return;
+    }
+
+    onComplete();
+  }
 
   if (set.skipped) {
     return (
@@ -72,9 +109,17 @@ export default function SetRow({
     );
   }
 
+  // Border styling: active = green, completed = none, future = subtle
+  const borderColor = set.completed
+    ? 'transparent'
+    : isActive
+    ? Colors.primary
+    : Colors.surface2;
+  const borderWidth = set.completed ? 0 : isActive ? 2 : 1;
+
   return (
     <View style={{ position: 'relative', marginBottom: 6, overflow: 'hidden' }}>
-      {/* Delete background — only visible on left swipe */}
+      {/* Delete background */}
       <Animated.View
         style={[deleteStyle, {
           position: 'absolute',
@@ -83,13 +128,13 @@ export default function SetRow({
           justifyContent: 'center',
           alignItems: 'flex-end',
           paddingRight: 20,
-          borderRadius: 6,
+          borderRadius: 8,
         }]}
       >
         <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Delete</Text>
       </Animated.View>
 
-      {/* Complete background — only visible on right swipe */}
+      {/* Complete background */}
       <Animated.View
         style={[completeStyle, {
           position: 'absolute',
@@ -97,7 +142,7 @@ export default function SetRow({
           backgroundColor: Colors.primary,
           justifyContent: 'center',
           paddingLeft: 20,
-          borderRadius: 6,
+          borderRadius: 8,
         }]}
       >
         <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Complete</Text>
@@ -108,15 +153,17 @@ export default function SetRow({
           style={[
             animatedStyle,
             {
-              backgroundColor: Colors.surface,
+              backgroundColor: set.completed ? `${Colors.primary}18` : Colors.surface,
               flexDirection: 'row',
               alignItems: 'center',
               paddingVertical: 6,
-              borderRadius: 6,
+              borderRadius: 8,
+              borderWidth,
+              borderColor,
             },
           ]}
         >
-          {/* Row Options Menu Trigger */}
+          {/* Row menu */}
           <Pressable
             onPress={onMenuPress}
             style={{ width: 40, alignItems: 'center', justifyContent: 'center' }}
@@ -154,8 +201,20 @@ export default function SetRow({
             <TextInput
               value={String(set.reps || '')}
               keyboardType="number-pad"
-              placeholder={set.rir !== undefined ? `${set.rir} RIR` : '0'}
-              placeholderTextColor={set.rir !== undefined ? Colors.primary : Colors.muted}
+              placeholder={
+                set.rir !== undefined
+                  ? `${set.rir} RIR`
+                  : set.targetReps
+                  ? String(set.targetReps)
+                  : '0'
+              }
+              placeholderTextColor={
+                rirError
+                  ? Colors.error
+                  : set.rir !== undefined || set.targetReps
+                  ? Colors.primary
+                  : Colors.muted
+              }
               onChangeText={(text) => {
                 const clean = text.replace(/[^0-9]/g, '');
                 onRepsChange(parseInt(clean, 10) || 0);
@@ -170,25 +229,32 @@ export default function SetRow({
                 textAlign: 'center',
                 fontSize: 16,
                 fontWeight: '600',
+                borderWidth: rirError ? 1 : 0,
+                borderColor: rirError ? Colors.error : 'transparent',
               }}
             />
           </View>
 
           {/* Log Checkbox */}
           <View style={{ width: 60, alignItems: 'center' }}>
-            <Pressable onPress={onToggleComplete}>
+            <Pressable onPress={handleComplete}>
               <View
                 style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
                   backgroundColor: set.completed ? Colors.primary : '#1E1E1E',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  borderWidth: set.completed ? 0 : isActive ? 2 : 1,
+                  borderColor: isActive ? Colors.primary : '#3A3A3A',
                 }}
               >
                 {set.completed && (
                   <MaterialCommunityIcons name="check" size={18} color="white" />
+                )}
+                {!set.completed && isActive && (
+                  <MaterialCommunityIcons name="circle-medium" size={14} color={Colors.primary} />
                 )}
               </View>
             </Pressable>

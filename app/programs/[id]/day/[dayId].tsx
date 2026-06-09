@@ -20,7 +20,7 @@ import { ExerciseWeeklyData, generateProgressiveOverload } from '../../../../src
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
 import { useWorkoutStore } from '../../../../src/store/useWorkoutStore';
-import { Colors, MuscleGroupColors } from '../../../../src/utils/constants';
+import { BOTTOM_TAB_HEIGHT, Colors, MuscleGroupColors } from '../../../../src/utils/constants';
 
 const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -393,7 +393,7 @@ export default function ProgramDayScreen() {
 
       {/* Footer — only for upcoming days */}
       {!loading && !day?.completed && (
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2, gap: 10 }}>
+        <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2, gap: 10 }}>
           {isTemplate && (
             <Pressable
               onPress={() => setPickerOpen(true)}
