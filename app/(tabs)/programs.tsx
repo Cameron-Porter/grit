@@ -3,8 +3,16 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { deleteProgram, getPrograms, setCurrentProgram } from '../../src/api/programs';
+import { deleteProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
 import { useColors } from '../../src/utils/useColors';
+
+type ProgramStatus = 'active' | 'complete' | 'paused';
+
+function getProgramStatus(program: Program): ProgramStatus {
+  if (program.is_current) return 'active';
+  if (program.totalDays > 0 && program.completedDays >= program.totalDays) return 'complete';
+  return 'paused';
+}
 
 export default function Programs() {
   const colors = useColors();
@@ -105,18 +113,32 @@ export default function Programs() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
                   <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700' }}>{item.name}</Text>
-                  {item.is_current ? (
-                    <View style={{ backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                      <Text style={{ color: colors.background, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>ACTIVE</Text>
-                    </View>
-                  ) : (
-                    <View style={{ backgroundColor: colors.surface2, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                      <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>PAUSED</Text>
-                    </View>
-                  )}
+                  {(() => {
+                    const status = getProgramStatus(item as Program);
+                    if (status === 'active') {
+                      return (
+                        <View style={{ backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ color: colors.background, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>ACTIVE</Text>
+                        </View>
+                      );
+                    }
+                    if (status === 'complete') {
+                      return (
+                        <View style={{ backgroundColor: '#22C55E', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>COMPLETE</Text>
+                        </View>
+                      );
+                    }
+                    return (
+                      <View style={{ backgroundColor: colors.surface2, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
+                        <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>PAUSED</Text>
+                      </View>
+                    );
+                  })()}
                 </View>
                 <Text style={{ color: colors.muted, fontSize: 13 }}>
                   {item.total_weeks} weeks · {item.days_per_week} days/week
+                  {item.completedDays > 0 && ` · ${item.completedDays}/${item.totalDays} days done`}
                 </Text>
               </View>
               <Pressable
@@ -130,12 +152,16 @@ export default function Programs() {
             {/* Inline context menu */}
             {menuOpen === item.id && (
               <View style={{ marginTop: 12, backgroundColor: colors.surface2, borderRadius: 10, overflow: 'hidden' }}>
-                {!item.is_current && (
-                  <Pressable onPress={() => handleSetCurrent(item.id)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
-                    <MaterialCommunityIcons name="play-circle-outline" size={18} color={colors.primary} />
-                    <Text style={{ color: colors.text, fontSize: 15 }}>Resume Program</Text>
-                  </Pressable>
-                )}
+                {!item.is_current && (() => {
+                  const status = getProgramStatus(item as Program);
+                  const label = status === 'complete' ? 'Set as Current' : 'Resume Program';
+                  return (
+                    <Pressable onPress={() => handleSetCurrent(item.id)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
+                      <MaterialCommunityIcons name="play-circle-outline" size={18} color={colors.primary} />
+                      <Text style={{ color: colors.text, fontSize: 15 }}>{label}</Text>
+                    </Pressable>
+                  );
+                })()}
                 <Pressable onPress={() => handleDelete(item.id, item.name)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
                   <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
                   <Text style={{ color: colors.error, fontSize: 15 }}>Delete program</Text>
