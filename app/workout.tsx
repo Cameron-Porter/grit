@@ -443,7 +443,7 @@ export default function ActiveWorkout() {
         </View>
         <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
           {activeProgramName
-            ? `${activeProgramName}${activeProgramWeek != null ? ` Â· Week ${activeProgramWeek}` : ''}`
+            ? `${activeProgramName}${activeProgramDayLabel ? ` · ${activeProgramDayLabel}` : activeProgramDayNumber != null ? ` · Day ${activeProgramDayNumber}` : ''}`
             : 'Free Workout'}
         </Text>
       </View>

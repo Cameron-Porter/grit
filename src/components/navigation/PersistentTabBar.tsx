@@ -8,7 +8,7 @@ import { useColors } from '../../utils/useColors';
 type TabName = 'today' | 'programs' | 'progress' | 'profile';
 
 const TABS: { name: TabName; label: string; icon: string; route: string }[] = [
-  { name: 'today',    label: 'Today',    icon: 'dumbbell',             route: '/workout' },
+  { name: 'today',    label: 'Workout',  icon: 'dumbbell',             route: '/workout' },
   { name: 'programs', label: 'Programs', icon: 'calendar-multiselect', route: '/(tabs)/programs' },
   { name: 'progress', label: 'Progress', icon: 'chart-line',           route: '/(tabs)/history' },
   { name: 'profile',  label: 'Profile',  icon: 'account-circle',       route: '/(tabs)/more' },

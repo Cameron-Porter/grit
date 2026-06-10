@@ -242,6 +242,7 @@ export default function CreateProgram() {
   const isLastStep = step === daysPerWeek + 1;
   const progressPct = step <= 1 ? 0 : (step - 1) / daysPerWeek;
   const canAdvanceSettings = !!name.trim() && selectedDays.length === daysPerWeek;
+  const canAdvanceExercises = !!currentDay && currentDay.slots.every((s) => !!s.selectedExercise);
   const headerTitle =
     step === 0 ? 'New Program' :
     step === 1 ? 'Training Focus' :
@@ -518,9 +519,12 @@ export default function CreateProgram() {
                 <Text style={{ color: colors.muted, fontSize: 14 }}>{savingStatus}</Text>
               </View>
             ) : (
-              <Pressable onPress={handleNext}
-                style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-                <Text style={{ color: colors.background, fontWeight: '700', fontSize: 16 }}>
+              <Pressable
+                onPress={handleNext}
+                disabled={!canAdvanceExercises}
+                style={{ backgroundColor: canAdvanceExercises ? colors.primary : colors.surface2, borderRadius: 14, padding: 16, alignItems: 'center' }}
+              >
+                <Text style={{ color: canAdvanceExercises ? colors.background : colors.muted, fontWeight: '700', fontSize: 16 }}>
                   {isLastStep
                     ? 'Create & Start →'
                     : `Next: ${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex + 1]] ?? `Day ${exerciseStepIndex + 2}`} →`}
