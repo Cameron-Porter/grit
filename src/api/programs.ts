@@ -14,6 +14,8 @@ export interface Program {
   created_at: string;
   focus: string | null;
   muscle_priorities: Record<string, 'emphasize' | 'grow' | 'maintain'> | null;
+  totalDays: number;
+  completedDays: number;
 }
 
 export interface ProgramDay {
@@ -53,11 +55,22 @@ export interface ProgramDayTarget {
 
 export async function getPrograms(): Promise<Program[]> {
   const userId = await getUserId();
-  const query = supabase.from("programs").select("*").order("created_at", { ascending: false });
+  const query = supabase
+    .from("programs")
+    .select("*, program_days(id, completed, skipped)")
+    .order("created_at", { ascending: false });
   if (userId) query.eq("user_id", userId);
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((p: any) => {
+    const days: { completed: boolean; skipped: boolean }[] = p.program_days ?? [];
+    const { program_days: _drop, ...rest } = p;
+    return {
+      ...rest,
+      totalDays: days.length,
+      completedDays: days.filter((d) => d.completed || d.skipped).length,
+    };
+  });
 }
 
 export async function createProgram(
@@ -109,8 +122,13 @@ export async function deleteProgram(id: string): Promise<void> {
 }
 
 export async function setCurrentProgram(id: string): Promise<void> {
-  // Clear all current flags, then set the selected one
-  await supabase.from("programs").update({ is_current: false }).neq("id", "");
+  const userId = await getUserId();
+  // Clear all flags for this user, then set the selected one
+  if (userId) {
+    await supabase.from("programs").update({ is_current: false }).eq("user_id", userId);
+  } else {
+    await supabase.from("programs").update({ is_current: false }).neq("id", id);
+  }
   const { error } = await supabase.from("programs").update({ is_current: true }).eq("id", id);
   if (error) throw error;
 }
