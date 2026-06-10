@@ -11,7 +11,7 @@ A mobile fitness application built for lifters who want structured, progressive 
 G.R.I.T. is a fully functional React Native application targeting iOS and Android. The following features are production-ready:
 
 ### Workout Logging
-- Start free workouts or launch directly from a program day
+- Start a Quick Workout (unplanned session) or launch directly from a program day
 - Log sets with weight, reps, and RIR (Reps in Reserve)
 - Swipe right to complete a set, swipe left to remove it
 - Auto-fill target reps when completing non-RIR sets

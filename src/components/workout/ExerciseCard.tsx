@@ -60,7 +60,7 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
   // Group displayed sessions by program name
   const grouped = new Map<string, HistorySessionEntry[]>();
   displayed.forEach((s) => {
-    const key = s.programName ?? 'Free Workout';
+    const key = s.programName ?? 'Quick Workout';
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(s);
   });
@@ -90,7 +90,7 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
                 <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '700' }}>
                   {session.weekNumber != null && session.dayNumber != null
                     ? `Week ${session.weekNumber} · Day ${session.dayNumber}`
-                    : 'Free Workout'}
+                    : 'Quick Workout'}
                 </Text>
                 <Text style={{ color: colors.muted, fontSize: 11 }}>
                   {new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

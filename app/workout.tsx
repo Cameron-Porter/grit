@@ -176,7 +176,7 @@ export default function ActiveWorkout() {
                   onPress={() => startWorkout()}
                   style={{ flex: 1, backgroundColor: colors.surface2, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.surface2 }}
                 >
-                  <Text style={{ color: colors.muted, fontWeight: '700', fontSize: 14 }}>Free Workout</Text>
+                  <Text style={{ color: colors.muted, fontWeight: '700', fontSize: 14 }}>Quick Workout</Text>
                 </Pressable>
               </View>
             </View>
@@ -444,7 +444,7 @@ export default function ActiveWorkout() {
         <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
           {activeProgramName
             ? `${activeProgramName}${activeProgramDayLabel ? ` · ${activeProgramDayLabel}` : activeProgramDayNumber != null ? ` · Day ${activeProgramDayNumber}` : ''}`
-            : 'Free Workout'}
+            : 'Quick Workout'}
         </Text>
       </View>
 
