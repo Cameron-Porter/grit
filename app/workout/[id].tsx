@@ -1,102 +1,99 @@
-import { useLocalSearchParams } from 'expo-router';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/api/supabase';
-import { WorkoutSetRow } from '../../src/types/workout';
-import { Colors } from '../../src/utils/constants';
+import ReadOnlyExerciseCard, { ReadOnlyExercise } from '../../src/components/workout/ReadOnlyExerciseCard';
+import { useColors } from '../../src/utils/useColors';
 
 export default function WorkoutDetail() {
-  const { id } = useLocalSearchParams();
-  const [sets, setSets] = useState<WorkoutSetRow[]>([]);
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const [exercises, setExercises] = useState<ReadOnlyExercise[]>([]);
+  const [completedAt, setCompletedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadWorkout();
+    load();
   }, []);
 
-  const loadWorkout = async () => {
+  const load = async () => {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from('workout_sets')
-      .select('*')
-      .eq('workout_id', id);
+    const [{ data: sets }, { data: workoutRows }] = await Promise.all([
+      supabase
+        .from('workout_sets')
+        .select('exercise_name, muscle_group, equipment, note, weight, reps, set_index, completed')
+        .eq('workout_id', id)
+        .order('exercise_name')
+        .order('set_index'),
+      supabase
+        .from('workouts')
+        .select('completed_at')
+        .eq('id', id)
+        .single(),
+    ]);
 
-    if (error) {
-      console.log(error);
-      setLoading(false);
-      return;
-    }
+    setCompletedAt(workoutRows?.completed_at ?? null);
 
-    setSets(data || []);
+    // Group sets by exercise, carrying metadata from first row
+    const map = new Map<string, ReadOnlyExercise>();
+    (sets ?? []).forEach((s) => {
+      if (!map.has(s.exercise_name)) {
+        map.set(s.exercise_name, {
+          name: s.exercise_name,
+          muscleGroup: s.muscle_group ?? null,
+          equipment: s.equipment ?? null,
+          note: s.note ?? null,
+          sets: [],
+        });
+      }
+      map.get(s.exercise_name)!.sets.push({
+        weight: s.weight,
+        reps: s.reps,
+        completed: s.completed,
+      });
+    });
+
+    setExercises(Array.from(map.values()));
     setLoading(false);
   };
 
-  // Group by exercise
-  const grouped = sets.reduce((acc: Record<string, WorkoutSetRow[]>, set) => {
-    if (!acc[set.exercise_name]) acc[set.exercise_name] = [];
-    acc[set.exercise_name].push(set);
-    return acc;
-  }, {});
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        <Text style={{ color: Colors.text, padding: 16 }}>
-          Loading workout...
-        </Text>
-      </View>
-    );
-  }
-
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: Colors.background }}
-      contentContainerStyle={{ padding: 16 }}
-    >
-      <Text style={{ color: Colors.text, fontSize: 22, marginBottom: 16 }}>
-        Workout Details
-      </Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Header */}
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
+        <Pressable onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <MaterialCommunityIcons name="arrow-left" size={20} color={colors.primary} />
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600', marginLeft: 4 }}>History</Text>
+        </Pressable>
+        <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700' }}>Workout</Text>
+        {completedAt && (
+          <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
+            {new Date(completedAt).toLocaleDateString('en-US', {
+              weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+            })}
+          </Text>
+        )}
+      </View>
 
-      {Object.keys(grouped).map((exerciseName) => {
-        const exerciseSets = grouped[exerciseName];
-
-        return (
-          <View
-            key={exerciseName}
-            style={{
-              backgroundColor: Colors.surface,
-              padding: 12,
-              borderRadius: 12,
-              marginBottom: 12,
-            }}
-          >
-            {/* Exercise Name */}
-            <Text
-              style={{
-                color: Colors.text,
-                fontSize: 18,
-                marginBottom: 8,
-              }}
-            >
-              {exerciseName}
-            </Text>
-
-            {/* Sets */}
-            {exerciseSets.map((s, i) => (
-              <Text
-                key={i}
-                style={{
-                  color: Colors.muted,
-                  marginBottom: 4,
-                }}
-              >
-                Set {s.set_index + 1}: {s.weight} lb × {s.reps}
-              </Text>
-            ))}
-          </View>
-        );
-      })}
-    </ScrollView>
+      {loading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          {exercises.map((ex) => (
+            <ReadOnlyExerciseCard key={ex.name} exercise={ex} />
+          ))}
+          {exercises.length === 0 && (
+            <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 40 }}>No sets recorded.</Text>
+          )}
+        </ScrollView>
+      )}
+    </View>
   );
 }
