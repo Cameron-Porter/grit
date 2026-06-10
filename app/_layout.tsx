@@ -4,14 +4,11 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import PersistentTabBar from '../src/components/navigation/PersistentTabBar';
 import { useAuthStore } from '../src/store/useAuthStore';
-import { useWorkoutStore } from '../src/store/useWorkoutStore';
 
 export default function Layout() {
   const router = useRouter();
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
-  const { activeWorkoutId, exercises } = useWorkoutStore();
-  const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
 
   useEffect(() => {
     initialize();
@@ -23,8 +20,7 @@ export default function Layout() {
     if (!user && !inAuthGroup) {
       router.replace('/login');
     } else if (user && inAuthGroup) {
-      // If there's an in-progress workout, jump straight into it
-      router.replace(hasActiveWorkout ? '/workout' : '/(tabs)/programs');
+      router.replace('/workout');
     }
   }, [user, initialized]);
 
@@ -50,6 +46,8 @@ export default function Layout() {
         <Stack.Screen name="programs/[id]/day/[dayId]" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="exercise/[id]" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="personal-records" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="growth-over-time" options={{ headerShown: false, animation: 'slide_from_right' }} />
       </Stack>
       <PersistentTabBar />
     </GestureHandlerRootView>

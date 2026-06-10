@@ -5,14 +5,13 @@ import { Tabs } from 'expo-router';
 export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }}>
-      <Tabs.Screen name="index" />
+      <Tabs.Screen name="programs" />
       <Tabs.Screen name="history" />
       <Tabs.Screen name="log" />
-      <Tabs.Screen name="home" />
-      <Tabs.Screen name="programs" />
-      <Tabs.Screen name="templates" />
-      <Tabs.Screen name="exercises" />
       <Tabs.Screen name="more" />
+      {/* Legacy / deep-link screens — not shown in tab bar */}
+      <Tabs.Screen name="templates" options={{ href: null }} />
+      <Tabs.Screen name="exercises" options={{ href: null }} />
     </Tabs>
   );
 }

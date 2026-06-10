@@ -197,6 +197,16 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
+      skipAllSets: () =>
+        set((state) => ({
+          exercises: state.exercises.map((ex) => ({
+            ...ex,
+            sets: ex.sets.map((s) =>
+              s.completed ? s : { ...s, skipped: true, completed: false },
+            ),
+          })),
+        })),
+
       setExerciseNote: (exerciseId, note) =>
         set((state) => ({
           exercises: state.exercises.map((ex) =>
@@ -206,7 +216,9 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       startFromProgramDay: (dayId, programName, exerciseTemplates, weekNumber, dayNumber, dayLabel) => {
         set((state) => {
-          if (state.activeWorkoutId && state.exercises.length > 0) return state;
+          // Guard only when the user has already logged completed sets — don't block on a stale/unstarted workout
+          const hasCompletedSets = state.exercises.some((ex) => ex.sets.some((s) => s.completed));
+          if (state.activeWorkoutId && hasCompletedSets) return state;
           const { bodyWeight } = useProfileStore.getState();
           const isWeek2Plus = (weekNumber ?? 1) >= 2;
           return {
@@ -286,19 +298,22 @@ export const useWorkoutStore = create<WorkoutState>()(
 
           if (workoutError) throw workoutError;
 
+          // Only save sets the user actually completed — skipped sets are not logged
           const workoutSets = state.exercises.flatMap((exercise) =>
-            exercise.sets.map((s, index) => ({
-              workout_id: workoutId,
-              exercise_name: exercise.name,
-              muscle_group: exercise.muscleGroup ?? null,
-              equipment: exercise.equipment ?? null,
-              note: exercise.note ?? null,
-              set_index: index,
-              reps: s.reps,
-              weight: s.weight,
-              completed: s.completed,
-              rir: s.rir ?? null,
-            })),
+            exercise.sets
+              .filter((s) => s.completed)
+              .map((s, index) => ({
+                workout_id: workoutId,
+                exercise_name: exercise.name,
+                muscle_group: exercise.muscleGroup ?? null,
+                equipment: exercise.equipment ?? null,
+                note: exercise.note ?? null,
+                set_index: index,
+                reps: s.reps,
+                weight: s.weight,
+                completed: true,
+                rir: s.rir ?? null,
+              })),
           );
 
           if (workoutSets.length > 0) {
@@ -319,16 +334,16 @@ export const useWorkoutStore = create<WorkoutState>()(
             await supabase.from('workout_feedback').insert(feedbackRows).then(null, () => {});
           }
 
-          // Mark program day complete
+          // Mark program day complete or skipped depending on whether any sets were logged
           if (state.activeProgramDayId) {
-            await markDayComplete(state.activeProgramDayId).then(null, () => {});
-
-            // Fire-and-forget: compute next-session targets from session history.
-            // Runs in background so the UI is not blocked. Silent on failure —
-            // worst case the user sees last-known weight instead of a new recommendation.
-            const { experienceLevel } = useProfileStore.getState();
-            computeAndSaveProgressionTargets(state.activeProgramDayId, experienceLevel)
-              .catch(() => {});
+            if (workoutSets.length > 0) {
+              await markDayComplete(state.activeProgramDayId).catch(() => {});
+              const { experienceLevel } = useProfileStore.getState();
+              computeAndSaveProgressionTargets(state.activeProgramDayId, experienceLevel).catch(() => {});
+            } else {
+              // All sets were skipped — mark the day as skipped, not complete
+              await skipProgramDay(state.activeProgramDayId).catch(() => {});
+            }
           }
 
           set({

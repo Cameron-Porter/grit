@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Colors } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
 interface NoteModalProps {
   visible: boolean;
@@ -26,6 +26,7 @@ export default function NoteModal({
   onClose,
   onSave,
 }: NoteModalProps) {
+  const colors = useColors();
   const [text, setText] = useState(initialNote);
 
   useEffect(() => {
@@ -54,19 +55,19 @@ export default function NoteModal({
 
           {/* Header */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700' }}>Note</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>Note</Text>
             <Pressable onPress={onClose} style={{ padding: 4 }}>
-              <MaterialCommunityIcons name="close" size={22} color={Colors.muted} />
+              <MaterialCommunityIcons name="close" size={22} color={colors.muted} />
             </Pressable>
           </View>
-          <Text style={{ color: Colors.muted, fontSize: 13, marginBottom: 16 }}>{exerciseName}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 16 }}>{exerciseName}</Text>
 
           {/* Input */}
           <TextInput
             value={text}
             onChangeText={setText}
             placeholder="Add a note for this exercise..."
-            placeholderTextColor={Colors.muted}
+            placeholderTextColor={colors.muted}
             multiline
             numberOfLines={4}
             maxLength={250}
@@ -74,7 +75,7 @@ export default function NoteModal({
               backgroundColor: '#252525',
               borderRadius: 10,
               padding: 14,
-              color: Colors.text,
+              color: colors.text,
               fontSize: 15,
               minHeight: 100,
               textAlignVertical: 'top',
@@ -82,7 +83,7 @@ export default function NoteModal({
             }}
             autoFocus
           />
-          <Text style={{ color: Colors.muted, fontSize: 12, textAlign: 'right', marginBottom: 16 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'right', marginBottom: 16 }}>
             {text.length}/250
           </Text>
 
@@ -92,13 +93,13 @@ export default function NoteModal({
               onPress={onClose}
               style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#252525', alignItems: 'center' }}
             >
-              <Text style={{ color: Colors.muted, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
+              <Text style={{ color: colors.muted, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
-              style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' }}
+              style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
             >
-              <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 15 }}>Save Note</Text>
+              <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Save Note</Text>
             </Pressable>
           </View>
         </View>

@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
-import { Colors, MuscleGroupColors } from '../../utils/constants';
+import { MuscleGroupColors } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
 export interface ReadOnlyExercise {
   name: string;
@@ -11,9 +12,10 @@ export interface ReadOnlyExercise {
 }
 
 function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
+  const colors = useColors();
   return (
     <View style={{
-      backgroundColor: Colors.surface,
+      backgroundColor: colors.surface,
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 6,
@@ -26,7 +28,7 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
       {/* Weight */}
       <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
         <View style={{ backgroundColor: '#1E1E1E', width: '100%', maxWidth: 90, paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}>
-          <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
             {set.weight || '0'}
           </Text>
         </View>
@@ -35,7 +37,7 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
       {/* Reps */}
       <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
         <View style={{ backgroundColor: '#1E1E1E', width: '100%', maxWidth: 90, paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}>
-          <Text style={{ color: Colors.text, fontSize: 16, fontWeight: '600' }}>
+          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
             {set.reps || '0'}
           </Text>
         </View>
@@ -47,7 +49,7 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
           width: 30,
           height: 30,
           borderRadius: 6,
-          backgroundColor: set.completed ? Colors.primary : '#1E1E1E',
+          backgroundColor: set.completed ? colors.primary : '#1E1E1E',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
@@ -59,10 +61,11 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
 }
 
 export default function ReadOnlyExerciseCard({ exercise }: { exercise: ReadOnlyExercise }) {
-  const badgeColor = MuscleGroupColors[exercise.muscleGroup ?? ''] ?? Colors.primary;
+  const colors = useColors();
+  const badgeColor = MuscleGroupColors[exercise.muscleGroup ?? ''] ?? colors.primary;
 
   return (
-    <View style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 16, overflow: 'hidden', opacity: 0.72 }}>
+    <View style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 16, overflow: 'hidden', opacity: 0.72 }}>
 
       {/* Muscle group badge — pixel-for-pixel match of ExerciseCard */}
       {exercise.muscleGroup && (
@@ -85,9 +88,9 @@ export default function ReadOnlyExerciseCard({ exercise }: { exercise: ReadOnlyE
       <View style={{ paddingVertical: 10 }}>
         {/* Exercise title row — same as ExerciseCard, no action icons */}
         <View style={{ paddingHorizontal: 16, marginBottom: 4 }}>
-          <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
           {exercise.equipment ? (
-            <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>{exercise.equipment}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{exercise.equipment}</Text>
           ) : null}
         </View>
 
@@ -103,17 +106,17 @@ export default function ReadOnlyExerciseCard({ exercise }: { exercise: ReadOnlyE
             padding: 10,
             gap: 8,
           }}>
-            <MaterialCommunityIcons name="note-text-outline" size={14} color={Colors.primary} style={{ marginTop: 1 }} />
-            <Text style={{ color: Colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
+            <MaterialCommunityIcons name="note-text-outline" size={14} color={colors.primary} style={{ marginTop: 1 }} />
+            <Text style={{ color: colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
           </View>
         ) : null}
 
         {/* Column headers — identical to ExerciseCard */}
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#252525', marginBottom: 6 }}>
           <View style={{ width: 40 }} />
-          <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
-          <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>
-          <Text style={{ width: 60, textAlign: 'center', color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>LOG</Text>
+          <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
+          <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>
+          <Text style={{ width: 60, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>LOG</Text>
         </View>
 
         {/* Set rows */}

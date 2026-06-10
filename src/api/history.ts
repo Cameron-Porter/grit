@@ -9,15 +9,6 @@ export async function getWorkouts() {
   return data;
 }
 
-export async function getWorkoutDetails(workoutId: string) {
-  const { data, error } = await supabase
-    .from("workout_sets")
-    .select("*")
-    .eq("workout_id", workoutId);
-  if (error) throw error;
-  return data;
-}
-
 // Used in the workout History panel per exercise — shows most-recent session per program
 export interface HistorySessionEntry {
   programName: string | null;
@@ -98,34 +89,6 @@ export async function getExerciseSessionHistory(exerciseName: string): Promise<H
   });
 }
 
-export async function getLastSessionSets(exerciseName: string) {
-  const { data: setRows } = await supabase
-    .from("workout_sets")
-    .select("workout_id")
-    .eq("exercise_name", exerciseName);
-
-  if (!setRows || setRows.length === 0) return [];
-
-  const workoutIds = [...new Set(setRows.map((r) => r.workout_id))];
-
-  const { data: workouts } = await supabase
-    .from("workouts")
-    .select("id")
-    .in("id", workoutIds)
-    .order("completed_at", { ascending: false })
-    .limit(1);
-
-  if (!workouts || workouts.length === 0) return [];
-
-  const { data: sets } = await supabase
-    .from("workout_sets")
-    .select("weight, reps, set_index")
-    .eq("exercise_name", exerciseName)
-    .eq("workout_id", workouts[0].id)
-    .order("set_index");
-
-  return sets || [];
-}
 
 export interface ExerciseSession {
   workoutId: string;

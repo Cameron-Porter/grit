@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -11,9 +11,10 @@ import {
   View,
 } from 'react-native';
 import { useAuthStore } from '../src/store/useAuthStore';
-import { Colors } from '../src/utils/constants';
+import { useColors } from '../src/utils/useColors';
 
 export default function LoginScreen() {
+  const colors = useColors();
   const router = useRouter();
   const { signIn, signUp, signInWithGoogle, loading } = useAuthStore();
 
@@ -68,7 +69,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -77,22 +78,22 @@ export default function LoginScreen() {
       >
         {/* Logo / branding */}
         <View style={{ alignItems: 'center', marginBottom: 48 }}>
-          <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: `${Colors.primary}22`, borderWidth: 2, borderColor: Colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-            <MaterialCommunityIcons name="dumbbell" size={36} color={Colors.primary} />
+          <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: `${colors.primary}22`, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <MaterialCommunityIcons name="dumbbell" size={36} color={colors.primary} />
           </View>
-          <Text style={{ color: Colors.text, fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>GRIT</Text>
-          <Text style={{ color: Colors.muted, fontSize: 14, marginTop: 6 }}>Guided Results &amp; Intelligent Training</Text>
+          <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>GRIT</Text>
+          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 6 }}>Guided Results &amp; Intelligent Training</Text>
         </View>
 
         {/* Mode tabs */}
-        <View style={{ flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 12, padding: 4, marginBottom: 28 }}>
+        <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 12, padding: 4, marginBottom: 28 }}>
           {(['login', 'signup'] as const).map((m) => (
             <Pressable
               key={m}
               onPress={() => { setMode(m); setError(null); setSuccessMsg(null); }}
-              style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: mode === m ? Colors.primary : 'transparent', alignItems: 'center' }}
+              style={{ flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: mode === m ? colors.primary : 'transparent', alignItems: 'center' }}
             >
-              <Text style={{ color: mode === m ? Colors.background : Colors.muted, fontWeight: '700', fontSize: 14 }}>
+              <Text style={{ color: mode === m ? colors.background : colors.muted, fontWeight: '700', fontSize: 14 }}>
                 {m === 'login' ? 'Log In' : 'Sign Up'}
               </Text>
             </Pressable>
@@ -101,8 +102,8 @@ export default function LoginScreen() {
 
         {/* Success message */}
         {successMsg && (
-          <View style={{ backgroundColor: `${Colors.success}18`, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: `${Colors.success}40` }}>
-            <Text style={{ color: Colors.success, fontSize: 14 }}>{successMsg}</Text>
+          <View style={{ backgroundColor: `${colors.success}18`, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: `${colors.success}40` }}>
+            <Text style={{ color: colors.success, fontSize: 14 }}>{successMsg}</Text>
           </View>
         )}
 
@@ -114,47 +115,47 @@ export default function LoginScreen() {
         )}
 
         {/* Email */}
-        <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Email</Text>
+        <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Email</Text>
         <TextInput
           value={email}
           onChangeText={setEmail}
           placeholder="you@example.com"
-          placeholderTextColor={Colors.muted}
+          placeholderTextColor={colors.muted}
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
-          style={{ backgroundColor: Colors.surface, color: Colors.text, borderRadius: 12, padding: 16, fontSize: 15, marginBottom: 16 }}
+          style={{ backgroundColor: colors.surface, color: colors.text, borderRadius: 12, padding: 16, fontSize: 15, marginBottom: 16 }}
         />
 
         {/* Password */}
-        <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Password</Text>
-        <View style={{ backgroundColor: Colors.surface, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: mode === 'signup' ? 16 : 28 }}>
+        <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Password</Text>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 12, flexDirection: 'row', alignItems: 'center', marginBottom: mode === 'signup' ? 16 : 28 }}>
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor={Colors.muted}
+            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+            placeholderTextColor={colors.muted}
             secureTextEntry={!showPassword}
             autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-            style={{ flex: 1, color: Colors.text, padding: 16, fontSize: 15 }}
+            style={{ flex: 1, color: colors.text, padding: 16, fontSize: 15 }}
           />
           <Pressable onPress={() => setShowPassword((v) => !v)} style={{ padding: 14 }}>
-            <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={20} color={Colors.muted} />
+            <MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={20} color={colors.muted} />
           </Pressable>
         </View>
 
         {/* Confirm password (sign up only) */}
         {mode === 'signup' && (
           <>
-            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Confirm Password</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Confirm Password</Text>
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="••••••••"
-              placeholderTextColor={Colors.muted}
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholderTextColor={colors.muted}
               secureTextEntry={!showPassword}
               autoComplete="new-password"
-              style={{ backgroundColor: Colors.surface, color: Colors.text, borderRadius: 12, padding: 16, fontSize: 15, marginBottom: 28 }}
+              style={{ backgroundColor: colors.surface, color: colors.text, borderRadius: 12, padding: 16, fontSize: 15, marginBottom: 28 }}
             />
           </>
         )}
@@ -163,28 +164,28 @@ export default function LoginScreen() {
         <Pressable
           onPress={handleSubmit}
           disabled={loading}
-          style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 17, alignItems: 'center', opacity: loading ? 0.7 : 1, marginBottom: 16 }}
+          style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 17, alignItems: 'center', opacity: loading ? 0.7 : 1, marginBottom: 16 }}
         >
-          <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>
+          <Text style={{ color: colors.background, fontWeight: '700', fontSize: 16 }}>
             {loading ? 'Loading...' : mode === 'login' ? 'Log In' : 'Create Account'}
           </Text>
         </Pressable>
 
         {/* Divider */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: Colors.surface2 }} />
-          <Text style={{ color: Colors.muted, marginHorizontal: 12, fontSize: 13 }}>or</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: Colors.surface2 }} />
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.surface2 }} />
+          <Text style={{ color: colors.muted, marginHorizontal: 12, fontSize: 13 }}>or</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: colors.surface2 }} />
         </View>
 
         {/* Google SSO */}
         <Pressable
           onPress={handleGoogle}
           disabled={loading}
-          style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: Colors.surface2, opacity: loading ? 0.7 : 1 }}
+          style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: colors.surface2, opacity: loading ? 0.7 : 1 }}
         >
-          <MaterialCommunityIcons name="google" size={20} color={Colors.text} />
-          <Text style={{ color: Colors.text, fontWeight: '700', fontSize: 15 }}>Continue with Google</Text>
+          <MaterialCommunityIcons name="google" size={20} color={colors.text} />
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>Continue with Google</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

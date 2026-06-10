@@ -24,6 +24,7 @@ export interface ProgramDay {
   label: string | null;
   completed: boolean;
   completed_at: string | null;
+  skipped: boolean;
 }
 
 export interface ProgramExercise {
@@ -197,10 +198,10 @@ export async function getNextProgramWorkout(): Promise<{
   if (!current) return null;
 
   const days = await getProgramDays(current.id);
-  // Find first incomplete day in week/day order
+  // Find first day not yet completed and not intentionally skipped
   const nextDay = days
     .sort((a, b) => a.week_number !== b.week_number ? a.week_number - b.week_number : a.day_number - b.day_number)
-    .find((d) => !d.completed);
+    .find((d) => !d.completed && !d.skipped);
 
   if (!nextDay) return null;
 
@@ -219,11 +220,17 @@ export async function markDayComplete(dayId: string): Promise<void> {
 }
 
 export async function skipProgramDay(dayId: string): Promise<void> {
-  // Marks the day as completed (so the program advances) but no sets are logged.
-  // The weekly adaptation engine treats zero-volume days as missed workouts.
   const { error } = await supabase
     .from("program_days")
-    .update({ completed: true, completed_at: new Date().toISOString() })
+    .update({ skipped: true, completed: false, completed_at: null })
+    .eq("id", dayId);
+  if (error) throw error;
+}
+
+export async function unskipProgramDay(dayId: string): Promise<void> {
+  const { error } = await supabase
+    .from("program_days")
+    .update({ skipped: false })
     .eq("id", dayId);
   if (error) throw error;
 }

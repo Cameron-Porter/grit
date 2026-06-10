@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, Text, View } from 'react-native';
-import { Colors } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
 interface PRPopupProps {
   exerciseName: string;
@@ -11,6 +11,7 @@ interface PRPopupProps {
 }
 
 export default function PRPopup({ exerciseName, weight, reps, isBodyweight, onDismiss }: PRPopupProps) {
+  const colors = useColors();
   const translateY = useRef(new Animated.Value(-120)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -50,22 +51,22 @@ export default function PRPopup({ exerciseName, weight, reps, isBodyweight, onDi
           backgroundColor: '#1A2E1A',
           borderRadius: 16,
           borderWidth: 1.5,
-          borderColor: Colors.success,
+          borderColor: colors.success,
           padding: 16,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 14,
-          shadowColor: Colors.success,
+          shadowColor: colors.success,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 12,
           elevation: 8,
         }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${Colors.success}22`, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: `${colors.success}22`, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 22 }}>🏆</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: Colors.success, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>
+            <Text style={{ color: colors.success, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>
               New Personal Record!
             </Text>
             <Text style={{ color: '#E5E7EB', fontSize: 15, fontWeight: '700' }}>{exerciseName}</Text>

@@ -85,9 +85,10 @@ export async function createManualPR(
       .eq("id", existing.id);
     if (error) throw error;
   } else {
+    const userId = await getUserId();
     const { error } = await supabase
       .from("personal_records")
-      .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now });
+      .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now, user_id: userId });
     if (error) throw error;
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { Colors } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
 type JointPain = 'None' | 'Low' | 'Moderate' | 'A lot';
 type Pump = 'Low' | 'Moderate' | 'Amazing';
@@ -24,16 +24,16 @@ const jointPainColor = (v: JointPain) => {
   return '#EF4444';
 };
 
-const pumpColor = (v: Pump) => {
-  if (v === 'Low') return Colors.muted;
-  if (v === 'Moderate') return Colors.primary;
+const pumpColor = (v: Pump, primary: string, muted: string) => {
+  if (v === 'Low') return muted;
+  if (v === 'Moderate') return primary;
   return '#2DD4BF';
 };
 
-const volumeColor = (v: Volume) => {
+const volumeColor = (v: Volume, primary: string) => {
   if (v === 'Not enough') return '#F97316';
   if (v === 'Just right') return '#22C55E';
-  if (v === 'Pushed limits') return Colors.primary;
+  if (v === 'Pushed limits') return primary;
   return '#EF4444';
 };
 
@@ -43,6 +43,7 @@ export default function FeedbackModal({
   onClose,
   onSave,
 }: FeedbackModalProps) {
+  const colors = useColors();
   const [jointPain, setJointPain] = useState<JointPain>('None');
   const [pump, setPump] = useState<Pump>('Moderate');
   const [volume, setVolume] = useState<Volume>('Just right');
@@ -66,10 +67,10 @@ export default function FeedbackModal({
             <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
 
             {/* Title */}
-            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>
               How did it go?
             </Text>
-            <Text style={{ color: Colors.muted, fontSize: 14, marginBottom: 24 }}>
+            <Text style={{ color: colors.muted, fontSize: 14, marginBottom: 24 }}>
               {muscleGroup} · Rate this session
             </Text>
 
@@ -79,7 +80,8 @@ export default function FeedbackModal({
               icon="bone"
               options={JOINT_PAIN}
               selected={jointPain}
-              getColor={jointPainColor}
+              getColor={(v) => jointPainColor(v as JointPain)}
+              mutedColor={colors.muted}
               onSelect={(v) => setJointPain(v as JointPain)}
             />
 
@@ -89,7 +91,8 @@ export default function FeedbackModal({
               icon="arm-flex"
               options={PUMP}
               selected={pump}
-              getColor={pumpColor}
+              getColor={(v) => pumpColor(v as Pump, colors.primary, colors.muted)}
+              mutedColor={colors.muted}
               onSelect={(v) => setPump(v as Pump)}
             />
 
@@ -99,7 +102,8 @@ export default function FeedbackModal({
               icon="chart-line"
               options={VOLUME}
               selected={volume}
-              getColor={volumeColor}
+              getColor={(v) => volumeColor(v as Volume, colors.primary)}
+              mutedColor={colors.muted}
               onSelect={(v) => setVolume(v as Volume)}
             />
 
@@ -107,9 +111,9 @@ export default function FeedbackModal({
             <View style={{ marginTop: 8 }}>
               <Pressable
                 onPress={handleSave}
-                style={{ padding: 16, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' }}
+                style={{ padding: 16, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
               >
-                <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 15 }}>Save Feedback</Text>
+                <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Save Feedback</Text>
               </Pressable>
             </View>
           </ScrollView>
@@ -124,6 +128,7 @@ function FeedbackSection({
   options,
   selected,
   getColor,
+  mutedColor,
   onSelect,
 }: {
   label: string;
@@ -131,11 +136,12 @@ function FeedbackSection({
   options: string[];
   selected: string;
   getColor: (v: any) => string;
+  mutedColor: string;
   onSelect: (v: string) => void;
 }) {
   return (
     <View style={{ marginBottom: 24 }}>
-      <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
+      <Text style={{ color: mutedColor, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
         {label}
       </Text>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -155,7 +161,7 @@ function FeedbackSection({
                 backgroundColor: active ? `${color}22` : 'transparent',
               }}
             >
-              <Text style={{ color: active ? color : Colors.muted, fontSize: 14, fontWeight: active ? '700' : '500' }}>
+              <Text style={{ color: active ? color : mutedColor, fontSize: 14, fontWeight: active ? '700' : '500' }}>
                 {opt}
               </Text>
             </Pressable>

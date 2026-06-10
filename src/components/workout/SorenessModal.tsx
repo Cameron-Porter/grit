@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { Colors } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
 type SorenessLevel = 'Not sore' | 'Healed early' | 'Just in time' | 'Still sore';
 
@@ -18,6 +18,7 @@ const SORENESS_LEVELS: { value: SorenessLevel; description: string; color: strin
 ];
 
 export default function SorenessModal({ visible, muscleGroup, onSave }: SorenessModalProps) {
+  const colors = useColors();
   const [selected, setSelected] = useState<SorenessLevel>('Not sore');
 
   const handleSave = () => {
@@ -33,10 +34,10 @@ export default function SorenessModal({ visible, muscleGroup, onSave }: Soreness
             <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
 
             {/* Title */}
-            <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>
               How's your soreness?
             </Text>
-            <Text style={{ color: Colors.muted, fontSize: 14, marginBottom: 24 }}>
+            <Text style={{ color: colors.muted, fontSize: 14, marginBottom: 24 }}>
               {muscleGroup} · Since your last session
             </Text>
 
@@ -56,10 +57,10 @@ export default function SorenessModal({ visible, muscleGroup, onSave }: Soreness
                       padding: 14,
                     }}
                   >
-                    <Text style={{ color: active ? color : Colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>
+                    <Text style={{ color: active ? color : colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>
                       {value}
                     </Text>
-                    <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
+                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
                       {description}
                     </Text>
                   </Pressable>
@@ -69,9 +70,9 @@ export default function SorenessModal({ visible, muscleGroup, onSave }: Soreness
 
             <Pressable
               onPress={handleSave}
-              style={{ padding: 16, borderRadius: 12, backgroundColor: Colors.primary, alignItems: 'center' }}
+              style={{ padding: 16, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
             >
-              <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 15 }}>Save</Text>
+              <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Save</Text>
             </Pressable>
           </ScrollView>
         </View>

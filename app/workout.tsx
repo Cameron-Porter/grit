@@ -1,7 +1,9 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { confirm } from '../src/utils/confirm';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
 import { checkMuscleGroupPreviouslyTrained, getNextProgramWorkout, replaceExerciseInTemplate } from '../src/api/programs';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
@@ -15,7 +17,8 @@ import SetMenuModal from '../src/components/workout/SetMenuModal';
 import { useProfileStore } from '../src/store/useProfileStore';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
 import { Exercise, WorkoutSet } from '../src/types/workout';
-import { BOTTOM_TAB_HEIGHT, Colors, MuscleGroupColors } from '../src/utils/constants';
+import { BOTTOM_TAB_HEIGHT } from '../src/utils/constants';
+import { useColors } from '../src/utils/useColors';
 
 const MIN_EXERCISES = 4;
 
@@ -26,199 +29,10 @@ interface PRState {
   isBodyweight?: boolean;
 }
 
-// ─── Idle State (no active workout) ──────────────────────────────────────────
-
-function IdleScreen() {
-  const router = useRouter();
-  const startWorkout = useWorkoutStore((s) => s.startWorkout);
-  const startFromProgramDay = useWorkoutStore((s) => s.startFromProgramDay);
-  const skipDay = useWorkoutStore((s) => s.skipDay);
-
-  const [nextWorkout, setNextWorkout] = useState<Awaited<ReturnType<typeof getNextProgramWorkout>>>(null);
-  const [loading, setLoading] = useState(true);
-  const [skipping, setSkipping] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      getNextProgramWorkout()
-        .then(setNextWorkout)
-        .catch(() => setNextWorkout(null))
-        .finally(() => setLoading(false));
-    }, []),
-  );
-
-  const handleStart = () => {
-    if (!nextWorkout) return;
-    startFromProgramDay(
-      nextWorkout.day.id,
-      nextWorkout.program.name,
-      nextWorkout.exercises.map((e) => ({
-        name: e.exercise_name,
-        muscleGroup: e.muscle_group ?? '',
-        equipment: e.equipment ?? 'Bodyweight',
-        targetSets: e.target_sets,
-        targetRepsMin: e.target_reps_min ?? 8,
-        targetRepsMax: e.target_reps_max ?? 12,
-        targetWeight: e.target_weight ?? 0,
-        rir: e.rir ?? undefined,
-      })),
-      nextWorkout.day.week_number,
-      nextWorkout.day.day_number,
-      nextWorkout.day.label,
-    );
-    // State update is synchronous — the active workout will render on next frame
-  };
-
-  const handleSkip = () => {
-    if (!nextWorkout) return;
-    const confirm = () => {
-      setSkipping(true);
-      skipDay(nextWorkout.day.id)
-        .then(() => getNextProgramWorkout())
-        .then(setNextWorkout)
-        .catch(() => setNextWorkout(null))
-        .finally(() => setSkipping(false));
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Skip Workout', 'Cancel'],
-          destructiveButtonIndex: 0,
-          cancelButtonIndex: 1,
-          message: `Skip ${nextWorkout.day.label ?? `Day ${nextWorkout.day.day_number}`}? It will be marked as missed and the program will advance.`,
-        },
-        (index) => { if (index === 0) confirm(); },
-      );
-    } else {
-      Alert.alert(
-        'Skip Workout',
-        `Skip ${nextWorkout.day.label ?? `Day ${nextWorkout.day.day_number}`}? It will be marked as missed and the program will advance.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Skip', style: 'destructive', onPress: confirm },
-        ],
-      );
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: Colors.muted, fontSize: 15 }}>Loading...</Text>
-      </View>
-    );
-  }
-
-  return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
-        <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-          GRIT
-        </Text>
-        <Text style={{ color: Colors.text, fontSize: 28, fontWeight: '700' }}>
-          {nextWorkout ? 'Next Workout' : "All Caught Up"}
-        </Text>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
-        {nextWorkout ? (
-          <>
-            {/* Up Next card */}
-            <View style={{ backgroundColor: Colors.surface, borderRadius: 14, overflow: 'hidden' }}>
-              <View style={{ backgroundColor: `${Colors.primary}18`, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
-                <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                  {nextWorkout.program.name} · Week {nextWorkout.day.week_number}
-                </Text>
-                <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700', marginTop: 3 }}>
-                  {nextWorkout.day.label ?? `Day ${nextWorkout.day.day_number}`}
-                </Text>
-              </View>
-
-              <View style={{ padding: 12, gap: 8 }}>
-                {nextWorkout.exercises.map((ex, i) => {
-                  const color = ex.muscle_group ? (MuscleGroupColors[ex.muscle_group] ?? Colors.muted) : Colors.muted;
-                  return (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
-                      <Text style={{ color: Colors.text, fontSize: 15, flex: 1, fontWeight: '500' }}>{ex.exercise_name}</Text>
-                      <Text style={{ color: Colors.muted, fontSize: 12 }}>
-                        {ex.target_sets} × {ex.target_reps_min ?? 8}–{ex.target_reps_max ?? 12}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-
-              {/* Start button */}
-              <Pressable
-                onPress={handleStart}
-                style={({ pressed }) => ({
-                  margin: 12,
-                  marginTop: 4,
-                  backgroundColor: Colors.primary,
-                  borderRadius: 12,
-                  padding: 16,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  opacity: pressed ? 0.8 : 1,
-                })}
-              >
-                <MaterialCommunityIcons name="play" size={22} color={Colors.background} />
-                <Text style={{ color: Colors.background, fontSize: 17, fontWeight: '700' }}>Start Workout</Text>
-              </Pressable>
-
-              {/* Skip */}
-              <Pressable
-                onPress={handleSkip}
-                disabled={skipping}
-                style={{ paddingVertical: 12, alignItems: 'center' }}
-              >
-                <Text style={{ color: Colors.muted, fontSize: 13, fontWeight: '600' }}>
-                  {skipping ? 'Skipping...' : 'Skip This Workout'}
-                </Text>
-              </Pressable>
-            </View>
-          </>
-        ) : (
-          /* No program or all complete */
-          <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 24, alignItems: 'center' }}>
-            <MaterialCommunityIcons name="trophy-outline" size={40} color={Colors.primary} style={{ marginBottom: 12 }} />
-            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700', marginBottom: 6 }}>All caught up!</Text>
-            <Text style={{ color: Colors.muted, fontSize: 14, textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
-              No scheduled workouts remaining. Create a new program to keep progressing.
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
-              <Pressable
-                onPress={() => router.push('/programs')}
-                style={{ flex: 1, backgroundColor: `${Colors.primary}22`, borderRadius: 10, paddingVertical: 13, alignItems: 'center', borderWidth: 1, borderColor: Colors.primary }}
-              >
-                <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 14 }}>Programs</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => {
-                  startWorkout();
-                }}
-                style={{ flex: 1, backgroundColor: Colors.surface2, borderRadius: 10, paddingVertical: 13, alignItems: 'center' }}
-              >
-                <Text style={{ color: Colors.muted, fontWeight: '700', fontSize: 14 }}>Free Workout</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
-}
-
-// ─── Active Workout ───────────────────────────────────────────────────────────
-
 export default function ActiveWorkout() {
+  const colors = useColors();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
     activeWorkoutId,
     exercises,
@@ -237,14 +51,16 @@ export default function ActiveWorkout() {
     queueFeedback,
     queueSoreness,
     pendingFeedback,
+    startWorkout,
     startFromProgramDay,
+    skipAllSets,
     skipDay,
+    endWorkout,
     activeProgramDayId,
     activeProgramName,
     activeProgramWeek,
     activeProgramDayNumber,
     activeProgramDayLabel,
-    endWorkout,
     replaceExercise,
   } = useWorkoutStore();
 
@@ -260,18 +76,60 @@ export default function ActiveWorkout() {
   const [sorenessMuscle, setSorenessMuscle] = useState<string | null>(null);
   const [prPopup, setPrPopup] = useState<PRState | null>(null);
   const [activeSetData, setActiveSetData] = useState<{ exerciseId: string; setIndex: number } | null>(null);
-  // Exercise replacement state
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
-  const [replacePending, setReplacePending] = useState<{ name: string; muscle: string; equipment: string } | null>(null);
+  const [replacePending, setReplacePending] = useState<{ targetId: string; name: string; muscle: string; equipment: string } | null>(null);
   const [replacePersist, setReplacePersist] = useState(false);
+
+  // Idle state
+  const [nextWorkout, setNextWorkout] = useState<Awaited<ReturnType<typeof getNextProgramWorkout>>>(null);
+  const [loadingNext, setLoadingNext] = useState(false);
 
   const feedbackShownFor = useRef<Set<string>>(new Set());
   const sorenessShownFor = useRef<Set<string>>(new Set());
   const prCache = useRef<Map<string, number>>(new Map());
 
+  const hasWorkoutSession = !!activeWorkoutId;
   const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
 
-  // Load PRs when exercises change — runs before any conditional return (hooks rule)
+  // Auto-load next workout when no session is active
+  useEffect(() => {
+    if (hasWorkoutSession) {
+      setNextWorkout(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingNext(true);
+    getNextProgramWorkout()
+      .then((n) => {
+        if (cancelled) return;
+        if (n && n.exercises.length > 0) {
+          startFromProgramDay(
+            n.day.id,
+            n.program.name,
+            n.exercises.map((e) => ({
+              name: e.exercise_name,
+              muscleGroup: e.muscle_group ?? '',
+              equipment: e.equipment ?? 'Bodyweight',
+              targetSets: e.target_sets,
+              targetRepsMin: e.target_reps_min ?? 8,
+              targetRepsMax: e.target_reps_max ?? 12,
+              targetWeight: e.target_weight ?? 0,
+              rir: e.rir ?? undefined,
+            })),
+            n.day.week_number,
+            n.day.day_number,
+            n.day.label,
+          );
+        } else {
+          setNextWorkout(n);
+        }
+      })
+      .catch(() => { if (!cancelled) setNextWorkout(null); })
+      .finally(() => { if (!cancelled) setLoadingNext(false); });
+    return () => { cancelled = true; };
+  }, [hasWorkoutSession]);
+
+  // Load PRs when exercises change â€” runs before any conditional return (hooks rule)
   useEffect(() => {
     if (!hasActiveWorkout) return;
     exercises.forEach((ex) => {
@@ -287,10 +145,48 @@ export default function ActiveWorkout() {
     });
   }, [exercises.length]);
 
-  // Render idle screen when no active workout
-  if (!hasActiveWorkout) {
-    return <IdleScreen />;
+  // â”€â”€ Idle view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  if (!hasWorkoutSession) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
+          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+            GRIT
+          </Text>
+          <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Today's Workout</Text>
+          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>Guided Results &amp; Intelligent Training</Text>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
+          {loadingNext && <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />}
+          {!loadingNext && !nextWorkout && (
+            <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 18, alignItems: 'center' }}>
+              <MaterialCommunityIcons name="trophy-outline" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>All caught up!</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginBottom: 16 }}>
+                All scheduled workouts are complete, or no program is active yet.
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 10, width: '100%' }}>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/programs')}
+                  style={{ flex: 1, backgroundColor: `${colors.primary}22`, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.primary }}
+                >
+                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>Programs</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => startWorkout()}
+                  style={{ flex: 1, backgroundColor: colors.surface2, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.surface2 }}
+                >
+                  <Text style={{ color: colors.muted, fontWeight: '700', fontSize: 14 }}>Free Workout</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+    );
   }
+
+  // â”€â”€ Active workout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
   const doneSets = exercises.reduce(
@@ -303,27 +199,7 @@ export default function ActiveWorkout() {
   const doFinish = async () => {
     try {
       await finishWorkout();
-      const next = await getNextProgramWorkout();
-      if (next && next.exercises.length > 0) {
-        startFromProgramDay(
-          next.day.id,
-          next.program.name,
-          next.exercises.map((e) => ({
-            name: e.exercise_name,
-            muscleGroup: e.muscle_group ?? '',
-            equipment: e.equipment ?? 'Bodyweight',
-            targetSets: e.target_sets,
-            targetRepsMin: e.target_reps_min ?? 8,
-            targetRepsMax: e.target_reps_max ?? 12,
-            targetWeight: e.target_weight ?? 0,
-            rir: e.rir ?? undefined,
-          })),
-          next.day.week_number,
-          next.day.day_number,
-          next.day.label,
-        );
-      }
-      // Stay on /workout — it will show either the next workout or the idle state
+      // Next workout auto-loads via the useEffect watching hasWorkoutSession
     } catch (e) {
       console.error(e);
     }
@@ -369,58 +245,62 @@ export default function ActiveWorkout() {
   };
 
   const handleSkipWorkout = () => {
-    const doSkip = () => {
-      if (activeProgramDayId) {
-        skipDay(activeProgramDayId);
-      } else {
-        endWorkout();
-      }
-    };
-
-    if (Platform.OS === 'ios') {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ['Skip Workout', 'Cancel'],
-          destructiveButtonIndex: 0,
-          cancelButtonIndex: 1,
-          message: 'Skip this workout? Progress will be discarded and the day marked as missed.',
-        },
-        (index) => { if (index === 0) doSkip(); },
-      );
-    } else {
-      Alert.alert(
-        'Skip Workout',
-        'Skip this workout? Progress will be discarded and the day marked as missed.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Skip', style: 'destructive', onPress: doSkip },
-        ],
-      );
-    }
+    confirm(
+      'Skip Workout',
+      'All remaining sets will be marked as skipped and this day will be noted as skipped in your program.',
+      () => {
+        if (activeProgramDayId) {
+          skipDay(activeProgramDayId);
+        } else {
+          endWorkout();
+        }
+      },
+      'Skip Day',
+      true,
+    );
   };
 
   const handleConfirmReplace = async () => {
-    if (!replaceTargetId || !replacePending) return;
-    const oldExercise = exercises.find((ex) => ex.id === replaceTargetId);
-    replaceExercise(replaceTargetId, replacePending.name, replacePending.muscle, replacePending.equipment);
-    if (replacePersist && activeProgramDayId && oldExercise) {
-      replaceExerciseInTemplate(
-        activeProgramDayId,
-        oldExercise.name,
-        replacePending.name,
-        replacePending.muscle,
-        replacePending.equipment,
-      ).catch(() => {});
-    }
+    if (!replacePending) return;
+
+    const { targetId, ...pending } = replacePending;
+    const oldExercise = exercises.find((ex) => ex.id === targetId);
+    const persist = replacePersist;
+
     setReplaceTargetId(null);
     setReplacePending(null);
     setReplacePersist(false);
+
+    replaceExercise(targetId, pending.name, pending.muscle, pending.equipment);
+
+    if (persist && activeProgramDayId && oldExercise) {
+      try {
+        await replaceExerciseInTemplate(
+          activeProgramDayId,
+          oldExercise.name,
+          pending.name,
+          pending.muscle,
+          pending.equipment,
+        );
+      } catch {
+        Alert.alert('Could not save', 'The exercise was replaced this session but failed to save to the program template.');
+      }
+    }
   };
+
+  const exerciseDone = (ex: Exercise) =>
+    ex.sets.length === 0 || ex.sets.every((s) => s.completed || s.skipped);
+
+  const allSkipped =
+    exercises.length > 0 &&
+    exercises.every(exerciseDone) &&
+    exercises.some((ex) => ex.sets.length > 0) &&
+    exercises.every((ex) => ex.sets.length === 0 || ex.sets.every((s) => s.skipped && !s.completed));
 
   const canFinish =
     exercises.length > 0 &&
-    exercises.some((ex) => ex.sets.some((s) => s.completed)) &&
-    exercises.every((ex) => ex.sets.every((s) => s.completed || s.skipped));
+    exercises.every(exerciseDone) &&
+    (exercises.some((ex) => ex.sets.some((s) => s.completed)) || allSkipped);
 
   const handleUpdateSet = (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => {
     updateSet(exerciseId, setIndex, data, data.weight !== undefined ? autoMatchWeight : false);
@@ -535,57 +415,58 @@ export default function ActiveWorkout() {
     : 'Regular';
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Progress bar */}
-      <View style={{ height: 3, backgroundColor: Colors.surface2, width: '100%' }}>
-        <View style={{ height: 3, backgroundColor: Colors.primary, width: `${progress * 100}%` }} />
+      <View style={{ height: 3, backgroundColor: colors.surface2, width: '100%' }}>
+        <View style={{ height: 3, backgroundColor: colors.primary, width: `${progress * 100}%` }} />
       </View>
 
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <Text style={{ color: Colors.text, fontSize: 24, fontWeight: '700', flex: 1 }}>
+          <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700', flex: 1 }}>
             {activeProgramDayLabel ?? (activeProgramDayNumber ? `Day ${activeProgramDayNumber}` : 'Workout')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             {totalSets > 0 && (
-              <Text style={{ color: Colors.muted, fontSize: 13 }}>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>
                 {doneSets}/{totalSets} sets
               </Text>
             )}
-            {/* Skip workout button */}
-            <Pressable onPress={handleSkipWorkout} style={{ padding: 4 }}>
-              <MaterialCommunityIcons name="skip-next" size={22} color={Colors.muted} />
+            <Pressable
+              onPress={handleSkipWorkout}
+              style={{ backgroundColor: `${colors.warning}22`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+            >
+              <Text style={{ color: colors.warning, fontSize: 13, fontWeight: '700' }}>Skip Workout</Text>
             </Pressable>
           </View>
         </View>
-        <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
+        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
           {activeProgramName
-            ? `${activeProgramName}${activeProgramWeek != null ? ` · Week ${activeProgramWeek}` : ''}`
+            ? `${activeProgramName}${activeProgramWeek != null ? ` Â· Week ${activeProgramWeek}` : ''}`
             : 'Free Workout'}
         </Text>
       </View>
 
       {/* Scrollable content */}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 24 }}>
-        {/* Minimum exercises warning */}
         {tooFewExercises && exercises.length > 0 && (
           <Pressable
             onPress={() => setPickerOpen(true)}
-            style={{ backgroundColor: `${Colors.primary}15`, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: `${Colors.primary}40` }}
+            style={{ backgroundColor: `${colors.primary}15`, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: `${colors.primary}40` }}
           >
-            <MaterialCommunityIcons name="information-outline" size={18} color={Colors.primary} />
-            <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '600', flex: 1 }}>
+            <MaterialCommunityIcons name="information-outline" size={18} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', flex: 1 }}>
               Add {MIN_EXERCISES - exercises.length} more exercise{MIN_EXERCISES - exercises.length !== 1 ? 's' : ''} for an effective workout
             </Text>
-            <MaterialCommunityIcons name="plus-circle-outline" size={20} color={Colors.primary} />
+            <MaterialCommunityIcons name="plus-circle-outline" size={20} color={colors.primary} />
           </Pressable>
         )}
 
         {exercises.length === 0 && (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
-            <Text style={{ color: Colors.muted, fontSize: 16 }}>No exercises yet</Text>
-            <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
+            <Text style={{ color: colors.muted, fontSize: 16 }}>No exercises yet</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>
               Tap "+ Add Exercise" to get started
             </Text>
           </View>
@@ -613,10 +494,10 @@ export default function ActiveWorkout() {
           style={({ pressed }) => ({
             marginTop: 4,
             padding: 14,
-            backgroundColor: Colors.surface,
+            backgroundColor: colors.surface,
             borderRadius: 12,
             borderWidth: 1,
-            borderColor: Colors.surface2,
+            borderColor: colors.surface2,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -624,20 +505,20 @@ export default function ActiveWorkout() {
             opacity: pressed ? 0.7 : 1,
           })}
         >
-          <MaterialCommunityIcons name="plus" size={18} color={Colors.primary} />
-          <Text style={{ color: Colors.primary, fontWeight: '700', fontSize: 15 }}>
+          <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
+          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15 }}>
             Add Exercise
           </Text>
         </Pressable>
       </ScrollView>
 
       {/* Pinned Finish Workout button */}
-      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 16, borderTopWidth: 1, borderTopColor: Colors.surface2, backgroundColor: Colors.background }}>
+      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 16, borderTopWidth: 1, borderTopColor: colors.surface2, backgroundColor: colors.background }}>
         <Pressable
           onPress={onFinishWorkout}
           disabled={!canFinish || isSaving}
           style={{
-            backgroundColor: canFinish ? Colors.primary : Colors.surface2,
+            backgroundColor: canFinish ? colors.primary : colors.surface2,
             padding: 17,
             borderRadius: 14,
             opacity: isSaving ? 0.7 : 1,
@@ -645,13 +526,13 @@ export default function ActiveWorkout() {
         >
           <Text
             style={{
-              color: canFinish ? Colors.background : Colors.muted,
+              color: canFinish ? colors.background : colors.muted,
               textAlign: 'center',
               fontWeight: '700',
               fontSize: 16,
             }}
           >
-            {isSaving ? 'Saving...' : 'Finish Workout'}
+            {isSaving ? 'Saving...' : allSkipped ? 'Skip Day & Continue' : 'Finish Workout'}
           </Text>
         </Pressable>
       </View>
@@ -693,7 +574,8 @@ export default function ActiveWorkout() {
         visible={!!replaceTargetId && !replacePending}
         onClose={() => setReplaceTargetId(null)}
         onSelect={(name, muscle, equipment) => {
-          setReplacePending({ name, muscle, equipment });
+          if (!replaceTargetId) return;
+          setReplacePending({ targetId: replaceTargetId, name, muscle, equipment });
           setReplacePersist(false);
         }}
       />
@@ -702,7 +584,7 @@ export default function ActiveWorkout() {
       <Modal visible={!!replacePending} transparent animationType="fade" onRequestClose={() => { setReplacePending(null); setReplaceTargetId(null); }}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
           <View style={{ backgroundColor: '#252525', borderRadius: 16, padding: 20, width: '100%', maxWidth: 340 }}>
-            <Text style={{ color: Colors.text, fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
               Replace with {replacePending?.name}?
             </Text>
             {activeProgramDayId && (
@@ -713,13 +595,13 @@ export default function ActiveWorkout() {
                 <View style={{
                   width: 22, height: 22, borderRadius: 5,
                   borderWidth: 2,
-                  borderColor: replacePersist ? Colors.primary : '#555',
-                  backgroundColor: replacePersist ? Colors.primary : 'transparent',
+                  borderColor: replacePersist ? colors.primary : '#555',
+                  backgroundColor: replacePersist ? colors.primary : 'transparent',
                   alignItems: 'center', justifyContent: 'center',
                 }}>
-                  {replacePersist && <MaterialCommunityIcons name="check" size={14} color={Colors.background} />}
+                  {replacePersist && <MaterialCommunityIcons name="check" size={14} color={colors.background} />}
                 </View>
-                <Text style={{ color: Colors.text, fontSize: 14, flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 14, flex: 1 }}>
                   Apply to all{activeProgramDayLabel ? ` ${activeProgramDayLabel}` : ''} workouts in this program
                 </Text>
               </Pressable>
@@ -727,15 +609,15 @@ export default function ActiveWorkout() {
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
               <Pressable
                 onPress={() => { setReplacePending(null); setReplaceTargetId(null); }}
-                style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: Colors.surface2, alignItems: 'center' }}
+                style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center' }}
               >
-                <Text style={{ color: Colors.muted, fontWeight: '600' }}>Cancel</Text>
+                <Text style={{ color: colors.muted, fontWeight: '600' }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirmReplace}
-                style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center' }}
+                style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' }}
               >
-                <Text style={{ color: Colors.background, fontWeight: '700' }}>Replace</Text>
+                <Text style={{ color: colors.background, fontWeight: '700' }}>Replace</Text>
               </Pressable>
             </View>
           </View>

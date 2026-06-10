@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type { ExperienceLevel } from '../types/program';
+import type { Theme } from '../utils/constants';
 
 export interface BodyWeightEntry {
   date: string; // YYYY-MM-DD
@@ -27,11 +28,13 @@ interface ProfileState {
   usePreferredEquipment: boolean;
   preferredEquipment: string[];
   experienceLevel: ExperienceLevel;
+  theme: Theme;
   setBodyWeight: (weight: number) => void;
   setAutoMatchWeight: (value: boolean) => void;
   setUsePreferredEquipment: (value: boolean) => void;
   setPreferredEquipment: (types: string[]) => void;
   setExperienceLevel: (level: ExperienceLevel) => void;
+  setTheme: (theme: Theme) => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -43,6 +46,7 @@ export const useProfileStore = create<ProfileState>()(
       usePreferredEquipment: false,
       preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
       experienceLevel: 'intermediate',
+      theme: 'dark',
       setBodyWeight: (weight) =>
         set((state) => {
           const today = new Date().toISOString().split('T')[0];
@@ -56,6 +60,7 @@ export const useProfileStore = create<ProfileState>()(
       setUsePreferredEquipment: (value) => set({ usePreferredEquipment: value }),
       setPreferredEquipment: (types) => set({ preferredEquipment: types }),
       setExperienceLevel: (level) => set({ experienceLevel: level }),
+      setTheme: (theme) => set({ theme }),
     }),
     {
       name: 'grit-profile-storage',

@@ -103,11 +103,6 @@ export function roundToIncrement(weight: number, increment: number): number {
   return Math.round(weight / increment) * increment;
 }
 
-// Convenience alias kept for existing call sites outside this file.
-export function roundTo5(weight: number): number {
-  return roundToIncrement(weight, 5);
-}
-
 // ─── Session analysis helpers ─────────────────────────────────────────────────
 
 // Working weight = highest weight completed in the session.

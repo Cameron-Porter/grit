@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addProgramExercise,
   createProgram,
@@ -13,7 +14,8 @@ import { buildProgram } from '../../src/rules/programBuilder';
 import { useProfileStore } from '../../src/store/useProfileStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import type { DayPlan, ExerciseSlot, ExperienceLevel, MuscleGroup, ProgramFocus, SlotRole } from '../../src/types/program';
-import { BOTTOM_TAB_HEIGHT, Colors, MuscleGroupColors } from '../../src/utils/constants';
+import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants';
+import { useColors } from '../../src/utils/useColors';
 import SlotExercisePicker from '../../src/components/workout/SlotExercisePicker';
 
 const WEEKDAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -41,17 +43,6 @@ const PRIORITY_MUSCLES: MuscleGroup[] = [
 ];
 
 type Priority = 'emphasize' | 'grow' | 'maintain';
-const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
-  { value: 'emphasize', label: 'Emphasize', color: '#2DD4BF' },
-  { value: 'grow',      label: 'Grow',      color: Colors.primary },
-  { value: 'maintain',  label: 'Maintain',  color: Colors.muted },
-];
-
-const ROLE_COLORS: Record<SlotRole, string> = {
-  Primary:   Colors.primary,
-  Secondary: '#A78BFA',
-  Accessory: Colors.muted,
-};
 
 // Steps: 0 = settings, 1 = focus/priorities, 2..N+1 = exercises per day
 const EXPERIENCE_LEVELS: { value: ExperienceLevel; label: string; desc: string }[] = [
@@ -61,6 +52,18 @@ const EXPERIENCE_LEVELS: { value: ExperienceLevel; label: string; desc: string }
 ];
 
 export default function CreateProgram() {
+  const colors = useColors();
+  const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
+    { value: 'emphasize', label: 'Emphasize', color: '#2DD4BF' },
+    { value: 'grow',      label: 'Grow',      color: colors.primary },
+    { value: 'maintain',  label: 'Maintain',  color: colors.muted },
+  ];
+  const ROLE_COLORS: Record<SlotRole, string> = {
+    Primary:   colors.primary,
+    Secondary: '#A78BFA',
+    Accessory: colors.muted,
+  };
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const startFromProgramDay = useWorkoutStore((s) => s.startFromProgramDay);
   const endWorkout = useWorkoutStore((s) => s.endWorkout);
@@ -258,64 +261,64 @@ export default function CreateProgram() {
 
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <Pressable onPress={() => { if (step === 0) router.back(); else setStep(step - 1); }}>
-          <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.text} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
         </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '700' }} numberOfLines={1}>{headerTitle}</Text>
+          <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }} numberOfLines={1}>{headerTitle}</Text>
           {step >= 2 && (
-            <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
               Day {exerciseStepIndex + 1} of {daysPerWeek} · Tap a slot to pick an exercise
             </Text>
           )}
         </View>
         {step >= 2 && (
-          <Text style={{ color: Colors.muted, fontSize: 13 }}>{exerciseStepIndex + 1}/{daysPerWeek}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13 }}>{exerciseStepIndex + 1}/{daysPerWeek}</Text>
         )}
       </View>
 
       {step >= 2 && (
-        <View style={{ height: 2, backgroundColor: Colors.surface2 }}>
-          <View style={{ height: 2, backgroundColor: Colors.primary, width: `${progressPct * 100}%` }} />
+        <View style={{ height: 2, backgroundColor: colors.surface2 }}>
+          <View style={{ height: 2, backgroundColor: colors.primary, width: `${progressPct * 100}%` }} />
         </View>
       )}
 
       {/* ── Step 0: Settings ── */}
       {step === 0 && (
-        <ScrollView contentContainerStyle={{ padding: 20 }}>
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Program Name</Text>
+        <><ScrollView contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_TAB_HEIGHT + 100 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Program Name</Text>
           <TextInput
             value={name} onChangeText={setName}
-            placeholder="e.g. Push Pull Legs" placeholderTextColor={Colors.muted}
-            style={{ backgroundColor: Colors.surface, color: Colors.text, borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 28 }}
+            placeholder="e.g. Push Pull Legs" placeholderTextColor={colors.muted}
+            style={{ backgroundColor: colors.surface, color: colors.text, borderRadius: 12, padding: 16, fontSize: 16, marginBottom: 28 }}
             autoFocus
           />
 
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Total Weeks</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Total Weeks</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
             {[2, 3, 4, 5, 6, 7, 8].map((w) => (
               <Pressable key={w} onPress={() => setTotalWeeks(w)}
-                style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: totalWeeks === w ? Colors.primary : Colors.surface, borderWidth: 1, borderColor: totalWeeks === w ? Colors.primary : Colors.surface2 }}>
-                <Text style={{ color: totalWeeks === w ? Colors.background : Colors.text, fontWeight: '700', fontSize: 15 }}>{w}</Text>
+                style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: totalWeeks === w ? colors.primary : colors.surface, borderWidth: 1, borderColor: totalWeeks === w ? colors.primary : colors.surface2 }}>
+                <Text style={{ color: totalWeeks === w ? colors.background : colors.text, fontWeight: '700', fontSize: 15 }}>{w}</Text>
               </Pressable>
             ))}
           </View>
 
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Days Per Week</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Days Per Week</Text>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
             {[2, 3, 4, 5, 6].map((d) => (
               <Pressable key={d} onPress={() => setDaysPerWeek(d)}
-                style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: daysPerWeek === d ? Colors.primary : Colors.surface, borderWidth: 1, borderColor: daysPerWeek === d ? Colors.primary : Colors.surface2 }}>
-                <Text style={{ color: daysPerWeek === d ? Colors.background : Colors.text, fontWeight: '700', fontSize: 15 }}>{d}</Text>
+                style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: daysPerWeek === d ? colors.primary : colors.surface, borderWidth: 1, borderColor: daysPerWeek === d ? colors.primary : colors.surface2 }}>
+                <Text style={{ color: daysPerWeek === d ? colors.background : colors.text, fontWeight: '700', fontSize: 15 }}>{d}</Text>
               </Pressable>
             ))}
           </View>
 
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Training Days</Text>
-          <Text style={{ color: Colors.muted, fontSize: 12, marginBottom: 12 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 8 }}>Training Days</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 12 }}>
             Select {daysPerWeek} day{daysPerWeek !== 1 ? 's' : ''} · {selectedDays.length}/{daysPerWeek} selected
           </Text>
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 28 }}>
@@ -324,92 +327,95 @@ export default function CreateProgram() {
               const atMax = selectedDays.length >= daysPerWeek;
               return (
                 <Pressable key={idx} onPress={() => toggleDay(idx)}
-                  style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: isSelected ? Colors.primary : Colors.surface, borderWidth: 1.5, borderColor: isSelected ? Colors.primary : Colors.surface2, alignItems: 'center', opacity: (!isSelected && atMax) ? 0.4 : 1 }}>
-                  <Text style={{ color: isSelected ? Colors.background : Colors.muted, fontSize: 11, fontWeight: '800' }}>{label}</Text>
+                  style={{ flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: isSelected ? colors.primary : colors.surface, borderWidth: 1.5, borderColor: isSelected ? colors.primary : colors.surface2, alignItems: 'center', opacity: (!isSelected && atMax) ? 0.4 : 1 }}>
+                  <Text style={{ color: isSelected ? colors.background : colors.muted, fontSize: 11, fontWeight: '800' }}>{label}</Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Experience Level</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Experience Level</Text>
           <View style={{ gap: 8, marginBottom: 28 }}>
             {EXPERIENCE_LEVELS.map((opt) => {
               const active = experienceLevel === opt.value;
               return (
                 <Pressable key={opt.value} onPress={() => setExperienceLevel(opt.value)}
-                  style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? Colors.primary : '#333', backgroundColor: active ? `${Colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? Colors.primary : '#555', backgroundColor: active ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                    {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.background }} />}
+                  style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? colors.primary : '#333', backgroundColor: active ? `${colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? colors.primary : '#555', backgroundColor: active ? colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                    {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.background }} />}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: active ? Colors.primary : Colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
-                    <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
+                    <Text style={{ color: active ? colors.primary : colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
                   </View>
                 </Pressable>
               );
             })}
           </View>
 
-          <View style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 16, marginBottom: 28 }}>
-            <Text style={{ color: Colors.muted, fontSize: 13 }}>
-              <Text style={{ color: Colors.text, fontWeight: '700' }}>{totalWeeks} weeks</Text>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 28 }}>
+            <Text style={{ color: colors.muted, fontSize: 13 }}>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{totalWeeks} weeks</Text>
               {' · '}
-              <Text style={{ color: Colors.text, fontWeight: '700' }}>{daysPerWeek} days/week</Text>
+              <Text style={{ color: colors.text, fontWeight: '700' }}>{daysPerWeek} days/week</Text>
               {selectedDays.length === daysPerWeek && (
-                <Text style={{ color: Colors.primary, fontWeight: '600' }}>
+                <Text style={{ color: colors.primary, fontWeight: '600' }}>
                   {' · '}{sortedSelected.map((d) => WEEKDAYS_SHORT[d]).join(', ')}
                 </Text>
               )}
             </Text>
           </View>
 
-          <Pressable onPress={handleNextFromSettings} disabled={!canAdvanceSettings}
-            style={{ backgroundColor: canAdvanceSettings ? Colors.primary : Colors.surface2, borderRadius: 14, padding: 17 }}>
-            <Text style={{ color: canAdvanceSettings ? Colors.background : Colors.muted, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
-              Set Training Focus →
-            </Text>
-          </Pressable>
         </ScrollView>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+            <Pressable onPress={handleNextFromSettings} disabled={!canAdvanceSettings}
+              style={{ backgroundColor: canAdvanceSettings ? colors.primary : colors.surface2, borderRadius: 14, padding: 17 }}>
+              <Text style={{ color: canAdvanceSettings ? colors.background : colors.muted, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
+                Set Training Focus →
+              </Text>
+            </Pressable>
+          </View>
+        </>
       )}
 
       {/* ── Step 1: Focus + Priorities ── */}
       {step === 1 && (
         <>
-          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Program Focus</Text>
+          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_TAB_HEIGHT + 100 }}>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Program Focus</Text>
             <View style={{ gap: 8, marginBottom: 32 }}>
               {FOCUS_OPTIONS.map((opt) => {
                 const active = focus === opt.value;
                 return (
                   <Pressable key={opt.value} onPress={() => setFocus(opt.value)}
-                    style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? Colors.primary : '#333', backgroundColor: active ? `${Colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? Colors.primary : '#555', backgroundColor: active ? Colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                      {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.background }} />}
+                    style={{ borderRadius: 12, borderWidth: 1.5, borderColor: active ? colors.primary : '#333', backgroundColor: active ? `${colors.primary}18` : 'transparent', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{ width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: active ? colors.primary : '#555', backgroundColor: active ? colors.primary : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                      {active && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.background }} />}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: active ? Colors.primary : Colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
-                      <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
+                      <Text style={{ color: active ? colors.primary : colors.text, fontSize: 15, fontWeight: active ? '700' : '500' }}>{opt.label}</Text>
+                      <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>{opt.desc}</Text>
                     </View>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>Muscle Priorities</Text>
-            <Text style={{ color: Colors.muted, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>Muscle Priorities</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
               <Text style={{ color: '#2DD4BF', fontWeight: '700' }}>Emphasize</Text> — max growth, high volume{'\n'}
-              <Text style={{ color: Colors.primary, fontWeight: '700' }}>Grow</Text> — steady growth at moderate volume{'\n'}
-              <Text style={{ color: Colors.muted, fontWeight: '700' }}>Maintain</Text> — preserve size, minimal volume
+              <Text style={{ color: colors.primary, fontWeight: '700' }}>Grow</Text> — steady growth at moderate volume{'\n'}
+              <Text style={{ color: colors.muted, fontWeight: '700' }}>Maintain</Text> — preserve size, minimal volume
             </Text>
 
             {PRIORITY_MUSCLES.map((muscle) => {
               const current = musclePriorities[muscle] ?? 'grow';
-              const badgeColor = MuscleGroupColors[muscle] ?? Colors.primary;
+              const badgeColor = MuscleGroupColors[muscle] ?? colors.primary;
               return (
                 <View key={muscle} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                     <MaterialCommunityIcons name="blur-linear" size={11} color={badgeColor} style={{ marginRight: 5 }} />
-                    <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '600' }}>{muscle}</Text>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{muscle}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', gap: 6 }}>
                     {PRIORITY_OPTIONS.map((p) => {
@@ -417,7 +423,7 @@ export default function CreateProgram() {
                       return (
                         <Pressable key={p.value} onPress={() => setPriority(muscle, p.value)}
                           style={{ flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, borderColor: active ? p.color : '#333', backgroundColor: active ? `${p.color}22` : 'transparent', alignItems: 'center' }}>
-                          <Text style={{ color: active ? p.color : Colors.muted, fontSize: 11, fontWeight: active ? '800' : '500' }}>{p.label}</Text>
+                          <Text style={{ color: active ? p.color : colors.muted, fontSize: 11, fontWeight: active ? '800' : '500' }}>{p.label}</Text>
                         </Pressable>
                       );
                     })}
@@ -427,10 +433,10 @@ export default function CreateProgram() {
             })}
           </ScrollView>
 
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
             <Pressable onPress={handleNextFromFocus}
-              style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-              <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>Build Plan →</Text>
+              style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
+              <Text style={{ color: colors.background, fontWeight: '700', fontSize: 16 }}>Build Plan →</Text>
             </Pressable>
           </View>
         </>
@@ -439,20 +445,20 @@ export default function CreateProgram() {
       {/* ── Steps 2..N+1: Review & customize each day ── */}
       {step >= 2 && currentDay && (
         <View style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 140 }}>
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 100 }}>
             {/* Day summary header */}
-            <View style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', gap: 12 }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>
+                <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>
                   {currentDay.splitName}
                 </Text>
-                <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>
                   {currentDay.slots.length} slots · {currentDay.totalSets} sets · ~{currentDay.estimatedMinutes} min
                 </Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
                 {currentDay.primaryMuscles.map((m) => {
-                  const c = MuscleGroupColors[m] ?? Colors.primary;
+                  const c = MuscleGroupColors[m] ?? colors.primary;
                   return (
                     <View key={m} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: `${c}22` }}>
                       <Text style={{ color: c, fontSize: 10, fontWeight: '800' }}>{m}</Text>
@@ -463,14 +469,14 @@ export default function CreateProgram() {
             </View>
 
             {currentDay.slots.map((slot, slotIdx) => {
-              const badgeColor = MuscleGroupColors[slot.muscle] ?? Colors.primary;
+              const badgeColor = MuscleGroupColors[slot.muscle] ?? colors.primary;
               const roleColor = ROLE_COLORS[slot.role];
               const hasExercise = !!slot.selectedExercise;
               return (
                 <Pressable
                   key={slot.id}
                   onPress={() => setPickerTarget({ dayIdx: exerciseStepIndex, slotIdx })}
-                  style={{ backgroundColor: Colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}
+                  style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}
                 >
                   {/* Muscle + role header */}
                   <View style={{ paddingHorizontal: 12, paddingTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -486,18 +492,18 @@ export default function CreateProgram() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 }}>
                     <View style={{ flex: 1 }}>
                       {hasExercise ? (
-                        <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '600' }}>{slot.selectedExercise}</Text>
+                        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{slot.selectedExercise}</Text>
                       ) : (
-                        <Text style={{ color: Colors.muted, fontSize: 14, fontStyle: 'italic' }}>Tap to select exercise</Text>
+                        <Text style={{ color: colors.muted, fontSize: 14, fontStyle: 'italic' }}>Tap to select exercise</Text>
                       )}
-                      <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
+                      <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
                         {slot.sets} sets · {slot.repsMin}–{slot.repsMax} reps · RIR {slot.rir}
                       </Text>
                     </View>
                     <MaterialCommunityIcons
                       name={hasExercise ? 'swap-horizontal' : 'chevron-right'}
                       size={20}
-                      color={hasExercise ? Colors.primary : Colors.muted}
+                      color={hasExercise ? colors.primary : colors.muted}
                     />
                   </View>
                 </Pressable>
@@ -505,16 +511,16 @@ export default function CreateProgram() {
             })}
           </ScrollView>
 
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: Colors.background, borderTopWidth: 1, borderTopColor: Colors.surface2 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
             {saving ? (
               <View style={{ alignItems: 'center', paddingVertical: 12, gap: 10 }}>
-                <ActivityIndicator color={Colors.primary} />
-                <Text style={{ color: Colors.muted, fontSize: 14 }}>{savingStatus}</Text>
+                <ActivityIndicator color={colors.primary} />
+                <Text style={{ color: colors.muted, fontSize: 14 }}>{savingStatus}</Text>
               </View>
             ) : (
               <Pressable onPress={handleNext}
-                style={{ backgroundColor: Colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-                <Text style={{ color: Colors.background, fontWeight: '700', fontSize: 16 }}>
+                style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
+                <Text style={{ color: colors.background, fontWeight: '700', fontSize: 16 }}>
                   {isLastStep
                     ? 'Create & Start →'
                     : `Next: ${WEEKDAYS_FULL[sortedSelected[exerciseStepIndex + 1]] ?? `Day ${exerciseStepIndex + 2}`} →`}

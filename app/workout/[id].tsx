@@ -2,11 +2,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../src/api/supabase';
 import ReadOnlyExerciseCard, { ReadOnlyExercise } from '../../src/components/workout/ReadOnlyExerciseCard';
-import { Colors } from '../../src/utils/constants';
+import { useColors } from '../../src/utils/useColors';
 
 export default function WorkoutDetail() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [exercises, setExercises] = useState<ReadOnlyExercise[]>([]);
@@ -60,16 +63,16 @@ export default function WorkoutDetail() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
         <Pressable onPress={() => router.back()} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-          <MaterialCommunityIcons name="arrow-left" size={20} color={Colors.primary} />
-          <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: '600', marginLeft: 4 }}>History</Text>
+          <MaterialCommunityIcons name="arrow-left" size={20} color={colors.primary} />
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600', marginLeft: 4 }}>History</Text>
         </Pressable>
-        <Text style={{ color: Colors.text, fontSize: 24, fontWeight: '700' }}>Workout</Text>
+        <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700' }}>Workout</Text>
         {completedAt && (
-          <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 2 }}>
+          <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
             {new Date(completedAt).toLocaleDateString('en-US', {
               weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
             })}
@@ -79,7 +82,7 @@ export default function WorkoutDetail() {
 
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -87,7 +90,7 @@ export default function WorkoutDetail() {
             <ReadOnlyExerciseCard key={ex.name} exercise={ex} />
           ))}
           {exercises.length === 0 && (
-            <Text style={{ color: Colors.muted, textAlign: 'center', marginTop: 40 }}>No sets recorded.</Text>
+            <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 40 }}>No sets recorded.</Text>
           )}
         </ScrollView>
       )}

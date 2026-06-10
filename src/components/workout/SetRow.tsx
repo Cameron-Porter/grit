@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { WorkoutSet } from '../../types/workout';
-import { Colors } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -33,6 +33,7 @@ export default function SetRow({
   onRemove,
   onMenuPress,
 }: SetRowProps) {
+  const colors = useColors();
   const translateX = useSharedValue(0);
   const shakeX = useSharedValue(0);
   const [rirError, setRirError] = useState(false);
@@ -98,13 +99,21 @@ export default function SetRow({
 
   if (set.skipped) {
     return (
-      <View style={{ marginBottom: 6, paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', opacity: 0.4 }}>
+      <View style={{ marginBottom: 6, paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', opacity: 0.45 }}>
         <View style={{ width: 40 }} />
-        <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 13, fontStyle: 'italic' }}>—</Text>
-        <Text style={{ flex: 1, textAlign: 'center', color: Colors.muted, fontSize: 13, fontStyle: 'italic' }}>—</Text>
-        <View style={{ width: 60, alignItems: 'center' }}>
-          <Text style={{ color: Colors.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>SKIP</Text>
-        </View>
+        <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 16, textDecorationLine: 'line-through' }}>
+          {set.weight > 0 ? String(set.weight) : '—'}
+        </Text>
+        <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 16, textDecorationLine: 'line-through' }}>
+          {set.reps > 0 ? String(set.reps) : '—'}
+        </Text>
+        <Pressable
+          onPress={() => onComplete()}
+          hitSlop={8}
+          style={{ width: 60, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <MaterialCommunityIcons name="minus-circle-outline" size={28} color="#555" />
+        </Pressable>
       </View>
     );
   }
@@ -113,8 +122,8 @@ export default function SetRow({
   const borderColor = set.completed
     ? 'transparent'
     : isActive
-    ? Colors.primary
-    : Colors.surface2;
+    ? colors.primary
+    : colors.surface2;
   const borderWidth = set.completed ? 0 : isActive ? 2 : 1;
 
   return (
@@ -124,7 +133,7 @@ export default function SetRow({
         style={[deleteStyle, {
           position: 'absolute',
           left: 0, right: 0, top: 0, bottom: 0,
-          backgroundColor: Colors.error,
+          backgroundColor: colors.error,
           justifyContent: 'center',
           alignItems: 'flex-end',
           paddingRight: 20,
@@ -139,7 +148,7 @@ export default function SetRow({
         style={[completeStyle, {
           position: 'absolute',
           left: 0, right: 0, top: 0, bottom: 0,
-          backgroundColor: Colors.primary,
+          backgroundColor: colors.primary,
           justifyContent: 'center',
           paddingLeft: 20,
           borderRadius: 8,
@@ -153,7 +162,7 @@ export default function SetRow({
           style={[
             animatedStyle,
             {
-              backgroundColor: set.completed ? `${Colors.primary}18` : Colors.surface,
+              backgroundColor: set.completed ? `${colors.primary}18` : colors.surface,
               flexDirection: 'row',
               alignItems: 'center',
               paddingVertical: 6,
@@ -168,7 +177,7 @@ export default function SetRow({
             onPress={onMenuPress}
             style={{ width: 40, alignItems: 'center', justifyContent: 'center' }}
           >
-            <MaterialCommunityIcons name="dots-vertical" size={22} color={Colors.muted} />
+            <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
           </Pressable>
 
           {/* Weight Input */}
@@ -177,20 +186,20 @@ export default function SetRow({
               value={String(set.weight || '')}
               keyboardType="decimal-pad"
               placeholder="0"
-              placeholderTextColor={Colors.muted}
+              placeholderTextColor={colors.muted}
               onChangeText={(text) => {
                 const clean = text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                 onWeightChange(parseFloat(clean) || 0);
               }}
               style={{
-                backgroundColor: '#1E1E1E',
-                color: Colors.text,
+                backgroundColor: colors.surface2,
+                color: colors.text,
                 width: '100%',
-                maxWidth: 90,
-                paddingVertical: 8,
-                borderRadius: 6,
+                maxWidth: 100,
+                paddingVertical: 12,
+                borderRadius: 8,
                 textAlign: 'center',
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: '600',
               }}
             />
@@ -210,51 +219,51 @@ export default function SetRow({
               }
               placeholderTextColor={
                 rirError
-                  ? Colors.error
+                  ? colors.error
                   : set.rir !== undefined || set.targetReps
-                  ? Colors.primary
-                  : Colors.muted
+                  ? colors.primary
+                  : colors.muted
               }
               onChangeText={(text) => {
                 const clean = text.replace(/[^0-9]/g, '');
                 onRepsChange(parseInt(clean, 10) || 0);
               }}
               style={{
-                backgroundColor: '#1E1E1E',
-                color: Colors.text,
+                backgroundColor: colors.surface2,
+                color: colors.text,
                 width: '100%',
-                maxWidth: 90,
-                paddingVertical: 8,
-                borderRadius: 6,
+                maxWidth: 100,
+                paddingVertical: 12,
+                borderRadius: 8,
                 textAlign: 'center',
-                fontSize: 16,
+                fontSize: 18,
                 fontWeight: '600',
                 borderWidth: rirError ? 1 : 0,
-                borderColor: rirError ? Colors.error : 'transparent',
+                borderColor: rirError ? colors.error : 'transparent',
               }}
             />
           </View>
 
           {/* Log Checkbox */}
-          <View style={{ width: 60, alignItems: 'center' }}>
-            <Pressable onPress={handleComplete}>
+          <View style={{ width: 64, alignItems: 'center' }}>
+            <Pressable onPress={handleComplete} hitSlop={8}>
               <View
                 style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  backgroundColor: set.completed ? Colors.primary : '#1E1E1E',
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
+                  backgroundColor: set.completed ? colors.primary : colors.surface2,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: set.completed ? 0 : isActive ? 2 : 1,
-                  borderColor: isActive ? Colors.primary : '#3A3A3A',
+                  borderColor: isActive ? colors.primary : colors.surface2,
                 }}
               >
                 {set.completed && (
-                  <MaterialCommunityIcons name="check" size={18} color="white" />
+                  <MaterialCommunityIcons name="check" size={22} color="white" />
                 )}
                 {!set.completed && isActive && (
-                  <MaterialCommunityIcons name="circle-medium" size={14} color={Colors.primary} />
+                  <MaterialCommunityIcons name="circle-medium" size={16} color={colors.primary} />
                 )}
               </View>
             </Pressable>

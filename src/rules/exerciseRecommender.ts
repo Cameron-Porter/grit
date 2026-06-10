@@ -1,6 +1,5 @@
 import type { ExerciseDefinition, ExperienceLevel, MuscleGroup, SlotRole } from '../types/program';
-import { getExerciseByName } from '../data/exerciseDatabase';
-import { getApprovedExercises } from '../data/slotTemplates';
+import { EXERCISE_DATABASE, getExerciseByName } from '../data/exerciseDatabase';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -96,10 +95,9 @@ function computeVarietyPenalty(
 // Exercises with unavailable equipment are filtered out when availableEquipment
 // is provided, but if that would leave zero results, all candidates are kept.
 export function getRecommendedExercises(ctx: PickerContext): RankedExercise[] {
-  const approvedNames = getApprovedExercises(ctx.muscle, ctx.role, ctx.experienceLevel);
-  const candidates = approvedNames
-    .map((name) => getExerciseByName(name))
-    .filter((ex): ex is ExerciseDefinition => ex !== undefined);
+  const candidates = EXERCISE_DATABASE.filter((ex) =>
+    ex.primaryMuscles.includes(ctx.muscle),
+  );
 
   let pool = candidates;
   if (ctx.availableEquipment) {

@@ -2,30 +2,30 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BOTTOM_TAB_HEIGHT, Colors } from '../../utils/constants';
+import { BOTTOM_TAB_HEIGHT } from '../../utils/constants';
+import { useColors } from '../../utils/useColors';
 
-type TabName = 'workout' | 'programs' | 'templates' | 'exercises' | 'more';
+type TabName = 'today' | 'programs' | 'progress' | 'profile';
 
 const TABS: { name: TabName; label: string; icon: string; route: string }[] = [
-  { name: 'workout',   label: 'Workout',   icon: 'dumbbell',             route: '/workout' },
-  { name: 'programs',  label: 'Programs',  icon: 'calendar-multiselect', route: '/(tabs)/programs' },
-  { name: 'templates', label: 'Templates', icon: 'clipboard-list-outline', route: '/(tabs)/templates' },
-  { name: 'exercises', label: 'Exercises', icon: 'lightning-bolt',        route: '/(tabs)/exercises' },
-  { name: 'more',      label: 'More',      icon: 'dots-horizontal',       route: '/(tabs)/more' },
+  { name: 'today',    label: 'Today',    icon: 'dumbbell',             route: '/workout' },
+  { name: 'programs', label: 'Programs', icon: 'calendar-multiselect', route: '/(tabs)/programs' },
+  { name: 'progress', label: 'Progress', icon: 'chart-line',           route: '/(tabs)/history' },
+  { name: 'profile',  label: 'Profile',  icon: 'account-circle',       route: '/(tabs)/more' },
 ];
 
 function getActiveTab(segments: string[]): TabName | null {
   const s0 = segments[0];
   const s1 = segments[1];
-  if (s0 === 'workout' || (s0 === '(tabs)' && s1 === 'home')) return 'workout';
+  if (s0 === 'workout') return 'today';
   if (s0 === 'programs' || (s0 === '(tabs)' && s1 === 'programs')) return 'programs';
-  if (s0 === '(tabs)' && s1 === 'templates') return 'templates';
-  if (s0 === 'exercise' || (s0 === '(tabs)' && s1 === 'exercises')) return 'exercises';
-  if (s0 === 'profile' || (s0 === '(tabs)' && (s1 === 'more' || s1 === 'log'))) return 'more';
+  if (s0 === '(tabs)' && (s1 === 'history' || s1 === 'log')) return 'progress';
+  if (s0 === 'profile' || (s0 === '(tabs)' && s1 === 'more')) return 'profile';
   return null;
 }
 
 export default function PersistentTabBar() {
+  const colors = useColors();
   const router = useRouter();
   const segments = useSegments() as string[];
   const insets = useSafeAreaInsets();
@@ -43,9 +43,9 @@ export default function PersistentTabBar() {
       left: 0,
       right: 0,
       height: BOTTOM_TAB_HEIGHT + bottomPad,
-      backgroundColor: Colors.background,
+      backgroundColor: colors.background,
       borderTopWidth: 1,
-      borderTopColor: Colors.surface2,
+      borderTopColor: colors.surface2,
       flexDirection: 'row',
       paddingBottom: bottomPad,
     }}>
@@ -60,10 +60,10 @@ export default function PersistentTabBar() {
             <MaterialCommunityIcons
               name={tab.icon as any}
               size={22}
-              color={active ? Colors.primary : Colors.muted}
+              color={active ? colors.primary : colors.muted}
             />
             <Text style={{
-              color: active ? Colors.primary : Colors.muted,
+              color: active ? colors.primary : colors.muted,
               fontSize: 10,
               fontWeight: active ? '700' : '500',
             }}>

@@ -80,6 +80,7 @@ export type WorkoutState = {
   moveExerciseDown: (exerciseId: string) => void;
   skipSet: (exerciseId: string, setIndex: number) => void;
   skipSets: (exerciseId: string) => void;
+  skipAllSets: () => void;
   setExerciseNote: (exerciseId: string, note: string) => void;
   finishWorkout: () => Promise<void>;
   skipDay: (dayId: string) => Promise<void>;

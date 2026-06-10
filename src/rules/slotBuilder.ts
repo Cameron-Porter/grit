@@ -9,7 +9,8 @@ import type {
   WeekParams,
 } from '../types/program';
 
-export const MAX_SLOTS_PER_SESSION = 5;
+const MAX_SLOTS_PER_SESSION = 5;
+const MIN_SLOTS_PER_SESSION = 4;
 
 // ─── Slot allocation algorithm ────────────────────────────────────────────────
 //
@@ -57,6 +58,20 @@ function selectIncludedPairs(
     if (!included.has(key)) {
       included.add(key);
       remaining--;
+    }
+  }
+
+  // Phase 4 — backfill to minimum: Phases 1–3 can leave very few slots when
+  // most assigned muscles land at mev priority (e.g. a Legs day where Quads/
+  // Hamstrings/Glutes only have Primary/Secondary template slots). Scan the
+  // template in order — Primary before Secondary — adding any assigned muscle
+  // until we hit MIN_SLOTS_PER_SESSION.
+  if (included.size < MIN_SLOTS_PER_SESSION) {
+    for (const spec of template.slots) {
+      if (included.size >= MIN_SLOTS_PER_SESSION) break;
+      if (!dayMuscles.has(spec.muscle)) continue;
+      const key = `${spec.muscle}-${spec.role}`;
+      if (!included.has(key)) included.add(key);
     }
   }
 
@@ -141,12 +156,4 @@ export function buildDaySlots(
   }
 
   return result;
-}
-
-// Convenience helper used by programBuilder and tests.
-export function volumeTargetsForDay(
-  dayMuscles: Map<MuscleGroup, MusclePriority | 'mev'>,
-  volumeTargets: AdjustedVolumeTarget[],
-): AdjustedVolumeTarget[] {
-  return volumeTargets.filter((t) => dayMuscles.has(t.muscle));
 }

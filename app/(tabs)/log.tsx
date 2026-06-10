@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExercises } from '../../src/api/exercises';
 import {
   createManualPR,
@@ -21,7 +22,8 @@ import {
 } from '../../src/api/personalRecords';
 import LineChart from '../../src/components/LineChart';
 import ExercisePicker from '../../src/components/workout/ExercisePicker';
-import { Colors, MuscleGroupColors } from '../../src/utils/constants';
+import { MuscleGroupColors } from '../../src/utils/constants';
+import { useColors } from '../../src/utils/useColors';
 
 const MUSCLE_GROUPS = [
   'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
@@ -44,6 +46,8 @@ const MUSCLE_EXERCISES: Record<string, string[]> = {
 };
 
 export default function PRsAndProgress() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const chartWidth = width - 32;
 
@@ -107,16 +111,16 @@ export default function PRsAndProgress() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.background }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 56, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.surface2 }}>
-        <Text style={{ color: Colors.text, fontSize: 28, fontWeight: '700' }}>PRs & Progress</Text>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
+        <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>PRs & Progress</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
 
         {/* ── PROGRESS OVER TIME ── */}
         <View style={{ padding: 16, paddingBottom: 0 }}>
-          <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
             Progress Over Time
           </Text>
 
@@ -124,14 +128,14 @@ export default function PRsAndProgress() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
             {MUSCLE_GROUPS.map((muscle) => {
               const active = muscle === selectedMuscle;
-              const color = MuscleGroupColors[muscle] ?? Colors.primary;
+              const color = MuscleGroupColors[muscle] ?? colors.primary;
               return (
                 <Pressable
                   key={muscle}
                   onPress={() => handleSelectMuscle(muscle)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderRadius: 20, backgroundColor: active ? `${color}22` : Colors.surface, borderWidth: 1.5, borderColor: active ? color : Colors.surface2 }}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderRadius: 20, backgroundColor: active ? `${color}22` : colors.surface, borderWidth: 1.5, borderColor: active ? color : colors.surface2 }}
                 >
-                  <Text style={{ color: active ? color : Colors.muted, fontSize: 13, fontWeight: '700' }}>{muscle}</Text>
+                  <Text style={{ color: active ? color : colors.muted, fontSize: 13, fontWeight: '700' }}>{muscle}</Text>
                 </Pressable>
               );
             })}
@@ -145,22 +149,22 @@ export default function PRsAndProgress() {
                 <Pressable
                   key={ex}
                   onPress={() => setSelectedExercise(ex)}
-                  style={{ paddingHorizontal: 12, paddingVertical: 6, marginRight: 8, borderRadius: 8, backgroundColor: active ? Colors.primary : Colors.surface, borderWidth: 1, borderColor: active ? Colors.primary : Colors.surface2 }}
+                  style={{ paddingHorizontal: 12, paddingVertical: 6, marginRight: 8, borderRadius: 8, backgroundColor: active ? colors.primary : colors.surface, borderWidth: 1, borderColor: active ? colors.primary : colors.surface2 }}
                 >
-                  <Text style={{ color: active ? Colors.background : Colors.muted, fontSize: 12, fontWeight: active ? '700' : '500' }}>{ex}</Text>
+                  <Text style={{ color: active ? colors.background : colors.muted, fontSize: 12, fontWeight: active ? '700' : '500' }}>{ex}</Text>
                 </Pressable>
               );
             })}
           </ScrollView>
 
-          <View style={{ backgroundColor: Colors.surface, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-            <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{selectedExercise}</Text>
-            <Text style={{ color: Colors.muted, fontSize: 12, marginBottom: 16 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 16 }}>
+            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{selectedExercise}</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 16 }}>
               {isBodyweightExercise ? 'Max reps per session' : 'Max weight per session (lbs)'}
             </Text>
             {chartLoading ? (
               <View style={{ height: 200, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: Colors.muted }}>Loading...</Text>
+                <Text style={{ color: colors.muted }}>Loading...</Text>
               </View>
             ) : (
               <LineChart
@@ -176,23 +180,23 @@ export default function PRsAndProgress() {
         {/* ── PERSONAL RECORDS ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
               Personal Records
             </Text>
             <Pressable
               onPress={() => setAddPRVisible(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Colors.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}
             >
-              <MaterialCommunityIcons name="plus" size={16} color={Colors.primary} />
-              <Text style={{ color: Colors.primary, fontSize: 13, fontWeight: '700' }}>Add PR</Text>
+              <MaterialCommunityIcons name="plus" size={16} color={colors.primary} />
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>Add PR</Text>
             </Pressable>
           </View>
 
           {prs.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
               <Text style={{ fontSize: 32 }}>🏆</Text>
-              <Text style={{ color: Colors.muted, fontSize: 14, marginTop: 8 }}>No PRs recorded yet</Text>
-              <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 4 }}>Add one, or they auto-track during workouts</Text>
+              <Text style={{ color: colors.muted, fontSize: 14, marginTop: 8 }}>No PRs recorded yet</Text>
+              <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Add one, or they auto-track during workouts</Text>
             </View>
           ) : (
             prs.map((pr) => {
@@ -200,27 +204,27 @@ export default function PRsAndProgress() {
               return (
                 <View
                   key={pr.id}
-                  style={{ backgroundColor: Colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
+                  style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
                 >
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${Colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                     <Text style={{ fontSize: 18 }}>🏆</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: Colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
-                    <Text style={{ color: Colors.muted, fontSize: 12, marginTop: 2 }}>
+                    <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>
                       {new Date(pr.achieved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     {isBodyweightPR ? (
                       <>
-                        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '—'}</Text>
-                        <Text style={{ color: Colors.muted, fontSize: 12 }}>reps</Text>
+                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '—'}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>reps</Text>
                       </>
                     ) : (
                       <>
-                        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
-                        <Text style={{ color: Colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` × ${pr.reps}` : ''}</Text>
+                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` × ${pr.reps}` : ''}</Text>
                       </>
                     )}
                   </View>
@@ -239,40 +243,40 @@ export default function PRsAndProgress() {
         >
           <View style={{ backgroundColor: '#1A1F26', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
-            <Text style={{ color: Colors.text, fontSize: 18, fontWeight: '700', marginBottom: 20 }}>Add Personal Record</Text>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 20 }}>Add Personal Record</Text>
 
-            <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Exercise</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>Exercise</Text>
             <Pressable
               onPress={() => setExercisePickerVisible(true)}
               style={{ backgroundColor: '#252525', borderRadius: 10, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
             >
-              <Text style={{ color: prExerciseName ? Colors.text : Colors.muted, fontSize: 15, flex: 1 }}>
+              <Text style={{ color: prExerciseName ? colors.text : colors.muted, fontSize: 15, flex: 1 }}>
                 {prExerciseName || 'Select exercise...'}
               </Text>
-              <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.muted} />
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
             </Pressable>
 
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
               <View style={{ flex: 2 }}>
-                <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Weight (lbs)</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Weight (lbs)</Text>
                 <TextInput
                   value={prWeight}
                   onChangeText={setPRWeight}
                   placeholder="225"
-                  placeholderTextColor={Colors.muted}
+                  placeholderTextColor={colors.muted}
                   keyboardType="numeric"
-                  style={{ backgroundColor: '#252525', color: Colors.text, borderRadius: 10, padding: 14, fontSize: 15 }}
+                  style={{ backgroundColor: '#252525', color: colors.text, borderRadius: 10, padding: 14, fontSize: 15 }}
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: Colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Reps</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>Reps</Text>
                 <TextInput
                   value={prReps}
                   onChangeText={setPRReps}
                   placeholder="1"
-                  placeholderTextColor={Colors.muted}
+                  placeholderTextColor={colors.muted}
                   keyboardType="numeric"
-                  style={{ backgroundColor: '#252525', color: Colors.text, borderRadius: 10, padding: 14, fontSize: 15 }}
+                  style={{ backgroundColor: '#252525', color: colors.text, borderRadius: 10, padding: 14, fontSize: 15 }}
                 />
               </View>
             </View>
@@ -282,14 +286,14 @@ export default function PRsAndProgress() {
                 onPress={() => setAddPRVisible(false)}
                 style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: '#252525', alignItems: 'center' }}
               >
-                <Text style={{ color: Colors.muted, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
+                <Text style={{ color: colors.muted, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleSavePR}
                 disabled={!prExerciseName || !prWeight || prSaving}
-                style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: prExerciseName && prWeight ? Colors.primary : Colors.surface2, alignItems: 'center' }}
+                style={{ flex: 2, padding: 14, borderRadius: 12, backgroundColor: prExerciseName && prWeight ? colors.primary : colors.surface2, alignItems: 'center' }}
               >
-                <Text style={{ color: prExerciseName && prWeight ? Colors.background : Colors.muted, fontWeight: '700', fontSize: 15 }}>
+                <Text style={{ color: prExerciseName && prWeight ? colors.background : colors.muted, fontWeight: '700', fontSize: 15 }}>
                   {prSaving ? 'Saving...' : 'Save PR'}
                 </Text>
               </Pressable>
