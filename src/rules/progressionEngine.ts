@@ -21,6 +21,9 @@ export interface SessionPerformance {
   sets: { weight: number; reps: number }[];
 }
 
+export type ProgramFocus = 'hypertrophy' | 'strength' | 'powerbuilding' | 'general' | 'maintenance';
+export type MusclePriority = 'emphasize' | 'grow' | 'maintain';
+
 export interface ProgressionContext {
   experienceLevel: ExperienceLevel;
   isDeload: boolean;
@@ -30,6 +33,10 @@ export interface ProgressionContext {
   // Weeks elapsed since the last completed deload.
   // Used to gate "fatigue masking" vs "true plateau" disambiguation.
   weeksSinceLastDeload?: number;
+  // Program-level goal — drives deload protocol, load increment, and maintenance behavior.
+  programFocus?: ProgramFocus;
+  // Per-muscle volume priority — drives set-count progression within the meso.
+  musclePriority?: MusclePriority;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -85,7 +92,14 @@ export function getLoadIncrement(
   exerciseType: ExerciseType = 'barbell-compound',
   role: SlotRole = 'Primary',
   experienceLevel: ExperienceLevel = 'intermediate',
+  programFocus?: ProgramFocus,
 ): number {
+  // Strength focus: compounds always get full 5 lb jumps regardless of role.
+  // Doctrine: heavier loading drives neuromuscular adaptation; micro-loading only for isolation accessories.
+  if (programFocus === 'strength') {
+    if (isIsolationClass(exerciseType) && role === 'Accessory') return 2.5;
+    return 5;
+  }
   if (experienceLevel === 'beginner') return 5;
   if (experienceLevel === 'intermediate') {
     return role === 'Accessory' ? 2.5 : 5;
@@ -188,9 +202,21 @@ export function recommendProgression(
 
   const role: SlotRole = prescription.role ?? 'Primary';
   const exerciseType: ExerciseType = prescription.exerciseType ?? 'barbell-compound';
-  const increment = getLoadIncrement(exerciseType, role, ctx.experienceLevel);
+  const increment = getLoadIncrement(exerciseType, role, ctx.experienceLevel, ctx.programFocus);
 
   const isCut = ctx.trainingPhase === 'cut';
+  const isMaintenance = ctx.programFocus === 'maintenance';
+  const isStrength = ctx.programFocus === 'strength';
+
+  // Set-count progression within meso:
+  //   emphasize → add 1 set per week above base (volume accumulation)
+  //   grow      → hold at template value
+  //   maintain  → never exceed template value
+  const baseSetCount = prescription.sets;
+  const weekBonus = ctx.musclePriority === 'emphasize' ? Math.max(0, ctx.mesoWeek - 1) : 0;
+  const effectiveSets = ctx.musclePriority === 'maintain'
+    ? baseSetCount
+    : baseSetCount + weekBonus;
 
   // During a cut, raise the rep floor to 8 to reduce injury risk from heavy loading.
   const effectiveRepsMin = isCut
@@ -208,7 +234,7 @@ export function recommendProgression(
   const badSessionThreshold = isCut ? 3 : 2;
 
   const base = {
-    nextSets: prescription.sets,
+    nextSets: effectiveSets,
     nextRepsMin: effectiveRepsMin,
     nextRepsMax: prescription.repsMax,
     nextRir: prescription.rir,
@@ -216,17 +242,46 @@ export function recommendProgression(
     isPlateauWarning: false,
   };
 
-  // ── Priority 1: Deload week — no progression decisions ────────────────────
+  // ── Priority 1: Deload week — protocol varies by focus ────────────────────
   if (ctx.isDeload) {
+    const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
+    if (isStrength) {
+      // Strength deload doctrine: maintain reps, reduce load 10%, keep neuromuscular coordination.
+      // Full volume cuts degrade motor patterns; active deloads are mandatory.
+      const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.9, increment), increment);
+      return {
+        ...base,
+        nextWeight: deloadWeight,
+        nextSets: baseSetCount,
+        nextRir: Math.max(3, prescription.rir),
+        action: 'DELOAD',
+        reason: `Strength deload — load reduced 10% (${lastWeight} → ${deloadWeight} lbs), reps and sets maintained to preserve neuromuscular coordination.`,
+      };
+    }
+    // Hypertrophy / powerbuilding / general: halve volume, hold load, cap effort.
     return {
       ...base,
-      nextWeight: sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0,
-      nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
+      nextWeight: lastWeight,
+      nextSets: Math.max(1, Math.ceil(baseSetCount * 0.5)),
       nextRepsMin: Math.max(1, Math.ceil(effectiveRepsMin * 0.5)),
       nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD',
       reason: 'Deload week — sets and reps halved, load held, effort capped at RIR 4.',
+    };
+  }
+
+  // ── Priority 2a: Maintenance focus — hold performance, no auto-increment ──
+  // Equivalent to fat-loss hold: maintaining is the success criterion.
+  if (isMaintenance) {
+    const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
+    const lastReps = sessions.length > 0 ? sessionPerf(sessions[0]).maxReps : 0;
+    return {
+      ...base,
+      nextWeight: lastWeight,
+      nextSets: baseSetCount,
+      action: 'CUT_HOLD',
+      reason: `Maintenance focus — holding ${lastReps} reps × ${lastWeight} lbs. No auto-increment; maintaining muscle is the goal.`,
     };
   }
 

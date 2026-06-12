@@ -1,0 +1,125 @@
+{
+  "core_concepts": [
+    "Specificity Principle: The squat builds full-body strength, stability, and athletic coordination (transferable to jumping/sprinting), while the leg press is a pure isolation/hypertrophy tool.",
+    "Internal vs. External Stability: Squats require 'internal' stabilization (core, back, balance), whereas leg presses provide 'external' stability via the machine, allowing for higher force output without systemic fatigue.",
+    "Limiting Factor Rule: In squats, the core and lower back often reach failure before the legs; in leg presses, the quads are almost always the true limiting factor.",
+    "Complementary Programming: Squats and leg presses are not interchangeable but complementary. Match your leg press foot position to offset your squat bias (e.g., if you high-bar squat for quads, use a wide/high-foot stance on the leg press for glutes).",
+    "Anatomical Constraints: Limb proportions (femur length) dictate squat mechanics. Long-femured lifters often find squats become 'good mornings,' necessitating heel elevation (Stiletto Squat) or leg press reliance for quad hypertrophy."
+  ],
+  "actionable_advice": {
+    "sets_and_reps": "Squat: 3-5 sets of 5-8 reps (Strength focus). Leg Press: 3-4 sets of 10-15 reps (Hypertrophy focus).",
+    "frequency": "Perform squats as the primary movement 1-2x/week. Leg press is best as a secondary volume builder (1-3x/week).",
+    "intensity": "Squats: 1-2 RIR (risk of failure is higher). Leg Press: 0-1 RIR (safer to push to failure due to machine limits).",
+    "progression_methods": "Squats: Prioritize load/technique. Leg Press: Prioritize mechanical tension, control, and incremental set volume.",
+    "recovery_advice": "Squats carry high CNS fatigue; recover 48-72h. Leg Press is lower CNS fatigue, easier to recover from but still requires adequate quad recovery.",
+    "exercise_selection": "Use squats for functional power; use leg press for safe, high-volume quad isolation without spinal loading."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Squats promote greater explosive power (jump performance) transfer than leg presses.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Hypertrophy adaptations in quadriceps are similar between squats and leg presses if volume is equated.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Squats elicit higher systemic activation of core and stabilizing musculature.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Leg press allows for higher absolute force production per set due to minimized stability requirements.",
+      "confidence_level": "Expert Opinion"
+    }
+  ],
+  "coaching_insights": [
+    "The 'Redundancy Rule': If you back squat with a quad-dominant high-bar style, don't follow it with low-foot-placement leg presses. Balance the stimulus.",
+    "For clients with long femurs, if squats are failing to hit the quads, elevate their heels or utilize the leg press as the primary mass-builder.",
+    "Leg press is an excellent tool for 'hard sets' because the lack of technical failure (unlike the barbell) lets the legs fully fatigue."
+  ],
+  "common_mistakes": [
+    "Substituting squats with leg presses hoping for the same functional strength transfer.",
+    "Rounding the lower back on the leg press platform, leading to spinal injury.",
+    "Locking out the knees excessively on the leg press, shifting tension to the joints rather than muscle.",
+    "Using too much weight on the leg press, resulting in a microscopic range of motion.",
+    "Ignoring squat depth due to poor ankle/hip mobility."
+  ],
+  "content_opportunities": {
+    "instagram_posts": [
+      "Why you can leg press more than you squat.",
+      "Squats for Power, Leg Press for Mass?",
+      "The 'Stiletto Squat' hack for long legs.",
+      "Stop ego-lifting on the leg press.",
+      "3 reasons your squat is failing.",
+      "How to set up the perfect leg press foot position.",
+      "Is the Leg Press 'cheating'?",
+      "Squat vs Leg Press: The science of growth.",
+      "When to use machines vs. free weights.",
+      "Fix your long-femur squat problems."
+    ],
+    "youtube_shorts": [
+      "Stop Squatting Like This (Long Femurs)",
+      "Leg Press vs Squat: Which for Quads?",
+      "The 90-degree shin rule for leg press.",
+      "Why you shouldn't swap squats for leg press.",
+      "Do squats hurt your back? Try this.",
+      "The truth about Tom Platz's squat advice.",
+      "One simple cue to fix your squat depth.",
+      "Leg press: Are you doing it right?",
+      "How to build capped quads fast.",
+      "Squat jump test: Why squats win."
+    ],
+    "motivational_quotes": [
+      "Squats build the body; leg presses build the quads.",
+      "Don't trade functional strength for machine comfort.",
+      "Master the hinge, master the squat.",
+      "Your legs don't know the difference; your nervous system does.",
+      "Machine-based load is the key to local fatigue.",
+      "Free weights are the test; machines are the tool.",
+      "Stop ego-lifting and start training.",
+      "Form is the limit, not the weight.",
+      "Squat for power, press for growth.",
+      "Build a base with squats, finish with presses."
+    ],
+    "myths_addressed": [
+      "Myth: Leg press is 'cheating' compared to squats.",
+      "Myth: You must barbell squat to build big legs.",
+      "Myth: Squats are universally bad for your knees.",
+      "Myth: Leg presses don't build real-world strength.",
+      "Myth: Barbell squats are safer than machines.",
+      "Myth: If you squat, you don't need leg press.",
+      "Myth: Range of motion doesn't matter on leg press.",
+      "Myth: Squats build more quad size than leg press.",
+      "Myth: Machine work isn't 'real' training.",
+      "Myth: You can't get strong without free weights."
+    ]
+  },
+  "grit_application": {
+    "goal": "Implement a 'Squat-First, Press-Secondary' priority logic based on user goals.",
+    "routine": "If a user selects 'Functional Strength' as a goal, the app prioritizes Squats. If 'Hypertrophy/Quad Focus' is selected, the app prioritizes Leg Press + Stiletto Squats.",
+    "instruction": "Add a 'Limb Proportion' assessment in the G.R.I.T. setup phase; if a user has long femurs, the app suggests heel-elevated squat variations by default.",
+    "tracking": "Log 'Squat Depth' and 'Leg Press Range' separately to ensure users aren't sacrificing range of motion for ego-lifting on the press."
+  },
+  "tags": [
+    "leg press",
+    "back squat",
+    "quadriceps hypertrophy",
+    "squat vs leg press",
+    "strength training",
+    "leg day",
+    "biomechanics",
+    "progressive overload",
+    "cns fatigue",
+    "muscle growth",
+    "long femur squat",
+    "stiletto squat",
+    "functional strength",
+    "power development",
+    "fitness science",
+    "workout programming",
+    "isolation exercises",
+    "posterior chain",
+    "gym hacks",
+    "evidence based fitness"
+  ]
+}

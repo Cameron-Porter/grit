@@ -1,0 +1,121 @@
+{
+  "core_concepts": [
+    "Definition of Reps and Sets: A rep is a single execution of an exercise; a set is a grouping of repetitions performed consecutively without rest.",
+    "Training Volume: Muscle growth is primarily a volume-driven adaptation. 10 sets per muscle group per week is established as a baseline threshold for effective hypertrophy.",
+    "Frequency: Spreading training volume across multiple sessions per week (2-3x/week) is generally more effective for muscle protein synthesis than infrequent, massive 'body-part' sessions.",
+    "Hypertrophy Basics: Strength (low reps, high load) and hypertrophy (moderate reps, moderate load) exist on a spectrum, but 8-12 reps per set is the classic benchmark for hypertrophy due to the balance of mechanical tension and metabolic stress.",
+    "Progressive Overload: The necessity of consistently increasing the weight, reps, or sets over time to force the body to adapt to new stress levels."
+  ],
+  "actionable_advice": {
+    "sets_and_reps": "Beginner standard: 3 sets of 8–12 repetitions. Focus on hitting failure by the final set.",
+    "frequency": "Aim for 2–3 training days per week initially to allow for adequate recovery. As fitness increases, frequency can scale up to 4+ days.",
+    "intensity": "Adjust weights so that the prescribed rep range is challenging but doable with perfect form; increase weight once the top of the rep range is consistently reached.",
+    "progression_methods": "Track your lifts in a logbook. Aim for small, incremental increases in weight or reps every 1-2 weeks.",
+    "recovery_advice": "Listen to your body, prioritize rest days, and ensure a balanced approach to full-body movements rather than over-specializing early on.",
+    "exercise_selection": "Prioritize core compound lifts (squat, deadlift, press patterns) for maximum movement efficiency and foundational strength."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Muscle growth is largely volume-dependent, with ~10 sets/week per muscle being a highly effective target.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Higher frequency (training muscles 2-3x/week) is superior to 1x/week for natural lifters.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "8-12 reps is an optimal 'standard' range for hypertrophy due to its efficiency in balancing metabolic stress and load.",
+      "confidence_level": "Moderate Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "Avoid the 'bro-split' trap; beginners benefit more from frequent, lower-volume exposures across the whole body.",
+    "Logbooks are not optional; they are the most important tool for ensuring objective progressive overload.",
+    "Discomfort is not synonymous with progress; ensure the client learns to distinguish between muscle fatigue and joint pain."
+  ],
+  "common_mistakes": [
+    "Switching routines too frequently ('program hopping') instead of allowing time for adaptation.",
+    "Ignoring the rest periods between sets, which are critical for maintaining intensity.",
+    "Ego lifting: Prioritizing weight over range of motion, which limits muscle stimulus.",
+    "Neglecting compound movements in favor of isolation exercises.",
+    "Inconsistent gym attendance or failing to track performance metrics."
+  ],
+  "content_opportunities": {
+    "instagram_posts": [
+      "Reps vs. Sets: The beginner's glossary.",
+      "Why tracking your lifts will 2x your gains.",
+      "Stop program hopping: The power of consistency.",
+      "3 sets of 10: Why it’s the gold standard.",
+      "Compound movements vs. Isolation: What to pick first.",
+      "The 'Newbie Gains' window: Use it or lose it.",
+      "How to set your rep targets.",
+      "Frequency: Should you train every day?",
+      "Listen to your body: DOMS vs. Injury.",
+      "The anatomy of a perfect beginner workout."
+    ],
+    "youtube_shorts": [
+      "What is a 'rep'? (Simple explanation)",
+      "What is a 'set'? (Simple explanation)",
+      "How many sets do you need?",
+      "Why 8-12 reps is the sweet spot.",
+      "The golden rule of progressive overload.",
+      "Beginner lifting mistakes to avoid.",
+      "How often should you gym?",
+      "Should you train to failure?",
+      "Are you tracking your progress?",
+      "Core lifts for beginners."
+    ],
+    "motivational_quotes": [
+      "Consistency scales better than intensity for beginners.",
+      "A set without a log is just exercise; a set with a log is training.",
+      "Progress is the only metric that matters.",
+      "Your first year is the foundation of the rest of your life.",
+      "Movements matter more than machines.",
+      "Start light, finish strong, track everything.",
+      "Growth is the result of managed stress.",
+      "Don't complicate the basics.",
+      "Training is a skill—practice it often.",
+      "If you aren't tracking, you aren't training."
+    ],
+    "myths_addressed": [
+      "Myth: You need to be sore to make progress.",
+      "Myth: Beginners should train 6 days a week.",
+      "Myth: Muscle confusion is necessary.",
+      "Myth: Lifting heavy is bad for joints.",
+      "Myth: You can 'tone' muscle without progressive overload.",
+      "Myth: Supplements are more important than your routine.",
+      "Myth: Isolation exercises build more muscle than compounds.",
+      "Myth: You should train to absolute failure every set.",
+      "Myth: Women will get bulky from lifting weights.",
+      "Myth: You need to do 20+ exercises per session."
+    ]
+  },
+  "grit_application": {
+    "goal": "Embed tracking and foundational terminology into the user's daily habit.",
+    "routine": "Create a 'Fundamentals Log' that requires users to track at least 3 compound movements per session to ensure objective progression.",
+    "instruction": "Add tooltips in the UI that define 'Sets' and 'Reps' at the point of entry so beginners never feel intimidated by gym terminology.",
+    "tracking": "Enable a 'Volume Heatmap' that visually shows which muscle groups the user has targeted over the last 7 days, ensuring they are hitting the 10-set-per-muscle baseline."
+  },
+  "tags": [
+    "jeff nippard",
+    "beginner fitness",
+    "training fundamentals",
+    "progressive overload",
+    "hypertrophy",
+    "gym terminology",
+    "sets and reps",
+    "muscle growth",
+    "workout programming",
+    "training frequency",
+    "fitness science",
+    "compound lifts",
+    "strength training",
+    "exercise tracking",
+    "newbie gains",
+    "muscle protein synthesis",
+    "recovery management",
+    "fitness coaching",
+    "science-based fitness",
+    "consistency"
+  ]
+}

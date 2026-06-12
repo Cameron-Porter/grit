@@ -1,0 +1,118 @@
+{
+  "core_concepts": [
+    "Range of Motion (ROM) & Hypertrophy: Greater ROM, particularly in the stretched position, is a primary driver of muscle growth.",
+    "Mechanical Tension: The primary stimulus for hypertrophy; must be applied through a full range of motion.",
+    "Partial vs. Full ROM: Full ROM is generally superior for development, but partials at the long end (stretch) can be effective when added to full ROM work.",
+    "Joint Health and Stability: ROM must be balanced against joint integrity; if a position causes pain, it is not a high-stimulus exercise for that individual.",
+    "Individual Anatomy: Anatomical differences (e.g., limb length, hip structure) dictate what constitutes a 'full' ROM for a specific person."
+  ],
+  "actionable_advice": {
+    "full_rom_priority": "Prioritize exercises that allow for a complete stretch of the target muscle (e.g., deep squats, incline dumbbell curls).",
+    "the_stretch_rule": "Spend more time in the lengthened (stretched) phase of the lift, using a controlled eccentric (2-3 seconds).",
+    "partial_inclusion": "If training past technical failure, add partials at the long end of the ROM (e.g., partial rep leg extensions or flys), not the shortened end.",
+    "monitoring": "If full ROM causes pain or technical breakdown (e.g., lumbar rounding in a deadlift), truncate the ROM slightly to stay within a safe, effective zone.",
+    "consistency": "Track ROM metrics (e.g., bar depth, degree of knee flexion) with as much rigor as load or reps."
+  },
+  "scientific_claims": {
+    "stretch_mediated_hypertrophy": {
+      "description": "Training at longer muscle lengths produces significantly greater hypertrophic responses compared to shorter lengths.",
+      "confidence": "Strong Evidence"
+    },
+    "rom_generalization": {
+      "description": "Full ROM is generally superior to partial ROM for hypertrophy across most compound movements.",
+      "confidence": "Strong Evidence"
+    },
+    "partial_reps_utility": {
+      "description": "Partials in the stretched position can be effective, whereas partials in the shortened position are generally less effective for hypertrophy.",
+      "confidence": "Moderate Evidence"
+    }
+  },
+  "coaching_insights": [
+    "Don't compromise full ROM just to increase the load; a lighter weight with a deep stretch is often more hypertrophic than a heavy ego-lift.",
+    "A client's 'full ROM' is individual; stop comparing depth to others and focus on their specific biomechanical limit.",
+    "If a movement pattern prevents a muscle from reaching its fully stretched position (e.g., lying leg curls), it is an inferior exercise choice regardless of loading potential.",
+    "Tempo is the key to ROM: A rushed eccentric phase is a wasted opportunity to accumulate mechanical tension in the lengthened position."
+  ],
+  "common_mistakes": [
+    "Cutting ROM to hit higher weight loads (ego lifting).",
+    "Using partial reps at the 'top' (contracted) end of a movement instead of the 'bottom' (stretched) end.",
+    "Ignoring the eccentric phase, effectively bypassing the most hypertrophic part of the movement.",
+    "Assuming every exercise should be taken to the same ROM regardless of joint health or anatomy.",
+    "Ignoring technique breakdown in order to reach an arbitrary 'number' or rep count."
+  ],
+  "content_opportunities": {
+    "instagram_post_ideas": [
+      "Why the stretch is where the gains happen.",
+      "Full ROM vs. Partial: The truth about muscle growth.",
+      "Stop ego-lifting: Why lighter weight is better.",
+      "Does tempo actually matter?",
+      "The 'bottom-end' partial hack for more growth.",
+      "Why partials at the top are a waste of time.",
+      "ROM Checklist: 3 cues for deeper squats.",
+      "Anatomy matters: Finding your unique ROM.",
+      "Are you cheating your range of motion?",
+      "How to stretch a muscle *under tension*."
+    ],
+    "youtube_short_ideas": [
+      "Stop cutting your reps short!",
+      "The secret to massive growth: Range of Motion.",
+      "Why your squat depth is killing your gains.",
+      "Partials: Top or bottom?",
+      "3 exercises for better muscle stretching.",
+      "Is your tempo too fast?",
+      "ROM vs. Load: Which should you prioritize?",
+      "How to fix your form in 60 seconds.",
+      "Why you shouldn't be proud of that heavy half-rep.",
+      "The science of the stretched position."
+    ],
+    "motivational_quotes": [
+      "Master the depth, own the muscle.",
+      "Quality range is better than heavy weight.",
+      "The stretch is where growth lives.",
+      "Don't cheat your body out of the stimulus.",
+      "Progressive overload includes progressive depth.",
+      "If you don't use the full range, you aren't using the full muscle.",
+      "Intensity is the goal; range is the medium.",
+      "Deep reps, deep growth.",
+      "Respect the anatomy, maximize the movement.",
+      "Consistency in range creates consistency in growth."
+    ],
+    "myths_addressed": [
+      "Heavy weight is all that matters.",
+      "Partial reps are always 'ego lifting'.",
+      "Full ROM is dangerous for everyone.",
+      "The 'pump' is more important than the stretch.",
+      "All ROM is created equal.",
+      "You don't need a deep stretch to grow.",
+      "Tempo doesn't matter as long as you move the weight.",
+      "If you're not in pain, you aren't doing full ROM.",
+      "You should always strive for the same ROM as your favorite bodybuilder.",
+      "Going deep on squats is bad for your knees."
+    ]
+  },
+  "grit_application": {
+    "implementation_strategy": "The app should include a 'Range of Motion' module. 1. For key lifts, provide 'Depth Benchmarks' using the device's camera for AI-based form verification. 2. 'Tempo Coaches' that force a specific eccentric count (e.g., 3s down) during high-priority hypertrophy blocks. 3. 'Stretch Bias' tagging in the exercise library, prioritizing movements that allow for deep lengthened-position loading. 4. 'ROM Logging' where users track depth markers for compound lifts."
+  },
+  "tags": [
+    "hypertrophy",
+    "rangeofmotion",
+    "stretchmediatedhypertrophy",
+    "sciencebasedfitness",
+    "muscleanatomy",
+    "progressiveoverload",
+    "trainingtips",
+    "bodybuilding",
+    "hypertrophymadesimple",
+    "trainingtempo",
+    "gymoptimization",
+    "strengthtraining",
+    "evidencebased",
+    "exerciseefficiency",
+    "fullrangeofmotion",
+    "musclebuilding",
+    "gymtips",
+    "biomechanics",
+    "jointhealth",
+    "traininglog"
+  ]
+}

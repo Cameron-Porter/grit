@@ -1,0 +1,119 @@
+{
+  "core_concepts": [
+    "Epistemology in Fitness: Understanding how we know what we know—distinguishing between opinion, logical inference, and empirical evidence.",
+    "The Scientific Method: The iterative process of observation, hypothesis, experimentation, and revision.",
+    "Hierarchy of Evidence: Prioritizing systematic reviews and meta-analyses over individual anecdotes or 'guru' opinions.",
+    "Falsifiability: The principle that a scientific theory must be testable and capable of being proven wrong to be valid.",
+    "Reductionism vs. Holism: Balancing the analysis of specific mechanisms (e.g., hypertrophy markers) with the context of the whole organism (systemic recovery).",
+    "Evidence-Based Practice (EBP): The integration of current best evidence, practitioner expertise, and client values/needs."
+  ],
+  "actionable_advice": {
+    "evaluation_protocol": "Before adopting a new training method, ask: What is the proposed mechanism? Is there peer-reviewed data supporting this? Is this observation repeatable?",
+    "critical_thinking": "Filter information by source authority; favor organizations and practitioners who cite primary literature and address counter-arguments.",
+    "avoiding_bias": "Check for confirmation bias by actively seeking out information that contradicts your current training methodology.",
+    "practical_application": "Treat personal results as 'n=1' data points, not universal laws. If a method works for you, it is valid as an anecdote, not necessarily a scientific principle.",
+    "documentation": "Maintain detailed training logs to bridge the gap between abstract theory and empirical personal reality."
+  },
+  "scientific_claims": {
+    "hierarchy_of_evidence": {
+      "description": "Scientific evidence is tiered, with systematic reviews/meta-analyses at the top and expert opinion/anecdotes at the bottom.",
+      "confidence": "Strong Evidence"
+    },
+    "correlation_vs_causation": {
+      "description": "Observing that two events occur together (e.g., doing exercise X and getting muscle Y) does not prove that X caused Y.",
+      "confidence": "Strong Evidence"
+    },
+    "parsimony": {
+      "description": "When multiple theories explain the same evidence, the simplest one (Occam’s Razor) is preferred until proven otherwise.",
+      "confidence": "Expert Opinion"
+    }
+  },
+  "coaching_insights": [
+    "Most 'bro-science' relies on logical fallacies; a good coach recognizes these to save clients time and effort.",
+    "Scientific understanding prevents 'shiny object syndrome'—the tendency to constantly change programs based on the latest social media trend.",
+    "Context matters: A study on sedentary individuals may not apply to an elite powerlifter. EBP requires adjusting the theory to the client's reality.",
+    "Don't conflate intensity (effort) with intelligence (strategy). Both are needed for long-term success."
+  ],
+  "common_mistakes": [
+    "Confusing personal experience ('it worked for me') with scientific proof ('it will work for everyone').",
+    "Cherry-picking studies to support a pre-existing bias while ignoring a broader body of contradictory evidence.",
+    "Accepting a claim simply because an 'influencer' with an aesthetic physique said it.",
+    "Failing to account for confounding variables like sleep, stress, and nutrition when evaluating a training program.",
+    "Over-complicating training; ignoring basic principles (progressive overload) for advanced, unproven hacks."
+  ],
+  "content_opportunities": {
+    "instagram_post_ideas": [
+      "Correlation vs. Causation: Does this exercise actually cause growth?",
+      "The Hierarchy of Evidence: Who should you trust?",
+      "Why 'It Worked For Me' is not a scientific argument.",
+      "The 3 pillars of Evidence-Based Practice.",
+      "How to read a fitness study without a PhD.",
+      "Debunking the 'Muscle Confusion' myth.",
+      "Logical fallacies in the fitness industry.",
+      "Why the simplest training program usually wins (Occam's Razor).",
+      "The danger of confirmation bias in your training.",
+      "How to evaluate an influencer's advice."
+    ],
+    "youtube_short_ideas": [
+      "What is 'Evidence-Based' fitness?",
+      "Are you falling for a logic trap?",
+      "Why personal experience is only 'n=1'.",
+      "Stop searching for 'hacks'—start searching for evidence.",
+      "How to spot a fake fitness claim.",
+      "Is your training program scientific?",
+      "The truth about anecdotes.",
+      "Science is about being wrong—and getting better.",
+      "Why 'expert' doesn't always mean 'correct'.",
+      "Critical thinking for your next gym session."
+    ],
+    "motivational_quotes": [
+      "Truth is not a matter of popularity.",
+      "Challenge your biases before you challenge your lifts.",
+      "A mind open to evidence is a mind prepared for growth.",
+      "Science is a process, not a destination.",
+      "Don't mistake effort for strategy.",
+      "The best program is the one supported by evidence and tailored to you.",
+      "Ask 'why' until you reach the evidence.",
+      "Facts don't care about your gains-mentality.",
+      "Be a student of the process, not just the results.",
+      "Logical consistency is the foundation of progress."
+    ],
+    "myths_addressed": [
+      "My influencer says X, so X must be true.",
+      "Anecdotes are equal to peer-reviewed data.",
+      "Scientific training is too complicated for 'normal' people.",
+      "If it's new, it's automatically better.",
+      "All studies are of equal quality.",
+      "If someone is jacked, everything they say is scientific fact.",
+      "Personal feelings are more reliable than data.",
+      "Complex programs are inherently better than simple ones.",
+      "Once a theory is published, it's set in stone forever.",
+      "Science just 'takes the fun' out of lifting."
+    ]
+  },
+  "grit_application": {
+    "implementation_strategy": "The app should include a 'Knowledge Literacy' module. 1. A 'Source Verifier' tool where users input a claim, and the app provides the 'weight' of evidence behind it (e.g., 'Anecdotal' vs 'Systematic Review'). 2. 'Debunking Prompts' that ask users to explain the mechanism behind a new exercise they added to their routine. 3. A 'Biased Check' in the goal-setting phase, asking users to list one potential downside or lack of evidence for their chosen program. 4. Weekly 'Theory Deep Dives' that explain a core physiological principle in layman's terms."
+  },
+  "tags": [
+    "sciencebasedfitness",
+    "evidencebased",
+    "fitnesseducation",
+    "criticalthinking",
+    "theoryofscience",
+    "hypertrophy",
+    "renaissanceperiodization",
+    "strengthtraining",
+    "bodybuilding",
+    "physiology",
+    "logicalfallacies",
+    "traininglog",
+    "hypertrophytraining",
+    "gymtips",
+    "trainingphilosophy",
+    "dataanalysis",
+    "gymoptimization",
+    "fitnessscience",
+    "progression",
+    "knowledgebase"
+  ]
+}

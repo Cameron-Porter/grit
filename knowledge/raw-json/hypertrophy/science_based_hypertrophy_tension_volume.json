@@ -1,0 +1,120 @@
+{
+  "core_concepts": [
+    "Mechanical Tension as the Primary Driver: Hypertrophy is fundamentally an adaptation to tension. Maximizing tension requires handling challenging loads through a full range of motion.",
+    "Progressive Overload: The necessity of consistently increasing mechanical demand over time (weight, reps, or sets) to force further adaptation.",
+    "Volume Thresholds: The target range of 10–20 effective sets per muscle group per week provides the highest return on investment for most lifters.",
+    "Proximity to Failure: Effective sets must be taken within 1–3 Reps in Reserve (RIR) to ensure recruitment of high-threshold motor units.",
+    "Nutritional Foundation: Protein (1.6–2.2g/kg) is the essential building block; without it, the stimulus provided by training cannot be fully realized."
+  ],
+  "actionable_advice": {
+    "sets_and_reps": "Perform 10–20 working sets per muscle group weekly. Rep ranges can vary (5–30), but 6–12 is efficient for balancing load and metabolic stress.",
+    "frequency": "Distribute weekly volume across 2–3 sessions per muscle group to optimize the muscle protein synthesis response.",
+    "intensity": "Train close to failure (1–3 RIR). If a set doesn't feel challenging enough to prevent an additional 1-3 clean reps, the intensity is likely too low.",
+    "progression_methods": "Implement 'Double Progression': stick to a weight until the top of the rep range is reached for all sets, then increase the load by the smallest increment possible.",
+    "recovery_advice": "Cap volume at 20 sets per muscle weekly. If strength stalls or persistent soreness occurs, initiate a deload week (reducing volume by 50%).",
+    "nutrition": "Prioritize 0.7–1.0 grams of protein per pound of body weight, spread across 3–5 feedings to optimize protein synthesis."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Mechanical tension is the undisputed primary trigger for muscle protein synthesis (mTOR activation).",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Volume follows an inverted-U curve; beyond 20 sets per muscle/week, recovery capacity is often outpaced by fatigue.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Training muscles 2+ times per week is superior to 1x per week for long-term hypertrophy.",
+      "confidence_level": "Strong Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "The 'Logbook Rule': If you aren't tracking load and reps, you are just exercising, not training for growth. Growth requires objective data.",
+    "Quality vs. Quantity: One set taken to 1 RIR is worth more than three sets taken to 5+ RIR.",
+    "Movement Quality: Range of motion is a component of tension. A half-rep with 200lbs provides less tension to the target tissue than a full-rep with 180lbs."
+  ],
+  "common_mistakes": [
+    "Junk Volume: Performing many sets with very low intensity, thinking that 'more time in the gym' equals 'more muscle.'",
+    "Program Hopping: Switching exercises every week, preventing the body from mastering the movement and achieving true progressive overload.",
+    "Ignoring Protein: Relying on the stimulus of training while failing to provide the amino acids required for repair.",
+    "Ego Lifting: Using momentum and partial range of motion to handle weights that the target muscle cannot actually control."
+  ],
+  "content_opportunities": {
+    "instagram_posts": [
+      "The 10-20 Set Rule for Growth.",
+      "Why your logbook is your best training partner.",
+      "Mechanical Tension vs. The Pump.",
+      "How to set up Double Progression.",
+      "Protein targets for max hypertrophy.",
+      "Stop wasting time with Junk Volume.",
+      "RIR: How to know if you're working hard enough.",
+      "The 'Full Range of Motion' requirement.",
+      "Why 2x frequency beats 1x.",
+      "The 3-day recovery rule."
+    ],
+    "youtube_shorts": [
+      "Muscle growth in 60 seconds.",
+      "The #1 rule for training: Tension.",
+      "Why 8-12 reps aren't magic.",
+      "How many sets do you REALLY need?",
+      "Stop ego lifting: Fix your ROM.",
+      "How to track your progress.",
+      "Is your rest time too short?",
+      "The protein intake truth.",
+      "What is 'Junk Volume'?",
+      "How to break a plateau."
+    ],
+    "motivational_quotes": [
+      "Mechanical tension is the currency of growth.",
+      "If you aren't tracking, you aren't training.",
+      "Quality work demands quality rest.",
+      "Progressive overload is the law of the gym.",
+      "Don't confuse activity with productivity.",
+      "Build the stimulus, then feed the recovery.",
+      "One hard set beats three easy ones.",
+      "Master the motion, then push the weight.",
+      "Volume is the tool, tension is the goal.",
+      "Adaptation is a choice, not a given."
+    ],
+    "myths_addressed": [
+      "Myth: You need 'muscle confusion' to grow.",
+      "Myth: You MUST train to absolute failure every set.",
+      "Myth: 1 set per exercise is sufficient.",
+      "Myth: Protein timing matters more than daily totals.",
+      "Myth: Lifting heavy compounds is only for powerlifters.",
+      "Myth: You can 'shape' a muscle with high reps.",
+      "Myth: Soreness is the only indicator of a good workout.",
+      "Myth: Machines are inferior to free weights.",
+      "Myth: You need more than 20 sets per week.",
+      "Myth: Cardio kills all muscle gains."
+    ]
+  },
+  "grit_application": {
+    "goal": "Optimize volume management and progressive overload through automated tracking.",
+    "routine": "Create a 'Weekly Volume Dashboard' that flags when users hit the 10–20 set threshold. Prevent exceeding 20 sets to avoid systemic overtraining.",
+    "instruction": "Implement a 'Tension Check' prompt: 'Did you use full ROM?' and 'Was this challenging?' after every logged set to encourage quality control.",
+    "tracking": "Sync nutrition data to ensure protein intake hits the 0.7g-1.0g/lb target, pushing alerts if daily protein dips below the maintenance floor."
+  },
+  "tags": [
+    "hypertrophy",
+    "mechanical tension",
+    "progressive overload",
+    "muscle growth",
+    "science-based fitness",
+    "training volume",
+    "training frequency",
+    "protein intake",
+    "Jeff Nippard",
+    "hypertrophy science",
+    "workout programming",
+    "sets and reps",
+    "muscular hypertrophy",
+    "RIR",
+    "evidence based",
+    "recovery management",
+    "fitness coaching",
+    "training intensity",
+    "gym log",
+    "muscle protein synthesis"
+  ]
+}

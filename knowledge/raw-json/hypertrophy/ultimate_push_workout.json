@@ -1,0 +1,144 @@
+{
+  "core_concepts": [
+    "Push-Pull-Legs (PPL) Split: High-frequency, dedicated training sessions for chest, shoulders, and triceps.",
+    "Hypertrophy Focus: Maximizing muscle growth through exercise selection, mechanical tension, and metabolic stress.",
+    "Mechanical Tension: Utilizing heavy loads on compound movements for primary stimulus.",
+    "End-Range Emphasis: Targeting muscles in fully lengthened (stretched) and fully contracted positions.",
+    "Inter-set Stretching: Holding stretches during rest periods to potentially enhance muscular adaptations.",
+    "Partial Reps (Stretched vs. Squeezed): Using specific partial ranges to emphasize target tissues where they are strongest or most stimulated.",
+    "Anatomical Variation: Altering joint angles and planes of motion to target different muscular compartments.",
+    "Progressive Overload: Systematic increase in intensity and volume over time."
+  ],
+  "actionable_advice": {
+    "warm_up": "5 minutes cardio + upper body dynamic drills (arm circles, cable external rotations).",
+    "bench_press": {
+      "intensity": "Near max effort (3-5 reps).",
+      "form": "Stable base (butt, upper back, head), pinched shoulder blades, controlled negative, explosive positive.",
+      "elbow_position": "0-30 degrees of tuck for shoulder health and pectoral alignment."
+    },
+    "larson_press": {
+      "sets": 2,
+      "reps": 10,
+      "intensity": "75% of bench press top set weight.",
+      "form": "Legs elevated to eliminate leg drive, controlled tempo (1-2s negative, 1-2s positive)."
+    },
+    "dumbbell_arnold_press": {
+      "sets": 3,
+      "reps": "8-10",
+      "form": "Palm-in to flare-out motion, maintain core tightness, use belt/straps for heavier loading."
+    },
+    "inter_set_stretching": {
+      "protocol": "30-second static hold at 7/10 intensity in between sets of cable press-arounds."
+    },
+    "triceps_supersets": {
+      "technique": "Superset squeeze-only press-downs (second half of ROM) with stretch-only overhead extensions (first half of ROM)."
+    }
+  },
+  "scientific_claims": {
+    "inter_set_stretching": {
+      "description": "Studies suggest 30-second static stretching at moderate intensity between sets may increase muscle growth.",
+      "confidence": "Moderate Evidence"
+    },
+    "static_stretching_interference": {
+      "description": "Static stretching does not interfere with strength unless held for >60-90 seconds.",
+      "confidence": "Moderate Evidence"
+    },
+    "deltoid_anatomy": {
+      "description": "The deltoid may be composed of seven distinct intramuscular segments (e.g., D4, D5) rather than just three heads.",
+      "confidence": "Expert Opinion"
+    },
+    "triceps_long_head": {
+      "description": "The long head crosses both shoulder and elbow joints; varying shoulder position influences its activation.",
+      "confidence": "Strong Evidence"
+    }
+  },
+  "coaching_insights": [
+    "Prioritize stability on heavy compound lifts to maximize force production.",
+    "When time is limited, consider collapsing horizontal and vertical pushing into single compound movements, though dedicated movements are better for specialization.",
+    "The 'sticking point' or hardest portion of a movement is not always the best place to focus; balancing stretch-focused training is vital for hypertrophy.",
+    "Don't ignore the end-range contraction (e.g., passing the midline in fly/press movements) if it can be achieved without compromising the stretch.",
+    "Utilizing 'stretched' vs 'squeezed' partials can be a powerful tool for overcoming training plateaus or adding intensity without excessive systemic fatigue."
+  ],
+  "common_mistakes": [
+    "Yanking the bar off the rack rather than having a spotter lift it out smoothly.",
+    "Ignoring the depth requirements (elbow below shoulder) for legal/standard bench press form.",
+    "Turning overhead presses or lateral raises into momentum-based swings.",
+    "Focusing only on the 'pump' (mind-muscle connection) while ignoring progressive loading on key compound movements.",
+    "Performing partial reps randomly instead of strategically (e.g., specifically targeting stretched vs. squeezed phases)."
+  ],
+  "content_opportunities": {
+    "instagram_post_ideas": [
+      "Bench Press setup checklist (video).",
+      "Why your chest isn't growing: The 'post-midline' contraction tip.",
+      "Stop swinging! How to perform a strict Arnold Press.",
+      "The 30-second stretch secret for hypertrophy.",
+      "Larson Press vs. Flat Bench: When to use which.",
+      "3 cues for a perfect bench press base.",
+      "Stop doing full reps for everything: The power of partials.",
+      "Are you training your delts for 3D growth?",
+      "Tricep anatomy 101: Why shoulder position matters.",
+      "How to choose your elbow tuck angle for benching."
+    ],
+    "youtube_short_ideas": [
+      "One cue to instantly improve your bench press.",
+      "The 'Squeeze vs. Stretch' tricep superset.",
+      "Why you should stop resting completely between sets.",
+      "Arnold Press: Common mistakes to avoid.",
+      "How to set up for a Larson Press.",
+      "Do these 3 things for a 3D shoulder look.",
+      "Is your chest press actually training your chest?",
+      "The best tricep exercise you aren't doing.",
+      "Bench press depth: What you need to know.",
+      "Quick tip: Fixing your overhead press form."
+    ],
+    "motivational_quotes": [
+      "Maximum effectiveness over maximum efficiency.",
+      "Stable base, explosive power.",
+      "Train the range of motion, grow the muscle.",
+      "Don't just move weight, control the tension.",
+      "The stretch is where the growth happens.",
+      "Master the basics, then optimize the details.",
+      "Consistent progress is the only path to success.",
+      "Training isn't just about the set; it's about what you do in between.",
+      "Find the angle that makes your muscles work, not your joints ache.",
+      "Every repetition is an opportunity for adaptation."
+    ],
+    "myths_addressed": [
+      "Stretching between sets kills strength.",
+      "You need a massive powerlifting arch to bench heavy.",
+      "Partial reps are 'ego lifting' and useless.",
+      "The deltoid is only 3 muscles.",
+      "You must stop at the midline for all chest exercises.",
+      "Heavy weight training is the only way to grow.",
+      "Triceps only care about elbow extension.",
+      "Pressing must be done with elbows tucked at 0 degrees.",
+      "Mind-muscle connection is more important than load progression.",
+      "You need to change your exercises every week to confuse the muscles."
+    ]
+  },
+  "grit_application": {
+    "implementation_strategy": "The app should utilize a 'Dynamic Hypertrophy' module. 1. Users input their primary goal (e.g., '3D Shoulders' or 'Massive Chest'). 2. The app auto-adjusts exercise selection based on the biomechanical principles highlighted (e.g., suggesting crossbody Y-raises instead of standard lateral raises). 3. It incorporates 'Inter-set Stretches' into the rest timers to keep users productive. 4. It includes a tracking feature for 'Top Set' vs 'Back-off Set' performance, ensuring the user hits the necessary RPE (near-max) before switching to controlled volume work. 5. 'Stretched/Squeezed Partial' coaching cues are integrated directly into the exercise animations to ensure proper execution."
+  },
+  "tags": [
+    "hypertrophy",
+    "pushworkout",
+    "jeffnippard",
+    "musclegrowth",
+    "bodybuilding",
+    "sciencebasedtraining",
+    "benchpress",
+    "shouldertraining",
+    "tricepworkout",
+    "chestworkout",
+    "gymtips",
+    "fitnesseducation",
+    "progressiveoverload",
+    "anatomy",
+    "fitnessscience",
+    "workoutprogram",
+    "strengthtraining",
+    "trainingprinciples",
+    "gymoptimization",
+    "advancedtraining"
+  ]
+}

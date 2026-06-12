@@ -1,0 +1,119 @@
+{
+  "core_concepts": [
+    "Pull Day Structure: Focused on back (lats/rhomboids/traps), biceps, and rear delts.",
+    "Feeder Sets: A warm-up protocol using multiple sets with gradually increasing RPE (4-10) to prepare for a heavy all-out set to failure.",
+    "Mechanical Tension & Mind-Muscle Connection: Balancing heavy compound loading with isolation work for better fiber recruitment.",
+    "Lengthened-Position Hypertrophy: Emphasis on training muscles (especially biceps/back) at their most stretched position, as studies indicate this is highly hypertrophic.",
+    "Dropsets: Used at the end of key exercises to push fibers to high levels of activation when technical failure is reached.",
+    "Bicep Anatomy Bias: Overhead bicep curl variations can bias the long head (the \"peak\") compared to standard curls with arms at the side.",
+    "Asymmetry Mitigation: Unilateral training (one arm at a time) to identify and correct strength/size imbalances."
+  ],
+  "actionable_advice": {
+    "warm_up": "5 minutes light cardio, 10 arm circles per side, 10 cable external rotations per side.",
+    "feeder_set_protocol": "4-5 sets building up: Set 1 (RPE 4-5), Set 2 (RPE 6-7), Set 3 (RPE 7-8), Final Set (RPE 10/Failure).",
+    "exercise_execution": "On primary compound back movements, use a consistent grip width across feeder sets to establish a baseline. Use unilateral movements for biceps to prioritize mind-muscle connection and prevent imbalances.",
+    "dropset_method": "Once technical failure is reached, strip 30% of the weight and perform 4-5 additional reps.",
+    "bicep_peak": "Include at least one overhead bicep curl variation to target the long head of the bicep."
+  },
+  "scientific_claims": {
+    "stretched_position_training": {
+      "description": "Training at longer muscle lengths (e.g., preacher curls from 0-50 degrees) produces significantly more hypertrophy than training at shorter lengths.",
+      "confidence": "Strong Evidence"
+    },
+    "bicep_long_head_bias": {
+      "description": "Overhead bicep curl variations may bias the long head of the bicep (outer part/peak) compared to arms-down positions.",
+      "confidence": "Moderate Evidence"
+    },
+    "emg_individual_variation": {
+      "description": "Muscle activation patterns are highly individual, suggesting the need for personal experimentation rather than universal rules.",
+      "confidence": "Strong Evidence"
+    }
+  },
+  "coaching_insights": [
+    "Feeder sets are superior to short warm-ups for exercises where mind-muscle connection is a common bottleneck (e.g., lat pulldowns).",
+    "Technical failure on back exercises is often premature due to secondary muscles; dropsets allow the back to reach true fatigue.",
+    "Consistency in grip width during feeder sets is non-negotiable for strength baseline tracking.",
+    "If an exercise feels like you're 'just moving weight,' prioritize a unilateral version to regain focus on the target tissue."
+  ],
+  "common_mistakes": [
+    "Excessive grip width variance during warm-up sets, leading to inconsistent strength tracking.",
+    "Stopping sets because the bicep/back technically failed, ignoring that the fibers could handle more work via partials or dropsets.",
+    "Neglecting unilateral work, allowing strength asymmetries to grow over time.",
+    "Over-relying on short, minimal warm-ups for complex movements where neurological priming is needed."
+  ],
+  "content_opportunities": {
+    "instagram_post_ideas": [
+      "Feeder sets: The best way to warm up for growth.",
+      "Are your biceps lagging? Try overhead curls.",
+      "Why 'failure' isn't always the end of a set.",
+      "The science of the stretch: Why you need to train at long lengths.",
+      "Unilateral vs Bilateral: Fix your imbalances.",
+      "Lat Pulldown: Grip width vs Bicep activation.",
+      "The 30% drop set rule for back development.",
+      "Stop swinging! The secret to a better mind-muscle connection.",
+      "Is your back workout actually hitting your back?",
+      "3 cues for a perfect Row."
+    ],
+    "youtube_short_ideas": [
+      "Stop warming up like a beginner: Try Feeder Sets.",
+      "The best bicep exercise you aren't doing.",
+      "Do this to fix back imbalances.",
+      "Why your biceps aren't peaking.",
+      "Failure hack: The 30% dropset.",
+      "Stop training at the top half of your curls.",
+      "Lat pulldown: Too wide? Too close?",
+      "One change for a better back thickness.",
+      "How to actually feel your lats working.",
+      "The science of stretching muscles for growth."
+    ],
+    "motivational_quotes": [
+      "Train the length, grow the strength.",
+      "Don't just move weight, build muscle.",
+      "Strength is a baseline; hypertrophy is an art.",
+      "Balance the load, correct the weak links.",
+      "The hardest rep is just the beginning of the growth.",
+      "Master the connection to master the muscle.",
+      "Efficiency is important, but effectiveness is the priority.",
+      "Identify the imbalance, rectify the form.",
+      "Focus on the stretch, stay for the contraction.",
+      "Progress is found in the detail of the set."
+    ],
+    "myths_addressed": [
+      "Feeder sets are just wasted energy.",
+      "Full failure is the only way to trigger growth.",
+      "Wide grip is always better for lats.",
+      "All bicep curls are created equal.",
+      "Unilateral training is only for physical therapy.",
+      "You don't need to warm up if you're strong.",
+      "The 'peak' of the bicep is purely genetic (can't be trained).",
+      "Dropsets are 'ego lifting'.",
+      "The back is just one big muscle.",
+      "Heavy weight is the only indicator of a good workout."
+    ]
+  },
+  "grit_application": {
+    "implementation_strategy": "The app should implement a 'Neural Priming & Feeder' mode. 1. For compound lifts, the app provides a guided warm-up flow that prompts the user to increase intensity (RPE 4 to 10) across 4 sets before the main working set. 2. A 'Unilateral Toggle' feature for bicep/back exercises that calculates weight based on the user's weaker side history. 3. A 'Dropset Assist' feature that automatically updates the target weight (30% reduction) once the user logs 'Technical Failure'. 4. A 'Stretch Focus' indicator on exercises where the research supports an emphasis on the lengthened position."
+  },
+  "tags": [
+    "pullworkout",
+    "backtraining",
+    "bicepworkout",
+    "hypertrophy",
+    "sciencebasedfitness",
+    "jeffnippard",
+    "bodybuilding",
+    "feedersets",
+    "muscleanatomy",
+    "progressiveoverload",
+    "mindmuscleconnection",
+    "dropsets",
+    "unilateralexercises",
+    "biceppeak",
+    "latdevelopment",
+    "trainingtips",
+    "gymoptimization",
+    "strengthscience",
+    "workoutprogram",
+    "reardelts"
+  ]
+}

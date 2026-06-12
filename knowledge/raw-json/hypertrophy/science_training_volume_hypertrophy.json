@@ -1,0 +1,121 @@
+{
+  "core_concepts": [
+    "Volume-Hypertrophy Relationship: Training volume (sets per muscle/week) follows an 'Inverted-U' curve; more isn't always better, and excessive volume leads to diminishing returns and potential overtraining.",
+    "Training Age Categorization: Muscle growth recommendations must be scaled by training experience (Beginner: <1 yr, Intermediate: 1–4 yrs, Advanced: >4 yrs).",
+    "Effective vs. 'Junk' Volume: A set only counts toward your goal if it is performed with proper intensity and proximity to failure, rather than just going through the motions.",
+    "Frequency per Muscle Group: Research suggests that hitting each muscle group at least twice per week (via splits like Push/Pull/Legs or Full Body) is generally superior for hypertrophy compared to once-a-week 'body part' splits.",
+    "Compound vs. Isolation Scaling: As experience increases, total set counts per muscle group must be adjusted upward, but the ratio between compound lifts (multi-joint) and isolation work should remain balanced."
+  ],
+  "actionable_advice": {
+    "sets_per_week": "Beginner: 5–12 sets/muscle/week; Intermediate: 8–15 sets/muscle/week; Advanced: 12–25 sets/muscle/week.",
+    "frequency": "Train each muscle group 2–3 times per week to maximize the stimulus-recovery-adaptation cycle.",
+    "intensity": "Focus on high effort. Sets should be taken close to failure (RIR 1–3).",
+    "progression_methods": "Prioritize progressive overload by manipulating volume (sets/reps) and intensity (load) in a structured logbook.",
+    "recovery_advice": "Balance volume against recovery capacity. If performance stalls, reduce volume (a deload) rather than adding more sets.",
+    "nutrition": "Protein intake should remain consistently high (approx 1.6–2.2g per kg of body weight) to support tissue repair from high-volume training."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Increased training frequency (2-3x/week) outperforms lower frequency (1x/week) for hypertrophy when volume is equated.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "The 'Inverted-U' curve accurately describes the relationship between weekly volume and hypertrophic gains.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Beginners gain muscle rapidly due to high sensitivity to novel stimuli ('newbie gains'), requiring significantly less volume than advanced trainees.",
+      "confidence_level": "Strong Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "Do not count sets by exercise, but by muscles involved. A bench press counts as a chest set, a front delt set, and a triceps set.",
+    "A 'Beginner' program isn't defined by the exercises, but by the level of volume required to stimulate adaptation; you can use simple programs to get advanced results with enough effort.",
+    "Plateaus are best addressed by checking total weekly volume—often, reducing volume to a recoverable level and pushing harder on those sets is more effective than adding more work."
+  ],
+  "common_mistakes": [
+    "Doing excessive sets (25+) without enough intensity to make them 'effective' (junk volume).",
+    "Counting sets inconsistently (e.g., forgetting compound lift carryover to secondary muscles).",
+    "Treating 'Intermediate' training as just doing more of the same, rather than increasing overall intensity and management.",
+    "Ignoring the need for deloads when volume is high.",
+    "Prioritizing high-volume splits over balanced full-body or push/pull/legs splits that provide better frequency."
+  ],
+  "content_opportunities": {
+    "instagram_posts": [
+      "Beginner vs. Advanced: How many sets do you actually need?",
+      "Why your 3-hour gym sessions are killing your gains.",
+      "The Inverted-U Volume Curve: Explained.",
+      "Are you counting your sets correctly?",
+      "Push/Pull/Legs vs. Body Part Split: The science.",
+      "What are 'Newbie Gains' and how long do they last?",
+      "The art of the deload: When to step back.",
+      "Quality over quantity: Why 'Junk Volume' is a trap.",
+      "How to scale your training for 5+ years of experience.",
+      "Sets per muscle group: The ultimate cheat sheet."
+    ],
+    "youtube_shorts": [
+      "How many sets per week for growth?",
+      "Stop wasting time with junk volume.",
+      "Beginners: You don't need 20 sets per muscle.",
+      "Advanced training is about management, not more work.",
+      "How to count sets properly.",
+      "The best training split for growth.",
+      "Why 3-hour workouts don't work.",
+      "Frequency: 1x vs 3x per week.",
+      "What counts as a 'working set'?",
+      "The 'Inverted-U' volume rule."
+    ],
+    "motivational_quotes": [
+      "Growth happens in the recovery between training.",
+      "Harder sets beat more sets every time.",
+      "Consistency scales better than complexity.",
+      "Respect the Inverted-U: More isn't always better.",
+      "Training is a stimulus, not a punishment.",
+      "Your first year is the foundation, your fifth year is the craft.",
+      "Manage your volume to master your results.",
+      "Junk volume is just a waste of potential.",
+      "Adaptation requires stress, but recovery requires patience.",
+      "Build a program that you can sustain for years."
+    ],
+    "myths_addressed": [
+      "Myth: You need to train each muscle once a week for 'maximum' rest.",
+      "Myth: 25+ sets per muscle is 'advanced' (it's often just junk volume).",
+      "Myth: Beginners should start with an advanced bodybuilder split.",
+      "Myth: You can't build muscle without spending hours in the gym.",
+      "Myth: 'Newbie gains' imply you can do anything and grow.",
+      "Myth: Every set you perform in a workout contributes equally to growth.",
+      "Myth: If you aren't sore, you didn't do enough sets.",
+      "Myth: You should increase volume every week indefinitely.",
+      "Myth: Compound lifts don't count for secondary muscles.",
+      "Myth: Training more frequently is 'overtraining'."
+    ]
+  },
+  "grit_application": {
+    "goal": "Optimize volume management based on user training age and recovery.",
+    "routine": "Implement a 'Volume Tracker' that automatically calculates weekly set totals per muscle group, flagging the user if they enter 'Junk Volume' territory (>20 sets/week).",
+    "instruction": "Integrate an 'Experience Level' onboarding quiz that sets default set-ranges (Beginner: 5-12, Intermediate: 8-15, Advanced: 12-25) to prevent overtraining.",
+    "tracking": "Use a 'Set Counter' that automatically attributes compound lift sets to multiple muscle groups (e.g., Bench Press = Chest + Triceps + Front Delts) to provide accurate weekly totals."
+  },
+  "tags": [
+    "hypertrophy",
+    "training volume",
+    "muscle growth",
+    "progressive overload",
+    "training split",
+    "muscle protein synthesis",
+    "workout programming",
+    "jeff nippard",
+    "fitness science",
+    "training frequency",
+    "beginner lifting",
+    "advanced training",
+    "junk volume",
+    "set count",
+    "periodization",
+    "muscle building",
+    "fitness coaching",
+    "science-based fitness",
+    "recovery management",
+    "gym programming"
+  ]
+}

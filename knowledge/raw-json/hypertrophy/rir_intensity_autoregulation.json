@@ -1,0 +1,115 @@
+{
+  "core_concepts": [
+    "Reps in Reserve (RIR): A self-assessment tool representing the estimated number of additional repetitions one could perform with good form before reaching technical failure.",
+    "Technical Failure: The point at which a full-range-of-motion repetition can no longer be completed with proper technique.",
+    "Autoregulation: Adjusting training intensity based on daily performance capacity rather than sticking to rigid, pre-determined numbers.",
+    "Effective Volume: Sets taken close enough to failure to trigger hypertrophy; training too far from failure is ineffective, while constant true failure can lead to excessive fatigue.",
+    "Progression Mechanics: Using RIR to manage intensity across a mesocycle—starting with higher RIR (3–4) and tapering down to 0–1 RIR as the cycle ends."
+  ],
+  "actionable_advice": {
+    "usage": "Use RIR to estimate intensity for each set. Target RIR 3–4 for the start of a training block and RIR 0–1 for the final week(s).",
+    "consistency": "Keep RIR consistent across all working sets within a session. As fatigue accumulates, reps may decrease, but RIR should remain the same.",
+    "progression": "If a set feels easier than the target RIR, increase weight or reps in the next session. Do not over-adjust for minor daily fluctuations; look at the long-term trend.",
+    "exercise_selection": "Apply lower RIR (closer to failure) to stable, isolation exercises (e.g., cable curls) where form breakdown is less risky; apply higher RIR (1–2) to high-skill or injury-prone compound lifts (e.g., squats, deadlifts).",
+    "evaluation": "Periodically test true failure (safely) to calibrate your internal RIR gauge."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Training close to failure is necessary for optimal mechanical tension and muscle growth.",
+      "confidence": "Strong Evidence"
+    },
+    {
+      "claim": "There is no significant difference in hypertrophy between training to absolute failure and stopping 1–2 reps short.",
+      "confidence": "Moderate Evidence"
+    },
+    {
+      "claim": "RIR is a reliable method for autoregulating intensity in trained lifters.",
+      "confidence": "Moderate Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "RIR is a skill that improves with experience; beginners may need to train to failure occasionally to calibrate their sense of effort.",
+    "Don't chase 'magic' intensity; long-term progress is about consistent, managed effort, not destroying yourself in a single session.",
+    "RIR helps manage the stimulus-to-fatigue ratio, preventing systemic burnout in high-volume programs.",
+    "Consistency in technique is paramount. If form is sacrificed to 'get more reps', the RIR value is invalidated."
+  ],
+  "common_mistakes": [
+    "Sandbagging: Consistently leaving way more reps in the tank than intended (e.g., calling it RIR 2 when it was actually RIR 8).",
+    "Over-adjusting: Changing weights drastically every single session based on minor feelings rather than evaluating progress over the whole mesocycle.",
+    "Sacrificing form: Grinding out 'ugly' reps to reach a perceived failure point, which adds fatigue without effective stimulus.",
+    "Inconsistency: Treating RIR differently for the first set versus the last set of an exercise."
+  ],
+  "content_opportunities": {
+    "instagram_post_ideas": [
+      "What is RIR and why does it matter?",
+      "Stop training to failure every set: Here’s why.",
+      "How to calibrate your 'Reps in Reserve' gauge.",
+      "Why your 'failure' might not be true failure.",
+      "The relationship between RIR and mesocycle progression.",
+      "Visual: RIR 0 vs RIR 3.",
+      "Autoregulation: Training for your body, not the paper plan.",
+      "The danger of 'ego-lifting' to reach failure.",
+      "How to keep RIR consistent across sets.",
+      "The 'Goldilocks Zone' of training intensity."
+    ],
+    "youtube_short_ideas": [
+      "What does '2 RIR' actually feel like?",
+      "Stop grinding out bad reps!",
+      "How to track intensity without burning out.",
+      "Why you should leave reps in the tank.",
+      "The secret to long-term hypertrophy gains.",
+      "Are you sandbagging your sets?",
+      "RIR vs RPE: What's the difference?",
+      "How to program your last week of a mesocycle.",
+      "The #1 mistake in gauging failure.",
+      "How to get stronger without injury."
+    ],
+    "motivational_quotes": [
+      "Train for the long game, not the next hour.",
+      "Progress is built on the foundation of managed intensity.",
+      "Consistency over intensity is the path to greatness.",
+      "If you leave everything in the gym, you have nothing left for tomorrow.",
+      "Master the technique, then master the effort.",
+      "Smart training is hard training that you can recover from.",
+      "Failure isn't the goal; stimulus is.",
+      "Build your physique brick by brick, not by burnout.",
+      "Listen to your body; it tells you more than the plate weight ever will.",
+      "Growth happens in recovery, not in the moment of exhaustion."
+    ],
+    "myths_addressed": [
+      "You must train to failure every set to grow.",
+      "Reps in Reserve is just an excuse to be lazy.",
+      "If you aren't in pain, you aren't working hard enough.",
+      "You should always use the same weight/reps every session.",
+      "Autoregulation means doing whatever you feel like that day.",
+      "Only advanced lifters can use RIR.",
+      "Leaving reps in reserve limits strength gains.",
+      "Training with RIR is 'too complicated' for beginners.",
+      "You can't build muscle if you don't 'go until you can't'.",
+      "Tracking RIR is less effective than tracking RPE."
+    ]
+  },
+  "grit_application": "The fitness app can implement an 'Intensity Autoregulator' feature. 1) Post-set logging: After each set, users input their RIR. 2) 'Calibration Mode': The app prompts users to occasionally perform an AMRAP (As Many Reps As Possible) set to re-calibrate their RIR perception. 3) 'Fatigue Management': If a user reports RIR 0 frequently for several weeks, the app suggests a deload week. 4) 'Dynamic Progression': The app recommends weight increases based on the user consistently hitting lower than target RIRs (e.g., targeting RIR 2 but consistently hitting RIR 4, so it suggests a weight bump).",
+  "tags": [
+    "Hypertrophy",
+    "RepsInReserve",
+    "RIR",
+    "TrainingIntensity",
+    "Autoregulation",
+    "StrengthTraining",
+    "MuscleGrowth",
+    "Periodization",
+    "FitnessScience",
+    "EvidenceBasedFitness",
+    "WorkoutProgramming",
+    "Bodybuilding",
+    "HypertrophyTraining",
+    "GymPerformance",
+    "ProgressiveOverload",
+    "Recovery",
+    "TrainingLog",
+    "GymTips",
+    "StimulusManagement",
+    "MikeIsraetel"
+  ]
+}

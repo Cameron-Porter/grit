@@ -654,7 +654,7 @@ export default function ActiveWorkout() {
       <FeedbackModal
         visible={!!feedbackMuscle}
         muscleGroup={feedbackMuscle ?? ''}
-        initialFeedback={feedbackMuscle ? pendingFeedback.find((f) => f.muscleGroup === feedbackMuscle) ?? null : null}
+        initialFeedback={feedbackMuscle ? pendingFeedback.find((f) => f.muscleGroup === feedbackMuscle) ?? undefined : undefined}
         onClose={() => handleFeedbackAdvance()}
         onSave={(data) => handleFeedbackAdvance(data)}
       />

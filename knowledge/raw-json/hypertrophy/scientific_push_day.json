@@ -1,0 +1,120 @@
+{
+  "core_concepts": [
+    "Push Day Architecture: A scientific push workout balances compound movements for mechanical tension (chest, shoulders) and isolation movements for metabolic stress (triceps, lateral delts).",
+    "Undulating Loading: Using varied rep ranges within a single session (heavy/low reps to light/high reps) to stimulate different muscle fiber types and manage systemic fatigue.",
+    "Stability & Safety: Prioritizing stable platforms (machines) for heavy isolation work while using free weights for compound lifts to maintain stabilizer muscle development.",
+    "Tempo Manipulation: Using slow eccentrics (e.g., 5-second negatives) on isolation movements to improve the mind-muscle connection and increase time under tension.",
+    "Final Set Intensity: Utilizing AMRAP (As Many Reps As Possible) or failure sets at the end of a session when systemic fatigue from other exercises is no longer a limiting factor."
+  ],
+  "actionable_advice": {
+    "sets_and_reps": "Compound lifts: 3 sets with varying rep schemes (e.g., 8, 5, 15). Isolation lifts: 3 sets of 10–20 reps.",
+    "intensity": "Warm-up pyramid (empty bar -> 50% load -> 75% load) before top sets. Use RPE-based training to ensure quality reps.",
+    "progression_methods": "Implement small, incremental load increases. When hitting the top of a rep range, increase weight slightly for the next session.",
+    "recovery_advice": "Cap volume at a recoverable level. Utilize machines for movements where stabilizers are fatigued to reduce injury risk in the final stages of a workout.",
+    "exercise_selection": "Combine heavy compound presses (incline bench) with targeted deltoid and tricep isolations (machine laterals, skull crushers)."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Machine-based movements allow for training closer to failure with a reduced risk of injury compared to free weights when fatigued.",
+      "confidence_level": "Expert Opinion"
+    },
+    {
+      "claim": "Increased time under tension (TUT) via slow eccentrics improves neuromuscular control and muscle fiber recruitment.",
+      "confidence_level": "Moderate Evidence"
+    },
+    {
+      "claim": "Varied rep ranges in a single session contribute to comprehensive fiber type stimulation (type I and type II).",
+      "confidence_level": "Moderate Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "Warm-up pyramids aren't just for injury prevention; they serve as a 'greasing the groove' phase for neuromuscular priming.",
+    "AMRAP sets are best placed at the very end of a workout to prevent performance interference with subsequent exercises.",
+    "When a trainee loses technical form, the set is over. Machines provide a 'safety net' to extend the set beyond what a free weight could safely allow."
+  ],
+  "common_mistakes": [
+    "Ignoring the warm-up pyramid and jumping straight into heavy work.",
+    "Losing focus on the eccentric (lowering) phase during the final high-rep sets.",
+    "Using momentum on lateral raises instead of isolating the side delt.",
+    "Performing too much isolation work before the main compound lift is finished.",
+    "Failing to track set-by-set progress (load and reps) in a logbook."
+  ],
+  "content_opportunities": {
+    "instagram_posts": [
+      "The warm-up pyramid every lifter needs.",
+      "Why I use machines for shoulder press.",
+      "Tempo hacks: How to grow faster with slower reps.",
+      "Push Day: Compound vs. Isolation order.",
+      "The science of the 'AMRAP' finisher.",
+      "Fix your bench press stability.",
+      "Stop swinging your lateral raises!",
+      "The undulation rep strategy explained.",
+      "Building a bigger V-taper.",
+      "How to bench press without shoulder pain."
+    ],
+    "youtube_shorts": [
+      "Perfect warm-up pyramid.",
+      "Stop ego lifting on bench.",
+      "3-second eccentric hack.",
+      "Shoulder press: Free weight vs. Machine.",
+      "End your workout with an AMRAP.",
+      "Build a wider V-taper.",
+      "Proper skullcrusher form.",
+      "Lateral raise technique tips.",
+      "Push Day science in 60s.",
+      "Are you tracking your sets?"
+    ],
+    "motivational_quotes": [
+      "Stability is the foundation of strength.",
+      "Control the negative, master the growth.",
+      "Don't trade your form for weight.",
+      "The last rep of the AMRAP is where the work begins.",
+      "Prime the nervous system, then build the muscle.",
+      "Quality tension beats quantity of weight.",
+      "Every set has a purpose.",
+      "Master the move, then challenge the muscle.",
+      "Consistency is the ultimate load.",
+      "Form is not optional."
+    ],
+    "myths_addressed": [
+      "Myth: You only need to train heavy to grow.",
+      "Myth: Machines are for 'beginners only'.",
+      "Myth: You should always train to failure on every set.",
+      "Myth: You need 20+ exercises per workout.",
+      "Myth: Warm-ups are a waste of time.",
+      "Myth: Faster lifting tempo builds more explosive muscle.",
+      "Myth: You shouldn't do isolation work on compound days.",
+      "Myth: The bench press is the only chest exercise that matters.",
+      "Myth: Muscle confusion is the key to progress.",
+      "Myth: You can't build muscle with high-rep training."
+    ]
+  },
+  "grit_application": {
+    "goal": "Optimize Push Day via tempo control and intensity sequencing.",
+    "routine": "Create a 'Tempo Guide' feature in the app, where specific exercises prompt a 'Slow Eccentric' timer (e.g., 3-5 seconds) for isolation moves.",
+    "instruction": "Implement a 'Warm-up Wizard' that pre-populates a pyramid structure for main compound lifts to ensure neurological priming.",
+    "tracking": "Use an 'Intensity Log' that tags sets as 'Standard' vs. 'AMRAP' to track volume specifically for fatigue management."
+  },
+  "tags": [
+    "push workout",
+    "chest hypertrophy",
+    "shoulder training",
+    "tricep isolation",
+    "progressive overload",
+    "Jeff Nippard",
+    "science-based fitness",
+    "RPE training",
+    "muscle growth",
+    "workout programming",
+    "time under tension",
+    "tempo training",
+    "gym log",
+    "compound vs isolation",
+    "training intensity",
+    "muscle recruitment",
+    "hypertrophy science",
+    "warm-up protocols",
+    "fitness coaching",
+    "bodybuilding"
+  ]
+}

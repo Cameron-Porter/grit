@@ -1,0 +1,116 @@
+{
+  "core_concepts": [
+    "Maximum Recoverable Volume (MRV): The total amount of training volume a muscle group can handle and still recover from before the next session.",
+    "Minimum Effective Volume (MEV): The minimum amount of work required to maintain or stimulate muscle growth.",
+    "Maintenance Volume (MV): The amount of training required to simply maintain existing muscle mass.",
+    "Volume Landmarks: A framework for periodizing training based on the stages of an athlete's development and recovery capacity.",
+    "Fatigue Management: The necessity of balancing high-stimulus work with enough recovery time to allow for supercompensation."
+  ],
+  "actionable_advice": {
+    "volume_progression": "Start at MEV at the beginning of a mesocycle. Gradually increase sets each week, staying within the range of MEV to MRV.",
+    "deloading": "Required after reaching MRV to drop systemic and local fatigue, allowing for the next cycle of higher volume.",
+    "intensity": "Maintain high intensity (RIR 1-3) throughout the volume accumulation to ensure the stimulus remains effective.",
+    "tracking": "Log all sets per muscle group per week to identify where an individual falls on the Volume Landmark spectrum.",
+    "recovery": "If performance declines or systemic fatigue symptoms appear (poor sleep, motivation, joint pain), reduce volume immediately to the next lower phase."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Muscle hypertrophy follows a dose-response relationship with volume up to a point of diminishing returns.",
+      "confidence": "Strong Evidence"
+    },
+    {
+      "claim": "Individual MRV varies significantly based on genetics, training status, sleep, nutrition, and stress.",
+      "confidence": "Strong Evidence"
+    },
+    {
+      "claim": "Failure to deload after reaching MRV leads to plateaus and risk of injury.",
+      "confidence": "Moderate Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "Volume is not the end-all; intensity and execution must accompany volume increases to see results.",
+    "The 'more is better' mentality is the fastest path to stagnation; precision is the hallmark of a successful program.",
+    "Listen to biological markers (appetite, sleep, joint health) as they are the earliest indicators of nearing MRV.",
+    "Mesocycle structure (accumulation -> deload) is more important than day-to-day training variety."
+  ],
+  "common_mistakes": [
+    "Starting a program at too high a volume (skipping MEV), leading to early burnout.",
+    "Ignoring the deload phase, thinking it is 'wasted' training time.",
+    "Adding sets while strength is decreasing, failing to recognize systemic fatigue.",
+    "Treating MV, MEV, and MRV as static numbers rather than dynamic variables that change with life stress.",
+    "Compensating for poor nutrition/sleep by just 'training harder'."
+  ],
+  "content_opportunities": {
+    "instagram_post_ideas": [
+      "The 4 Volume Landmarks explained.",
+      "Why 'more volume' isn't always the answer.",
+      "How to spot your MRV before you burnout.",
+      "The secret to the Deload: Why you must rest.",
+      "MEV vs. MRV: A visual guide.",
+      "Is your volume killing your gains?",
+      "Why you should start your cycle at the minimum.",
+      "The role of life stress on your recovery capacity.",
+      "Tracking your sets for long-term growth.",
+      "What happens to your muscles during a deload?"
+    ],
+    "youtube_short_ideas": [
+      "Stop doing 20 sets per muscle group!",
+      "What is MRV?",
+      "Why Deloads are not a waste of time.",
+      "How to find your Minimum Effective Volume.",
+      "The truth about overtraining.",
+      "Don't add more sets yet!",
+      "The Volume Landmark progression cycle.",
+      "How stress affects your gym volume.",
+      "Are you training too much?",
+      "The #1 sign you need a deload."
+    ],
+    "motivational_quotes": [
+      "Train only as hard as you can recover.",
+      "The most dangerous path in the gym is 'more'.",
+      "Precision beats intensity every single time.",
+      "Growth happens in the rest, not the stress.",
+      "Learn your limits to break through them.",
+      "Volume is a tool; don't let it become your master.",
+      "Strength is built in the deload.",
+      "Work smart enough to grow, not hard enough to break.",
+      "Consistency thrives where recovery lives.",
+      "Your MRV is your ceiling; don't hit your head on it."
+    ],
+    "myths_addressed": [
+      "Doing 30 sets for chest is better than 10.",
+      "If you aren't sore, the volume was too low.",
+      "Deloading is for the weak.",
+      "You can out-train a bad diet if you do more sets.",
+      "Your MRV stays the same all year long.",
+      "You should go to failure on every set.",
+      "More sets always equal more hypertrophy.",
+      "Overtraining is a myth for natural lifters.",
+      "You don't need a deload if you use supplements.",
+      "The best athletes do the most volume."
+    ]
+  },
+  "grit_application": "The app should implement a 'Volume Landmark Tracker'. 1) During onboarding, the app sets the user at 'Maintenance Volume' for their specific training age. 2) The app automatically tracks weekly set counts per muscle group. 3) The 'MRV Warning System' alerts the user when they approach high-volume weeks, prompting a mandatory deload check. 4) The app uses subjective 'Recovery Scores' (sleep, mood, soreness) to auto-adjust the recommended sets for the upcoming week, effectively teaching the user how to self-regulate.",
+  "tags": [
+    "VolumeLandmarks",
+    "MRV",
+    "MEV",
+    "Hypertrophy",
+    "Recovery",
+    "TrainingVolume",
+    "Deload",
+    "Periodization",
+    "MuscleGrowth",
+    "StimulusToFatigue",
+    "FitnessEducation",
+    "StrengthTraining",
+    "WorkoutProgramming",
+    "Overtraining",
+    "Autoregulation",
+    "BodybuildingScience",
+    "RenaissancePeriodization",
+    "DrMikeIsraetel",
+    "TrainingAge",
+    "FatigueManagement"
+  ]
+}

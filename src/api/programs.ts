@@ -109,7 +109,7 @@ export async function createProgram(
   if (progError) throw progError;
 
   // Auto-generate all program_days rows
-  const days: Omit<ProgramDay, "id" | "completed" | "completed_at">[] = [];
+  const days: Omit<ProgramDay, "id" | "completed" | "completed_at" | "skipped">[] = [];
   for (let week = 1; week <= totalWeeks; week++) {
     for (let day = 1; day <= daysPerWeek; day++) {
       days.push({

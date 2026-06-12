@@ -4,7 +4,9 @@ import { supabase } from './supabase';
 import { getExerciseByName } from '../data/exerciseDatabase';
 import {
   recommendProgression,
+  type MusclePriority,
   type ProgressionContext,
+  type ProgramFocus,
   type SessionPerformance,
 } from '../rules/progressionEngine';
 import type { ExperienceLevel } from '../types/program';
@@ -25,12 +27,14 @@ export async function computeAndSaveProgressionTargets(
 
   const { data: programRow } = await supabase
     .from('programs')
-    .select('total_weeks')
+    .select('total_weeks, focus, muscle_priorities')
     .eq('id', dayRow.program_id)
     .single();
   if (!programRow) return;
 
   const totalMesoWeeks: number = programRow.total_weeks;
+  const programFocus = (programRow.focus ?? 'hypertrophy') as ProgramFocus;
+  const musclePriorities: Record<string, string> = programRow.muscle_priorities ?? {};
   const templateExercises = await getTemplateDayExercises(dayRow.program_id, dayRow.day_number);
   if (!templateExercises.length) return;
 
@@ -47,16 +51,23 @@ export async function computeAndSaveProgressionTargets(
 
     if (nextDayRow) {
       const isDeload = nextWeek === totalMesoWeeks;
-      const ctx: ProgressionContext = {
-        experienceLevel,
-        isDeload,
-        mesoWeek: nextWeek,
-        totalMesoWeeks,
-      };
 
       const targets = (
         await Promise.all(
           templateExercises.map(async (ex) => {
+            const musclePriority = (
+              ex.muscle_group ? musclePriorities[ex.muscle_group] : undefined
+            ) as MusclePriority | undefined;
+
+            const ctx: ProgressionContext = {
+              experienceLevel,
+              isDeload,
+              mesoWeek: nextWeek,
+              totalMesoWeeks,
+              programFocus,
+              musclePriority,
+            };
+
             const allSessions = await getExerciseAllSessions(ex.exercise_name);
             const sessions: SessionPerformance[] = allSessions
               .slice(0, 8)

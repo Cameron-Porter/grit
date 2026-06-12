@@ -1,0 +1,120 @@
+{
+  "core_concepts": [
+    "High-Frequency Training: Training major muscle groups 5 days per week using full-body splits. This contrasts with traditional 'bro-splits' by spreading volume out.",
+    "Distributed Volume: Spreading total weekly volume across frequent sessions rather than concentrating it into one long 'chest day,' which optimizes muscle protein synthesis (MPS) spikes.",
+    "Performance Optimization: Lower per-session volume for any single body part keeps intensity high throughout the set, minimizing the accumulation of excessive systemic fatigue.",
+    "Recovery Capacity: Higher frequency full-body training improves work capacity and recovery efficiency over time, allowing for more high-quality work to be performed across the week.",
+    "Mind-Muscle Connection: Increased exposure to specific movement patterns (hitting a muscle 5x/week) improves motor unit recruitment and focus on target muscle engagement."
+  ],
+  "actionable_advice": {
+    "frequency": "Train every major muscle group 5 days per week, utilizing a high-frequency full-body template.",
+    "intensity": "Use RPE (Rate of Perceived Exertion) targets (e.g., RPE 7-9) to autoregulate intensity, ensuring you don't burn out by going to absolute failure on every set.",
+    "sets_and_reps": "Mix low-rep compounds (e.g., 3x3 at 85% for strength) with moderate-to-high rep isolation work (e.g., 3x15 for hypertrophy).",
+    "progression_methods": "Rotate exercise selection to avoid overuse injuries and maintain freshness while keeping movement patterns consistent enough to drive skill acquisition.",
+    "recovery_advice": "Focus on high-quality sleep and adequate protein intake; since soreness is reduced through frequent exposure, keep sessions efficient and maintain recovery between high-frequency bouts."
+  },
+  "scientific_claims": [
+    {
+      "claim": "Higher training frequency (up to 5x/week) can be superior to low frequency for intermediate/advanced trainees by optimizing the muscle protein synthesis window.",
+      "confidence_level": "Moderate Evidence"
+    },
+    {
+      "claim": "Frequent, lower-volume per-session training can reduce muscle damage markers (soreness) compared to high-volume 'body-part' splits.",
+      "confidence_level": "Strong Evidence"
+    },
+    {
+      "claim": "Hitting each muscle group multiple times per week increases the total number of quality sets performed per week.",
+      "confidence_level": "Strong Evidence"
+    }
+  ],
+  "coaching_insights": [
+    "High-frequency training is an 'advanced' tool. It requires excellent time management and an ability to autoregulate intensity—do not prescribe this to beginners.",
+    "Use 'The Rule of Diminishing Returns': If a client is too sore to perform well on day 3 of 5, drop the volume on day 2 immediately.",
+    "Exercise variation is key. Do not perform the exact same bench press setup 5 days a week; rotate angles (e.g., flat, incline, cables) to prevent repetitive stress injuries."
+  ],
+  "common_mistakes": [
+    "Attempting high-frequency training as a beginner (without the base work capacity).",
+    "Failing to autoregulate: Going to absolute failure on Day 1, leaving the trainee wrecked for the remainder of the week.",
+    "Ignoring cumulative fatigue; thinking that because soreness is low, the body is fully recovered.",
+    "Neglecting exercise variation, leading to joint overuse.",
+    "Lack of planning: Not tracking total weekly volume across all 5 days."
+  ],
+  "content_opportunities": {
+    "instagram_posts": [
+      "Why training 5x/week beats 1x/week.",
+      "The end of 'International Chest Day'.",
+      "Soreness isn't progress: Why frequency works.",
+      "How to split 5 days of full-body volume.",
+      "RPE vs. Failure: Mastering intensity.",
+      "Is frequency the missing link for your growth?",
+      "The science of muscle protein synthesis windows.",
+      "Stop the bro-split: The case for high frequency.",
+      "How to avoid burnout in a 5-day program.",
+      "The 'new stimulus' trap for intermediate lifters."
+    ],
+    "youtube_shorts": [
+      "Train chest 5x a week? (Why it works)",
+      "Stop doing 20 sets of chest in one day.",
+      "Frequency > Volume per session.",
+      "Science of hitting muscles 5x/week.",
+      "Are you 'over-training' or 'under-recovering'?",
+      "Why high-frequency splits minimize soreness.",
+      "The secret to a bigger chest.",
+      "How to structure full-body daily.",
+      "RPE targets for intermediate lifters.",
+      "The 'No-Soreness' training secret."
+    ],
+    "motivational_quotes": [
+      "Frequent stimulus beats rare intensity.",
+      "Consistency is the foundation; frequency is the accelerator.",
+      "Don't kill a muscle once a week; challenge it every day.",
+      "Adaptation happens in the gap between sessions.",
+      "Quality over quantity, frequency over exhaustion.",
+      "Train smarter, recover faster, grow consistently.",
+      "A muscle hit 5 times is a muscle that must adapt.",
+      "The most effective program is the one you can repeat.",
+      "Performance is the ultimate metric of recovery.",
+      "Stop chasing the burn and start chasing the growth."
+    ],
+    "myths_addressed": [
+      "Myth: You need 7 days to recover a muscle.",
+      "Myth: High frequency automatically leads to overtraining.",
+      "Myth: You have to be sore to make gains.",
+      "Myth: Full body training is only for beginners.",
+      "Myth: You should train each body part once a week.",
+      "Myth: More sets in one day = better growth.",
+      "Myth: High frequency is impossible for natural lifters.",
+      "Myth: You must do all chest exercises on 'Chest Day'.",
+      "Myth: CNS fatigue is only caused by heavy weights.",
+      "Myth: You can't build mass with high frequency."
+    ]
+  },
+  "grit_application": {
+    "goal": "Optimize recovery and volume management for high-frequency training.",
+    "routine": "Develop a 'Frequency-Adjustment Algorithm' that monitors the user's RPE logs. If RPE is consistently hitting 10, the app automatically suggests a volume reduction for the next 2 days.",
+    "instruction": "Implement a 'Recovery Check-in' survey on Day 3: 'How is your fatigue on a scale of 1-10?' Adjust the day's training volume based on the input.",
+    "tracking": "Use a 'Body Part Heatmap' to track total weekly sets for each muscle group across 5 days, ensuring the user hits the 10-20 set target without exceeding individual-session recovery limits."
+  },
+  "tags": [
+    "high frequency training",
+    "full body workout",
+    "muscle protein synthesis",
+    "progressive overload",
+    "hypertrophy science",
+    "workout frequency",
+    "Jeff Nippard",
+    "science-based fitness",
+    "recovery management",
+    "RPE training",
+    "muscle growth",
+    "intermediate training",
+    "training split",
+    "volume management",
+    "hypertrophy",
+    "strength and conditioning",
+    "muscle recovery",
+    "fitness coaching",
+    "evidence based",
+    "bodybuilding"
+  ]
+}
