@@ -150,11 +150,7 @@ export default function ActiveWorkout() {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '800', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
-            GRIT
-          </Text>
           <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Today's Workout</Text>
-          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 4 }}>Guided Results &amp; Intelligent Training</Text>
         </View>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
           {loadingNext && <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />}
@@ -226,9 +222,9 @@ export default function ActiveWorkout() {
     await doFinish();
   };
 
-  const handleFeedbackAdvance = (data?: { jointPain: string; pump: string; volume: string }) => {
+  const handleFeedbackAdvance = (data?: { jointPain: string | null; pump: string | null; volume: string | null }) => {
     if (data && feedbackMuscle) {
-      queueFeedback(feedbackMuscle, data.jointPain, data.pump, data.volume);
+      queueFeedback(feedbackMuscle, data.jointPain ?? '', data.pump ?? '', data.volume ?? '');
     }
 
     if (pendingFeedbackGroups.length > 0) {
@@ -410,10 +406,6 @@ export default function ActiveWorkout() {
     ? exercises.find((ex) => ex.id === noteExerciseId)
     : null;
 
-  const activeSetType = activeSetData
-    ? exercises.find((ex) => ex.id === activeSetData.exerciseId)?.sets[activeSetData.setIndex]?.type
-    : 'Regular';
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Progress bar */}
@@ -424,9 +416,11 @@ export default function ActiveWorkout() {
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700', flex: 1 }}>
-            {activeProgramDayLabel ?? (activeProgramDayNumber ? `Day ${activeProgramDayNumber}` : 'Workout')}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700' }}>
+              {activeProgramDayLabel ?? (activeProgramDayNumber ? `Day ${activeProgramDayNumber}` : 'Workout')}
+            </Text>
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             {totalSets > 0 && (
               <Text style={{ color: colors.muted, fontSize: 13 }}>
@@ -626,17 +620,12 @@ export default function ActiveWorkout() {
 
       <SetMenuModal
         visible={!!activeSetData}
-        currentType={activeSetType as 'Regular' | 'M' | 'MM'}
         onClose={() => setActiveSetData(null)}
         onDelete={() =>
           activeSetData && removeSet(activeSetData.exerciseId, activeSetData.setIndex)
         }
         onSkip={() =>
           activeSetData && skipSet(activeSetData.exerciseId, activeSetData.setIndex)
-        }
-        onUpdateType={(newType) =>
-          activeSetData &&
-          updateSet(activeSetData.exerciseId, activeSetData.setIndex, { type: newType })
         }
       />
 
@@ -665,6 +654,7 @@ export default function ActiveWorkout() {
       <FeedbackModal
         visible={!!feedbackMuscle}
         muscleGroup={feedbackMuscle ?? ''}
+        initialFeedback={feedbackMuscle ? pendingFeedback.find((f) => f.muscleGroup === feedbackMuscle) ?? null : null}
         onClose={() => handleFeedbackAdvance()}
         onSave={(data) => handleFeedbackAdvance(data)}
       />

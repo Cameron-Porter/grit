@@ -54,6 +54,15 @@ export const useWorkoutStore = create<WorkoutState>()(
           isSaving: false,
         }),
 
+      clearProgramState: () =>
+        set({
+          activeProgramDayId: null,
+          activeProgramName: null,
+          activeProgramWeek: null,
+          activeProgramDayNumber: null,
+          activeProgramDayLabel: null,
+        }),
+
       queueFeedback: (muscleGroup, jointPain, pump, volume) =>
         set((state) => ({
           pendingFeedback: [
@@ -233,6 +242,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               name: t.name,
               muscleGroup: t.muscleGroup,
               equipment: t.equipment,
+              painWarning: t.painWarning,
               sets: t.targetSets
                 ? Array.from({ length: t.targetSets }, () => {
                     const isBodyweight = t.equipment === 'Bodyweight';

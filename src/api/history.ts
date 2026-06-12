@@ -207,3 +207,31 @@ export async function getWorkoutForProgramDay(programDayId: string): Promise<Wor
     })),
   };
 }
+
+// Returns the most recent joint_pain rating per muscle group.
+// Used to show pain warnings on exercise cards when starting a program day.
+export async function getLastMuscleGroupFeedback(
+  muscleGroups: string[],
+): Promise<Record<string, string | null>> {
+  if (muscleGroups.length === 0) return {};
+  const { data } = await supabase
+    .from('workout_feedback')
+    .select('muscle_group, joint_pain, workouts!inner(completed_at)')
+    .in('muscle_group', muscleGroups);
+
+  if (!data) return {};
+
+  // Sort newest first, keep first occurrence of each muscle group
+  const sorted = [...data].sort((a, b) =>
+    new Date((b.workouts as any).completed_at).getTime() -
+    new Date((a.workouts as any).completed_at).getTime(),
+  );
+
+  const result: Record<string, string | null> = {};
+  for (const row of sorted) {
+    if (!(row.muscle_group in result)) {
+      result[row.muscle_group] = row.joint_pain ?? null;
+    }
+  }
+  return result;
+}

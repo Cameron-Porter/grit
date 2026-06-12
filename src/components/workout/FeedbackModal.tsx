@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useColors } from '../../utils/useColors';
 
@@ -9,8 +9,9 @@ type Volume = 'Not enough' | 'Just right' | 'Pushed limits' | 'Too much';
 interface FeedbackModalProps {
   visible: boolean;
   muscleGroup: string;
+  initialFeedback?: { jointPain: string | null; pump: string | null; volume: string | null };
   onClose: () => void;
-  onSave: (feedback: { jointPain: JointPain; pump: Pump; volume: Volume }) => void;
+  onSave: (feedback: { jointPain: string | null; pump: string | null; volume: string | null }) => void;
 }
 
 const JOINT_PAIN: JointPain[] = ['None', 'Low', 'Moderate', 'A lot'];
@@ -40,13 +41,22 @@ const volumeColor = (v: Volume, primary: string) => {
 export default function FeedbackModal({
   visible,
   muscleGroup,
+  initialFeedback,
   onClose,
   onSave,
 }: FeedbackModalProps) {
   const colors = useColors();
-  const [jointPain, setJointPain] = useState<JointPain>('None');
-  const [pump, setPump] = useState<Pump>('Moderate');
-  const [volume, setVolume] = useState<Volume>('Just right');
+  const [jointPain, setJointPain] = useState<JointPain | null>(null);
+  const [pump, setPump] = useState<Pump | null>(null);
+  const [volume, setVolume] = useState<Volume | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setJointPain((initialFeedback?.jointPain as JointPain) ?? null);
+      setPump((initialFeedback?.pump as Pump) ?? null);
+      setVolume((initialFeedback?.volume as Volume) ?? null);
+    }
+  }, [visible]);
 
   const handleSave = () => {
     onSave({ jointPain, pump, volume });
@@ -77,7 +87,6 @@ export default function FeedbackModal({
             {/* Joint Pain */}
             <FeedbackSection
               label="Joint Pain"
-              icon="bone"
               options={JOINT_PAIN}
               selected={jointPain}
               getColor={(v) => jointPainColor(v as JointPain)}
@@ -88,7 +97,6 @@ export default function FeedbackModal({
             {/* Pump */}
             <FeedbackSection
               label="Pump"
-              icon="arm-flex"
               options={PUMP}
               selected={pump}
               getColor={(v) => pumpColor(v as Pump, colors.primary, colors.muted)}
@@ -99,7 +107,6 @@ export default function FeedbackModal({
             {/* Volume */}
             <FeedbackSection
               label="Adequate Volume"
-              icon="chart-line"
               options={VOLUME}
               selected={volume}
               getColor={(v) => volumeColor(v as Volume, colors.primary)}
@@ -132,9 +139,8 @@ function FeedbackSection({
   onSelect,
 }: {
   label: string;
-  icon: string;
   options: string[];
-  selected: string;
+  selected: string | null;
   getColor: (v: any) => string;
   mutedColor: string;
   onSelect: (v: string) => void;

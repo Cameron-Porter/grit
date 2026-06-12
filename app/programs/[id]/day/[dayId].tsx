@@ -3,22 +3,21 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/history';
+import { getLastMuscleGroupFeedback, getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/history';
 import {
   addProgramExercise,
+  getProgram,
   getProgramDay,
   getProgramDayTargets,
   getProgramExercises,
-  getProgramWeekCompletedDays,
   getTemplateDayExercises,
   ProgramDay,
   ProgramDayTarget,
   ProgramExercise,
   removeProgramExercise,
-  saveProgramDayTargets,
+  setCurrentProgram,
   unskipProgramDay,
 } from '../../../../src/api/programs';
-import { ExerciseWeeklyData, generateProgressiveOverload } from '../../../../src/api/gemini';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
 import { useWorkoutStore } from '../../../../src/store/useWorkoutStore';
@@ -61,12 +60,12 @@ export default function ProgramDayScreen() {
   const startFromProgramDay = useWorkoutStore((s) => s.startFromProgramDay);
 
   const [day, setDay] = useState<ProgramDay | null>(null);
+  const [programName, setProgramName] = useState<string | null>(null);
   const [exercises, setExercises] = useState<ProgramExercise[]>([]);
   const [dayTargets, setDayTargets] = useState<ProgramDayTarget[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [history, setHistory] = useState<WorkoutDayHistory | null>(null);
   const [loading, setLoading] = useState(true);
-  const [generatingAI, setGeneratingAI] = useState(false);
 
   const isTemplate = !day || day.week_number === 1;
 
@@ -76,8 +75,9 @@ export default function ProgramDayScreen() {
 
   const load = async () => {
     setLoading(true);
-    const dayData = await getProgramDay(dayId);
+    const [dayData, prog] = await Promise.all([getProgramDay(dayId), getProgram(id)]);
     setDay(dayData);
+    setProgramName(prog?.name ?? null);
 
     if (!dayData) { setLoading(false); return; }
 
@@ -91,113 +91,13 @@ export default function ProgramDayScreen() {
       setHistory(h);
     }
 
-    // For week 2+ upcoming (not completed, not skipped) days, load or generate progressive overload targets
+    // For week 2+ upcoming days, load any targets already computed by the progression engine
     if (!dayData.completed && !dayData.skipped && dayData.week_number > 1) {
       const existing = await getProgramDayTargets(dayId);
-      if (existing.length > 0) {
-        setDayTargets(existing);
-      } else {
-        generateAITargets(dayData, exerciseData);
-      }
+      setDayTargets(existing);
     }
 
     setLoading(false);
-  };
-
-  const generateAITargets = async (dayData: ProgramDay, exerciseData: ProgramExercise[]) => {
-    setGeneratingAI(true);
-    try {
-      // Fetch program context (focus, priorities, total_weeks)
-      const { supabase } = await import('../../../../src/api/supabase');
-      const { data: programRow } = await supabase
-        .from('programs')
-        .select('focus, muscle_priorities, total_weeks')
-        .eq('id', id)
-        .single();
-      const focus = (programRow as any)?.focus ?? 'hypertrophy';
-      const musclePriorities = (programRow as any)?.muscle_priorities ?? {};
-      const totalWeeks = (programRow as any)?.total_weeks ?? 0;
-
-      // Fetch ALL completed days from the previous week
-      const prevWeekDays = await getProgramWeekCompletedDays(id, dayData.week_number - 1);
-      if (!prevWeekDays.length) { setGeneratingAI(false); return; }
-
-      // Fetch workout history for every completed day last week
-      const prevWeekHistories = await Promise.all(
-        prevWeekDays.map(async (d) => ({
-          dayId: d.id,
-          dayLabel: d.label ?? `Day ${d.day_number}`,
-          history: await getWorkoutForProgramDay(d.id).catch(() => null),
-        })),
-      );
-
-      // For each exercise in today's plan, collect ALL last-week sessions
-      // that trained the same muscle group (accounts for twice-a-week frequency)
-      const exerciseWeeklyData: ExerciseWeeklyData[] = exerciseData.map((ex) => {
-        const muscleGroup = ex.muscle_group ?? '';
-
-        const sessions = prevWeekHistories
-          .filter((h) =>
-            h.history?.exercises.some(
-              (e) => e.muscleGroup?.toLowerCase() === muscleGroup.toLowerCase(),
-            ),
-          )
-          .map((h) => {
-            // Collect sets for this specific exercise (or all sets for the muscle group if not found)
-            const matchingExercise = h.history!.exercises.find(
-              (e) => e.name === ex.exercise_name,
-            );
-            const muscleExercises = h.history!.exercises.filter(
-              (e) => e.muscleGroup?.toLowerCase() === muscleGroup.toLowerCase(),
-            );
-            const sets = (matchingExercise ?? muscleExercises[0])?.sets.map((s) => ({
-              weight: s.weight,
-              reps: s.reps,
-              completed: s.completed,
-            })) ?? [];
-
-            const fb = h.history!.feedback.find(
-              (f) => f.muscleGroup?.toLowerCase() === muscleGroup.toLowerCase(),
-            );
-            return {
-              dayLabel: h.dayLabel,
-              sets,
-              feedback: fb
-                ? {
-                    pump: fb.pump,
-                    jointPain: fb.jointPain,
-                    volume: fb.volume,
-                    soreness: (fb as any).soreness ?? null,
-                  }
-                : null,
-            };
-          });
-
-        return { exerciseName: ex.exercise_name, muscleGroup, sessions };
-      });
-
-      // Only generate for exercises that have at least one prior session
-      const withHistory = exerciseWeeklyData.filter((e) => e.sessions.length > 0);
-      if (!withHistory.length) { setGeneratingAI(false); return; }
-
-      const targets = await generateProgressiveOverload(
-        focus,
-        musclePriorities,
-        dayData.week_number,
-        totalWeeks,
-        withHistory,
-      );
-
-      if (targets.length > 0) {
-        await saveProgramDayTargets(dayId, targets);
-        const saved = await getProgramDayTargets(dayId);
-        setDayTargets(saved);
-      }
-    } catch (e) {
-      console.error('AI target generation failed:', e);
-    } finally {
-      setGeneratingAI(false);
-    }
   };
 
   const handleAddExercise = async (name: string, muscleGroup: string, equipment: string) => {
@@ -224,13 +124,21 @@ export default function ProgramDayScreen() {
     }
   };
 
-  const handleStartWorkout = () => {
+  const handleStartWorkout = async () => {
+    await setCurrentProgram(id);
+
+    const muscleGroups = [...new Set(exercises.map((e) => e.muscle_group).filter(Boolean))] as string[];
+    const lastFeedback = muscleGroups.length > 0
+      ? await getLastMuscleGroupFeedback(muscleGroups).catch(() => ({} as Record<string, string | null>))
+      : {} as Record<string, string | null>;
+
     startFromProgramDay(
       dayId,
-      null,
+      programName,
       exercises.map((e) => {
         // Week 2+ uses program_day_targets; week 1 uses program_exercises targets
         const aiTarget = dayTargets.find((t) => t.exercise_name === e.exercise_name);
+        const pain = e.muscle_group ? lastFeedback[e.muscle_group] : null;
         return {
           name: e.exercise_name,
           muscleGroup: e.muscle_group ?? '',
@@ -240,6 +148,7 @@ export default function ProgramDayScreen() {
           targetRepsMax: aiTarget?.target_reps_max ?? e.target_reps_max ?? undefined,
           targetWeight: aiTarget?.target_weight ?? e.target_weight ?? undefined,
           rir: aiTarget?.rir ?? e.rir ?? undefined,
+          painWarning: (pain && pain !== 'None') ? `Joint pain (${pain}) reported last session for ${e.muscle_group}` : undefined,
         };
       }),
       day?.week_number ?? null,
@@ -404,18 +313,15 @@ export default function ProgramDayScreen() {
               </View>
             )}
 
-            {/* AI generating indicator */}
-            {generatingAI && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, padding: 12, backgroundColor: `${colors.primary}18`, borderRadius: 10 }}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>Generating progressive overload plan…</Text>
-              </View>
-            )}
-
             {exercises.map((item) => {
               const badgeColor = item.muscle_group ? (MuscleGroupColors[item.muscle_group] ?? colors.primary) : colors.primary;
-              const aiTarget = dayTargets.find((t) => t.exercise_name === item.exercise_name);
-              const hasAI = !!aiTarget;
+              const target = dayTargets.find((t) => t.exercise_name === item.exercise_name);
+              const displaySets = target?.target_sets ?? item.target_sets;
+              const displayRepsMin = target?.target_reps_min ?? item.target_reps_min;
+              const displayRepsMax = target?.target_reps_max ?? item.target_reps_max;
+              const displayRir = target?.rir ?? item.rir ?? 3;
+              const displayWeight = target?.target_weight ?? item.target_weight ?? 0;
+              const hasTarget = displaySets != null && (displayRepsMin ?? 0) > 0;
               return (
                 <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
                   {item.muscle_group && (
@@ -438,32 +344,20 @@ export default function ProgramDayScreen() {
                         </Pressable>
                       )}
                     </View>
-                    {/* AI target summary */}
-                    {hasAI && (
+                    {hasTarget && (
                       <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                         <View style={{ backgroundColor: `${colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                           <MaterialCommunityIcons name="lightning-bolt" size={10} color={colors.primary} />
                           <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '700' }}>
-                            {aiTarget.target_sets}×{aiTarget.target_reps_min}–{aiTarget.target_reps_max} @ {aiTarget.rir} RIR
-                            {aiTarget.target_weight > 0 ? `  ·  ${aiTarget.target_weight} lbs` : ''}
+                            {displaySets}×{displayRepsMin}–{displayRepsMax} @ {displayRir} RIR
+                            {displayWeight > 0 ? `  ·  ${displayWeight} lbs` : ''}
                           </Text>
                         </View>
-                        {aiTarget.ai_rationale ? (
+                        {target?.ai_rationale ? (
                           <Text style={{ color: colors.muted, fontSize: 11, flex: 1, marginTop: 2 }} numberOfLines={2}>
-                            {aiTarget.ai_rationale}
+                            {target.ai_rationale}
                           </Text>
                         ) : null}
-                      </View>
-                    )}
-                    {/* Week-1 AI target summary (from program_exercises) */}
-                    {!hasAI && item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
-                      <View style={{ marginTop: 8 }}>
-                        <View style={{ backgroundColor: `${colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <MaterialCommunityIcons name="lightning-bolt" size={10} color={colors.primary} />
-                          <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '700' }}>
-                            {item.target_sets}×{item.target_reps_min}–{item.target_reps_max} @ {item.rir ?? 3} RIR
-                          </Text>
-                        </View>
                       </View>
                     )}
                   </View>

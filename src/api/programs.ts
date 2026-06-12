@@ -73,6 +73,18 @@ export async function getPrograms(): Promise<Program[]> {
   });
 }
 
+export async function getProgram(id: string): Promise<Program | null> {
+  const { data, error } = await supabase
+    .from("programs")
+    .select("*, program_days(id, completed, skipped)")
+    .eq("id", id)
+    .single();
+  if (error) return null;
+  const days: { completed: boolean; skipped: boolean }[] = data.program_days ?? [];
+  const { program_days: _drop, ...rest } = data;
+  return { ...rest, totalDays: days.length, completedDays: days.filter((d) => d.completed || d.skipped).length };
+}
+
 export async function createProgram(
   name: string,
   totalWeeks: number,

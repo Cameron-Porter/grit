@@ -14,6 +14,7 @@ import { confirm } from '../../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStore';
+import useRevenueCat from '../../src/hooks/useRevenueCat';
 import { useColors } from '../../src/utils/useColors';
 
 function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
@@ -41,8 +42,12 @@ export default function ProfileAndSettings() {
     theme, setTheme,
   } = useProfileStore();
 
+  const { isProMember, customerInfo } = useRevenueCat();
+
   const meta = user?.user_metadata ?? {};
-  const displayName: string = meta.full_name ?? meta.name ?? user?.email?.split('@')[0] ?? 'Athlete';
+  const identityEmail = user?.identities?.[0]?.identity_data?.email as string | undefined;
+  const resolvedEmail: string | undefined = user?.email ?? meta.email ?? identityEmail;
+  const displayName: string = meta.full_name ?? meta.name ?? resolvedEmail?.split('@')[0] ?? 'Athlete';
   const avatarUrl: string | null = meta.avatar_url ?? meta.picture ?? null;
 
   const [bwInput, setBwInput] = useState(bodyWeight != null ? String(bodyWeight) : '');
@@ -90,13 +95,63 @@ export default function ProfileAndSettings() {
         )}
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{displayName}</Text>
-          {user?.email && (
-            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{user.email}</Text>
+          {resolvedEmail && (
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{resolvedEmail}</Text>
           )}
         </View>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+
+        {/* ── GRIT PRO ── */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Membership</Text>
+          {isProMember ? (
+            <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="crown" size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>GRIT Pro</Text>
+                  <View style={{ backgroundColor: colors.primary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: colors.background, fontSize: 10, fontWeight: '900' }}>ACTIVE</Text>
+                  </View>
+                </View>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>
+                  {customerInfo?.activeSubscriptions?.[0] ? 'Subscription active' : 'Full access enabled'}
+                </Text>
+              </View>
+              <Pressable onPress={() => router.push('/subscription')} style={{ padding: 4 }} hitSlop={8}>
+                <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              onPress={() => router.push('/subscription')}
+              style={({ pressed }) => ({
+                backgroundColor: colors.surface,
+                borderRadius: 14,
+                padding: 16,
+                borderWidth: 1.5,
+                borderColor: `${colors.primary}50`,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${colors.primary}18`, alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="crown-outline" size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>Upgrade to GRIT Pro</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>Monthly or annual — cancel anytime.</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.primary} />
+            </Pressable>
+          )}
+        </View>
 
         {/* ── MY PROGRESS ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
@@ -246,9 +301,11 @@ export default function ProfileAndSettings() {
           </Pressable>
         </View>
 
-        <Text style={{ color: colors.muted, fontSize: 12, textAlign: 'center', marginTop: 32 }}>
-          GRIT · Guided Results &amp; Intelligent Training
-        </Text>
+        <Image
+          source={require('../../assets/images/banner.png')}
+          style={{ width: '70%', aspectRatio: 2, alignSelf: 'center', marginTop: 32, opacity: 0.4 }}
+          resizeMode="contain"
+        />
       </ScrollView>
     </View>
   );

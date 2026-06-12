@@ -1,7 +1,7 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,7 +15,6 @@ import { useColors } from '../src/utils/useColors';
 
 export default function LoginScreen() {
   const colors = useColors();
-  const router = useRouter();
   const { signIn, signUp, signInWithGoogle, loading } = useAuthStore();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -69,7 +68,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.background }}
+      style={{ flex: 1, backgroundColor: '#000000' }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
@@ -77,13 +76,11 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Logo / branding */}
-        <View style={{ alignItems: 'center', marginBottom: 48 }}>
-          <View style={{ width: 72, height: 72, borderRadius: 20, backgroundColor: `${colors.primary}22`, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-            <MaterialCommunityIcons name="dumbbell" size={36} color={colors.primary} />
-          </View>
-          <Text style={{ color: colors.text, fontSize: 36, fontWeight: '900', letterSpacing: -1 }}>GRIT</Text>
-          <Text style={{ color: colors.muted, fontSize: 14, marginTop: 6 }}>Guided Results &amp; Intelligent Training</Text>
-        </View>
+        <Image
+          source={require('../assets/images/banner.png')}
+          style={{ width: '100%', aspectRatio: 2, marginBottom: 40 }}
+          resizeMode="contain"
+        />
 
         {/* Mode tabs */}
         <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 12, padding: 4, marginBottom: 28 }}>
@@ -133,7 +130,7 @@ export default function LoginScreen() {
           <TextInput
             value={password}
             onChangeText={setPassword}
-            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+            placeholder="••••••••"
             placeholderTextColor={colors.muted}
             secureTextEntry={!showPassword}
             autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
@@ -151,7 +148,7 @@ export default function LoginScreen() {
             <TextInput
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
               placeholderTextColor={colors.muted}
               secureTextEntry={!showPassword}
               autoComplete="new-password"

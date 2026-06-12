@@ -30,6 +30,7 @@
     "react-native": "0.85.3",
     "react-native-gesture-handler": "~2.31.1",
     "react-native-get-random-values": "~1.11.0",
+    "react-native-purchases": "^10.3.0",
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
@@ -44,6 +45,7 @@
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "jest-expo": "^56.0.4",
+    "puppeteer": "^25.1.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -59,7 +61,9 @@
   },
   "jest": {
     "preset": "jest-expo",
-    "setupFiles": ["./jest.setup.ts"],
+    "setupFiles": [
+      "./jest.setup.ts"
+    ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@testing-library/.*|zustand|uuid)"
     ],

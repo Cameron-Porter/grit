@@ -195,6 +195,14 @@ export default function ExerciseCard({
               </Pressable>
             </View>
 
+            {/* Pain warning */}
+            {exercise.painWarning ? (
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#2A1E0A', borderRadius: 8, padding: 10, gap: 8 }}>
+                <MaterialCommunityIcons name="alert-outline" size={14} color="#F59E0B" style={{ marginTop: 1 }} />
+                <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.painWarning}</Text>
+              </View>
+            ) : null}
+
             {/* Pinned note */}
             {exercise.note ? (
               <Pressable

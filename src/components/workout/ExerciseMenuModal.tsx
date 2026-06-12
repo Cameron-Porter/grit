@@ -61,7 +61,7 @@ export default function ExerciseMenuModal({
           <MenuButton icon="swap-horizontal" text="Replace exercise" color={colors.text} onPress={handle(onReplace)} />
           <MenuButton icon="note-plus-outline" text="New note" color={colors.text} onPress={handle(onNewNote)} />
           <MenuButton icon="fast-forward-outline" text="Skip sets" color={colors.text} onPress={handle(onSkipSets)} />
-          <MenuButton icon="medical-bag" text="Joint pain" color={colors.text} onPress={handle(onJointPain)} />
+          <MenuButton icon="medical-bag" text="Exercise feedback" color={colors.text} onPress={handle(onJointPain)} />
 
           <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
 

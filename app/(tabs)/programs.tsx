@@ -1,9 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
+import { confirm } from '../../src/utils/confirm';
+import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useColors } from '../../src/utils/useColors';
 
 type ProgramStatus = 'active' | 'complete' | 'paused';
@@ -18,6 +20,7 @@ export default function Programs() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const clearProgramState = useWorkoutStore((s) => s.clearProgramState);
   const [programs, setPrograms] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,27 +42,24 @@ export default function Programs() {
   };
 
   const handleSetCurrent = async (id: string) => {
-    await setCurrentProgram(id);
+    setPrograms((prev) => prev.map((p) => ({ ...p, is_current: p.id === id })));
     setMenuOpen(null);
+    await setCurrentProgram(id);
     load();
   };
 
-  const handleDelete = (id: string, name: string) => {
-    Alert.alert(
+  const handleDelete = (id: string, name: string, isCurrent: boolean) => {
+    confirm(
       'Delete Program',
       `Delete "${name}"? This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setMenuOpen(null);
-            await deleteProgram(id);
-            load();
-          },
-        },
-      ],
+      async () => {
+        setMenuOpen(null);
+        await deleteProgram(id);
+        if (isCurrent) clearProgramState();
+        load();
+      },
+      'Delete',
+      true,
     );
   };
 
@@ -162,7 +162,7 @@ export default function Programs() {
                     </Pressable>
                   );
                 })()}
-                <Pressable onPress={() => handleDelete(item.id, item.name)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
+                <Pressable onPress={() => handleDelete(item.id, item.name, item.is_current)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
                   <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
                   <Text style={{ color: colors.error, fontSize: 15 }}>Delete program</Text>
                 </Pressable>

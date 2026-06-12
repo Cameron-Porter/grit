@@ -25,6 +25,7 @@ export type Exercise = {
   sets: WorkoutSet[];
   equipment: string;
   note?: string;
+  painWarning?: string;
 };
 
 export type Props = {
@@ -61,6 +62,7 @@ export type WorkoutState = {
 
   startWorkout: () => void;
   endWorkout: () => void;
+  clearProgramState: () => void;
   queueFeedback: (muscleGroup: string, jointPain: string, pump: string, volume: string) => void;
   queueSoreness: (muscleGroup: string, soreness: string) => void;
 
@@ -96,6 +98,7 @@ export type WorkoutState = {
       targetRepsMax?: number;
       targetWeight?: number;
       rir?: number;
+      painWarning?: string;
     }[],
     weekNumber?: number | null,
     dayNumber?: number | null,

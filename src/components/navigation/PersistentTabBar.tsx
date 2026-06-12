@@ -10,7 +10,7 @@ type TabName = 'today' | 'programs' | 'progress' | 'profile';
 const TABS: { name: TabName; label: string; icon: string; route: string }[] = [
   { name: 'today',    label: 'Workout',  icon: 'dumbbell',             route: '/workout' },
   { name: 'programs', label: 'Programs', icon: 'calendar-multiselect', route: '/(tabs)/programs' },
-  { name: 'progress', label: 'Progress', icon: 'chart-line',           route: '/(tabs)/history' },
+  { name: 'progress', label: 'History',  icon: 'history',              route: '/(tabs)/history' },
   { name: 'profile',  label: 'Profile',  icon: 'account-circle',       route: '/(tabs)/more' },
 ];
 
@@ -19,7 +19,7 @@ function getActiveTab(segments: string[]): TabName | null {
   const s1 = segments[1];
   if (s0 === 'workout') return 'today';
   if (s0 === 'programs' || (s0 === '(tabs)' && s1 === 'programs')) return 'programs';
-  if (s0 === '(tabs)' && (s1 === 'history' || s1 === 'log')) return 'progress';
+  if (s0 === '(tabs)' && (s1 === 'history' || s1 === 'log' || s1 === 'personal-records')) return 'progress';
   if (s0 === 'profile' || (s0 === '(tabs)' && s1 === 'more')) return 'profile';
   return null;
 }

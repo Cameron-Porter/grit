@@ -1,0 +1,773 @@
+So at this point I want you to head into your settings. Right. So I'm going to just um hide my screen for a second while I go into my settings. I don't want anything to pop up that shouldn't.
+12:43:0012 hours, 43 minutesUm, so in this case, I'm in my settings now and I'm going to go and type in the following. I'm going to type in profile.
+12:43:0712 hours, 43 minutes, 7 secondsOkay, so the easiest thing that you can do at this point is go into your settings. I'm just typed in in the settings app. I've gone to the top and I've typed in profile. Then you have VPN
+12:43:1612 hours, 43 minutes, 16 secondsand device management. Click it. Okay, so at this point I now have a VPN. So in this case, it says VPN screen and it
+12:43:2412 hours, 43 minutes, 24 secondssays downloaded profile here. Register for development. I click it and as you can see I've got the profile on my
+12:43:3112 hours, 43 minutes, 31 secondsscreen. Okay. So now you can see I've got the profile on my screen and what I've essentially done here is I basically gone ahead and enrolled in it
+12:43:3912 hours, 43 minutes, 39 secondsand I've already installed this so I don't need to install again. But if I was to do it you can see I can pop in my password. So in this case I pop it in
+12:43:4712 hours, 43 minutes, 47 secondsand then install. Right. So the install will come up. Now I've already done this so I'm not going to do that. Okay. So at this point you should then have your uh
+12:43:5412 hours, 43 minutes, 54 secondsregister for deploy uh development right. So once you've done that you also need to make sure you enable developer mode. So I'm going to show you how to
+12:44:0312 hours, 44 minutes, 3 secondsalso do developer mode. So once you're on your phone go to your settings and then you want to go to let me just find it again.
+12:44:1112 hours, 44 minutes, 11 secondsUm this one I always actually lose where it is. Oh yeah. So you want to go to privacy and security. Okay. I'm just
+12:44:2012 hours, 44 minutes, 20 secondstrying to check. There we go. Yeah. So, you want to head to privacy and security tab. Next, you want to go all the way down to developer mode. Hit okay. And
+12:44:2812 hours, 44 minutes, 28 secondsthen you should be able to enable this, right? Enable this setting because this is going to allow us to install internal distribution apps onto our test device,
+12:44:3612 hours, 44 minutes, 36 secondsour iPhone. Okay. Right. So, at this point, we've got this. So, I'm going to go back. And then you're also going to have um where did it go? Okay. That's
+12:44:4512 hours, 44 minutes, 45 secondsfine for now. For now, for now, that's completely fine. Yeah. So once you've done that, what I'm going to do is I'm going to go back to my previous apps
+12:44:5212 hours, 44 minutes, 52 secondsjust to kind of have a placeholder there. So now we've registered the phone. Okay. So now this phone will be able to accept, you know, um something
+12:45:0012 hours, 45 minutesif we were to push it to the distribution network. Okay. So everything's good on that front.
+12:45:0612 hours, 45 minutes, 6 secondsUh let me move my There we go. Move my code back. Okay, cool. So now that that is done, we've added our device. So our device has now been added successfully.
+12:45:1612 hours, 45 minutes, 16 secondsAnd then what I need you to do is go ahead and we're going to go ahead and build create a uh a development build
+12:45:2312 hours, 45 minutes, 23 secondsfor our app. Now the way we do this is we go ahead and say EAS build. Okay.
+12:45:2912 hours, 45 minutes, 29 secondsThen we're going to say d-profile development.
+12:45:3412 hours, 45 minutes, 34 secondsOkay. Then we're going to say t-platform iOS. So I'm building a a development
+12:45:4112 hours, 45 minutes, 41 secondsbuild for the iOS platform. Okay. Hit enter. And then you'll see it will go ahead and it will start something called a iOS um internal distribution build.
+12:45:5212 hours, 45 minutes, 52 secondsNow this is the important part. Remember where it said you needed a bundle bundle identifier. We didn't have that right in uh in the app store connect settings.
+12:46:0012 hours, 46 minutesThis is where we basically do it. So in this case I'm going to leave it as it is. Revenue cat app YouTube. And then I'm going to hit enter. Okay. And then
+12:46:0912 hours, 46 minutes, 9 secondsin this case it will say if you provide your Apple account we'll be able to generate all the necessary build credent and fully validate them blah blah blah.
+12:46:1512 hours, 46 minutes, 15 secondsIn that case I'm going to say yes. It makes my life easier. So I've already done that. So I've already got my Apple account. Again this will fail if you haven't got the app store connect
+12:46:2212 hours, 46 minutes, 22 secondsdeveloper if you haven't paid for your developer fee. Right. So $99 or it depends where you are in the world but that's what I had to pay. And in this case you can see we've got all of our
+12:46:3012 hours, 46 minutes, 30 secondsstuff and then we have basically it will ask us to create a distribution certificate. Okay. So in this case, I've
+12:46:3812 hours, 46 minutes, 38 secondsalready created the distribution certificate. You in this case will actually have to do that. So it will prompt you at this point to do that.
+12:46:4512 hours, 46 minutes, 45 secondsI've done that. So I'm going to go ahead and hit enter. So to reuse my distribution certificate, then you see select devices for the ad hoc build. Now this is the important part. That's my
+12:46:5412 hours, 46 minutes, 54 secondsphone, right? So in that case, my phone is now registered. So from the previous step, that's why it's there. Okay? So I'm going to go ahead and hit enter now.
+12:47:0212 hours, 47 minutes, 2 secondsAnd then you can see handling and provisioning profiles. Basically, it's just securing it. So, only my phone is going to be able to use this app, right?
+12:47:1012 hours, 47 minutes, 10 secondsUm, there we go. And then it gets pushed out. Bam, bam, bam. All credentials are ready to build. Would you like to set up
+12:47:1812 hours, 47 minutes, 18 secondspush notifications? No, not for this one. Yeah. And then we're going to upload to EAS build. Okay. So, now this is uploading to ES build. And this is
+12:47:2712 hours, 47 minutes, 27 secondsbasically where it gets cued for a build. Okay. So, let's go ahead and check this out now. So, if I go to this
+12:47:3312 hours, 47 minutes, 33 secondslink right here, what we will see is we will see this being built out. And I'm just waiting it load on another screen and I'm going to bring it over to this
+12:47:4112 hours, 47 minutes, 41 secondsscreen. So, right now, what we can see is it will take me to this screen. And you'll see that this is actually going to go ahead and build out an internal
+12:47:4912 hours, 47 minutes, 49 secondsdistribution build. Now, the confusing part is you're probably wondering, hang on a minute. So, I have to I have to rebuild and deploy every time I make a
+12:47:5712 hours, 47 minutes, 57 secondschange in my app. No, the actual crazy part that's really cool here is you do this build once, right? And then what
+12:48:0512 hours, 48 minutes, 5 secondsyou do is you basically open the app up on your phone, which I'll show you how to do, right? And then what happens is as you update the uh app on your phone
+12:48:1412 hours, 48 minutes, 14 secondsbecause you're running Expo Start, right? So, it's running a server on your local machine. Because you're on the same Wi-Fi network, it streams the
+12:48:2212 hours, 48 minutes, 22 secondsupdates to your phone, which is damn cool, right? you're developing and you're literally seeing the streamed updates to your phone. It's so cool,
+12:48:3012 hours, 48 minutes, 30 secondsright? So, it's actually uh I was pretty mind-blown when I saw that. Right. So, this will take a minute to to go ahead and deploy. So, we're going to let that
+12:48:3712 hours, 48 minutes, 37 secondsdo its thing. Right. And in the meantime, we're going to go back over to Apple to the App Store Connect settings.
+12:48:4512 hours, 48 minutes, 45 secondsRight. So, in this case, the bundle ID.
+12:48:4712 hours, 48 minutes, 47 secondsAnd here you can see if we go cancel, I need to basically refresh. GG Mark says keep in mind if you add any modules or
+12:48:5512 hours, 48 minutes, 55 secondspackages to the project you need to rebuild 100%. Right? If you do any uh
+12:49:0212 hours, 49 minutes, 2 secondsyarn or you know like you add in a new dependency or anything like that or for example you added in tailwind right then
+12:49:1012 hours, 49 minutes, 10 secondsyou have to do that EIS build step again because there's new dependencies that have to be built. It can't just stream the entire dependency and it has to build that in the bundle. It can stream
+12:49:1912 hours, 49 minutes, 19 secondsthe UI updates but it can't stream like entire dependencies. So in that case, yes, very good comment. Thank you so much. That's why comments are so important for you guys to interact with
+12:49:2712 hours, 49 minutes, 27 secondsme, right? So in this case, we create a new app. I just want to see as well.
+12:49:3112 hours, 49 minutes, 31 secondsLet's click bundle ID. Yay. There we go guys. Revenue Cat app YouTube. That's the one that we have. Awesome stuff. Uh someone says, "Take a water break. You
+12:49:3912 hours, 49 minutes, 39 secondslook tired." I I will. Thank you very much. Right. I will have one in one sec.
+12:49:4212 hours, 49 minutes, 42 secondsSo here we're going to type in just YouTube demo iOS. YouTube demo app. All right. Primary language is English UK
+12:49:5112 hours, 49 minutes, 51 secondsand then skew. Uh I just say YouTube app demo. It really don't make a difference. Uh user access.
+12:50:0112 hours, 50 minutes, 1 secondUm you can app.
+12:50:0412 hours, 50 minutes, 4 secondsOkay. Uh let's just click on I think I did full access right now. But um
+12:50:1312 hours, 50 minutes, 13 secondsokay, let's do full access for now. So that's going to create a new app in the app store. Right. Oh, we have our first app in the app store, guys. At this
+12:50:2012 hours, 50 minutes, 20 secondspoint, now you can see down here subscriptions. All right. So, this is where we start getting really fancy.
+12:50:2612 hours, 50 minutes, 26 secondsRight. This where we start doing some crazy stuff. But basically, what we now need to do is create a subscription.
+12:50:3212 hours, 50 minutes, 32 secondsRight now, you can also start messing around with inapp purchases for single purchases, that kind of stuff. But we're going to be covering subscriptions today. So, I'm going to go to
+12:50:4012 hours, 50 minutes, 40 secondssubscriptions and let's just have a look on that build. One second. Okay. So, you see that build's building. It's going to take about 10 minutes. So, in the meantime, we're going to set this up.
+12:50:4812 hours, 50 minutes, 48 secondsSo, this is where um Revenue Cat and the next bit go hand in hand, right? So, what we're going to do is we're going to
+12:50:5512 hours, 50 minutes, 55 secondsclick on subscription groups, right? And what I'm actually going to do is just have a reference open on the side so I can teach you in a smooth way. I don't
+12:51:0212 hours, 51 minutes, 2 secondsmake a mistake. That's silly. Um is published for all now. No. So, basically, Kirby asked a good question.
+12:51:0812 hours, 51 minutes, 8 secondsSo, right now, it's basically deploying to an internal distribution. uh it's basically making this and deploying an
+12:51:1512 hours, 51 minutes, 15 secondsinternal distribution build but only my phone can access that because of the way I added it to my EAS network earlier right so you have to add the
+12:51:2312 hours, 51 minutes, 23 secondsprovisioning profile to be able to access that and then you and you also have to enable developer mode okay um so quite important yeah um still in Dubai
+12:51:3212 hours, 51 minutes, 32 secondsyes I am Simon so in this case subscription groups let's click on create and in this case we're going to create a subscription group and here
+12:51:4012 hours, 51 minutes, 40 secondswhat I'm going to call it is let's call it a pro subscription. Okay, pro subscription. Let's call it and click create. This is a subscription group.
+12:51:5012 hours, 51 minutes, 50 secondsSo, you can have different subscriptions inside of here. Now, inside of here, I'm going to have two subscriptions. One is going to be pro monthly and one is going
+12:51:5812 hours, 51 minutes, 58 secondsto be pro- annual. So, here I'm going to click on create and this one's going to be pro monthly.
+12:52:0412 hours, 52 minutes, 4 secondsProduct ID here. Let's go ahead and say that this one is just going to be our pro, right? So, I'm just going to call this one pro and then I'm going to call
+12:52:1312 hours, 52 minutes, 13 secondsthe next one pro annual. Right. So, um right. Um so, we're going to call pro monthly pro and then pro annual is going
+12:52:2012 hours, 52 minutes, 20 secondsto be pro annual. Right. So, let's go create. Uh oh, I've already done that.
+12:52:2612 hours, 52 minutes, 26 secondsYeah. So, I've already got an app that's doing this. So, I'm going to say pro monthly. Let's just do pro monthly and
+12:52:3312 hours, 52 minutes, 33 secondsproearly. Okay. So, pro monthly. There we go. Actually, probably easier to be fair. It's probably clearer. Right now,
+12:52:4112 hours, 52 minutes, 41 secondswe've got this. Now, this is the important part. Okay. So, we have to fill this out correctly. Now, the subscription duration is going to be for
+12:52:4812 hours, 52 minutes, 48 secondsone week. Right? So, in this case, oh, sorry, one month. Right? Now, uh this bit I want you to kind of take your time, go through it. Right? So, we got
+12:52:5712 hours, 52 minutes, 57 secondsone month. Right? So, this is monthly subscription. And then we're going to go to subscription prices. Right? Now, this is where you can have localized pricing.
+12:53:0512 hours, 53 minutes, 5 secondsSo, in this case, we're going to go ahead and say, um, Derek, what's up, man? Good to see you back, dude. Thank you so much. Add subscription price. And in this case, we can add in, you know, different prices, that kind of thing.
+12:53:1512 hours, 53 minutes, 15 secondsSo, let's just imagine our monthly price for this app was £499, right? You can say whatever, you know, region you want.
+12:53:2312 hours, 53 minutes, 23 secondsClick next. And then look what it's going to do. It will calculate the price internationally. Now, this is something I really actually like about the app
+12:53:3112 hours, 53 minutes, 31 secondsstore is that, you know, for example, if you wanted to make it cheaper in a certain country, you can actually go ahead and do that. So for example, I
+12:53:3812 hours, 53 minutes, 38 secondsknow in some countries especially um when we have I have certain audiences who basically want us to reduce pricing in certain countries. You can definitely
+12:53:4612 hours, 53 minutes, 46 secondsdo that, right? So you can definitely do that here and you can make it cheaper in some countries, you can make it more in other countries. Whatever you decide, it's up to you. It's your app, right? So in this case, we're going to do that.
+12:53:5512 hours, 53 minutes, 55 secondsWe're going to say next. And this we're doing in all these countries. You click confirm. Make sure you watch looking for it and then confirm. You can also download it. Right? So let's do that.
+12:54:0412 hours, 54 minutes, 4 secondsAnd then right so now you can see current pricing for new subscribers.
+12:54:0912 hours, 54 minutes, 9 secondsGood stuff. And then we've got app store localization right so in this case you can actually go ahead and change how it
+12:54:1612 hours, 54 minutes, 16 secondswould appear in different areas of different apps for example right so in this case you can go ahead and pop in um so localization so how it would appear
+12:54:2512 hours, 54 minutes, 25 secondsin Arabic how it appear in English and so forth. So in this case imagine we had like um promonly discount right? So pro
+12:54:3312 hours, 54 minutes, 33 secondsmonthly sorry subscription. So pro monthly and then you can say something like just say pro monthly. So a promonly
+12:54:4212 hours, 54 minutes, 42 secondssubscription to access pro stuff access bro basically. Yeah. So basically
+12:54:5012 hours, 54 minutes, 50 secondsyou can you can bas um I keep saying basically sorry you can you can go ahead and change all of that. So basically in
+12:54:5812 hours, 54 minutes, 58 secondsall of the different stores it will say different things. I'm going to try my best to not keep repeating what I just said. Right. So then you need to basic
+12:55:0712 hours, 55 minutes, 7 secondsthen you need to take a screenshot of the app. Okay. So in this case, take a screenshot of the app. And what I've done here is I've already got a
+12:55:1512 hours, 55 minutes, 15 secondsscreenshot of another app or I've honestly just taken any screenshot here.
+12:55:1912 hours, 55 minutes, 19 secondsBut really what you can do to really kind of easily make your life super clear here is you can just go ahead and go click and then that will take a
+12:55:2612 hours, 55 minutes, 26 secondsscreenshot. Right? So that's if you didn't know that you can actually do that. fairly straightforward quick way to clip a screenshot and then here I'm
+12:55:3412 hours, 55 minutes, 34 secondsjust going to say test uh app development. Yeah. So obviously in the real world you would add like a pro
+12:55:4112 hours, 55 minutes, 41 secondsscreen or something like this and then actually explain you know this is for a pro. It's going to have a lot more um
+12:55:4812 hours, 55 minutes, 48 secondsit's going to have the going to have a lot more description here about what your pro offers. Right? If this is an actual production app you would obviously put a lot of time into this
+12:55:5612 hours, 55 minutes, 56 secondspoint and then do that. Right? So, we're going to go ahead and hit save. Cool.
+12:56:0312 hours, 56 minutes, 3 secondsAnd then Patty says, "I was so curious about how to connect mobile apps to the app store.
+12:56:0912 hours, 56 minutes, 9 secondsThis tutorial is insane." Thank you so much. I'm glad you're enjoying it.
+12:56:1312 hours, 56 minutes, 13 secondsRight. Family sharing as well. You can ch turn on here. And I think it was here that I did the other step as well for
+12:56:2012 hours, 56 minutes, 20 secondsthe trial. I think it was here. No, was it? No, it was in a different bit, I think. Okay. But anyway, we're going to go back. So, we've done that bit. And basically you want it in a Oh no. So if
+12:56:2912 hours, 56 minutes, 29 secondsit's missing missing data, it's not good. It should be in a ready to submit state. Uh add localizations we need to do. So add localizations.
+12:56:3712 hours, 56 minutes, 37 secondsApp store localization. Oh yeah. So at the top level we need to add app store localization. So in this case subscription groups we can just call it
+12:56:4412 hours, 56 minutes, 44 secondspro um monthly. Oh no sorry pro subscription.
+12:56:5012 hours, 56 minutes, 50 secondsUm keep it as the app name custom name blah blah blah. In this case it's the English customization but obviously you can add as many as you want. And I would honestly say you should, right? If you
+12:56:5812 hours, 56 minutes, 58 secondshave an Arabic audience, you want to allow your Arabic audience to see everything in Arabic. If you have a Indian audience, you want to see everything in Punjabi or Hindi or, you
+12:57:0512 hours, 57 minutes, 5 secondsknow, any language you want, French, um, Spanish, whatever you want. It's all going to be here. That's where you add in the different languages. Okay. So now
+12:57:1212 hours, 57 minutes, 12 secondswe're going to go ahead and pop in another one. We're going to say pro annual.
+12:57:1912 hours, 57 minutes, 19 secondsOkay. And then here, or proearly. Let's call it pro-yearly, right? And this one's going to be called pro pro yearly. Okay. And click create.
+12:57:3212 hours, 57 minutes, 32 secondsOkay. And now you can see that's better.
+12:57:3812 hours, 57 minutes, 38 secondsSubscription duration is 1 year. So this will be a yearly subscription.
+12:57:4412 hours, 57 minutes, 44 secondsAnd we're going to do the same thing, right? So in this case, let's imagine your yearly subscription was like 30 $ 34.99,
+12:57:5212 hours, 57 minutes, 52 secondsright? I say it will be cheaper to subscribe yearly than it would to be to annual because obviously that's the way it works in most cases. We're going to confirm all of our pricing options.
+12:58:0212 hours, 58 minutes, 2 secondsAnd then let's just go ahead and check on our app build. So you can see that's got 5 minutes remaining. So we're doing pretty well, guys. It's actually really good. This actually worked out very
+12:58:0912 hours, 58 minutes, 9 secondswell, right? App Store localization. And also, by the way, you're you're probably going to have to fill out your taxes and all that kind of stuff when you set up
+12:58:1712 hours, 58 minutes, 17 secondsyour App Store Connect account. Okay, apps localization. Let's do it here. We can say proy yearly.
+12:58:2312 hours, 58 minutes, 23 secondsAnd then description we can say uh your access to pro yearly subscription.
+12:58:3212 hours, 58 minutes, 32 secondsOkay. Like so. Right. And same thing over here. By the way, uh we're going to add in a screenshot. So I'm just going
+12:58:3912 hours, 58 minutes, 39 secondsto add a dummy screenshot for now. And remember there actually has to be a correct sort of um it has to be in the correct dimension, right? Or the correct
+12:58:4612 hours, 58 minutes, 46 secondsresolution. So that's why I did a direct screenshot from the phone itself and it will tell you that it's incorrect if you're not giving it a correct resolution one. Right? So I'm going to say pro yearly subscription test. Right?
+12:58:5912 hours, 58 minutes, 59 secondsSo obviously it should be fully thought out. Right? And then we're going to click on save I believe. So save. Yep. That's all good. Save.
+12:59:0912 hours, 59 minutes, 9 secondsOkay. So save and hit back. So subscriptions. Now we've got our pro monthly, our pr yearly. This is good.
+12:59:1712 hours, 59 minutes, 17 secondsUm, and then we go back to subscriptions. And you can see now we've also got one. Where did I add in there's
+12:59:2512 hours, 59 minutes, 25 secondsalso a way while we're waiting for the app to get deployed. Now, we need to basically go ahead and prepare to connect this to revenue cap. Right. So,
+12:59:3412 hours, 59 minutes, 34 secondsonce we've got this down, you need to go to users and access, right? So, click on users and access. And then you should have this area. Right? So, you've got
+12:59:4212 hours, 59 minutes, 42 secondsme, you've got sandbox testers. So, this is important. Now guys, so this one you Okay, now I I stress this when I say
+12:59:5012 hours, 59 minutes, 50 secondsthis, use a different sandbox ID compared to your normal Apple ID, right?
+12:59:5612 hours, 59 minutes, 56 secondsAnd then when you have your sandbox ID, you actually have to set that up in your your iPhone settings. So the place to do
+13:00:0313 hours, 3 secondsthat is actually in So I think it's uh let me see where is it. So settings.
+13:00:0813 hours, 8 secondsWhere the hell did I put it? Um anyway, there's a there's a point where you need to find it, right? Uh and we will find it. So don't worry, I'll definitely find
+13:00:1513 hours, 15 secondsit afterwards. Okay. So at this point, I want to go to um here and I want to basically create a sandbox tester. So
+13:00:2413 hours, 24 secondsI've already created one and I've done UAE, right, cuz I'm in Dubai, right? But obviously that's why I was seeing Durhams, right, with the currency here
+13:00:3313 hours, 33 secondswhen I was um trying to purchase. Now the really good thing about this is that basically you can have a you know an um
+13:00:4013 hours, 40 secondsan email and a password and basically once you click edit and you click it you can click on clear purchase history. Now
+13:00:4813 hours, 48 secondswhat this does is is it simulates you never having bought the test subscription in the first place. So you can try the subscription out then you
+13:00:5613 hours, 56 secondscan click on clear purchase history and then it will basically go ahead and act as if you never did the subscription.
+13:01:0113 hours, 1 minute, 1 secondRight? Remember obviously it's all fake anyway. It's like in sandbox mode.
+13:01:0413 hours, 1 minute, 4 secondsRight? So that's important. And then we're going to have keys. Now keys is obviously our next important thing. So if we go to inapp purchase, you can see
+13:01:1213 hours, 1 minute, 12 secondswe've got a subscription key, right? So this is going to be important as well in just a second as well. So firstly, let's go over to um our Revenue Cat. So
+13:01:2013 hours, 1 minute, 20 secondsRevenue Cat is the place to be. This is where we're going to basically set everything up to make the whole app work. So we're going to go ahead and log into Revenue Cat. So I'm going to log in
+13:01:2913 hours, 1 minute, 29 secondsright now. And you can see I've already got a few projects here right now. We're going to go to projects. We're going to create a new project. And we're going to
+13:01:3713 hours, 1 minute, 37 secondsgo ahead and call this one um YouTube Revenue Cat demo. Okay. Create project.
+13:01:4713 hours, 1 minute, 47 secondsNow, in this case, we can start by adding an app. So, it's super easy to actually follow their instructions. Okay, guys. We're almost at 500 likes.
+13:01:5313 hours, 1 minute, 53 secondsThat is sick. All right. Keep going. Um, so check this out. So, in this case, we're going to go ahead and do App Store. Remember, you can actually hook
+13:02:0113 hours, 2 minutes, 1 secondup App Store, Play Store, Stripe, and Amazon in one place, which is damn sick. So, we're going to click on App Store.
+13:02:0713 hours, 2 minutes, 7 secondsThen, we're going to go ahead and type in um let's just call it YouTube.
+13:02:1213 hours, 2 minutes, 12 secondsYouTube Revenue Cat. Revenue Cat doesn't really make a difference, right?
+13:02:1913 hours, 2 minutes, 19 secondsAnd then let's go back to our So, the uh bundle ID is quite important, right? So, inside of our code, what you will find
+13:02:2813 hours, 2 minutes, 28 secondsin EAS.json JSON is is it ESJON? No, it wasn't here. It was app.json I think. No, app.json. Yeah.
+13:02:4113 hours, 2 minutes, 41 secondsSo, iOS bundle identifier is here. Okay.
+13:02:4513 hours, 2 minutes, 45 secondsSo, there it is. You want to copy it from app.json bundle identifier. And then you basically want to go back to
+13:02:5213 hours, 2 minutes, 52 secondsover here and paste it. Okay. Now, you've got App Store Connect app shared specific secret. So if you click on I, it'll say what the hell is that? And it
+13:03:0013 hours, 3 minuteswill tell you basically where to go to get it. So in this case, we need the key. So all you need to do is go into your app store connect my apps, select
+13:03:0813 hours, 3 minutes, 8 secondsyour app, app information, general, manage, and then you should see app specific shared secret. So I'm going to go into it right now. So I'm going to go into the app. So let's go into our app.
+13:03:1813 hours, 3 minutes, 18 secondsSo this is my demo app. Then we're going to go into was it services? I can't remember. Was it services?
+13:03:2513 hours, 3 minutes, 25 secondsApp information. Yes. Okay, I found it.
+13:03:2713 hours, 3 minutes, 27 secondsYeah. So, app information on the left and then we're going to go to app shared app specific shared secret.
+13:03:3713 hours, 3 minutes, 37 secondsClick on manage and then here generate.
+13:03:4013 hours, 3 minutes, 40 secondsSo, I'm going to click generate and I'm going to hide my screen. So, I'm clicking generate and what's happened is it's given me a shared secret. So, I'm copying my shared secret right now.
+13:03:4913 hours, 3 minutes, 49 secondsRight. So, I'm smashing the copy button.
+13:03:5113 hours, 3 minutes, 51 secondsAnd make sure you note this down because otherwise you have to regenerate it if you if you lose it. Okay. So, I've copied it now.
+13:03:5713 hours, 3 minutes, 57 secondsThen what I'm doing is I'm going over to my revenue cap now. Okay. So I've gone over to my revenue cap and I'm going to
+13:04:0513 hours, 4 minutes, 5 secondsclick on set secret and I'm going to paste in the value here and then I'm going to click set. Okay. So I'm pasting in the value and I'm clicking set and
+13:04:1313 hours, 4 minutes, 13 secondsthat's it. Right? So I've saved my secret. Now then you've got inapp purchase. Uh we don't need to do that right now but eventually you will need to put in a P8 file from App Store Connect. Um, so I would Google that.
+13:04:2413 hours, 4 minutes, 24 secondsOnce you go to the the actual um full deployment, you're going to have to have that, right? So, we'll do that later or you can do that in another tutorial, I think. For now, we'll save the changes.
+13:04:3613 hours, 4 minutes, 36 secondsWe'll go over to, you can see now it's pulling everything in. Let's go to API keys. Um, we've got
+13:04:4413 hours, 4 minutes, 44 secondsa key over here. So, this is going to be our public specific key. So, in this case, this is a special key we're going to actually need to use very shortly.
+13:04:5113 hours, 4 minutes, 51 secondsOkay. Um, and then we're going to go over to
+13:04:5913 hours, 4 minutes, 59 secondsOh, yeah. Here, this is where the magic happens, right? So, products, offerings, entitlements, right? So, these are different ways in which you can go ahead
+13:05:0613 hours, 5 minutes, 6 secondsand pass the basically your app information, right? So, think of it this way. Products are going to essentially
+13:05:1313 hours, 5 minutes, 13 secondsbe the lowest level. They're going to be essentially the inapp purchases, the in-app subscriptions. So, in our case here, what we're going to have, we're going to have different products for
+13:05:2213 hours, 5 minutes, 22 secondsdifferent reasons. Now, I'm just going to quickly make sure I get this 100% right so I don't make a mistake in teaching this,
+13:05:2913 hours, 5 minutes, 29 secondsbut what we essentially have is for products, we're going to have pro- monthly and pro-yearly. Okay? So, let's go ahead and click new. And you can see
+13:05:3813 hours, 5 minutes, 38 secondswe're clicking on our YouTube app. And here, now the identifier is very important. Remember previously what we did was we set up our subscriptions. So,
+13:05:4613 hours, 5 minutes, 46 secondslet's go back to subscriptions. Inside of subs subscription groups, you can go ahead and see these two product IDs, right? So, subscription pro monthly and pro yearly. So, you want to take the ID.
+13:05:5613 hours, 5 minutes, 56 secondsThis is very important. You get the ID right. You're going to copy the identifier here. So, we're going to do monthly first. Create a product. Okay.
+13:06:0213 hours, 6 minutes, 2 secondsSo, it's the lowest level, right? Now, we've got this. Now, you've got entitlements, right? And you've also got offerings, right? So, in this case,
+13:06:1113 hours, 6 minutes, 11 secondswe've got entitlements. We've also got offerings. So the first thing we want to do here is we want to have
+13:06:2013 hours, 6 minutes, 20 secondsum where is it? So we need to create a entitlement here and the entitlement here is going to be the pro monthly and
+13:06:2813 hours, 6 minutes, 28 secondsthis is going to say pro access to all features. Right? Add. And you can see it says zero products.
+13:06:3613 hours, 6 minutes, 36 secondsWe go into our products. We attach the association to it. There you go. Okay.
+13:06:4413 hours, 6 minutes, 44 secondsNow, the way that I like to do it is you can do it with entitlements, but offerings is kind of the simpler way to do it. So, offerings are basically a selection of products that are offered
+13:06:5213 hours, 6 minutes, 52 secondsto a user on a pay wall. So, you can do entitlements are slightly different.
+13:06:5513 hours, 6 minutes, 55 secondsThey basically represent a level of access, right? Um, so if you see pro access and so forth, right? So, in fact,
+13:07:0113 hours, 7 minutes, 1 secondI made a mistake here. I actually did it as No, no, I did have a mistake here.
+13:07:0913 hours, 7 minutes, 9 secondsNo. Yeah, I did. So, okay. So, in this case, focus I don't worry about entitlements for now. We're not doing that. We're doing more so on the payw
+13:07:1713 hours, 7 minutes, 17 secondswall side of things. So, go on to pay wall and um offerings and we're going to go on new. Okay. Now, for the payw wall here, we're going to call this um pro.
+13:07:2713 hours, 7 minutes, 27 secondsOkay. And we're going to say the pro membership um pro membership subscription.
+13:07:3613 hours, 7 minutes, 36 secondsOkay. And then add. And now, as you can see, inside of here, we're going to have two um packages inside of here. One is
+13:07:4513 hours, 7 minutes, 45 secondsgoing to be for monthly, one is going to be for annual. Okay. So, inside of here, let's go ahead and add in the monthly. So, in this case, identifier monthly.
+13:07:5213 hours, 7 minutes, 52 secondsYou see this custom, and we're going to go ahead and say pro. So, just pro monthly is here.
+13:08:0113 hours, 8 minutes, 1 secondOkay. And you can see what we do is we attach the product to it. So, in this case, I attach my monthly product to it.
+13:08:0813 hours, 8 minutes, 8 secondsSo that's it. That's the easiest way you want to do it. So offerings, then we have pro. And inside of here, we'll have two selections. Each one is going to be attached to its product. So monthly, and
+13:08:1713 hours, 8 minutes, 17 secondswe need to make a yearly now. So let's go ahead and do the same thing for the app. So we're going to say pro yearly.
+13:08:2413 hours, 8 minutes, 24 secondsThis was the same thing we did here for pro year. Okay. Create product.
+13:08:3313 hours, 8 minutes, 33 secondsAnd now we go to offerings.
+13:08:3613 hours, 8 minutes, 36 secondsWe go to pro. We go to oh no sorry go back uh yeah pro sorry sorry and create a new one called identifier is yearly so
+13:08:4413 hours, 8 minutes, 44 secondsannual then we'll say yearly uh pro subscription basically add
+13:08:5313 hours, 8 minutes, 53 secondsoh I'm god that's going to bug me so much right there we go pro year
+13:09:0213 hours, 9 minutes, 2 secondsI didn't think it was undoable but there we are there's no need to freak out pro monthly proy and then I'm going going to basically attach it to the pro yearly.
+13:09:1013 hours, 9 minutes, 10 secondsThere we go. So you see once you connect all of this up then you can basically we we connect it we set up correctly the
+13:09:1813 hours, 9 minutes, 18 secondsfirst way the first time. So products then offerings is what we're doing. We're not touching entitlements today.
+13:09:2413 hours, 9 minutes, 24 secondsOkay. Um so products and offerings is what we're doing. And then you've also got your integrations, experiments, AB testing, all that kind of stuff. Okay.
+13:09:3213 hours, 9 minutes, 32 secondsSo in this case um for this uh it's got no associated timers for now. That's
+13:09:3813 hours, 9 minutes, 38 secondsfine. Okay. So now what we can do is I believe actually you know what we
+13:09:4613 hours, 9 minutes, 46 secondsshould actually pass this to. So for now just to get rid of this error I'm going to pop in I'm going to say this is pro access
+13:09:5413 hours, 9 minutes, 54 secondsright just entitlement pro and associated products are pro yearly and pro monthly. Okay. Because if you're
+13:10:0213 hours, 10 minutes, 2 secondsYeah. So you can either do it by entitlement. So in this case a level of access. So pro for example it should be pro. Why is that called pro? It should be I have updated it. No.
+13:10:1413 hours, 10 minutes, 14 secondsOh the description only changed. Okay.
+13:10:1613 hours, 10 minutes, 16 secondsSo really I would have named that pro and then I would have had pro monthly pro. But anyway you should the easiest way is products then offerings. Set up your offerings. Okay cool. Now that
+13:10:2513 hours, 10 minutes, 25 secondsthat's done I think we're good to go on this front. Okay here we are. State build in progress. So now this build is
+13:10:3113 hours, 10 minutes, 31 secondsalmost done. Good stuff, right? It's quite it's faster the second time. It's just obviously it's got to cach it the first time. Okay. So now that that's
+13:10:4013 hours, 10 minutes, 40 secondsgood, what we're going to do is basically start coding the the our app to get it all in the correct state that it needs to use. Okay.
+13:10:4913 hours, 10 minutes, 49 secondsSo let's go to our code and let's start creating things as we need it. So that way we're ready when it's when it's deployed. Okay. So I'm going to create something called a custom hook. Okay.
+13:11:0013 hours, 11 minutesSo, in React, this is a very good thing to know how to do. So, we're going to go ahead and do that right now. And we're almost at 500 likes. Let's go, guys.
+13:11:0713 hours, 11 minutes, 7 secondsAbsolutely incredible. We're going to create a folder called hooks, and I'm going to create a file called use revenue cat, right? TS.
+13:11:1713 hours, 11 minutes, 17 secondsAll right. And now in here, oh no, sorry. This is a TypeScript. Oh, yeah. TS.
+13:11:2413 hours, 11 minutes, 24 secondsLet's just put an X on it for now because I mean, you could potentially, right? So in this case here, we're going to have a functional component. So really all this is is a React Native
+13:11:3313 hours, 11 minutes, 33 secondsfunctional component or it's actually just a it's just a function, right? So it's a function and we're going to call it use revenue cat and it's a custom hook now. So you're also learning how to
+13:11:4213 hours, 11 minutes, 42 secondsmake custom hooks in this tutorial. And we're also going to say export and this one is not going to ex Yeah, export default revenue. Yeah, there you
+13:11:5013 hours, 11 minutes, 50 secondsare. Okay, so this is the start. This is your base. Now what we're going to do is we're going to have all of the sort of, you know, clever logic and the stuff
+13:11:5713 hours, 11 minutes, 57 secondsassociated around this. So, first thing I need is I need a bunch of different imports from um React Native and React
+13:12:0413 hours, 12 minutes, 4 secondsNative purchases. So, let's pop those in right now. Okay. So, we've got platform which tells us which will help us
+13:12:1113 hours, 12 minutes, 11 secondsdetermine what we're on. Android or iOS purchases, customer info, and purchase offering. Right. So, React Native purchases. This is how we're going to
+13:12:1813 hours, 12 minutes, 18 secondsconnect to Revenue Cat. Right. Um why can't we integrate the pay directly in our code? Because remember, we're trying to do everything in a cross-platform
+13:12:2613 hours, 12 minutes, 26 secondssense. Revenue Cat allows us to do that crossplatform approach with one bit of code. If you're doing it directly to the app store, you're going to have to do it directly for iOS, directly for Android.
+13:12:3613 hours, 12 minutes, 36 secondsIn this case, you do it in one instance and it works for both. That's why you want to do it. Okay. Obviously, I'm only showing you the uh the the single way of
+13:12:4513 hours, 12 minutes, 45 secondsdoing it. Right? So, in this case, I'm only going to do this for as a demo purposes, but you should be storing these in um what's it called? in
+13:12:5313 hours, 12 minutes, 53 secondsenvironment variables. But here, just to simplify it so you can see it all in the same um same screen. So your revenue cat
+13:13:0013 hours, 13 minutesGoogle API key for here we're going to use the revenue cat um uh iOS key. So let's go back to our revenue cat go to
+13:13:0813 hours, 13 minutes, 8 secondsAPI keys and we will have a public key that we will use. So you can see here public app specific API keys. We're
+13:13:1613 hours, 13 minutes, 16 secondsgoing to take that key and we're going to pop it in here. This should be in a in a in a special file, right? It shouldn't be in it should be an
+13:13:2313 hours, 13 minutes, 23 secondsenvironment file. And then we're going to say const and then this is where we start preparing our state. Okay. So I'm going to I'm going to create a few different things here to keep track of.
+13:13:3113 hours, 13 minutes, 31 secondsRight. And this so this is actually going to return us three things. I want to know the current offerings that we have in revenue. So I want to know what
+13:13:4013 hours, 13 minutes, 40 secondsmembership uh options we have. So like pro- yearly, pro monthly. I want to know the customer's current information and
+13:13:4713 hours, 13 minutes, 47 secondstheir current state. And I want to know if the user is a pro member. all in this function all neatly wrapped up right and I'm going to show you how easy that is
+13:13:5513 hours, 13 minutes, 55 secondsright so we're going to say current offering so one for the current offerings uh set current offering
+13:14:0413 hours, 14 minutes, 4 secondsand then here we'll say equals use state and you're either going to basically get the purchase offering back purchase offering why am I not getting this back
+13:14:1313 hours, 14 minutes, 13 secondsuse state uh we're either going to get purchase offering back or no,
+13:14:2213 hours, 14 minutes, 22 secondsright? And it's going to be initialized with no to begin with. And then we're going to have the same thing for customer info. Okay, so the same two
+13:14:3013 hours, 14 minutes, 30 secondsthings for customer info and current offering. So two pieces of state right now. And then we're also going to have um
+13:14:3813 hours, 14 minutes, 38 secondsbasically we're going to check the customer info object eventually to see if their active subscription includes
+13:14:4713 hours, 14 minutes, 47 secondseither pro uh monthly or pro yearly. And the way we do this is we say const is
+13:14:5413 hours, 14 minutes, 54 secondspro member. And obviously you can memorize this if you want to but I'm just going to show you very simply.
+13:14:5913 hours, 14 minutes, 59 secondsWe're going to say customer info dot active subscriptions and we're going to use optional chaining here as well because that could be no.
+13:15:0913 hours, 15 minutes, 9 secondsAnd then we could say if it is. So this is a a few different ways you could do this, right? You can firstly say if
+13:15:1713 hours, 15 minutes, 17 secondsdirectly into the thing. So you can actually go ahead and do like pro here, but I'm actually going to make it a little bit easier. I'm just going to say if it includes and say pro um monthly.
+13:15:2913 hours, 15 minutes, 29 secondsYeah. Or and obviously what I would recommend here highly is that you have these in constant files, right? So you have something like a const and
+13:15:3813 hours, 15 minutes, 38 secondsdifferent types. So in this case you could have something like types of membership or yeah membership. And then
+13:15:4613 hours, 15 minutes, 46 secondshere you would have your per monthly or you say monthly and also yearly. Yeah.
+13:15:5513 hours, 15 minutes, 55 secondsSo that way you've got like a a dedicated monthly.
+13:16:0213 hours, 16 minutes, 2 secondsAnd why is this freaking out? Cannot find monthly or types of membership.
+13:16:0613 hours, 16 minutes, 6 secondsSorry. Monthly. Yeah. Or if it's type yearly. Right. So that way you've got a const. There we go. Nice. And now that
+13:16:1513 hours, 16 minutes, 15 secondswill tell us if the user is a pro or not basically right. So if they have an active membership which is either monthly or yearly that in revenue cap.
+13:16:2213 hours, 16 minutes, 22 secondsOkay. So then we're going to have use effect. Now this is going this is where we start having the custom hook magic. We're going to have dependency array.
+13:16:2913 hours, 16 minutes, 29 secondsWe're going to import the use effect like so. And this is where we do our special stuff. Okay. So we need to do an asynchronous bit of code. Now when we
+13:16:3613 hours, 16 minutes, 36 secondsneed when we do asynchronous bit of code inside of a use effect we have to have wrap it in a function. So, we're going to say con fetch data equals an asynchronous function. Um, and then
+13:16:4613 hours, 16 minutes, 46 secondsinside of here, we're going to say firstly, we need to enable the debug logs for our purchases. That way, it can tell us more insightful information. So,
+13:16:5413 hours, 16 minutes, 54 secondsthis is the purchase API. And then we're basically going to we're going to detect or if we're on an iPhone or if we're on
+13:17:0113 hours, 17 minutes, 1 seconda um Android. So why the way we do this is we say if the platform operating system is Android configure our purchase
+13:17:0813 hours, 17 minutes, 8 secondsAPI with the Google key right if it's um uh iOS then configure with the Apple key right and obviously if if this was the
+13:17:1713 hours, 17 minutes, 17 secondscase and you're using uh environment variables at this point you would say process.m Google API key process M.API API, Apple API key and so forth, right?
+13:17:2613 hours, 17 minutes, 26 secondsThen what we do is we say const and then we need to basically get all of the offerings. Right? Now the offerings
+13:17:3213 hours, 17 minutes, 32 secondsjust to make it super super clear are in revenue cap. Remember we went ahead and we actually set up the offerings. So I
+13:17:3913 hours, 17 minutes, 39 secondsneed to basically get all of the offerings. So these two offerings. Okay.
+13:17:4613 hours, 17 minutes, 46 secondsWell, the actual pro is the offering and then I need to get the packages inside of it. So in this case I'm going to say const offerings.
+13:17:5413 hours, 17 minutes, 54 secondsofferings equals await purchases get offerings. Okay. And I'm going to do the same for the customer info. I'm going to
+13:18:0213 hours, 18 minutes, 2 secondssay const customer info equals await.get purchases get customer info. And that's what we want. Okay. So that this will
+13:18:1013 hours, 18 minutes, 10 secondsget us the customer information. This will get see how we hover it says gets current customer info. And here it gets us um offerings and so forth. And you can always look at the purchase
+13:18:1813 hours, 18 minutes, 18 secondsofferings to detect what type you're getting back. And then you can even look into that and see what kind of stuff you get back and so forth. Like active
+13:18:2613 hours, 18 minutes, 26 secondssubscriptions is a string array and so forth, right? So it's just a handy way to do it. And then we need to set that to our current pieces of state. So in
+13:18:3313 hours, 18 minutes, 33 secondsthis case, set current offering to customer uh to offerings sorry offerings.curren.
+13:18:4013 hours, 18 minutes, 40 secondsRight? So in this case, current offerings configured in the revenue dashboard or you can even show all of them. But in this case, I just want to show the current ones. And then we're
+13:18:4813 hours, 18 minutes, 48 secondsgoing to say set customer info to the customer info like so. Okay. Now once that's done, we need to execute our fetch data. So we're going to say fetch
+13:18:5613 hours, 18 minutes, 56 secondsthe data and if there's any any issues, we're simply going to console log them uh console error them. Right? So that's
+13:19:0313 hours, 19 minutes, 3 secondsthe easy way of writing uh basically this. It's an easy way of just saying that. Okay. So in this case, I'm just going to do console. Hit save like so.
+13:19:1513 hours, 19 minutes, 15 secondsAll right. That's awesome. Now that's perfect so far. We have no external dependency inside here. So we're good.
+13:19:2413 hours, 19 minutes, 24 secondsThen we're going to have a second use effect, right? So in a function with uh there we
+13:19:3213 hours, 19 minutes, 32 secondsgo. And we're going to say const. And this is basically going to be a listener now. Okay. So, what this will do is is it's going to basically every time the users's information updates, for
+13:19:4013 hours, 19 minutes, 40 secondsexample, if they got a uh if they subscribe to the pro membership, this should ping off and tell us, right? And it didn't have a detach listener
+13:19:4913 hours, 19 minutes, 49 secondsfunction in case anyone's wondering. So, that's what I would typically do here in the cleanup function of the use effect.
+13:19:5313 hours, 19 minutes, 53 secondsI would detach listener, but it didn't have that here. So, I was assuming it just did it itself. And you even got one for um I think that's No, it doesn't
+13:20:0113 hours, 20 minutes, 1 secondexist yet. I'm going to say customer con customer info updated object equals asynchronous. So I'm going to create an
+13:20:0913 hours, 20 minutes, 9 secondsasynchronous function here and I'm going to go ahead and say
+13:20:1813 hours, 20 minutes, 18 secondspurchaser info. So this actually has an argument here and then we're going to update. So
+13:20:2813 hours, 20 minutes, 28 secondsbasically this is a function and I'll show you how what we're going to do here. All right. So, this is a function that we're going to attach to a listener right now. So, we're going to say attach
+13:20:3613 hours, 20 minutes, 36 secondsit to the purchases dot add customer uh info update listener. And then what you do is you pass in your function. And
+13:20:4413 hours, 20 minutes, 44 secondswhat this does is this is essentially getting passed through here. And if you if you don't believe me, you can check here by doing this. And now if we hover
+13:20:5213 hours, 20 minutes, 52 secondsover a, you can see a is customer of type customer info. Hence why I've done it here. Okay. So that's basically how you detect the type. So in this case, we
+13:21:0113 hours, 21 minutes, 1 secondgot our uh customer info and then we basically set it with that. So that's basically what's happening. And if you're wondering, it returned nothing.
+13:21:0713 hours, 21 minutes, 7 secondsOtherwise, I would have detached it in the cleanup function. Okay. So done. And then we have no dependency management here. That's because there's nothing in
+13:21:1413 hours, 21 minutes, 14 secondsthere as well. Okay. And then what we want to do is we have all of these things happening behind the scenes now with use effect. So they're going to get updated. It will tell us if a user
+13:21:2213 hours, 21 minutes, 22 secondsupdates and so forth. Um and then what I want to do is I want to return these um objects. So this is our custom um hook
+13:21:3113 hours, 21 minutes, 31 secondspart of it. We're going to return the current offering, the customer info, and is pro member. And what's beautiful about this now is that that hook now I
+13:21:3813 hours, 21 minutes, 38 secondscan call it anywhere inside my app and it will tell me if the user is a pro member. It will tell me all the revenue c offerings and it will tell me the customer's current information. Right?
+13:21:4813 hours, 21 minutes, 48 secondsSo pretty sick, right? So in this case, we're going to go ahead and close that.
+13:21:5313 hours, 21 minutes, 53 secondsAnd now we can start implementing it. So I want to show you right now if we go to the home screen let's test this to see if this even works. Right? So firstly
+13:22:0113 hours, 22 minutes, 1 secondI'm going to go over here and I'm going to just go ahead and close this out. So command K. And now the thing is right so
+13:22:0913 hours, 22 minutes, 9 secondsthis is the point at which we are limited because um we cannot test the actual purchases
+13:22:1613 hours, 22 minutes, 16 secondswith um a simulator right we will get restricted at some point here. So what I will show you is you can there is a
+13:22:2413 hours, 22 minutes, 24 secondssetup process where you can activate I think the storefront API or something.
+13:22:2713 hours, 22 minutes, 27 secondsYou can basically set up your simulator in a way with Xcode and all that stuff.
+13:22:3013 hours, 22 minutes, 30 secondsBut I'm going to show you how we like I said how to test it on a real device. Hence why we deployed it to EAS. Right.
+13:22:3513 hours, 22 minutes, 35 secondsSo on the home screen now what I'm going to do is I'm going to pull in our custom hook. So I'm going to go ahead and say const custom offering. Go ahead and pull
+13:22:4413 hours, 22 minutes, 44 secondsin our custom hook. So just like we have other hooks I have one here. And what I'm going to do is I'm simply going to log out current offering to see what
+13:22:5113 hours, 22 minutes, 51 secondshappens. So I'm going say debug current offering, right? And let's see what we see in this case. There we go.
+13:23:0013 hours, 23 minutesYou're trying to use a module that is not supported in Expo Go. You need to create a development build of your app.
+13:23:0413 hours, 23 minutes, 4 secondsSo that's the problem, right? So in this case now, this is where we need to create a development build. So this is where we move over to the simulator. So
+13:23:1313 hours, 23 minutes, 13 secondsI didn't need to stop it there. MPX expo start. So now what I want you to do is I want to basically close the simulator
+13:23:2013 hours, 23 minutes, 20 secondsbecause that's the end of the journey for the simulator. Okay. Now what we're going to do is we're going to move over to
+13:23:2813 hours, 23 minutes, 28 secondsour phone. Okay. And then what we're going to do here is we're going to go to the deployment. So this one here. So iOS
+13:23:3613 hours, 23 minutes, 36 secondsinternal distribution build. This will finish. You click install. And this is where on the phone now I will show you what we need to do. Okay. So on my
+13:23:4413 hours, 23 minutes, 44 secondsphone, what I'm now going to do is I'm going to go ahead and scan this code. So I'm opening up my camera, I go ahead and pop in. It says open in
+13:23:5313 hours, 23 minutes, 53 secondsiTunes. And then you can see here it says uh would like to install Revenue Cat app YouTube. Okay. So I click install. And now this is installing it
+13:24:0113 hours, 24 minutes, 1 secondonto my phone. Okay. So I'm now going to go ahead and locate that on my phone. So I'm going to go into my photos. And
+13:24:0913 hours, 24 minutes, 9 secondsright now what I would do is simply just do a little search, right? So basically pull down um I'm not going to show my search but basically go onto your search
+13:24:1713 hours, 24 minutes, 17 secondsin your home screen and you pull down and you follow that because I don't want to show in case there's anything there.
+13:24:2313 hours, 24 minutes, 23 secondsUm and then basically what you'll do is you'll find the app that we just deployed. Okay. So our one is called revenue cat app and that's literally an
+13:24:3013 hours, 24 minutes, 30 secondsapp name. Right. So in this case I've now gone ahead and loaded the app and this is what you'll see right. So
+13:24:3813 hours, 24 minutes, 38 secondsthis is literally an app on my phone now. So you can see it's literally an app revenue app YouTube. So you just need to search for the app and you'll find it. Okay. So now at this point you
+13:24:4713 hours, 24 minutes, 47 secondsshould see we don't have a development server running. It's like blank. Okay.
+13:24:5113 hours, 24 minutes, 51 secondsHow do we do this? So this is where it gets really cool. Right. So right now I'm charging the phone again. So I'm going to go ahead and
+13:25:0013 hours, 25 minutesrestart my server. So in this case I'm going to go ahead and do uh R to refresh. Um where is it? Freshman servers.
+13:25:1213 hours, 25 minutes, 12 secondsLet me uh go ahead and actually do expo.
+13:25:1513 hours, 25 minutes, 15 secondsLet me go ahead and do this. Sorry. Let me do expo start MPX. Sorry, mpx expo start
+13:25:2413 hours, 25 minutes, 24 secondsum dash dev-client or d-dev client.
+13:25:3013 hours, 25 minutes, 30 secondsOkay. And now what you'll see is this should go ahead and fetch up our app over here. So let's just double check.
+13:25:3813 hours, 25 minutes, 38 secondsOh, in fact, I don't think I've actually got the um I didn't I think I needed to actually install that uh provisioning profile. I
+13:25:4713 hours, 25 minutes, 47 secondsdon't think I did it. All right. So, firstly, oh, 500 likes. Boom. We smashed it. Amazing stuff, guys. Yeah. So, at this point, I've messed up somewhere.
+13:25:5513 hours, 25 minutes, 55 secondsSo, I should have actually installed that. Okay. All right. So, at this point, what I want to do is actually I I want to install that provisioning profile that I completely ignored
+13:26:0313 hours, 26 minutes, 3 secondsearlier, right? Oh, okay. Let's do that again.
+13:26:0713 hours, 26 minutes, 7 secondsSo, um, in this case, right, well, I've just showed that. That's fine. This song gets me so hyped up. And then we're going to say EAS device create, which
+13:26:1613 hours, 26 minutes, 16 secondsI've already done, but we're going to do it again just to show you. Okay. And we're going to Yes. Yes.
+13:26:2513 hours, 26 minutes, 25 secondsOkay. Uh, we're going to say website.
+13:26:2713 hours, 26 minutes, 27 secondsYes. I'm going to register this, which I probably didn't do correctly the first time. That's my honest truth. So, I'm going to go ahead and screenshot. Get this expo dev. Oops.
+13:26:3913 hours, 26 minutes, 39 secondsRight. Download the profile. Allow.
+13:26:4213 hours, 26 minutes, 42 secondsProfile downloaded. I'm going to go into my settings right now.
+13:26:4713 hours, 26 minutes, 47 secondsI'm going to go into the profile. So I'm going to type in into the search bar. Uh profile.
+13:26:5413 hours, 26 minutes, 54 secondsAnd now I'm going to VPN and device management. I see downloaded profile is here. Register for development. Go ahead and do that. Install. Enter my passcode.
+13:27:0313 hours, 27 minutes, 3 secondsSo, let's do that right now. And I'm going to install it. So, now I clicked install. Okay, which I didn't do properly before. And now you can see
+13:27:1113 hours, 27 minutes, 11 secondsExpo Dev, your device is ready to run your internal development builds. So, that's where I kind of messed up. Right.
+13:27:1613 hours, 27 minutes, 16 secondsSo, I kind of I don't think I did it correctly the first time. Right now, what I'm going to do is reopen the app that I had open previously.
+13:27:2513 hours, 27 minutes, 25 secondsRight. So, in this case, um Oh, no.
+13:27:2713 hours, 27 minutes, 27 secondsActually, Sunny, I'm so stupid sometimes. All right. So, what I'm going to do is I'm going to go back to my app.
+13:27:3313 hours, 27 minutes, 33 secondsSo many steps, right? MPX expo start. Yeah.
+13:27:3913 hours, 27 minutes, 39 secondsAnd now watch this. So that QR code that popped up, now all we need to do is scan it. Oh, so stupid, right? So scan it.
+13:27:4813 hours, 27 minutes, 48 secondsAnd then this will pop up on our phone here. So once you're on this screen, I need you to go ahead and type click on the development build and it'll say open
+13:27:5713 hours, 27 minutes, 57 secondsin Revenue Cat app YouTube. Yes. And then you want to click on allow. You click on reload.
+13:28:0513 hours, 28 minutes, 5 secondsAnd just like that. Hey, look at that.
+13:28:0813 hours, 28 minutes, 8 secondsNow it says hello there friend blah blah blah. Right. And then you can shake to get to this. Right. So if I shake my phone now. So basically look I look like
+13:28:1713 hours, 28 minutes, 17 secondsa crazy man. But look if I basically I'm on my phone right now. So this is actually the the app that we built right now. So you see I can do all the things we did previously. I know it's not
+13:28:2513 hours, 28 minutes, 25 secondsfocused. It's super annoying. Right. All right. So, in this case, I can do all the stuff we were doing previously. If I click on the top bit over here. So, I'm just trying to show you. And if I talk
+13:28:3413 hours, 28 minutes, 34 secondsover there, there you go. You get even the popup and all sorts. Yeah. But now, if I go ahead and shake it.
+13:28:4113 hours, 28 minutes, 41 secondsOkay. Shake it. Yeah. There you go. Then it pops up with the the debug menu.
+13:28:4713 hours, 28 minutes, 47 secondsOkay. So, that's how you access the debug menu on this on this bit. So, you just shake the phone. Okay. Now, once you're on here, I want you to click on
+13:28:5513 hours, 28 minutes, 55 secondsremotejs debugger. All right? So, remote javascript debugger. And you see what happened the minute I clicked it. It opened up a React Native debugger on my
+13:29:0513 hours, 29 minutes, 5 secondscomputer. And what you'll find is now I've got the debug logs on my computer.
+13:29:1013 hours, 29 minutes, 10 secondsSo, if I inspect this screen by doing um inspect, now you can see I've got my debug. Remember the one that I showed you? And I can see Yes, we can see it.
+13:29:2013 hours, 29 minutes, 20 secondsmonthly annual.
+13:29:2313 hours, 29 minutes, 23 secondsLet's go. Let's go. It's working. All right. So, this is exactly what I wanted to see. All right. So, in that case, yeah. So, that's what you had to do. I'm
+13:29:3013 hours, 29 minutes, 30 secondsso sorry I messed that up. You just have to scan the bloody QR code. This is stupid. Whenever you see a QR code, just scan the thing, right? It makes it helps you out. All right. Um, but yeah, there you go. So, now we have it on our phone.
+13:29:4213 hours, 29 minutes, 42 secondsSo, this is And by the way, guys, I promise you something crazy. I'm going to show you something. And this is what what I initially thought. Wait, that actually works. So check this out. If I
+13:29:5113 hours, 29 minutes, 51 secondsgo to my um basically I just want to add in a bit of text here just to prove something to
+13:29:5713 hours, 29 minutes, 57 secondsyou. Yeah. So use text say hello world, right? I'm going to pop it in. So if I hit save, it rebuilt my app. There you
+13:30:0513 hours, 30 minutes, 5 secondsgo. Weirdly. Um it wouldn't have to do that every time, by the way. Say hello world. 1 2 3. Save.
+13:30:1213 hours, 30 minutes, 12 secondsOkay. Maybe because I'm streaming. I guess it's doing that. But it won't it doesn't always do that, right? But in this case, if I hit save now, I want to
+13:30:2013 hours, 30 minutes, 20 secondsshow you something that's remember that's streaming from my phone, right?
+13:30:2213 hours, 30 minutes, 22 secondsSo, I'm going to remove that text block and show you right now. So, I'm going to remove it. I'm removing it and I'm hitting save.
+13:30:3113 hours, 30 minutes, 31 secondsThat's crazy. That is crazy. That just streamed to my phone. And if I undo it and I hit save,
+13:30:3913 hours, 30 minutes, 39 secondslike that's nuts. And I and I'm stressing the point because I just find that absolutely crazy how that works, right? But yeah, so now you know
+13:30:4813 hours, 30 minutes, 48 secondsbasically what's happening, right? So let's hit 600 likes. Um but yeah, so now we've got the the connection to our back end already, right? So absolutely crazy.
+13:30:5813 hours, 30 minutes, 58 secondsSo it will literally stream it over your network to your development build. So that's what you need to do at this point, right? And now the awesome part
+13:31:0613 hours, 31 minutes, 6 secondsis if you need to debug it, we have our debug logs here. So, I can go ahead and cancel this. And remember, you can't click this because I'm streaming it. And
+13:31:1513 hours, 31 minutes, 15 secondsby the way, if you want to see it on your computer, I'm using something called Reflector 4 um to AirPlay to my phone. But as in right now, honestly, when you're developing, you can just have your phone in front of you.
+13:31:2613 hours, 31 minutes, 26 secondsOkay. So, now let's go ahead and test this. What I'm going to do is you're going to see me interact with the phone as well. But if I need to send a refresh command, I go to my terminal and I
+13:31:3513 hours, 31 minutes, 35 secondssimply put press R. So to R to refresh and I can actually refresh the app, right? And you can see it says debug
+13:31:4113 hours, 31 minutes, 41 secondslogs. So in this case, I had a debug in the home screen which showed the current offering, right? And that's what
+13:31:4913 hours, 31 minutes, 49 secondsyou see here and this is what I get back. So I get the annual membership. I get all of this good stuff, available packages and all that kind of stuff.
+13:31:5613 hours, 31 minutes, 56 secondsOkay, so this is really really awesome right now. Right. So now we're going to go ahead and take this knowledge. I'm going to put my song on cuz I like that
+13:32:0313 hours, 32 minutes, 3 secondssong so much. Where is it? We're going so well, guys. I'm actually so like this is going sick. Okay, so the next thing is let's actually make this thing work.
+13:32:1313 hours, 32 minutes, 13 secondsOkay.
+13:32:1513 hours, 32 minutes, 15 secondsSo, we're going to go to um Oh, yeah. Let me get my code up.
+13:32:2313 hours, 32 minutes, 23 secondsThere we are.
+13:32:2613 hours, 32 minutes, 26 secondsSo, now we're going to basically use the is pro member to determine if the user is actually a pro member or not. Okay.
+13:32:3313 hours, 32 minutes, 33 secondsSo, we're going to go here. We're going to go ahead and say uh we don't actually care about the rest of these. We just is pro member for now. Uh we're going to go down and basically first things first is
+13:32:4113 hours, 32 minutes, 41 secondsat the top over here. If they're a pro member, I want it to say um um pro.
+13:32:4813 hours, 32 minutes, 48 secondsOkay. So here I can say is pro member. Then they're going to basically say pro.
+13:32:5513 hours, 32 minutes, 55 secondsOtherwise it's going to say upgrade.
+13:32:5913 hours, 32 minutes, 59 secondsOkay. So I really don't know why it's doing that. Yeah. Um but as in it's fine. It's just going to do that a bit.
+13:33:0413 hours, 33 minutes, 4 secondsRight. But in this case, we now we've got upgrade. So if I click it, you can see on my phone it pops up. So I'm not clicking it. Sorry. I'm pressing it on my actual like I'm actually pressing the
+13:33:1313 hours, 33 minutes, 13 secondsapp. Right. So now you can see it says uh upgrade because I'm not pro. Okay.
+13:33:1813 hours, 33 minutes, 18 secondsNow the same applies to here. So where we've got requires pro, right? So requires pro is actually we can do inside of here. So we go to
+13:33:2613 hours, 33 minutes, 26 secondsaction row. So let's hop over to action row. Now I'm going to do the same thing. I'm going to pull through my um here.
+13:33:3313 hours, 33 minutes, 33 secondsAnd to be fair, we can just import what we need here. So, and then we can and then we don't need the rest of these just inside this file. We just need the
+13:33:4113 hours, 33 minutes, 41 secondsSP pro. That's all we care about right now. And then what I'm going to do is I'm going to conditionally render some styling now. So, first things first, I'm
+13:33:4713 hours, 33 minutes, 47 secondsgoing to go ahead and say um we're going to have a little extra variable here saying
+13:33:5513 hours, 33 minutes, 55 secondslocked for pro members is equal to if it requires pro and if they're not a pro member. So, this means
+13:34:0413 hours, 34 minutes, 4 secondsthat if the prop that we passed through, so basically I'm saying if I passed a prop saying it required pro, then it would go ahead and lock it. And if
+13:34:1113 hours, 34 minutes, 11 secondsthey're not a pro member, so if it requires pro and you're not a pro basically, then it should disable. So this will be true at that point if it's locked. Yeah. So now, oh god, that's so
+13:34:2013 hours, 34 minutes, 20 secondsannoying. I don't know why it's doing that. Yeah. But anyway, we'll work for it. Okay. So once that happens, then what we can do is we can basically say
+13:34:2813 hours, 34 minutes, 28 secondsthe um over here we can say the background color if it's locked for pro members, the background color is
+13:34:3613 hours, 34 minutes, 36 secondsgoing to be gray. Otherwise, it'll be the color that we specified. So, let that do it little weird refresh. And now you can see, boom, we get this add an exercise. That's all good, right?
+13:34:4613 hours, 34 minutes, 46 secondsEverything looks good. And in fact, what I'm going to do is I'm just going to save it when I'm ready. Right. So, uh, that way we don't get this weird spasm thing, right? And then I'm going to have
+13:34:5513 hours, 34 minutes, 55 secondslocked for pro members and only show the following.
+13:35:0013 hours, 35 minutesUm, like so. And then we're going to say and I'm going to just pop in what I would show here. So, I'm just going to have a nice little lock on the screen as
+13:35:0713 hours, 35 minutes, 7 secondswell. Yeah. So after this, you see now we've got the pro little lock nicely added in and that's only that's going to
+13:35:1413 hours, 35 minutes, 14 secondsbe absolutely positioned in the top right if it's uh if locked pro is there.
+13:35:2013 hours, 35 minutes, 20 secondsSo in this case I'm going to also disable I think I disable. Yes. Okay. So in this case we're going to say
+13:35:2813 hours, 35 minutes, 28 secondsthat these buttons for example right now if I press the button it shouldn't do that right. It shouldn't say this. It should instead take me to the payw wall.
+13:35:3613 hours, 35 minutes, 36 secondsSo the way that I do that is I go to here and I basically say okay if it's locked for pro members then I want to go
+13:35:4513 hours, 35 minutes, 45 secondsahead and basically navigate to the pay wall instead. So I'm going to navigate to the payw wall else I'm going to
+13:35:5213 hours, 35 minutes, 52 secondsnavigate to the screen. Right? So basically this right. So in this case here. So we're saying navigation to
+13:35:5913 hours, 35 minutes, 59 secondsnavigate payw wall otherwise navigate to the screen. Okay. So let's go over here.
+13:36:0613 hours, 36 minutes, 6 secondsThere we go. Just going to change the song a bit. So now what will happen is if any of the colored ones Hey, you have access. Hey, you have access. A you have
+13:36:1413 hours, 36 minutes, 14 secondsaccess. And if I go to a pro one. Whoa, you need to upgrade. Right. So, it blocks us now because the navigation is going straight to payw wall if you're
+13:36:2213 hours, 36 minutes, 22 secondsnot a pro member. And you see how that works, right? So, it's actually a really nice way of dealing with it. And it does exactly what we wanted. Okay. So, at
+13:36:3113 hours, 36 minutes, 31 secondsthis point now, we need to go ahead and actually implement um the basically the bottom bit, right?
+13:36:3713 hours, 36 minutes, 37 secondsSo, where my hell are my designs? Where are my designs at? Here we are. Yeah.
+13:36:4113 hours, 36 minutes, 41 secondsSo, I want to implement these two things.
+13:36:4613 hours, 36 minutes, 46 secondsthis the start a oneweek trial and the 46% annually and the restore purchases.
+13:36:5213 hours, 36 minutes, 52 secondsNow the annoying thing is is where the heck is the trial, right? Uh I I have done the trial before. I'm trying to remember where I put the trial. Um so
+13:37:0113 hours, 37 minutes, 1 secondwe will get we will find it. I promise you we will find it. I it has to be an app store connect, right? So let's go find it. So app store connect. Um
+13:37:1113 hours, 37 minutes, 11 secondsupgrades downloads. Okay. It was such a small setting. I remember finding it. It was pro monthly. I'm sure it was here.
+13:37:2013 hours, 37 minutes, 20 secondsAnd then it was time without music. Um I can turn the music down.
+13:37:2913 hours, 37 minutes, 29 secondsUm so see if you guys can find it before me.
+13:37:3413 hours, 37 minutes, 34 secondsYeah. Um where was it? There's a free trial option that I cannot find. There's a free trial option that I cannot find
+13:37:4213 hours, 37 minutes, 42 secondsfor App Store Connect. Right. So in this case uh if I go back to subscriptions
+13:37:4913 hours, 37 minutes, 49 secondsI believe it was in so in that purchases I'm going to see it on my other project if I have it. So
+13:37:5813 hours, 37 minutes, 58 secondsthis is my other project right here I've got here. So in this case this is the other one. I changed the setting and for
+13:38:0413 hours, 38 minutes, 4 secondsthe life of me I cannot find it. Um right. So, in this case, we have
+13:38:1313 hours, 38 minutes, 13 secondsum No, that seems to be the old one, Jay. I think.
+13:38:1813 hours, 38 minutes, 18 secondsYeah, that's not going to work for this one. Um, so let's go back.
+13:38:2613 hours, 38 minutes, 26 secondsInapp purchases. No, it wasn't here.
+13:38:3113 hours, 38 minutes, 31 secondsNo. Okay. So, we'll find it. We'll find it afterwards. Even it might have been. No, it wasn't here as well.
+13:38:3713 hours, 38 minutes, 37 secondsNon renewing. Okay, enough. So, it's fine. Let's let's build out the other the the part where we can still sign up.
+13:38:4313 hours, 38 minutes, 43 secondsThat's fine. I can show you how to do it. Uh and then I will implement the remind me at the end. I will implement it. Um
+13:38:5113 hours, 38 minutes, 51 secondsso, let's go ahead and do this now. So, I'm going to go ahead and implement the rest of it. So, the actual sign up
+13:38:5713 hours, 38 minutes, 57 secondsstuff. So, in the upgrade screen, so the payw wall, we're going to go to the payw wall.
+13:39:0513 hours, 39 minutes, 5 secondsAnd now I will show you. So, I'm going to need my current offering that we had previously. So, here
+13:39:1413 hours, 39 minutes, 14 secondsthis one. And then I need the current offering. I don't care about the others in this case. Now, for the current offering,
+13:39:2313 hours, 39 minutes, 23 secondsum, Asian CK is the most relatable programming experience. Honestly, that's why I do it live because it's so it's
+13:39:3213 hours, 39 minutes, 32 secondssuch rubbish when I see a tutorial and it's like everything's super perfect.
+13:39:3613 hours, 39 minutes, 36 secondsThis is not how it happens, right? Is stuff goes wrong. Um, okay. So, in this case, let's go to um my current
+13:39:4413 hours, 39 minutes, 44 secondsoffering. Yeah, what am I doing? Um, so we're going to have firstly current offering may take some time to load. Okay. So in which case I'm
+13:39:5213 hours, 39 minutes, 52 secondsactually going to say if there is no current offering then what I want to do is I actually want to return a loading indicator before we actually render
+13:39:5913 hours, 39 minutes, 59 secondsanything. So what I'm going to do here is I'm going to say um oops return and I'm going to import activity
+13:40:0813 hours, 40 minutes, 8 secondsindicator from React Native. And this is basically going to go ahead and show a loader. So now if I go here um oh oops
+13:40:1613 hours, 40 minutes, 16 secondsso I'm going to press it. I'm going to press it upgrade. And now you can see we've got a nice activity loader until the current offers are loaded, right?
+13:40:2413 hours, 40 minutes, 24 secondsBecause it will take a little bit of time for that to happen.
+13:40:2813 hours, 40 minutes, 28 secondsOkay. Um so now what we're going to do is we're going to say uh I'm going to firstly have a monthly purchase button.
+13:40:3413 hours, 40 minutes, 34 secondsOkay. And here what we're going to have is a touchable opacity button underneath everything. So here monthly subscribe we're going to have a touchable opacity.
+13:40:4313 hours, 40 minutes, 43 secondsYep. Like so.
+13:40:4613 hours, 40 minutes, 46 secondsAnd in this button, I'm going to have a two pieces of text. So one uh saying sign up and the same thing
+13:40:5513 hours, 40 minutes, 55 secondsagain. And we're just going to change it up. So basically I need the price, right? So I actually need the in the actual price. So uh I want it to
+13:41:0313 hours, 41 minutes, 3 secondsbasically say free trial for one week blah blah blah. And then I want it to
+13:41:1013 hours, 41 minutes, 10 secondssay the actual price afterwards. So I'm going to say current offering dot monthly. So you see how we can get
+13:41:2013 hours, 41 minutes, 20 secondswe can actually access it the product itself price string. So this will actually give me the price forward slash per month as it's a monthly month after.
+13:41:2913 hours, 41 minutes, 29 secondsNow the reason why I'm doing this is if I show you it will say free trial for one week 20 dirhams month after. Okay
+13:41:3613 hours, 41 minutes, 36 secondsthat's nice. Let's go ahead and do that right now. So let's style this up. So what I'm actually going to do I'm going to pop the styling in. And so I'm going
+13:41:4313 hours, 41 minutes, 43 secondsto apply the styles. I've already explained a bunch of style like what we're doing. We're giving it a bunch of styling here. I'm going to give this one some text white here. So text white. And
+13:41:5313 hours, 41 minutes, 53 secondsthen for the touchable opacity, I'm going to go ahead and give it the following styles. So I'm going to give it a nice little button style. So let's
+13:42:0113 hours, 42 minutes, 1 secondgo ahead and pop this one here. Hit save. And now we've got a nice little button at the bottom. Okay. And we basically want to handle the purchase of
+13:42:0913 hours, 42 minutes, 9 secondsthis. Right. So right now we don't have the free trial implemented. I will do that. But if I was to click this right now, it doesn't do anything. If I do on press,
+13:42:1713 hours, 42 minutes, 17 secondsI want to do a handle monthly monthly purchase. And I'm going to have
+13:42:2413 hours, 42 minutes, 24 secondstwo very similar functions here which you can go ahead and feel free to actually refactor yourself and make it your own like you know neater version um
+13:42:3313 hours, 42 minutes, 33 secondsbecause you can actually do that quite easily after this. So we're going to go and say const hand and all monthly purchase and it's going to be an asynchronous function.
+13:42:4213 hours, 42 minutes, 42 secondsYeah. And then here what we're going to do is we're going to say if there is no current offer or if there's no monthly offer then
+13:42:4913 hours, 42 minutes, 49 secondswe're going to simply return. Right. And then again when we optional chain this because it could be no which is why we're protecting ourselves. And then what I'm going to say is I'm going to
+13:42:5713 hours, 42 minutes, 57 secondssay purchase info. So basically this is where we carry out the execution or the p purchasing part. I say await
+13:43:0513 hours, 43 minutes, 5 secondspurchases. So await purchases. purchases and we import that from React Native.
+13:43:1213 hours, 43 minutes, 12 secondsYeah. And then we say dot purchase package. And in this case, what we do is we pass in the monthly package, right? Oops. Sorry, guys.
+13:43:2613 hours, 43 minutes, 26 secondsMessed up. Yeah. Handle monthly purchase. We pass in the monthly package. And what this is going to do, it's going to tell Revenue Cat that hang
+13:43:3413 hours, 43 minutes, 34 secondson, you want to basically go ahead and purchase this package. Okay. Then what I'm going to do is I'm going to add a debug here saying
+13:43:4313 hours, 43 minutes, 43 secondsyou bought the um basically you bought one second.
+13:43:4913 hours, 43 minutes, 49 secondsWhat have I done here? Purchase info. Um yeah, there we go. Purchaser in. We'll just say monthly sub purchased.
+13:44:0213 hours, 44 minutes, 2 secondsYeah, just like that. Okay.
+13:44:0613 hours, 44 minutes, 6 secondsAnd um what I'm going to do is you know what I'm going to maybe okay it's fine. Keep it there. I'll just won't save yet.
+13:44:1113 hours, 44 minutes, 11 secondsWe'll say and then I'm going basically going to say an alert, right? So if you're active afterwards, so if you've got a subscription and it all went well, we're going to say if purchaser
+13:44:2113 hours, 44 minutes, 21 secondsbasically the the customer's information, right? So in this case, purchaser info would be the customer's information that is returned. If the
+13:44:2813 hours, 44 minutes, 28 secondscustomer entitlements active pro basically entitlements, remember basically okay. So that's very important actually. Remember we did have
+13:44:3613 hours, 44 minutes, 36 secondsentitlements which was levels of access right and we included in that pro monthly and pro yearly right so in this
+13:44:4413 hours, 44 minutes, 44 secondscase pro monthly will be active right I actually want to double check this to be sure of something I want to go ahead and
+13:44:5313 hours, 44 minutes, 53 secondssee what the console log will return but let's go ahead and dopro because the identifier for our annual was I believe it was here. So let's go ahead and see. So, entitlements.
+13:45:0813 hours, 45 minutes, 8 secondsSo, I called it Oh, bloody hell. I called it pro monthly. Okay. So, let's delete this one. Let's just get rid of this. Delete entirement. Yeah. So,
+13:45:1513 hours, 45 minutes, 15 secondsforget that. Let's We actually want pro instead. It should be pro. Pro access.
+13:45:2413 hours, 45 minutes, 24 secondsYeah. And the hope. Okay. This makes so much sense. Now, this is how we actually get the entitlement to use the thing.
+13:45:3013 hours, 45 minutes, 30 secondsOkay. So in this case now what we can do is we can attach the entitlement of pro monthly and proearly and then we can check against that in the actual thing.
+13:45:3713 hours, 45 minutes, 37 secondsOkay, that makes sense now, right? Pro yearly,
+13:45:4413 hours, 45 minutes, 44 secondsright? So, at this point, that's good.
+13:45:5113 hours, 45 minutes, 51 secondsUm, and now we can dopro, that's fine.
+13:45:5313 hours, 45 minutes, 53 secondsYeah. Oh, sorry. So, I just want to show them all then. If if you got the pro entitlement, which will you will have because you purchased the monthly. Okay.
+13:46:0113 hours, 46 minutes, 1 secondThen we're going to say navigation.go back. So, it should close it afterwards.
+13:46:0413 hours, 46 minutes, 4 secondsAnd then what's amazing is that because the users will then become pro, our listener should then fire off and then
+13:46:1113 hours, 46 minutes, 11 secondsit should work in the way that we expect it, right? Because then this will say is pro. Uh and it will basically allow us through access and that will also say
+13:46:1913 hours, 46 minutes, 19 secondspro after we've successfully done it. So let's go ahead and say handle monthly purchase. Let's go and attach that to the correct thing. Handle monthly purchase. Okay. And let's try this out.
+13:46:2913 hours, 46 minutes, 29 secondsRight. So I'm going to go ahead and do give this a go. So, I'm going to click on add an exercise. And boom, we get that, which is great. That's what we
+13:46:3713 hours, 46 minutes, 37 secondswanted. And then I'm going to click on free trial for one. As in, we haven't got the free trial yet, but I'm going to click it. So, I pressed the button. And let's see what happened. Did I press it?
+13:46:4613 hours, 46 minutes, 46 secondsYeah. Okay, there we go. Okay, so that's good. That's a very good sign. And then you see the accounts popped up. And then we can click on subscribe. And also, by
+13:46:5313 hours, 46 minutes, 53 secondsthe way, in your settings, it will say sandbox account. You would put the test sandbox user that you set up in uh App
+13:47:0013 hours, 47 minutesStore Connect previously. Put that in, which is why I'm seeing Sunny Sanganger plus testim.com. Right? So that's the name. And then you want to put in the
+13:47:0813 hours, 47 minutes, 8 secondspasscode that you set for that test user. So I'm going to pop that in right now.
+13:47:1613 hours, 47 minutes, 16 secondsSo I'm doing that just now as we speak.
+13:47:1813 hours, 47 minutes, 18 secondsAnd then I'm going to go ahead and hit sign in. Okay. So I'm signing in. And now if all has done well, what we should
+13:47:2513 hours, 47 minutes, 25 secondssee is my purchase has gone through. Now it should say purchase is complete in a second.
+13:47:3213 hours, 47 minutes, 32 secondsOkay. So give it a second. Obviously this is a sandbox. It's going to take a little bit of time. And then what we should see is that this will navigation go back should kick in. And then it should say Oh, there we go. We're pro.
+13:47:4213 hours, 47 minutes, 42 secondsAmazing. Look at that. We said pro. And now we have a pro membership. Hey, look at that. We have a pro membership. And
+13:47:5013 hours, 47 minutes, 50 secondsjust to prove to you that that actually worked, right, I'm going to go over to my revenue cat now. So, let's go to
+13:47:5813 hours, 47 minutes, 58 secondsoverview and we are in the correct project, I believe. Yeah, we are in YouTube revenue cat demo. Yes. So, click into that project and then click on uh
+13:48:0713 hours, 48 minutes, 7 secondsoverview sandbox data. And basic bear in mind, guys, this has all of my other projects in, but the one that we want to pay attention is pro monthly. That's the
+13:48:1613 hours, 48 minutes, 16 secondsone we just set up. Pro monthly and pro yearly are the ones that we set up. Okay. You see where we got per monthly?
+13:48:2213 hours, 48 minutes, 22 secondsWe're going to click that. And as you can see, it's going to show that I subscribed per monthly for 1999 Durhams, which was correct. Yeah. And by the way,
+13:48:3213 hours, 48 minutes, 32 secondsit's showing total spent zero because one, we're in sandbox and two because it's in a different currency. You can test that and it will show you if you did USD, right? So now what you can do
+13:48:4013 hours, 48 minutes, 40 secondsis you can go ahead and see the user in here. Right? So, and this is again another really amazing reason to use re to use revenue cap. It shows when they
+13:48:4913 hours, 48 minutes, 49 secondsfirst saw the app. It first shows when they open the app and it show first shows when they started their subscription, right? So, one thing you'll find as well is that your
+13:48:5713 hours, 48 minutes, 57 secondssubscriptions in sandbox mode. I think it's every 5 minutes will renew monthly, right? So, every minute or so it renews
+13:49:0613 hours, 49 minutes, 6 secondsmonthly. So, that way you can test everything out. Otherwise, obviously, you're not going to wait an entire month, right? That's why you can see pro pro because it's basically going to
+13:49:1313 hours, 49 minutes, 13 secondsrenew. And if we click here indicates it was a renewal subscript. It was a subscription renewal on that's not the renewal yet. These are all renewals. All right. So in that case there we go. We
+13:49:2213 hours, 49 minutes, 22 secondscan see it. And obviously as I mentioned before it's it's it's because one we're in test and two we're we're doing durhams not US. Right? If you were charging US you would see US dollars.
+13:49:3113 hours, 49 minutes, 31 secondsOkay. So that's great. We're working.
+13:49:3313 hours, 49 minutes, 33 secondsNow how do we test this and actually get to the point where I want to deactivate my pro again? Right. So, my pro subscription, well, I'm going to show
+13:49:4113 hours, 49 minutes, 41 secondsyou right now. Well, basically, all you need to do is go to delete user. Go ahead and confirm.
+13:49:4813 hours, 49 minutes, 48 secondsAnd then what we can do is restart the server. So, in this case, if I restart my app, what you'll see is that we're locked
+13:49:5613 hours, 49 minutes, 56 secondsout. Okay. Now, as you can see, if I click it, I'm no longer a pro member cuz I deleted it, right? But really what you want to do is if I was to go into my app
+13:50:0513 hours, 50 minutes, 5 secondsright now and click restore purchases which we were going to implement, I would be able to actually restore it because technically on Apple my sandbox
+13:50:1213 hours, 50 minutes, 12 secondsuser has still got access to it. But if you really want to do it correctly, so if I was to go ahead and press free trial, so I press free trial again,
+13:50:2013 hours, 50 minutes, 20 secondsyou'll see that it's going to basically tell me that I'm already subscribed.
+13:50:2413 hours, 50 minutes, 24 secondsYeah, you see that I'm already subscribed, right? And the reason being is is unless I go to my sandbox testers
+13:50:3213 hours, 50 minutes, 32 secondsand I go to edit and I clear purchase history. Now you've basically reset that test user. Okay. So now what we got to
+13:50:4013 hours, 50 minutes, 40 secondsdo is if you want to test this out properly. So you see it just restored my purchase for me. So in this case, yeah, it's restored it again. So now it's
+13:50:4813 hours, 50 minutes, 48 secondsbasically gone to revenue cap. So basically what you have to do in tandem is delete the clear purchase history here. go to your revenue cap and delete
+13:50:5713 hours, 50 minutes, 57 secondsthe user from here. So go to overview sandbox, go to this user and delete them.
+13:51:0413 hours, 51 minutes, 4 secondsSo go to your user and basically remove them. And that's how you do a full test.
+13:51:1213 hours, 51 minutes, 12 secondsRight? And now if we refresh, so R to refresh, you'll see that now this one should Yeah, there we go. Right. It gets
+13:51:2013 hours, 51 minutes, 20 secondsdeactivated. And then if we do it now, upgrade. Cool. And obviously you can handle, you can put a loader in at that
+13:51:2813 hours, 51 minutes, 28 secondspoint, right? So you can have a splash screen while it's doing that. I'm just showing you obviously without any of that stuff. So if I now click it, you'll see it will offer me the opportunity to
+13:51:3713 hours, 51 minutes, 37 secondsupgrade. And I think Jay actually found what I was looking for. Yeah, there we go. Perfect. That's amazing. Right. So now what I'm going to do is I'm going to add the annual. Let's go ahead and get
+13:51:4613 hours, 51 minutes, 46 secondsthe annual in. Um, so let's go ahead and do this now. So the annual subscribe. So I'm going to do the same thing for
+13:51:5313 hours, 51 minutes, 53 secondsannual subscribe. And to be honest with you, what I'm going to do here is I'm just going to pop in the snippet of code for the styling. Um so actually no, I'll
+13:52:0213 hours, 52 minutes, 2 secondsdo it properly. I'll show you fully. So we'll say uh for annual I'm only going to include annual if annual actually existed. So we'll say if current
+13:52:0913 hours, 52 minutes, 9 secondsoffering dotanual exists, then we'll basically have a touchable opacity. So a touchable opacity.
+13:52:1813 hours, 52 minutes, 18 secondsOkay. And then inside of here, I'm going to have a piece of text saying something per year.
+13:52:2513 hours, 52 minutes, 25 secondsOkay. This is going to be the price string. Okay. That's so annoying, but anyway, we got there. Yeah. Then we're going to have the price string.
+13:52:3313 hours, 52 minutes, 33 secondsUh, and then I'm going to basically have a nice little formula to help you out here. So, what I'm actually doing here is I'm showing you how much you save if
+13:52:4113 hours, 52 minutes, 41 secondsyou sign up annually. And I'll show you how I've done it. It's a little formula.
+13:52:4513 hours, 52 minutes, 45 secondsAnd basically what I've said here is I've said save um this much percent annually. And all I've done here is a little formula where I'm basically
+13:52:5313 hours, 52 minutes, 53 secondscalculating the percentage of if you were to pay monthly for 12 months. Uh the difference basically how much
+13:53:0013 hours, 53 minutespercent would you save if you simply paid annual. Right? So this is a simple mathematical formula where I do one minus the difference here. Uh and then I
+13:53:0813 hours, 53 minutes, 8 secondstimes it by 100 to get the percent and I just do it to precision two to give me a two decimal um a two character. So, I never want to go over 100% for example,
+13:53:1613 hours, 53 minutes, 16 secondsright? Then I hit save and check this out. Okay, now you can see save 46% annually, right? So, that's nice. So,
+13:53:2513 hours, 53 minutes, 25 secondsnow we're saving 46 to be able to do that. Okay, so now what I'm going to do is add in the styling.
+13:53:3113 hours, 53 minutes, 31 secondsSo, let's go ahead and do that right now. I'm going to add in the touchable opacity styling last name. There we go. Beautiful.
+13:53:4013 hours, 53 minutes, 40 secondsAnd then I'm also while we're here I'm going to add in a touchable uh restore purchases button. Right? So I'm going to
+13:53:4713 hours, 53 minutes, 47 secondsobviously implement this but again the actual UI part of it is going to be here. Right? So for this bit I'm going to have an on press for handle annual purchases.
+13:53:5913 hours, 53 minutes, 59 secondsSo I need to create my restore purchases and handle annual purchases. And I'll show you the difference between the two and how we're going to implement them.
+13:54:0513 hours, 54 minutes, 5 secondsSo going back up now, let's create our handle annual. And the handle annual is honestly the exact same in many ways
+13:54:1313 hours, 54 minutes, 13 secondsexcept we're basically changing the annual. So obviously you can see there's a room to refactor here. I'm not going to go through it all, but you can definitely refactor it here and say if
+13:54:2213 hours, 54 minutes, 22 secondsit's monthly, hand it this way. If it's annual, do it this way. So we're simply going to go into here and we're going to change the monthly monthly monthly to annual.
+13:54:3213 hours, 54 minutes, 32 secondsOkay? And in this case, the entitlement would still be the same because annual and monthly still get the entitlement of
+13:54:3813 hours, 54 minutes, 38 secondspro. Okay. And um and then yeah, so in that case now we should see the annual.
+13:54:4413 hours, 54 minutes, 44 secondsSo once I hit save, we're going to get a little flickery weirdness. And then restore purchases. Okay. So I forgot to do that. Um so let me move this over
+13:54:5113 hours, 54 minutes, 51 secondshere. So restore purchases is going to be the last one. And then restore purchases actually, believe it or not, a lot easier than you think.
+13:54:5913 hours, 54 minutes, 59 secondsRestore purchases. And this, for example, is perfect for, let's imagine I pay for my monthly subscription, but I
+13:55:0613 hours, 55 minutes, 6 secondsgot a new phone and I downloaded the app and for some reason it doesn't think I'm a pro member. And that that's happened in a lot of cases. I guarantee you it's happened with me a lot of the time when
+13:55:1513 hours, 55 minutes, 15 secondsI've gone on to a new device and I'm like, well, hang on a minute. I pay for pro. Why am I not a pro member? And that's simply because it hasn't done a little fetch to the back end or to App
+13:55:2313 hours, 55 minutes, 23 secondsStore Connect or Google Play to say, is this person actually paying a subscription to us or not? Um, so in that case, you just have to restore purchase. It restores that connection
+13:55:3113 hours, 55 minutes, 31 secondsand then it knows that you're still a pro member. So I'll show you how we do that. Right now we simply have an asynchronous function. And again, all of
+13:55:3813 hours, 55 minutes, 38 secondsthis is made this simple because of revenue cat. So it is actually really nice, nicely done. We'll say info equals
+13:55:4513 hours, 55 minutes, 45 secondsuh and it is going to be restore. It's not restore transactions, it's restore purchases. Okay. And then what we do is
+13:55:5413 hours, 55 minutes, 54 secondswe're going to do a simple check and we're going to alert the screen. We're going to say if your active subscriptions.length was actually greater than zero, then
+13:56:0213 hours, 56 minutes, 2 secondsthen you definitely did you were subscribed before and it's going to say you're now restored. But if it wasn't and you wasn't actually, you know, you
+13:56:1013 hours, 56 minutes, 10 secondsdidn't pay for anything before and you just try to click restore, then it will actually catch you and it'll say no purchases to restore. And what we're going to do is we're going to carry in
+13:56:1713 hours, 56 minutes, 17 secondsthe alert from React Native, which is just a simple popup, right? So that's just like a easy lazy way of doing it.
+13:56:2313 hours, 56 minutes, 23 secondsOkay. So now if I go into upgrade. So in the top right upgrade.
+13:56:2813 hours, 56 minutes, 28 secondsNow you can see we've got the restore purchases and we've got that. So in this case now I'm going to go ahead and do annual and I'll show you how we can test. So firstly we're going to test the
+13:56:3713 hours, 56 minutes, 37 secondsannual membership. We already tested monthly. It works but we're going to do the free trial afterwards. We're going to try the annual membership and then
+13:56:4413 hours, 56 minutes, 44 secondswe're going to basically I'm going to show you how we test the disconnection.
+13:56:4813 hours, 56 minutes, 48 secondsSo imagine you went onto your new phone and then we can restore the purchase.
+13:56:5213 hours, 56 minutes, 52 secondsOkay. So, get ready for this. And do remember, we're going to smash the 550 like mark in just a second. So, just keep going strong, guys. All right. So,
+13:56:5913 hours, 56 minutes, 59 secondsI'm going to click on save 46% annually and the price. So, I'm pressing it now.
+13:57:0413 hours, 57 minutes, 4 secondsAnd you can see, boom, we get the price for the year pop up. I'm going to go ahead and do that right now. So, I'm going to go ahead and buy this on my Sandbox account.
+13:57:1513 hours, 57 minutes, 15 secondsSo, I'm doing it right now. So, I'm popping it in like so. Sign in.
+13:57:2213 hours, 57 minutes, 22 secondsAnd in just a second, boom.
+13:57:2513 hours, 57 minutes, 25 secondsRight, that's good. And then it will process it in the app store. And this will go ahead and give us our pro entitlement, which will then get
+13:57:3413 hours, 57 minutes, 34 secondsdetected, which means that we will now see a pro, right? Awesome stuff. That also reminds me, right? So firstly, that worked. Amazing stuff. So you have now
+13:57:4213 hours, 57 minutes, 42 secondshave access to those features. But it also reminds me that in our actual code, we could have probably also done just in hindsight in the use revenue cap to
+13:57:5213 hours, 57 minutes, 52 secondsdetect if the user was a pro um just as a FYI, you could probably go ahead and also do entitlements here and do
+13:57:5913 hours, 57 minutes, 59 secondsactive.pro, right? So this is probably a cleaner way of doing it. Yeah. So if we were to go ahead and refactor this right now, let's
+13:58:0813 hours, 58 minutes, 8 secondssee if that works. Yeah. So you see that's actually a lot cleaner. So that's exactly the way we need to do it. So I hope this makes sense. Now the entitlement is grouped under so that way
+13:58:1713 hours, 58 minutes, 17 secondsonce you're a pro member you can you basically include the products that are offered in there and then your offering is your payw wall right makes sense.
+13:58:2413 hours, 58 minutes, 24 secondsOkay so now it works right everything works the way I expected to but what if I go onto a new device and you know some reason it doesn't detect that I've done
+13:58:3313 hours, 58 minutes, 33 secondsit. So the way you can test this by the way is you go into your sandbox there you go into your user profile in revenue c not in app store connect. So,
+13:58:4113 hours, 58 minutes, 41 secondsaccording to Apple, now this user is a fully paid member. He's paying monthly.
+13:58:4513 hours, 58 minutes, 45 secondsUm, but what I'm going to do is I'm going to delete the user on Revenue Cap. Okay. And I'll show you what happens.
+13:58:5013 hours, 58 minutes, 50 secondsSo, I'm going to delete him on Revenue Cap.
+13:58:5313 hours, 58 minutes, 53 secondsAnd now, what we should see, I'm just going to quickly restart this up. So, refresh.
+13:59:0013 hours, 59 minutesNow, what you'll see is that this user no longer has their Pro membership, right? But hang on a minute. I've paid my Pro membership. And according to
+13:59:0713 hours, 59 minutes, 7 secondsApple, I am paying a bloody monthly subscription which I should be enabled for. So I click it. And now I go down to bottom and I click on uh purchase uh
+13:59:1713 hours, 59 minutes, 17 secondswhat's it called? I go down to the payable and I'm basically going to click on the restore purchases which is going to do that. So right now I'm pressing on restore purchase under the annual button. So I'm pressing over here.
+13:59:2713 hours, 59 minutes, 27 secondsRight. So I'm pressing restore purchases and now you can see your purchases have been restored. Okay. And then what we'll find is I can go ahead and swipe down.
+13:59:3713 hours, 59 minutes, 37 secondsAnd now I'm still a pro member, right?
+13:59:3913 hours, 59 minutes, 39 secondsSo I need I think at this point you could have just had navigation go back after this. So we could potentially just go ahead and pop it in afterwards uh for
+13:59:4713 hours, 59 minutes, 47 secondsrestore purchases like so. Again, same thing.
+13:59:5113 hours, 59 minutes, 51 secondsUm entitlements. Yeah, you could you could do that basically, right? Um and that will give you the same thing. Okay.
+14:00:0014 hoursAnd then that will basically rather than me having to manually swipe down, it will work. So I hope that bloody helped.
+14:00:0514 hours, 5 secondsThat was that's actually really cool like how that works. Right. So now we've got our pro membership. So I'm just clicked on pro just to show I've left
+14:00:1314 hours, 13 secondsthat as an option so I can demo it. But you got the free week, the annual, the restore purchases. Amazing stuff. If I was to try and go ahead and do this, it
+14:00:2014 hours, 20 secondswould go ahead and tell me that I'm already subscribed or I'm already doing this thing. So why am I doing it again?
+14:00:2514 hours, 25 secondsSo at this point now, I want to do the free trial. So that's the final step is the free trial, right? This has been a
+14:00:3214 hours, 32 secondsbanger of a build, right? Let's go ahead and get the free trial in. So we're going to go to the app store.
+14:00:4114 hours, 41 secondsYeah. So Riant store revenue cap. Okay.
+14:00:4414 hours, 44 secondsSo YouTube demo app. This is the one right now. I want a free trial. So I'm going to go to and I think Jay actually found a nice little article which I'm just going to go ahead and see.
+14:00:5514 hours, 55 secondsOkay. So what we can do now is we can go into
+14:01:0214 hours, 1 minute, 2 secondsin this one sorry we can go into select our app in the sidebar in app purchases and we should click manage.
+14:01:1514 hours, 1 minute, 15 secondsSo I I don't think it's here though.
+14:01:1714 hours, 1 minute, 17 secondsThat's the thing. It was it's not this one. I know I've been here before. Um,
+14:01:2714 hours, 1 minute, 27 secondsI'm trying to find it. So, in this case, all right, this is the one we're going to Let's debug it together. Screw it.
+14:01:3114 hours, 1 minute, 31 secondsI'm actually going to show you how I would find it. Right. So, in introductory offers. So, the introductory offers that we're looking
+14:01:3714 hours, 1 minute, 37 secondsfor right now are here. So, no. So, it's basically I'm just literally trying to find where the hell
+14:01:4514 hours, 1 minute, 45 secondsI put it cuz it's not here. It's um App Store introductory for free trial. App Store Connect.
+14:01:5914 hours, 1 minute, 59 secondsWe need 7 days free trial. You know, okay, so Oh, thank you. Bitebound. Let me check that. So, Bitebound says it's in my apps features.
+14:02:1014 hours, 2 minutes, 10 secondsMy apps feature. Where am I looking?
+14:02:1214 hours, 2 minutes, 12 secondsFeatures. Why am I going so like Okay, so subscriptions. I'm in subscriptions.
+14:02:1914 hours, 2 minutes, 19 secondsSubscription pricing.
+14:02:2214 hours, 2 minutes, 22 secondsOh, you know what? You're I think you're right, actually. So, if we go into monthly, I think it is in here.
+14:02:3014 hours, 2 minutes, 30 secondsYes, dude. Thank you, Vipan. That's what I'm talking about. It's there. I was wondering it. I knew it. I knew it was
+14:02:3714 hours, 2 minutes, 37 secondsYeah, cuz basically I did it in here as well. So, I'll show you in pro monthly.
+14:02:4214 hours, 2 minutes, 42 secondsI was thinking I was like, where is this? Thank you so much, dude. I was actually bugging me so much. Introductory offers. There you go. Bam.
+14:02:5014 hours, 2 minutes, 50 secondsFree for the first week. Right. So, in this case, this is the YouTube app emote. Oh, man. You're That is MVP right there. Right. Set up the introductory
+14:02:5714 hours, 2 minutes, 57 secondsoffer. And in this case, we've got all of the uh this is why I love live streams. Honestly, it's so exciting. We can solve it together. Right. So, in
+14:03:0514 hours, 3 minutes, 5 secondsthis case, we are going to enable it for everyone. Click next. The start date, we're actually going to go ahead and say like it's today and the end date is no end date, right? We're just going to
+14:03:1414 hours, 3 minutes, 14 secondshave this ongoing free trial offer, right? So, in this case, click next. And we're going to say um uh free trade won't make any charge pay as you go pay
+14:03:2214 hours, 3 minutes, 22 secondsup front or type of intro. It's going to be a free introductory offer. Free for 3 days, one week, two week, and so forth.
+14:03:2914 hours, 3 minutes, 29 secondsSo, I'm going to say free for a week, right? Free for the first week. Next.
+14:03:3314 hours, 3 minutes, 33 secondsAnd then there you go. It's free for the first week. Confirm. And now this will actually have a free um offer inside,
+14:03:4214 hours, 3 minutes, 42 secondsright? And basically what's amazing about this is that revenue cap would simply pass this through the offering uh object that we've already hooked up.
+14:03:5014 hours, 3 minutes, 50 secondsOkay. So now if I show you the um if I was to refresh the app, I'm just
+14:04:0014 hours, 4 minutesgoing to show you if I console log the payw wall. So console log the current offering, right?
+14:04:0914 hours, 4 minutes, 9 secondsI'm going to basically move this and boom.
+14:04:1414 hours, 4 minutes, 14 secondsUh I'm going to press on pro and we should see in here in a second current offering. Where is it? Uh okay. Sorry.
+14:04:2114 hours, 4 minutes, 21 secondsHere. Yeah. So current offering we can see here in the debugger. Remember you have to shake the phone. Enable remote debugger in order to get that up. And
+14:04:2814 hours, 4 minutes, 28 secondsthen here we can see monthly offering type product intro price intro um
+14:04:3714 hours, 4 minutes, 37 secondsdiscounts pro monthly. Okay. So in this case because I've already got it. It's not going to show me an intro price.
+14:04:4414 hours, 4 minutes, 44 secondsHowever, uh is it here? Actually I don't think it is here. I think it's um in this one maybe. Product discounts.
+14:04:5514 hours, 4 minutes, 55 secondsOkay. I tell you what we'll do in that case. I'm going to restart my basically I'm going to assume my uh user actually
+14:05:0214 hours, 5 minutes, 2 secondsnever got that price because remember they've already signed up which means they won't get the price again. So what we're going to do is we're going to do a a refresh to that user. So we're going
+14:05:1014 hours, 5 minutes, 10 secondsto assume they clear their purchase history. We're going to remove them.
+14:05:1614 hours, 5 minutes, 16 secondsAnd obviously you should only do this when you're testing, right? Like don't do this for live users cuz you're literally going to wipe your live user
+14:05:2314 hours, 5 minutes, 23 secondsoff the off your apps and mess up everything. per year. And then we're going to click on delete.
+14:05:3214 hours, 5 minutes, 32 secondsConfirm confir. There we go.
+14:05:3714 hours, 5 minutes, 37 secondsYep. And now Okay. Yeah. Uh and now if I go back to
+14:05:4614 hours, 5 minutes, 46 secondsmy app, where's the phone? Yeah. If I refresh, we shouldn't be pro.
+14:05:5814 hours, 5 minutes, 58 secondsOkay, so I didn't delete the right user or deleted the wrong user. Okay, this is where it gets a bit annoying. So, what you should really ideally have is a separate account for every single project. That's what they recommend.
+14:06:0614 hours, 6 minutes, 6 secondsOtherwise, you get this headache where your users are merged. Um, so in this case, we've got the pro user here.
+14:06:1414 hours, 6 minutes, 14 secondsUm, my clear purchase history. Um, okay.
+14:06:2214 hours, 6 minutes, 22 secondsAnd now let's go back here. Refresh.
+14:06:2814 hours, 6 minutes, 28 secondsOkay, there we go. Okay. So in this case now I want to go ahead and see the log and I want to press upgrade and then
+14:06:3714 hours, 6 minutes, 37 secondsonce that's happen annual monthly product intro price um
+14:06:4914 hours, 6 minutes, 49 secondsokay so did I add it for
+14:06:5814 hours, 6 minutes, 58 secondsOkay, that's interesting. I think I might have had it for the wrong bloody thing. Let's see. Uh, app YouTube app store free for the first week. Cool.
+14:07:0514 hours, 7 minutes, 5 secondsSubscription pricing. Go back. Pro monthly. Did I save it or not?
+14:07:1314 hours, 7 minutes, 13 secondsOkay, so this is pro monthly. Fine. It could simply be cashed, I think.
+14:07:2314 hours, 7 minutes, 23 secondsMaybe. I don't know. Um, let's do free for the first Jan 26th to no end date. Free for the first week. Cool.
+14:07:3414 hours, 7 minutes, 34 secondsAnd I want to show you how I actually find it. So inside of
+14:07:4214 hours, 7 minutes, 42 secondsYeah. So it is intro price. It's in intro price. Yeah. So we should see it in in price. So last final leg of debugging and then we are literally golden.
+14:07:5414 hours, 7 minutes, 54 secondsOkay, so let's go into uh thank you so much for the kind words guys. Um let's go to payw wall.
+14:08:0514 hours, 8 minutes, 5 secondsUh and let's go to the bottom and I want to show you something quickly. Um I think also I'm showing the wrong thing here. So
+14:08:1314 hours, 8 minutes, 13 secondslet's go down to here where we have the button. So free trial form week. I'll show you the actual code that we use. So I'm going to say start a something for.
+14:08:2214 hours, 8 minutes, 22 secondsSo in this case what you do is you say start a current offering monthly product. Oops. Come on.
+14:08:3014 hours, 8 minutes, 30 secondsStart a monthly product intro price number of units. So like one times so I've got x space week free trial. So in
+14:08:4014 hours, 8 minutes, 40 secondsin this formula it will say like start a one uh or it'll be start a three day three times day free trial or so forth.
+14:08:4914 hours, 8 minutes, 49 secondsRight. So, in this case, this works.
+14:08:5014 hours, 8 minutes, 50 secondsJames, what's up? He goes, "Yeah, I made the last up. Let's go." Good to see Papa Fam OG members in the house, guys. I'm going to click on uh upgrade and let's
+14:08:5914 hours, 8 minutes, 59 secondssee. I'm not sure why it's not pulling through. Start a X free trial. So, we're not we're simply not getting it passed through, which is a bit strange right now, which we just need to debug and figure out what the hell is happening.
+14:09:0914 hours, 9 minutes, 9 secondsUm, apps. I am in the correct app.
+14:09:1714 hours, 9 minutes, 17 secondssubscriptions pro subscription. I have a feeling it's like not cached or something or it's it's caching or I don't know some
+14:09:2514 hours, 9 minutes, 25 secondsweirdness is happening. Um because the introductory offer is right there. I see it. Unless I've completely
+14:09:3314 hours, 9 minutes, 33 secondsadded it into Yeah, it's not like I can add it like a day before or anything. That's fine.
+14:09:4414 hours, 9 minutes, 44 secondsOkay. Um offer code promotion offers no introduction offer. It's definitely introductory offer. Let's go back to our
+14:09:5314 hours, 9 minutes, 53 secondsuh account. Oh, let's go back to the project. So, YouTube revenue demo.
+14:10:0314 hours, 10 minutes, 3 secondsYep. And then we've got the entire offering products.
+14:10:0814 hours, 10 minutes, 8 secondsSo pro monthly, pro monthly and
+14:10:1914 hours, 10 minutes, 19 secondsthe thing is as well even in here it would be pro monthly. I think what's happened is let me delete this product for a second and reattach the product.
+14:10:3114 hours, 10 minutes, 31 secondsSo now let's go ahead and create a new product called pro monthly.
+14:10:3814 hours, 10 minutes, 38 secondscreate product. I have a feeling what's happened is it's it's not pulled the latest thing in like the latest edition in. So, let's add in the addition. No,
+14:10:4714 hours, 10 minutes, 47 secondsgo back. Add in a new entitlement. So, if you've got pro monthly, you have access to pro entitlements. That's what
+14:10:5414 hours, 10 minutes, 54 secondswe want. And then in the offerings, we've got the packages and monthly is going to be connected to our pro monthly.
+14:11:0314 hours, 11 minutes, 3 secondsOh, amazing stuff. James loves the new site way to cosign team. Thank you so much. We try super hard, dude. He's talking about the Papa Fam new community website. It's absolutely awesome.
+14:11:1514 hours, 11 minutes, 15 secondsSo, make sure you guys if you want to join 0 to 4 sec. Check out link in the description. Join us. Right. So, now I think that would have repulled it back
+14:11:2214 hours, 11 minutes, 22 secondsin. Okay. So, now if we try to basically go ahead, we just dis we basically did a hard disconnect here. And then let's do a refresh.
+14:11:3414 hours, 11 minutes, 34 secondsOkay. Uh, ignore that. That's fine for now. We haven't got a splash screen. So, add an exercise.
+14:11:4214 hours, 11 minutes, 42 secondsYes, that's exactly it. Oh my god, we actually figured it out. Let's go. All right. So, basically what had happened
+14:11:4814 hours, 11 minutes, 48 secondsis Revenue Cat hadn't yet refetched the new introductory offer that I had added in. Okay, so that was the issue. Um, and
+14:11:5714 hours, 11 minutes, 57 secondsthen um, yeah, basically by removing the product and readding the product. To be honest with you, I think it would have refeted after a mount of time, but I
+14:12:0514 hours, 12 minutes, 5 secondsdidn't want to be uh, it did it. It did refresh for me when I did it myself, but um, I didn't want to wait because we're live right now. But yeah, that's
+14:12:1214 hours, 12 minutes, 12 secondsactually incredible. So, I think with that, guys, we're actually done. Oh my god, that was incredible. 3-hour build.
+14:12:2014 hours, 12 minutes, 20 secondsLet's go ahead and go through all of the things that we done in the today's build. So, I'm going to show you right now. And just to let you know, James,
+14:12:2714 hours, 12 minutes, 27 secondsthis is running on a real device right now in front of you. So I am demoing on a device right now that you can see. Um but okay, on that note, yeah, so
+14:12:3614 hours, 12 minutes, 36 secondsbasically what we went ahead and built today was an awesome application with um I taught you so many different elements
+14:12:4414 hours, 12 minutes, 44 secondstoday. I taught you the EAS app service, how to go ahead and deploy development builds internally and then test them on real devices and actually have this
+14:12:5214 hours, 12 minutes, 52 secondsconnected to your live developer environment which is nuts. We connected we created our first in-app subscription on app store connect. We then went ahead
+14:13:0114 hours, 13 minutes, 1 secondand connected it to revenue cap. We've got certain screens which are basically allowed for all users. And then we've got the some screens which are behind a
+14:13:0914 hours, 13 minutes, 9 secondspay wall. So in case I try to create a new routine, it will go ahead and say, "Whoa, whoa, whoa, you need to upgrade." And then we can go ahead and do annual.
+14:13:1714 hours, 13 minutes, 17 secondsWe can restore our purchases if we have done before. Or we can start a free trial, which I'm going to go ahead and show you right now because we've actually confidently gone ahead and
+14:13:2514 hours, 13 minutes, 25 secondsimplemented that. So now this will go ahead and actually pop up. And notice how I didn't have to change anything.
+14:13:3114 hours, 13 minutes, 31 secondsRight? So this is the reason why I didn't get the free trial is because I didn't correctly wipe my user. Uh I'll show you how we actually do this. Um, so
+14:13:3914 hours, 13 minutes, 39 secondsto test this properly, I want to because I want to show you this actually in a full test fashion. So let's go back to
+14:13:4814 hours, 13 minutes, 48 secondshere and let's go to our overview and I need to basically completely clear that customer. So clear customer purchase history.
+14:14:0114 hours, 14 minutes, 1 secondLet's go ahead and say sandbox data.
+14:14:0414 hours, 14 minutes, 4 secondsAnd these are all renewals anyway. So, in that case, let's go ahead and try this again. So, I'm going to R to refresh.
+14:14:1314 hours, 14 minutes, 13 secondsOkay. So, ignore the splash screen. That's fine. Let's go ahead and try now.
+14:14:1714 hours, 14 minutes, 17 secondsI have a feeling it's just simp it's it's quite a simple reason to be honest.
+14:14:2114 hours, 14 minutes, 21 secondsIt's cuz it's it's it's got me a little bit confused in in a weird state right now where I've got my So, I'm going to go ahead and enable this and then I'm
+14:14:2914 hours, 14 minutes, 29 secondsgoing to cancel my user entirely and then we can try again. But basically in the beginning of the video I did show you how this does work in because right
+14:14:3714 hours, 14 minutes, 37 secondsnow we're trying to provide this test scenario in the perfect way. Probably messed up one little step here. So in that case I'm done. It's gone ahead and that will go ahead and upgrade me.
+14:14:4914 hours, 14 minutes, 49 secondsIf I show you here. So let that go down. So now I am a pro.
+14:14:5514 hours, 14 minutes, 55 secondsThat's fine. And then you can see now I've got a pro membership. So if we go ahead and do pro, this is a pro monthly membership.
+14:15:0414 hours, 15 minutes, 4 secondsSo if we go to sandbox data, we should see a pro monthly. There we go. All right. There we are. So that's why it was there. So I need to cancel both of these users.
+14:15:1514 hours, 15 minutes, 15 secondsRight. So in this case, and remember obviously what you would really want to check is that if they're if they're a annual customer, don't show them the bloody buy button for the the other one.
+14:15:2514 hours, 15 minutes, 25 secondsRight? Obviously, I haven't I haven't covered all the corner cases, but that's just common sense. You wouldn't show the upgrade option again, like once you've
+14:15:3214 hours, 15 minutes, 32 secondsgot annual. Um, and then also here, I'm going to delete this user. So, basically, I'm deleting all the user
+14:15:3814 hours, 15 minutes, 38 secondsstates where uh I've signed up. So, now if I go here, there's no user as in there. Oh, there. That's a completely
+14:15:4614 hours, 15 minutes, 46 secondsdifferent app, but I've done that. And then here, I go to clear purchase history. Cool.
+14:15:5314 hours, 15 minutes, 53 secondsSo now I've basically said to Apple that this guy is not built like bought at all and I've cut him off from revenue cap in which case now you can see we've we've
+14:16:0114 hours, 16 minutes, 1 secondlost our pro. We click on add an exercise for pro and now if I click start a oneweek free trial we should get
+14:16:0814 hours, 16 minutes, 8 secondsan introductory offer for new as we're a new member technically. Um you currently subscribe to pro blah blah. Okay so I've
+14:16:1614 hours, 16 minutes, 16 secondsI'm attached somewhere. Bloody ho. I'm attached um it keeps reinstating me. So, where is my customer for YouTube revenue cap?
+14:16:2714 hours, 16 minutes, 27 secondsOkay, so I definitely have a customer here still left over which I can't seem to find. Come on. I need to find it. I have to show you
+14:16:3614 hours, 16 minutes, 36 secondsthis. I have to show you it before we finish up. So, renewal true go. Okay.
+14:16:4014 hours, 16 minutes, 40 secondsSo, it's not It seems to not be killing the user. So, yeah. See, it's confirm delete. All right.
+14:16:5314 hours, 16 minutes, 53 secondsAnd then let's refresh again. Sandbox data.
+14:17:0114 hours, 17 minutes, 1 secondOkay, let's go to here. Clear purchase history.
+14:17:0914 hours, 17 minutes, 9 secondsAnd I just want to double check one more time. Sandbox data.
+14:17:1614 hours, 17 minutes, 16 secondsOkay. So if I refresh now, sandbox data. Okay. So now we should see
+14:17:2414 hours, 17 minutes, 24 secondsour introductory price. Basically I just I I just I haven't got the I'm not resetting my user in the correct way. If it shows again. Yeah. So I'm actually
+14:17:3214 hours, 17 minutes, 32 secondsbloody subscribed. Okay. So in this case I just can't seem to find my user here.
+14:17:3714 hours, 17 minutes, 37 secondsBut basically what would happen is if I deleted the user, you would see exactly what I'm saying to you, right? So in that case it would work. So sandbox. Oh,
+14:17:4614 hours, 17 minutes, 46 secondswait a second. I can see him. Yes. See, I don't actually have it access. It's just a case of it's just taking a little bit of time.
+14:17:5514 hours, 17 minutes, 55 secondsSandbox purchase. Okay, that's fine.
+14:17:5714 hours, 17 minutes, 57 secondsBear in mind, guys, I do also have um a few my sandbox account is attached to
+14:18:0414 hours, 18 minutes, 4 secondsa few different builds here. So, revenue count, maybe it's this one.
+14:18:1014 hours, 18 minutes, 10 secondsYeah. So, okay. So, I have got a user in another app. That's probably why, actually.
+14:18:1614 hours, 18 minutes, 16 secondsLet's delete this user as well. I just want I have to try and fix it. Honestly, it's bothering me so much on the live.
+14:18:2214 hours, 18 minutes, 22 secondsI'm going to try and wrap this up and then we're going to do it.
+14:18:2714 hours, 18 minutes, 27 secondsOkay, so I think that one's died out anyway. And pop on demo.
+14:18:3314 hours, 18 minutes, 33 secondsOkay, now that's good. And then let's try this one more time.
+14:18:4014 hours, 18 minutes, 40 secondsOh no, that's not this one. Okay, so let's go ahead and I was about to touch my bloody laptop screen. Okay, anyway,
+14:18:4814 hours, 18 minutes, 48 secondsif it doesn't work, you know it's you know how to basically replicate. Okay, you know what? I am not even finding the bloody user right now. So, at some point, I've just the demo gods are
+14:18:5614 hours, 18 minutes, 56 secondsagainst me and I think it's just renewing my test data. My sandbox data is a bit of a and it caught in a bit of a loop. Yeah, see it just keeps on doing it thinking I'm bloody renewed.
+14:19:0714 hours, 19 minutes, 7 secondsOkay, let's just do it one more time and let's just go ahead and back to overview. Let's just try one more time.
+14:19:1414 hours, 19 minutes, 14 secondsIf not, it's completely fine. I've shown you how to do it and you can do it yourself. It will work on yours. I've got like so much random test data and
+14:19:2314 hours, 19 minutes, 23 secondsrandom things in the app that it's it's definitely missing messing this up where I've constantly tried to break it.
+14:19:3214 hours, 19 minutes, 32 secondsLet's do this again. Okay. So, if I click on add an exercise and I click on start a oneweek free trial, if this doesn't pop up, then we know that it's
+14:19:4114 hours, 19 minutes, 41 secondsjust okay. I mean, yeah, for me that was you're currently subscribed. Okay, so it's just reinvoked. Okay, that's fine. So, in
+14:19:5014 hours, 19 minutes, 50 secondsthis case, yeah, basically if on your devices I'm telling you it will work.
+14:19:5314 hours, 19 minutes, 53 secondsUh, I've got like three different projects, loads of test data where I've been testing this thing out. That's why if you had one project, it it really never gave me an issue. So, make sure
+14:20:0214 hours, 20 minutes, 2 secondsyou definitely give that a try because that's how you get the free trial method working. And as you can see, we can definitely sign up, which is the main thing, right? And then basically that
+14:20:1014 hours, 20 minutes, 10 secondsintro offer doesn't require anything special. It just means that if it detects a new user has come onto the platform, then it'll be like, oh, okay, it's your first time buying monthly.
+14:20:2014 hours, 20 minutes, 20 secondsHere's a free week and then afterwards you'll get charged the full amount. But otherwise, guys, that was absolutely incredible. Boom. That's insane. You've
+14:20:2814 hours, 20 minutes, 28 secondsjust built four incredible React Native apps and learned tons of new tech. Now, if you've made it this far in the video, drop a mobile emoji in the comments
+14:20:3614 hours, 20 minutes, 36 secondsright now, the mobile you see on the screen, so I know you're a true OG and you made it to this point. And don't forget, make sure to use the special links in the description, such as the
+14:20:4414 hours, 20 minutes, 44 secondsclerk link, because it tells them that you came from this video, and it allows us to make more videos like this for absolutely free, which is my mission.
+14:20:5114 hours, 20 minutes, 51 secondsIt's my goal, and it's to help you guys learn and achieve. And remember, if you want access to the entire source code for all of the builds that you've seen today or any of my future builds, then
+14:20:5914 hours, 20 minutes, 59 secondsmake sure you check out the Papa GitHub repo, which is linked down below in the description. It includes over 60 plus builds. And if you found it too tricky
+14:21:0714 hours, 21 minutes, 7 secondsor you want to get more involved in learning or you want direct mentorship, look no further. Come join us at Zero to Full Stack Hero 2.0. The link is on the
+14:21:1514 hours, 21 minutes, 15 secondsscreen right now. It will change your life just like how I've helped over a thousand students in our community change theirs. Now it's your chance to
+14:21:2314 hours, 21 minutes, 23 secondsbecome the developer that you've always wanted to. Until then, it's your boy Sunny aka Papa React and I will see you guys in the next video. Peace.

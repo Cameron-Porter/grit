@@ -109,7 +109,7 @@ ${history}
 Adjustment logic:
 - soreness "Still sore"→hold/reduce 1 set; "Just in time"→hold/+5lb; "Healed early"/"Not sore"→normal/aggressive
 - Multi-session same muscle: assess cumulative fatigue — 2nd session low volume/pump = near recovery limit
-- pump "Amazing"→push vol/intensity; pump "Low"→consider swap or reduce
+- pump "Amazing"→push vol/intensity; pump "Low"→flag exercise for swap next week (poor tension/connection, not a volume signal — do not reduce sets)
 - joint pain "A lot"→-10% weight (round to nearest 5lb); vol "Not enough"→+1 set; vol "Too much"→-1 set
 - Weight jumps: upper+5lb, lower+5-10lb (multiples of 5 only); RIR drops 1/wk toward peak
 
