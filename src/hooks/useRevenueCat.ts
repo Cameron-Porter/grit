@@ -23,10 +23,13 @@ export default function useRevenueCat() {
   const [loading, setLoading] = useState(true);
   const listenerRef = useRef(false);
 
-  const isProMember = !!(customerInfo?.entitlements.active[RC_ENTITLEMENT]);
+  const activeEntitlement = customerInfo?.entitlements.active[RC_ENTITLEMENT];
+  const isProMember = !!activeEntitlement;
+  const isTrialing = activeEntitlement?.periodType === 'TRIAL';
 
   useEffect(() => {
     const init = async () => {
+      setLoading(true);
       try {
         if (!configured) {
           Purchases.setLogLevel(LOG_LEVEL.DEBUG);
@@ -105,6 +108,7 @@ export default function useRevenueCat() {
     currentOffering,
     customerInfo,
     isProMember,
+    isTrialing,
     loading,
     monthlyPackage,
     annualPackage,

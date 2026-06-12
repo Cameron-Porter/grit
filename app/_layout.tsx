@@ -1,18 +1,25 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import PersistentTabBar from '../src/components/navigation/PersistentTabBar';
 import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
+import useRevenueCat from '../src/hooks/useRevenueCat';
 
 export default function Layout() {
   const router = useRouter();
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
+  const { isProMember, loading: rcLoading } = useRevenueCat();
+  const [fontsLoaded] = useFonts({
+    'Square721-BoldExtended': require('../assets/fonts/Square 721 Extended Bold.otf'),
+  });
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const isLoginScreen = segments[0] === 'login';
+  const isSubscriptionScreen = segments[0] === 'subscription';
 
   useEffect(() => {
     initialize();
@@ -28,9 +35,16 @@ export default function Layout() {
     }
   }, [user, initialized]);
 
-  // Hold a blank screen until auth state is known — prevents flashing
-  // to /login before the stored session is loaded from storage.
-  if (!initialized) {
+  // Paywall gate: send authenticated non-subscribers to /subscription
+  useEffect(() => {
+    if (!initialized || rcLoading) return;
+    if (user && !isProMember && !isLoginScreen && !isSubscriptionScreen) {
+      router.replace('/subscription');
+    }
+  }, [initialized, rcLoading, user, isProMember, isLoginScreen, isSubscriptionScreen]);
+
+  // Hold a blank screen until auth, fonts, and RevenueCat state are known to prevent flashing.
+  if (!initialized || !fontsLoaded || (user && rcLoading)) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />
@@ -41,6 +55,7 @@ export default function Layout() {
   const stack = (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="subscription" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="workout" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />

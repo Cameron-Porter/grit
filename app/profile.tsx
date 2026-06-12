@@ -17,35 +17,13 @@ import { getExercises } from '../src/api/exercises';
 import {
   createManualPR,
   getAllPRs,
-  getExerciseProgress,
   PersonalRecord,
 } from '../src/api/personalRecords';
 import { supabase } from '../src/api/supabase';
 import LineChart from '../src/components/LineChart';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
 import { EQUIPMENT_TYPES, useProfileStore } from '../src/store/useProfileStore';
-import { MuscleGroupColors } from '../src/utils/constants';
 import { useColors } from '../src/utils/useColors';
-
-const MUSCLE_GROUPS = [
-  'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
-  'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs', 'Forearms', 'Traps',
-];
-
-const MUSCLE_EXERCISES: Record<string, string[]> = {
-  Chest: ['Barbell Bench Press', 'Incline Barbell Bench Press', 'Dumbbell Bench Press', 'Incline Dumbbell Press', 'Cable Crossover', 'Pec Deck Fly'],
-  Back: ['Barbell Row (Bent Over)', 'Pull-Up (Wide Grip)', 'Seated Cable Row', 'Wide-Grip Lat Pulldown', 'Deadlift', 'Dumbbell Row (Single-Arm)'],
-  Shoulders: ['Barbell Overhead Press', 'Seated Dumbbell Press', 'Dumbbell Lateral Raise', 'Arnold Press', 'Face Pull'],
-  Biceps: ['Barbell Curl', 'EZ-Bar Curl', 'Hammer Curl', 'Preacher Curl (Barbell)', 'Incline Dumbbell Curl'],
-  Triceps: ['Close-Grip Bench Press', 'Skull Crusher (Barbell)', 'Tricep Pushdown (Rope)', 'Overhead Tricep Extension (Dumbbell)'],
-  Quads: ['Barbell Back Squat', 'Leg Press', 'Hack Squat', 'Leg Extension', 'Bulgarian Split Squat'],
-  Hamstrings: ['Romanian Deadlift (Barbell)', 'Lying Leg Curl', 'Seated Leg Curl', 'Nordic Hamstring Curl'],
-  Glutes: ['Barbell Hip Thrust', 'Cable Kickback', 'Hip Abduction Machine'],
-  Calves: ['Standing Calf Raise', 'Seated Calf Raise', 'Leg Press Calf Raise'],
-  Abs: ['Cable Crunch', 'Hanging Leg Raise', 'Ab Wheel Rollout', 'Plank'],
-  Forearms: ['Barbell Wrist Curl', 'Reverse Barbell Curl', "Farmer's Walk"],
-  Traps: ['Barbell Shrug', 'Dumbbell Shrug', 'Cable Shrug'],
-};
 
 export default function Profile() {
   const colors = useColors();
@@ -83,10 +61,6 @@ export default function Profile() {
     }
   };
 
-  const [selectedMuscle, setSelectedMuscle] = useState('Chest');
-  const [selectedExercise, setSelectedExercise] = useState(MUSCLE_EXERCISES['Chest'][0]);
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [chartLoading, setChartLoading] = useState(false);
   const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
@@ -102,7 +76,6 @@ export default function Profile() {
   const [bwSaved, setBwSaved] = useState(false);
 
   useEffect(() => { loadPRs(); }, []);
-  useEffect(() => { loadChart(); }, [selectedExercise]);
   useEffect(() => {
     getExercises().then((all) => {
       const map: Record<string, string> = {};
@@ -111,23 +84,8 @@ export default function Profile() {
     });
   }, []);
 
-  const isBodyweightExercise = equipmentMap[selectedExercise] === 'Bodyweight';
-
   const loadPRs = async () => {
     try { setPRs(await getAllPRs()); } catch { setPRs([]); }
-  };
-
-  const loadChart = async () => {
-    setChartLoading(true);
-    try { setChartData(await getExerciseProgress(selectedExercise)); }
-    catch { setChartData([]); }
-    finally { setChartLoading(false); }
-  };
-
-  const handleSelectMuscle = (muscle: string) => {
-    setSelectedMuscle(muscle);
-    const exs = MUSCLE_EXERCISES[muscle] ?? [];
-    if (exs.length > 0) setSelectedExercise(exs[0]);
   };
 
   const handleSaveBW = () => {
@@ -295,65 +253,6 @@ export default function Profile() {
               <LineChart data={bwChartData} width={chartWidth - 32} height={160} metric="weight" />
             </View>
           )}
-        </View>
-
-        {/* â”€â”€ PROGRESS â”€â”€ */}
-        <View style={{ padding: 16 }}>
-          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 16 }}>
-            Progress Over Time
-          </Text>
-
-          {/* Muscle tabs */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-            {MUSCLE_GROUPS.map((muscle) => {
-              const active = muscle === selectedMuscle;
-              const color = MuscleGroupColors[muscle] ?? colors.primary;
-              return (
-                <Pressable
-                  key={muscle}
-                  onPress={() => handleSelectMuscle(muscle)}
-                  style={{ paddingHorizontal: 14, paddingVertical: 8, marginRight: 8, borderRadius: 20, backgroundColor: active ? `${color}22` : colors.surface, borderWidth: 1.5, borderColor: active ? color : colors.surface2 }}
-                >
-                  <Text style={{ color: active ? color : colors.muted, fontSize: 13, fontWeight: '700' }}>{muscle}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Exercise selector */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
-            {(MUSCLE_EXERCISES[selectedMuscle] ?? []).map((ex) => {
-              const active = ex === selectedExercise;
-              return (
-                <Pressable
-                  key={ex}
-                  onPress={() => setSelectedExercise(ex)}
-                  style={{ paddingHorizontal: 12, paddingVertical: 6, marginRight: 8, borderRadius: 8, backgroundColor: active ? colors.primary : colors.surface, borderWidth: 1, borderColor: active ? colors.primary : colors.surface2 }}
-                >
-                  <Text style={{ color: active ? colors.background : colors.muted, fontSize: 12, fontWeight: active ? '700' : '500' }}>{ex}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16 }}>
-            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{selectedExercise}</Text>
-            <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 16 }}>
-              {isBodyweightExercise ? 'Max reps per session' : 'Max weight per session (lbs)'}
-            </Text>
-            {chartLoading ? (
-              <View style={{ height: 200, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: colors.muted }}>Loading...</Text>
-              </View>
-            ) : (
-              <LineChart
-                data={chartData}
-                width={chartWidth - 32}
-                height={200}
-                metric={isBodyweightExercise ? 'reps' : 'weight'}
-              />
-            )}
-          </View>
         </View>
 
         {/* â”€â”€ PERSONAL RECORDS â”€â”€ */}

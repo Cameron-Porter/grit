@@ -1,7 +1,7 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import GritWordmark from '../src/components/GritWordmark';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -76,11 +76,9 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Logo / branding */}
-        <Image
-          source={require('../assets/images/banner.png')}
-          style={{ width: '100%', aspectRatio: 2, marginBottom: 40 }}
-          resizeMode="contain"
-        />
+        <View style={{ alignItems: 'center', marginBottom: 40 }}>
+          <GritWordmark size="lg" letterColor="#FFFFFF" />
+        </View>
 
         {/* Mode tabs */}
         <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 12, padding: 4, marginBottom: 28 }}>

@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import GritWordmark from '../../src/components/GritWordmark';
 import {
   Alert,
   Image,
@@ -14,6 +15,7 @@ import { confirm } from '../../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStore';
+import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import useRevenueCat from '../../src/hooks/useRevenueCat';
 import { useColors } from '../../src/utils/useColors';
 
@@ -42,7 +44,7 @@ export default function ProfileAndSettings() {
     theme, setTheme,
   } = useProfileStore();
 
-  const { isProMember, customerInfo } = useRevenueCat();
+  const { isProMember, isTrialing, customerInfo } = useRevenueCat();
 
   const meta = user?.user_metadata ?? {};
   const identityEmail = user?.identities?.[0]?.identity_data?.email as string | undefined;
@@ -101,7 +103,7 @@ export default function ProfileAndSettings() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
 
         {/* ── GRIT PRO ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
@@ -114,12 +116,14 @@ export default function ProfileAndSettings() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>GRIT Pro</Text>
-                  <View style={{ backgroundColor: colors.primary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
-                    <Text style={{ color: colors.background, fontSize: 10, fontWeight: '900' }}>ACTIVE</Text>
+                  <View style={{ backgroundColor: isTrialing ? colors.warning : colors.primary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                    <Text style={{ color: colors.background, fontSize: 10, fontWeight: '900' }}>
+                      {isTrialing ? 'TRIAL' : 'ACTIVE'}
+                    </Text>
                   </View>
                 </View>
                 <Text style={{ color: colors.muted, fontSize: 12 }}>
-                  {customerInfo?.activeSubscriptions?.[0] ? 'Subscription active' : 'Full access enabled'}
+                  {isTrialing ? '7-day free trial' : customerInfo?.activeSubscriptions?.[0] ? 'Subscription active' : 'Full access enabled'}
                 </Text>
               </View>
               <Pressable onPress={() => router.push('/subscription')} style={{ padding: 4 }} hitSlop={8}>
@@ -145,8 +149,8 @@ export default function ProfileAndSettings() {
                 <MaterialCommunityIcons name="crown-outline" size={22} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>Upgrade to GRIT Pro</Text>
-                <Text style={{ color: colors.muted, fontSize: 12 }}>Monthly or annual — cancel anytime.</Text>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>Start Your Free Trial</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>7 days free, then monthly or annual.</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={20} color={colors.primary} />
             </Pressable>
@@ -301,11 +305,9 @@ export default function ProfileAndSettings() {
           </Pressable>
         </View>
 
-        <Image
-          source={require('../../assets/images/banner.png')}
-          style={{ width: '70%', aspectRatio: 2, alignSelf: 'center', marginTop: 32, opacity: 0.4 }}
-          resizeMode="contain"
-        />
+        <View style={{ alignItems: 'center', marginTop: 36, opacity: 0.4 }}>
+          <GritWordmark size="sm" />
+        </View>
       </ScrollView>
     </View>
   );

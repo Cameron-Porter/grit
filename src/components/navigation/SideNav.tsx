@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
-import { Image, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/useAuthStore';
 import { confirm } from '../../utils/confirm';
 import { useColors } from '../../utils/useColors';
+import GritWordmark from '../GritWordmark';
 
 export const SIDE_NAV_WIDTH = 220;
 
@@ -89,13 +90,9 @@ export default function SideNav() {
       paddingTop: insets.top,
       paddingBottom: insets.bottom,
     }}>
-      {/* Banner */}
-      <View style={{ backgroundColor: '#000000', paddingVertical: 4, paddingHorizontal: 8, marginBottom: 8 }}>
-        <Image
-          source={require('../../../assets/images/banner.png')}
-          style={{ width: '100%', height: 64 }}
-          resizeMode="contain"
-        />
+      {/* Wordmark */}
+      <View style={{ paddingVertical: 12, paddingHorizontal: 8, marginBottom: 8, alignItems: 'center' }}>
+        <GritWordmark size="sm" showTagline={false} />
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingTop: 4 }} showsVerticalScrollIndicator={false}>

@@ -29,6 +29,7 @@ export default function SubscriptionScreen() {
   const {
     loading,
     isProMember,
+    isTrialing,
     monthlyPackage,
     annualPackage,
     savingsPct,
@@ -46,8 +47,8 @@ export default function SubscriptionScreen() {
     const success = await purchasePackage(pkg);
     setPurchasing(false);
     if (success) {
-      Alert.alert('Welcome to GRIT Pro!', 'Your subscription is now active.', [
-        { text: 'Let\'s go', onPress: () => router.back() },
+      Alert.alert('Welcome to GRIT Pro!', 'Your 7-day free trial is now active. Enjoy full access.', [
+        { text: 'Let\'s go', onPress: () => router.replace('/workout') },
       ]);
     }
   };
@@ -68,12 +69,15 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 4 }}>
-          <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
-        </Pressable>
-      </View>
+      {/* Header — only show close button for active subscribers managing their plan */}
+      {isProMember && (
+        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 4 }}>
+            <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
+          </Pressable>
+        </View>
+      )}
+      {!isProMember && <View style={{ height: insets.top + 12 }} />}
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 32 }} showsVerticalScrollIndicator={false}>
 
@@ -86,7 +90,7 @@ export default function SubscriptionScreen() {
             GRIT Pro
           </Text>
           <Text style={{ color: colors.muted, fontSize: 15, textAlign: 'center', lineHeight: 22 }}>
-            Train smarter with advanced tools,{'\n'}unlimited programs, and detailed analytics.
+            Try free for 7 days, then choose a plan.{'\n'}Cancel anytime.
           </Text>
         </View>
 
@@ -114,9 +118,13 @@ export default function SubscriptionScreen() {
         ) : isProMember ? (
           <View style={{ backgroundColor: `${colors.primary}18`, borderRadius: 16, padding: 20, alignItems: 'center', borderWidth: 1.5, borderColor: colors.primary }}>
             <MaterialCommunityIcons name="check-circle" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
-            <Text style={{ color: colors.primary, fontSize: 17, fontWeight: '800', marginBottom: 4 }}>You're a Pro member</Text>
+            <Text style={{ color: colors.primary, fontSize: 17, fontWeight: '800', marginBottom: 4 }}>
+              {isTrialing ? 'Free Trial Active' : 'You\'re a Pro member'}
+            </Text>
             <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginBottom: 16 }}>
-              Your subscription is active. Enjoy full access to GRIT Pro.
+              {isTrialing
+                ? 'You\'re in your 7-day free trial. Enjoy full access to GRIT Pro.'
+                : 'Your subscription is active. Enjoy full access to GRIT Pro.'}
             </Text>
             {Platform.OS !== 'web' && (
               <Pressable
@@ -185,7 +193,7 @@ export default function SubscriptionScreen() {
                     <ActivityIndicator color={colors.background} />
                   ) : (
                     <Text style={{ color: colors.background, fontSize: 15, fontWeight: '800' }}>
-                      Get Annual Plan
+                      Start 7-Day Free Trial
                     </Text>
                   )}
                 </View>
@@ -218,7 +226,7 @@ export default function SubscriptionScreen() {
                     <ActivityIndicator color={colors.text} />
                   ) : (
                     <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>
-                      Get Monthly Plan
+                      Start 7-Day Free Trial
                     </Text>
                   )}
                 </View>
@@ -254,7 +262,8 @@ export default function SubscriptionScreen() {
         )}
 
         <Text style={{ color: colors.surface2, fontSize: 11, textAlign: 'center', marginTop: 8, lineHeight: 16 }}>
-          Subscriptions auto-renew unless cancelled at least 24 hours before the renewal date.{'\n'}
+          7-day free trial available to new subscribers only. After the trial, your subscription{'\n'}
+          auto-renews unless cancelled at least 24 hours before the renewal date.{'\n'}
           Manage or cancel in your App Store account settings.
         </Text>
       </ScrollView>
