@@ -29,6 +29,8 @@ interface SlotExercisePickerProps {
   onSelect: (name: string) => void;
   onMuscleChange?: (muscle: MuscleGroup) => void;
   onClose: () => void;
+  // HV-007: When set, only exercises with this movement_pattern are shown (with fallback).
+  requiredMovementPattern?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -52,6 +54,7 @@ export default function SlotExercisePicker({
   onSelect,
   onMuscleChange,
   onClose,
+  requiredMovementPattern,
 }: SlotExercisePickerProps) {
   const colors = useColors();
   const ROLE_COLORS: Record<SlotRole, string> = {
@@ -105,6 +108,18 @@ export default function SlotExercisePicker({
     if (usePreferredEquipment && preferredEquipment.length > 0) {
       const pref = result.filter((ex) => isPreferred(ex.equipment ?? ''));
       if (pref.length > 0) result = pref;
+    }
+
+    // HV-007: Filter to required movement pattern (with fallback to full pool).
+    // Normalizes both sides to lowercase-hyphen to bridge TS ('hip-extension')
+    // and DB ('Hip Extension') naming conventions.
+    if (requiredMovementPattern) {
+      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '-');
+      const reqNorm = normalize(requiredMovementPattern);
+      const strict = result.filter(
+        (ex) => ex.movement_category && normalize(ex.movement_category) === reqNorm,
+      );
+      if (strict.length > 0) result = strict;
     }
 
     const q = search.trim().toLowerCase();

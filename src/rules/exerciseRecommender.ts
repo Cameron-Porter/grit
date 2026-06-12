@@ -14,6 +14,9 @@ export interface PickerContext {
   // Exercise names already chosen in other slots of the same session.
   // Used to penalise redundancy.
   alreadySelectedInSession?: string[];
+  // HV-007: When set, candidates are filtered to this movement pattern first.
+  // Falls back to the full pool if no exercises match.
+  requiredMovementPattern?: string;
 }
 
 // ─── Output ───────────────────────────────────────────────────────────────────
@@ -102,6 +105,13 @@ export function getRecommendedExercises(ctx: PickerContext): RankedExercise[] {
   let pool = candidates;
   if (ctx.availableEquipment) {
     const strict = candidates.filter((ex) => equipIsAvailable(ex, ctx.availableEquipment));
+    if (strict.length > 0) pool = strict;
+  }
+
+  // HV-007: Hip thrust enforcement — filter to required movement pattern when specified.
+  // Falls back to the full pool if no exercises in the pool match.
+  if (ctx.requiredMovementPattern) {
+    const strict = pool.filter((ex) => ex.movementPattern === ctx.requiredMovementPattern);
     if (strict.length > 0) pool = strict;
   }
 

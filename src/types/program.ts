@@ -117,6 +117,10 @@ export interface ExerciseDefinition {
   // Exercises sharing a varietyGroup are mechanically redundant substitutes.
   // Selecting one will demote others in the recommendation ranking.
   varietyGroup?: string;
+  // HV-019: minimum RIR permitted for this exercise regardless of prescription.
+  hardRirFloor?: number;
+  // HV-013/HV-020: rule-engine tags for intra-session compatibility checks.
+  exerciseTags?: string[];
 }
 
 // ─── Slot template — defines what type of exercise belongs in each slot ───────
@@ -185,7 +189,7 @@ export interface WeekParams {
 // ─── Program validation ───────────────────────────────────────────────────────
 
 export interface ProgramValidationIssue {
-  type: 'session_sets' | 'session_exercises' | 'weekly_volume' | 'ordering' | 'movement_balance';
+  type: 'session_sets' | 'session_exercises' | 'weekly_volume' | 'ordering' | 'movement_balance' | 'proportionality' | 'back_plane' | 'muscle_coverage';
   severity: 'error' | 'warning';
   message: string;
   dayIndex?: number;

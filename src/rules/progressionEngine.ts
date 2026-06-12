@@ -11,6 +11,8 @@ export interface SlotPrescription {
   // Defaults to 'Primary' / 'barbell-compound' when omitted (5 lb increment, conservative).
   role?: SlotRole;
   exerciseType?: ExerciseType;
+  // HV-019: when set, nextRir will never go below this value regardless of taper.
+  hardRirFloor?: number;
 }
 
 // One completed session for a single exercise.
@@ -35,7 +37,7 @@ export interface ProgressionContext {
   weeksSinceLastDeload?: number;
   // Program-level goal — drives deload protocol, load increment, and maintenance behavior.
   programFocus?: ProgramFocus;
-  // Per-muscle volume priority — drives set-count progression within the meso.
+  // Per-muscle volume priority — drives RIR taper within the meso.
   musclePriority?: MusclePriority;
 }
 
@@ -241,6 +243,28 @@ export function recommendProgression(
     loadIncrement: increment,
     isPlateauWarning: false,
   };
+
+  // HV-001: Intra-mesocycle RIR taper for intermediate/advanced non-deload weeks.
+  // Applied to emphasize/grow muscles: RIR drops by weeks remaining so effort
+  // peaks on the final training week (weeksRemaining = 0).
+  // Deload overrides nextRir further below so this only affects working weeks.
+  if (
+    !ctx.isDeload &&
+    ctx.experienceLevel !== 'beginner' &&
+    (ctx.musclePriority === 'emphasize' || ctx.musclePriority === 'grow') &&
+    ctx.mesoWeek !== undefined &&
+    ctx.totalMesoWeeks !== undefined
+  ) {
+    const trainingWeeks = ctx.totalMesoWeeks - 1; // last week is deload
+    const weeksRemaining = trainingWeeks - ctx.mesoWeek; // 0 on final training week
+    base.nextRir = Math.max(0, base.nextRir - weeksRemaining);
+  }
+
+  // HV-019: Hard RIR floor for deadlift-pattern exercises.
+  // Applied after the taper so the floor wins over any taper reduction.
+  if (prescription.hardRirFloor !== undefined) {
+    base.nextRir = Math.max(base.nextRir, prescription.hardRirFloor);
+  }
 
   // ── Priority 1: Deload week — protocol varies by focus ────────────────────
   if (ctx.isDeload) {

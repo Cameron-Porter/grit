@@ -155,5 +155,40 @@ export function buildDaySlots(
     usedPairs.add(pairKey);
   }
 
+  // HV-008: Forearm placement — always after the last Back/Biceps/Traps slot.
+  // This enforces the rule at generation time regardless of template ordering.
+  const forearmIndices = result.reduce<number[]>((acc, slot, i) => {
+    if (slot.muscle === 'Forearms') acc.push(i);
+    return acc;
+  }, []);
+
+  if (forearmIndices.length > 0) {
+    const pullMuscles: MuscleGroup[] = ['Back', 'Biceps', 'Traps'];
+    let lastPullIdx = -1;
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (pullMuscles.includes(result[i].muscle)) {
+        lastPullIdx = i;
+        break;
+      }
+    }
+
+    if (lastPullIdx >= 0 && forearmIndices.some((fi) => fi <= lastPullIdx)) {
+      // Remove Forearm slots from their current positions, then insert after lastPullIdx.
+      const forearmSlots = forearmIndices.map((fi) => result[fi]);
+      const nonForearm = result.filter((_, i) => !forearmIndices.includes(i));
+      // Find new insertion point (position after last pull slot in the non-forearm array)
+      const insertAfter = nonForearm.reduce((acc, slot, i) => {
+        if (pullMuscles.includes(slot.muscle)) return i;
+        return acc;
+      }, -1);
+      nonForearm.splice(insertAfter + 1, 0, ...forearmSlots);
+      // Recompute sortOrder
+      for (let i = 0; i < nonForearm.length; i++) {
+        nonForearm[i] = { ...nonForearm[i], sortOrder: i };
+      }
+      return nonForearm;
+    }
+  }
+
   return result;
 }

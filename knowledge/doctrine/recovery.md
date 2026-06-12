@@ -30,7 +30,7 @@ No supplement, nutrition strategy, or recovery tool compensates for insufficient
 - **Default deload frequency**: every 4 weeks (end of each mesocycle)
 - **Extended programs**: every 6–8 weeks for lower-volume beginners or lighter programs
 - **Early deload trigger**: two consecutive sessions showing measurable performance regression (load or reps) at the same RIR
-- **Never deload after a single bad session** — rule out acute causes (poor sleep, stress, illness) before triggering a deload
+- **Never deload after a single bad session** — rule out acute causes (poor sleep, stress, illness) before triggering a deload. *Named principle (B-4, 2026-06-12):* This is called the **2-Session Confirmation Rule** — only trigger an early deload after performance declines across two consecutive sessions at the same prescribed RIR. A single bad session is data; two consecutive bad sessions is a pattern warranting deload
 
 ### Deload Protocols
 
@@ -58,6 +58,7 @@ No supplement, nutrition strategy, or recovery tool compensates for insufficient
 - Do not chase pumps, PRs, or test maxes during deload week
 - By the end of the deload week (day 5–7), the lifter should feel sharp, recovered, and eager to train at full intensity
 - A mid-mesocycle crash in week 3 almost always indicates the previous deload was performed too hard and fatigue was not cleared
+- *Named principle (B-4, 2026-06-12):* **The Braking Rule** — "when you hit the brakes on training, hit them hard." A deload that is only slightly easier than normal training does not clear fatigue — it merely slows the accumulation. The 50–70% volume reduction is non-negotiable; half-measures extend the fatigue problem rather than solving it (deloading_protocols.md)
 
 ### Recovery Signals (Monitoring)
 | Signal | Interpretation |
@@ -100,13 +101,16 @@ Week 5 (new mesocycle): Reset to MEV or slightly above; new exercise rotation if
 - Legs (squats, deadlifts) generate the highest systemic fatigue — avoid scheduling consecutive lower body days
 
 ### Nutrition for Recovery
-- Total daily protein (~0.7–1g per lb bodyweight) is the primary nutritional lever for muscle recovery and retention
-- Post-workout protein within **1–2 hours** provides anti-catabolic benefit (moderate evidence — secondary to daily totals)
-- 4+ meals per day distributes amino acid availability; single large protein meals are less efficient for sustained muscle protein synthesis
-- During fat loss phases, adequate protein is especially critical — muscle retention under caloric deficit is protein-dependent
+*Elevated from brief mention to standalone principles 2026-06-12 (A-3):*
+- **Total daily protein target: 0.7–1.0 g per lb bodyweight (1.6–2.2 g/kg)** — this is the effective range for hypertrophy-supporting muscle protein synthesis, consistently cited across 5+ files as the foundational nutritional prerequisite for adaptation. Below this range, training stimulus is partially wasted because the substrate for repair is insufficient
+- **Leucine** is the primary nutritional trigger for mTOR activation and muscle protein synthesis (MPS) — adequate protein intake is primarily a strategy for ensuring sufficient leucine availability (Strong Evidence; biology_of_muscle_growth.md, nutrient_timing.md)
+- Post-workout protein within **1–2 hours** provides anti-catabolic benefit (Moderate Evidence — secondary to daily totals; waiting longer than 2 hours post-workout to ingest protein is sub-optimal for maximizing the anabolic response window)
+- **4+ meals per day** distributes amino acid availability more effectively than 1–2 large protein meals; sustained MPS throughout the day requires repeated leucine spikes, not a single bolus
+- During fat loss phases, adequate protein is especially critical — muscle retention under caloric deficit is protein-dependent. Protein at the upper end of the range (1.0 g/lb) is appropriate during cuts
 
 ### Fat Loss Phase Recovery Modifications
 - During a caloric deficit, recovery capacity is reduced — total training volume should be moderated (10–20% reduction from maintenance-phase targets)
+- *Added 2026-06-12 (B-9):* Session duration during cuts should be capped at **90 minutes** (not 120). The standard hard cap of 120 minutes applies to build phases; under caloric restriction, sessions beyond 90 minutes accumulate disproportionate fatigue and produce junk volume without proportional stimulus benefit (Moderate Evidence; training_during_fat_loss.md)
 - Floating splits (training when recovered rather than on fixed calendar days) improve adherence and recovery during cuts
 - Maintain minimum 2× per muscle per week frequency to signal muscle retention; falling below this increases muscle loss risk
 - Avoid heavy 1–5 rep work during cuts — high fatigue environment plus maximal load creates disproportionate injury risk

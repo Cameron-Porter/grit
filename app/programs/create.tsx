@@ -545,6 +545,14 @@ export default function CreateProgram() {
         onSelect={handleSelectExercise}
         onMuscleChange={handleMuscleChange}
         onClose={() => setPickerTarget(null)}
+        requiredMovementPattern={
+          // HV-007: Restrict Glutes Primary to hip-extension exercises when Glutes are prioritized.
+          pickerSlot?.muscle === 'Glutes' &&
+          pickerSlot?.role === 'Primary' &&
+          (musclePriorities['Glutes'] === 'emphasize' || musclePriorities['Glutes'] === 'grow')
+            ? 'hip-extension'
+            : undefined
+        }
       />
     </View>
   );

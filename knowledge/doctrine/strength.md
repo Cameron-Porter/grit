@@ -10,6 +10,8 @@
 ### 1. Strength is a Neuromuscular Skill, Not Just Muscle Mass
 Strength — especially in the 1–5 rep range — is a learned motor pattern. Neural efficiency, inter-muscular coordination, and technique precision account for a substantial portion of maximum strength expression, separate from muscle cross-sectional area. This means strength can be lost rapidly with time off even when muscle mass is retained, and it must be actively maintained through frequent practice.
 
+*Strengthened 2026-06-12 (A-12):* The distinction between powerlifters (stronger) and bodybuilders (more muscle) exists precisely because strength is a skill with neurological components independent of muscle mass. Biomechanics (limb length ratios), motor unit recruitment sequencing, technique rhythm, and firing patterns all influence maximal strength expression in ways that hypertrophy training alone does not develop. **Practical corollary: a strength plateau is often a technique problem, not a muscle problem.** Before adding volume or load when strength stalls, evaluate whether the specific firing pattern, timing, and technique of the lift has been trained sufficiently. (Strong Evidence; strength_vs_muscle.md, strength_vs_hypertrophy.md)
+
 ### 2. Technique Mastery Precedes Load Progression
 No load increase is valid if it compromises movement quality. Technical failure — the point at which form breaks down — is true failure regardless of whether more reps are physically possible. Loading broken technique does not produce strength; it produces injury patterns. Technique must be grooved at submaximal loads before being stressed with near-maximal loads.
 

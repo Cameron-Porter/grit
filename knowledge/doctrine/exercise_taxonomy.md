@@ -200,7 +200,7 @@ Every exercise belongs to exactly one **movement category** — a biomechanical 
 | Rep range — machine isolation | 12–25 |
 | Beginner suitable | Yes (goblet squat, leg press); Barbell back squat requires form coaching |
 | Progression suitability | All levels |
-| Key cue | ROM drives quad development more than load — full depth is non-negotiable for maximum stimulus |
+| Key cue | ROM drives quad development more than load — full depth is non-negotiable for maximum stimulus. For leg extensions: lean back slightly to place the hip in extension, stretching the rectus femoris (the only quad head that crosses both the hip and knee). Standard upright seating leaves the rectus femoris understretched — lean-back positioning is Strong Evidence for superior rectus femoris stimulus |
 
 **Exercises:**
 
@@ -236,7 +236,7 @@ Every exercise belongs to exactly one **movement category** — a biomechanical 
 | Rep range — leg curl | 10–20 |
 | Beginner suitable | Leg curls: Yes; RDL: after basic coaching; Deadlift: requires form mastery |
 | Progression suitability | All levels (leg curls); intermediate/advanced (deadlift) |
-| Key cue | Hamstring tension at the stretched (hip-flexed) position drives stimulus — do not truncate the eccentric descent |
+| Key cue | Hamstring tension at the stretched (hip-flexed) position drives stimulus — do not truncate the eccentric descent. Seated leg curl (★ Preferred) trains the hamstring at longer overall length than lying leg curl because the hip is flexed during the movement, adding the hip component of hamstring stretch to the knee component. This is rated Strong Evidence for superior hamstring hypertrophy |
 
 **Exercises:**
 
@@ -254,7 +254,7 @@ Every exercise belongs to exactly one **movement category** — a biomechanical 
 | Weighted Hyperextension | Bodyweight Loadable | Medium | 10–15 | Secondary |
 | Nordic Hamstring Curl | Bodyweight | High | 4–10 | Secondary |
 | Lying Leg Curl | Machine | Medium | 10–20 | Secondary/Accessory |
-| Seated Leg Curl | Machine | Medium | 10–20 | Secondary/Accessory |
+| Seated Leg Curl | Machine | Medium | 10–20 | Secondary/Accessory ★ Preferred |
 | Standing Leg Curl | Machine | Low | 12–20 | Accessory |
 
 ---

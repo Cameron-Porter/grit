@@ -20,9 +20,11 @@ import {
 } from '../../../../src/api/programs';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
+import { useProfileStore } from '../../../../src/store/useProfileStore';
 import { useWorkoutStore } from '../../../../src/store/useWorkoutStore';
 import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../../../src/utils/constants';
 import { useColors } from '../../../../src/utils/useColors';
+import { validateDayExercises } from '../../../../src/rules/validation';
 
 const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -58,6 +60,7 @@ export default function ProgramDayScreen() {
   const { id, dayId } = useLocalSearchParams<{ id: string; dayId: string }>();
   const router = useRouter();
   const startFromProgramDay = useWorkoutStore((s) => s.startFromProgramDay);
+  const experienceLevel = useProfileStore((s) => s.experienceLevel) ?? 'intermediate';
 
   const [day, setDay] = useState<ProgramDay | null>(null);
   const [programName, setProgramName] = useState<string | null>(null);
@@ -103,6 +106,20 @@ export default function ProgramDayScreen() {
   const handleAddExercise = async (name: string, muscleGroup: string, equipment: string) => {
     if (!isTemplate) return;
     await addProgramExercise(dayId, name, muscleGroup, equipment, exercises.length);
+
+    // HV-013: Check for deadlift + barbell-row on the same day.
+    const updatedNames = [...exercises.map((e) => e.exercise_name), name];
+    const validationIssues = validateDayExercises(updatedNames, experienceLevel);
+    const errors = validationIssues.filter((i) => i.severity === 'error');
+    if (errors.length > 0) {
+      Alert.alert('Exercise Conflict', errors[0].message);
+    } else {
+      const warnings = validationIssues.filter((i) => i.severity === 'warning');
+      if (warnings.length > 0) {
+        Alert.alert('Training Advisory', warnings[0].message);
+      }
+    }
+
     load();
   };
 

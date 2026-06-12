@@ -12,6 +12,7 @@ export interface ExerciseRow {
   equipment: string;
   is_custom: boolean;
   description: string | null;
+  movement_category?: string | null;
 }
 
 export async function getExercises(): Promise<ExerciseRow[]> {

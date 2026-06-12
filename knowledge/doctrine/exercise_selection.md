@@ -73,9 +73,11 @@ These indicate the exercise may need to be replaced or modified:
 - Accessory: Straight-arm pulldown, cable pullover (isolates lat without bicep involvement)
 
 **Shoulders (Delts)**
-- Primary: Overhead press — compound, full overhead ROM
-- Secondary: Cable or machine lateral raise — forward lean, 15–30° elbow bend, 2-second eccentric, 10–20 reps
-- Accessory: Rear delt fly — face pull, cable rear delt fly, or machine reverse fly
+- Primary: Overhead press — compound, full overhead ROM (primarily develops anterior deltoid; does not replace lateral delt work)
+- Secondary: Cable or machine lateral raise — forward lean, 15–30° elbow bend, 2-second eccentric, 10–20 reps; **cables are preferred over dumbbells** because dumbbells provide zero tension at the bottom (the most hypertrophically valuable stretched position), while cables maintain continuous tension throughout
+- Accessory: Rear delt fly — face pull, cable rear delt fly, or machine reverse fly (transverse plane required for posterior delt; overhead press does not train it)
+- **Technique critical for lateral raises**: Keep wrist neutral (do not "pour the pitcher" / internally rotate the shoulder); raise in the scapular plane (15–30° forward of the frontal plane); stop at shoulder height — raising above shifts load to upper traps and narrows the subacromial space, increasing impingement risk. Internal rotation during lateral raises is rated Strong Evidence as a subacromial impingement mechanism
+- **Multi-angle coverage required**: The deltoid has 7 functional anatomical segments (not 3 heads); complete delt development requires abduction-plane isolation (lateral delt), overhead pressing (anterior delt), and transverse-plane movements (rear delt) — no single exercise covers all segments
 - **Avoid**: heavy barbell lateral raises, upright rows with narrow grip (shoulder impingement risk)
 
 **Biceps**
@@ -97,7 +99,7 @@ These indicate the exercise may need to be replaced or modified:
 
 **Hamstrings**
 - Primary: Hip hinge with full hip extension — Romanian deadlift, stiff-leg deadlift (hamstring stretch at bottom is the productive range)
-- Secondary: Leg curl — lying or seated (knee flexion component of hamstring function)
+- Secondary: Leg curl — **seated leg curl is preferred over lying leg curl** because the seated position places the hip in flexion, training the hamstring at a longer overall muscle length (hip flexion + knee extension stretch simultaneously). This superiority is rated Strong Evidence. Lying leg curls are acceptable alternatives but sub-optimal when seated is available
 - **Best SFR**: Exercises that provide tension at the hip with knee extended (stretched position)
 
 **Glutes**
@@ -138,7 +140,7 @@ When introducing a new exercise:
 ### Selecting for Equipment Constraints
 **Barbell available**: Prioritize barbell compounds for Primary slots (highest mechanical load capacity)
 **Dumbbells only**: Substitute dumbbell versions of all compounds — equivalent hypertrophy at matched volume; advantage of greater ROM in most movements
-**Cables**: Preferred for accessory/isolation slots — constant tension through the full range of motion, superior to free weights for lateral raises, flyes, and pulldowns
+**Cables**: Preferred for accessory/isolation slots — constant tension through the full range of motion, superior to free weights for lateral raises, flyes, and pulldowns. For lateral raises specifically, cables are the highest-SFR option because they provide tension at the bottom of the movement (the stretched position) where dumbbells provide none (Strong Evidence)
 **Machines**: Appropriate for all slots, particularly when joint stability is a limitation; machines allow higher effort without stabilizer fatigue limiting the set
 
 ### When to Rotate Exercises
@@ -179,7 +181,7 @@ When introducing a new exercise:
 
 **Smith machine squats as quad isolation**: Artificially altering the bar path changes the load distribution across joints and reduces quad stimulus relative to natural barbell squats or leg press. Machine squats are not a substitute for free-form squats in quad development.
 
-**Partial range of motion as intentional strategy (not injury accommodation)**: Except in specific strength peaking contexts, partial-range training as a deliberate hypertrophy strategy produces inferior muscle development compared to full ROM training. The stretch position is the most productive range — cutting it short abandons the highest-value portion of the rep.
+**Partial range of motion as intentional strategy (not injury accommodation)**: Shortened-position partials (stopping before the muscle reaches its full stretch) as a deliberate hypertrophy strategy produce inferior muscle development compared to full ROM training. The stretch position is the most productive range — cutting it short abandons the highest-value portion of the rep. *Qualification added 2026-06-12:* This prohibition applies to shortened-position partials only. Lengthened-position partials — performed in the stretched portion of the ROM, typically added after reaching full-ROM failure — are validated by Strong Evidence (2026 IJES study; multiple convergent files) as producing near-equivalent hypertrophy to full ROM at matched volume. These are an intensity technique, not a ROM shortcut. The rule remains: never truncate the stretch; but adding stretched-position partials after full-ROM failure is a legitimate extension of the set, not a violation of this principle.
 
 ---
 

@@ -74,6 +74,8 @@ Programs that people complete are better than programs that are theoretically op
 ### The Role of Enjoyment
 Exercises, splits, and training styles that a user enjoys will be performed with greater effort and more consistency than mechanically superior alternatives they find tedious or unpleasant. When choosing between two exercises with similar SFR, prefer the one the user will actually do well. An exercise that gets executed with full effort because the user likes it beats a "better" exercise performed half-heartedly.
 
+*Elevated to core programming variable 2026-06-12 (B-6):* Multiple new sources (training_intensity_sustainability_hypertrophy.md, training_during_fat_loss.md, evidence_based_fitness.md) explicitly state that **adherence to a sub-optimal program beats low adherence to the optimal program**. If a user consistently skips or dreads their current program structure, that program is objectively wrong regardless of its theoretical superiority. Enjoyment and adherence are not secondary considerations — they are primary program success metrics. This upgrades the "Role of Enjoyment" from a design preference to a hard constraint: if a split produces poor adherence, it must be changed, not corrected by the user's willpower.
+
 ### Self-Coaching Cues
 For the G.R.I.T. platform's coaching layer, the following cues represent high-value behavioral interventions:
 

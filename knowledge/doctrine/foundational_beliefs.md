@@ -31,9 +31,9 @@ Sets performed at 4+ RIR do not produce meaningful hypertrophic stimulus. They a
 ---
 
 ### U-03 · Stretch-Position Loading is the Most Potent Hypertrophic Stimulus
-**Frequency: 18/24 · Source count: 18 · Confidence: High**
+**Frequency: 18/24 · Source count: 18 · Confidence: High → updated to Near-Definitive (2026-06-12)**
 
-Loading a muscle at its longest functional length — the deepest position in the ROM — produces the greatest mechanical tension and the strongest adaptive signal. This principle appears across chest (deficit push-ups, deep dumbbell press), back (full lat stretch on pulldown), hamstrings (RDL with full hip hinge), quads (deep squat), delts (cable lateral raise at bottom), and biceps (incline dumbbell curl). It is the primary reason exercise selection matters beyond equipment availability.
+Loading a muscle at its longest functional length — the deepest position in the ROM — produces the greatest mechanical tension and the strongest adaptive signal. This principle appears across chest (deficit push-ups, deep dumbbell press), back (full lat stretch on pulldown), hamstrings (RDL with full hip hinge), quads (deep squat), delts (cable lateral raise at bottom), and biceps (incline dumbbell curl). It is the primary reason exercise selection matters beyond equipment availability. *Updated 2026-06-12:* Multiple additional distilled files (stretch_mediated_hypertrophy.md, optimizing_hypertrophy_rom.md, rom_hypertrophy_optimization.md, and others) corroborate this with Strong Evidence ratings and specific examples: seated leg curl superior to lying leg curl due to longer hamstring length; leg extension lean-back places rectus femoris under greater stretch.
 
 **Practical implementation:** For every muscle group, prioritize exercises that allow genuine loading at the stretched position. Truncating ROM to protect joints or lift more weight eliminates the most productive portion of the set. When choosing between two exercises with similar SFR, prefer the one that maximizes loaded stretch.
 
@@ -88,12 +88,14 @@ Diminishing returns on stimulus begin sharply after the 5th set on any single ex
 
 **Practical implementation:** No exercise should be prescribed more than 5 working sets within a session. If total volume for a muscle needs to exceed 5 sets in a session, add a second exercise rather than extending the first one beyond 5 sets.
 
+*Qualification added 2026-06-12 (C-3):* The 3–5 sets range correctly describes the standard submaximal approach. However, it implies a false floor of 3 sets being universally necessary. The HIT/Min-Max literature (Strong Evidence, hit_min_max.md, hit_min_max.json) demonstrates that 1–2 sets taken to *absolute failure* (0 RIR) produce equivalent hypertrophy to 3–4 submaximal sets, particularly for advanced lifters. This represents a valid inverse volume-intensity trade-off: **fewer sets require absolute failure; higher-set approaches use 1–2 RIR.** The ceiling of 5 sets remains valid. The floor of 3 sets is the correct standard for submaximal (1–2 RIR) training, but is not universal when intensity is maximized. The HIT/Min-Max approach is advanced-only — not appropriate for beginners who cannot reliably reach true failure.
+
 ---
 
 ### R-02 · Rep Range 5–30 All Produce Equivalent Hypertrophy Near Failure
-**Frequency: 15/24 · Source count: 15 · Confidence: High**
+**Frequency: 15/24 · Source count: 15 · Confidence: High → updated to Near-Definitive (2026-06-12)**
 
-Muscle growth is equivalent across the 5–30 rep range when sets are performed close to failure. The biological mechanisms differ (mechanical tension dominates at low reps; metabolite accumulation at high reps) but the muscle growth outcome is statistically equivalent. This is one of the most robustly established findings in modern hypertrophy research.
+Muscle growth is equivalent across the 5–30 rep range when sets are performed close to failure. The biological mechanisms differ (mechanical tension dominates at low reps; metabolite accumulation at high reps) but the muscle growth outcome is statistically equivalent. This is one of the most robustly established findings in modern hypertrophy research. *Updated 2026-06-12:* Five additional files (science_rep_ranges.md, biology_of_muscle_growth.md, science_programming_muscle_growth.md, biology_programming_muscle_growth.md, training_size_strength.md) corroborate this as Strong Evidence. One file extends the lower bound to 3 reps in strength-training contexts (not hypertrophy-specific), but the 5-rep floor remains the correct default for hypertrophy programming.
 
 **Practical implementation:** Rep range selection should be driven by: (1) joint safety for the specific movement, (2) the user's individual SFR preference, and (3) recovery cost. Not by the belief that a specific rep range is uniquely superior for growth.
 
@@ -145,11 +147,11 @@ The standard advancement model for hypertrophy: maximize reps within a target ra
 ---
 
 ### R-08 · Supersets With Non-Overlapping Muscles Increase Density Without Adding Fatigue
-**Frequency: 9/24 · Source count: 9 · Confidence: Moderate**
+**Frequency: 9/24 · Source count: 9 · Confidence: Moderate → updated to Moderate-High (2026-06-12)**
 
-Pairing exercises for opposing or non-overlapping muscle groups (chest + back, biceps + triceps, quads + hamstrings) allows one muscle to rest while the other works. This increases session density — more total work in less time — without compounding fatigue on the target muscle.
+Pairing exercises for opposing or non-overlapping muscle groups (chest + back, biceps + triceps, quads + hamstrings) allows one muscle to rest while the other works. This increases session density — more total work in less time — without compounding fatigue on the target muscle. *Updated 2026-06-12:* Drop sets and myo-reps are also validated (Moderate Evidence, asymmetrical_ppl_splits.md, training_past_failure.md, training_during_fat_loss.md) as producing similar muscle growth to traditional straight sets in less time. These intensity techniques warrant recognition as formally documented alternatives with appropriate caveats: drop sets and stretched-position partials are isolation-only; myo-reps are appropriate for intermediate and advanced lifters; none are appropriate for beginners.
 
-**Practical implementation:** Use antagonist supersets for isolation movements and secondary slots. Never superset two heavy compound movements for the same or overlapping muscle groups — the systemic fatigue spike is disproportionate and impairs both movements.
+**Practical implementation:** Use antagonist supersets for isolation movements and secondary slots. Never superset two heavy compound movements for the same or overlapping muscle groups — the systemic fatigue spike is disproportionate and impairs both movements. Drop sets and myo-reps are viable time-efficient alternatives to multiple straight sets for experienced lifters on isolation exercises.
 
 ---
 
@@ -241,9 +243,9 @@ During a caloric deficit, recovery capacity is reduced. Total training volume sh
 ---
 
 ### C-08 · Abs, Calves, and Delts Respond to Higher Frequency Due to Fast Recovery
-**Frequency: 8/24 · Source count: 8 · Confidence: Moderate**
+**Frequency: 8/24 · Source count: 8 · Confidence: Moderate → updated to Moderate-High for delts specifically (2026-06-12)**
 
-Small muscles with primarily slow-twitch fiber composition and high daily activity patterns (delts, calves, abs) recover from training faster than large compound muscles. They can be trained 3–4× per week without accumulating excessive fatigue, allowing higher total weekly volume within the recovery window.
+Small muscles with primarily slow-twitch fiber composition and high daily activity patterns (delts, calves, abs) recover from training faster than large compound muscles. They can be trained 3–4× per week without accumulating excessive fatigue, allowing higher total weekly volume within the recovery window. *Updated 2026-06-12:* The lateral deltoid's multipennate fiber structure makes it particularly suited for high volume and high metabolic stress — providing mechanistic rationale for its fast-recovery classification (building_delts_hypertrophy.md, lateral_raise_biomechanics.md). Both files recommend 2–4× weekly training specifically for side delts.
 
 **Practical implementation:** Assign delts, calves, and abs a `recoveryClass: 'fast'` — allow up to 4 sessions per week. Cap standard muscles at 3× and slow-recovery muscles (quads, hamstrings) at 3× with mandatory 48–72 hour gaps.
 

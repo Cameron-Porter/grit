@@ -31,7 +31,7 @@ Linear progression (add weight every session) eventually fails for everyone. Dou
 **Beginner (0–2 years training)**
 - Primary method: **Linear progression** — add weight when the top of the rep range is achieved with clean technique
 - Rate: 5–10 lbs per session for lower body compounds; 2.5–5 lbs per session for upper body compounds; 1.25–2.5 lbs for isolations
-- Rep range: 5–10 (narrow range — technique is still being grooved; high reps with form breakdown produce no stimulus and bad habits)
+- Rep range: 5–10 (narrow range — technique is still being grooved; high reps with form breakdown produce no stimulus and bad habits). *Qualification added 2026-06-12 (C-4):* Multiple sources (science_rep_ranges.md, foundational_strength_training.md) recommend 8–12 as the beginner starting range, citing better technique acquisition and reduced discomfort compared to 5–8. The 5–10 range is defensible but errs aggressive on the lower bound. When in doubt, default beginner isolation work to 8–12 rather than forcing 5 reps; consider 6–12 as a reasonable middle ground
 - RIR tracking: do not use — track by bar speed; when bar slows noticeably, the set is at or near failure
 - Do not change exercises for at least **3–4 months** — technique adaptation requires repetition with the same movements
 - Focus: 2–4 distributed compound movements per session, full-body or upper/lower split
@@ -64,6 +64,7 @@ Linear progression (add weight every session) eventually fails for everyone. Dou
 | Pause at stretch position | When load is capped or movement is too easy | Amplifies stretch-mediated stimulus |
 | Rest period reduction | Time-constrained training | Increases relative intensity without load change |
 | Myo-rep matching | Advanced, time-constrained, isolation movements | Matches effective reps while reducing total set time |
+| Lengthened-position partials | After reaching full-ROM failure; isolation exercises; intermediate/advanced | Extends effective stimulus beyond full-ROM failure by working the most productive (stretched) range of the rep |
 | Volume overload (add sets) | Within a mesocycle | Increases total weekly stimulus; must be within MRV |
 
 ### Rep Range Progression Model
@@ -125,6 +126,9 @@ Without this data, progression tracking is impossible.
 - When an exercise causes joint pain, tendon irritation, or technique breakdown despite adequate load management
 - Do not change exercises mid-mesocycle unless injury forces it — accommodation data needs time to accumulate
 
+### Asymmetrical A/B Split Design (2× Weekly Frequency)
+*Added 2026-06-12 (A-9):* For lifters training a muscle group 2× per week, both sessions should not be identical. Differentiating the two sessions by angle, load emphasis, or exercise selection improves regional hypertrophy and reduces overuse compared to running identical sessions twice. Examples: Chest-focused Push Day A + Delt-focused Push Day B; Lat-focused Pull Day A + Mid-back/rear-delt Pull Day B. (Strong Evidence for angle/region targeting; asymmetrical_ppl_splits.md, pull_day_architecture.md, building_delts_hypertrophy.md) This is a design consideration for intermediate and advanced lifters — not required for beginners who should train with identical sessions for technique consistency.
+
 ---
 
 ## Exceptions
@@ -145,7 +149,7 @@ Without this data, progression tracking is impossible.
 
 **"More is always better"**: Volume has a ceiling. Beyond MRV, adding more sets produces regression, not adaptation. High-volume training has value only when it remains within recoverable range.
 
-**"If you're not failing, you're not growing"**: Training to absolute muscular failure every set is not optimal. It generates disproportionate fatigue relative to stimulus. 1–2 RIR produces equivalent or superior stimulus in most conditions. Occasional failure sets are acceptable; every-set failure is a fatigue miscalculation.
+**"If you're not failing, you're not growing"**: Training to absolute muscular failure every set is not optimal. It generates disproportionate fatigue relative to stimulus. 1–2 RIR produces equivalent or superior stimulus in most conditions. Occasional failure sets are acceptable; every-set failure is a fatigue miscalculation. *Exception noted 2026-06-12:* HIT/Min-Max protocols (1–2 sets to absolute failure) are a valid alternative for advanced lifters, producing equivalent hypertrophy with fewer total sets. This is not contradictory — it is a different trade-off: maximum intensity on minimum sets versus moderate intensity on multiple sets. See foundational_beliefs.md R-01 qualification.
 
 **"You must always add weight"**: During phases of high life stress, poor sleep, illness, or fat loss, maintaining performance is a valid and successful outcome. Forcing load increases when recovery is compromised produces injury, not adaptation.
 
@@ -159,6 +163,6 @@ Without this data, progression tracking is impossible.
 | Reps before load (double progression) | High | Explicit across Nippard, Israetel; widely validated |
 | Progression speed inversely related to training age | High | Explicit in training_for_muscle_growth_beginner_to_advanced.md |
 | Micro-loading for advanced isolation work | Moderate-High | Consistent coaching recommendation; less RCT-tested |
-| Myo-rep matching as progression tool | Moderate | Empirically endorsed but not directly RCT-validated |
+| Myo-rep matching as progression tool | Moderate | Empirically endorsed but not directly RCT-validated. Operational definition (2026-06-12): perform a trigger set to near-failure, then take 5–10 second intra-set rest periods, performing mini-sets matching the trigger set rep count until cumulative fatigue prevents completing the mini-set. Best suited for isolation exercises; hold at Moderate / coaching judgment required until operational specifics are better established (see doctrine_gap_analysis.md E-3) |
 | Volume overload within mesocycle (MEV → MRV) | High | Core of Israetel volume landmark model; consistent across files |
 | Exercise rotation at mesocycle boundaries | Moderate-High | Accommodation mechanism clear; timing is coaching judgment |

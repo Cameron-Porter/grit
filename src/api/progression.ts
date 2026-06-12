@@ -82,6 +82,7 @@ export async function computeAndSaveProgressionTargets(
                 repsMax: ex.target_reps_max ?? 12,
                 rir: ex.rir ?? 3,
                 exerciseType: exerciseDef?.exerciseType,
+                hardRirFloor: exerciseDef?.hardRirFloor,
               },
               sessions,
               ctx,

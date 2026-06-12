@@ -1,16 +1,47 @@
 import { PRIMARY_ROLE_OVERLAP, SECONDARY_ROLE_MULTIPLIER, ACCESSORY_ROLE_MULTIPLIER } from '../data/roleOverlap';
+import { getExerciseByName } from '../data/exerciseDatabase';
 import { LOWER_SESSION_TYPES } from './splitDeriver';
 import type {
   AdjustedVolumeTarget,
   DayPlan,
+  ExperienceLevel,
   GeneratedProgram,
   MuscleGroup,
+  ProgramValidationIssue,
   ProgramValidationResult,
   SessionType,
 } from '../types/program';
 import { SESSION_MAX_EXERCISES, SESSION_MAX_SETS, SESSION_TARGET_SETS_MIN } from './sessionTrimmer';
 
 const EMPHASIZE_TOLERANCE = 0.80;
+
+// ─── HV-013: Intra-session deadlift + barbell-row compatibility check ─────────
+//
+// Deadlift-pattern + barbell-row on the same day creates excessive lumbar load.
+// beginner/intermediate → error; advanced → warning.
+export function validateDayExercises(
+  exerciseNames: string[],
+  experienceLevel: ExperienceLevel,
+): ProgramValidationIssue[] {
+  const issues: ProgramValidationIssue[] = [];
+  const hasDeadlift = exerciseNames.some((name) => {
+    const def = getExerciseByName(name);
+    return def?.exerciseTags?.includes('deadlift') ?? false;
+  });
+  const hasBarbellRow = exerciseNames.some((name) => {
+    const def = getExerciseByName(name);
+    return def?.exerciseTags?.includes('barbell-row') ?? false;
+  });
+  if (hasDeadlift && hasBarbellRow) {
+    issues.push({
+      type: 'movement_balance',
+      severity: experienceLevel === 'advanced' ? 'warning' : 'error',
+      message:
+        'Deadlift and Barbell Row on the same day creates excessive lumbar load. Replace the row with Chest-Supported Row or Seated Cable Row.',
+    });
+  }
+  return issues;
+}
 
 // ─── Effective set accumulation ───────────────────────────────────────────────
 function computeWeeklyEffectiveSets(
@@ -125,6 +156,102 @@ export function validateProgram(
       severity: 'warning',
       message: 'No squat or hinge pattern in weekly split — add a Lower or Legs session',
     });
+  }
+
+  // HV-004: Back plane parity — ensure both horizontal and vertical pulls are present.
+  // Only fires when ≥2 Back slots have selectedExercise populated.
+  for (const day of program.days) {
+    const backSlotsWithExercise = day.slots.filter(
+      (slot) => slot.muscle === 'Back' && slot.selectedExercise,
+    );
+    if (backSlotsWithExercise.length < 2) continue;
+
+    const patterns = backSlotsWithExercise
+      .map((slot) => getExerciseByName(slot.selectedExercise!)?.movementPattern)
+      .filter((p): p is NonNullable<typeof p> => p !== undefined);
+
+    const hasHorizontal = patterns.includes('horizontal-pull');
+    const hasVertical = patterns.includes('vertical-pull');
+
+    if (hasVertical && !hasHorizontal) {
+      issues.push({
+        type: 'back_plane',
+        severity: 'warning',
+        message:
+          'Back training has no horizontal pull (rows) — add a row variation for upper back thickness and rhomboid development.',
+        dayIndex: day.dayIndex,
+      });
+    } else if (hasHorizontal && !hasVertical) {
+      issues.push({
+        type: 'back_plane',
+        severity: 'warning',
+        message:
+          'Back training has no vertical pull (pulldowns/pull-ups) — add a lat pulldown or pull-up for width.',
+        dayIndex: day.dayIndex,
+      });
+    }
+  }
+
+  // HV-020: Tricep overhead extension coverage.
+  // Fires when ≥2 Triceps slots have selectedExercise and none have overheadExtension tag.
+  for (const day of program.days) {
+    const tricepSlotsWithExercise = day.slots.filter(
+      (slot) => slot.muscle === 'Triceps' && slot.selectedExercise,
+    );
+    if (tricepSlotsWithExercise.length < 2) continue;
+
+    const hasOverhead = tricepSlotsWithExercise.some((slot) => {
+      const def = getExerciseByName(slot.selectedExercise!);
+      return def?.exerciseTags?.includes('overheadExtension') ?? false;
+    });
+
+    if (!hasOverhead) {
+      issues.push({
+        type: 'muscle_coverage',
+        severity: 'warning',
+        message:
+          'No overhead tricep extension found. The long head requires the shoulder to be flexed overhead. Consider adding Skull Crusher or Overhead Extension.',
+        dayIndex: day.dayIndex,
+      });
+    }
+  }
+
+  // HV-002: Volume proportionality audit.
+  // Flags arm-dominant or quad-deficient programs.
+  const totalSets = Object.values(weeklyEffectiveSets).reduce<number>((sum, v) => sum + (v ?? 0), 0);
+  if (totalSets > 0) {
+    const tricepsSets = weeklyEffectiveSets['Triceps'] ?? 0;
+    const bicepsSets = weeklyEffectiveSets['Biceps'] ?? 0;
+    const quadsSets = weeklyEffectiveSets['Quads'] ?? 0;
+
+    if (tricepsSets / totalSets > 0.08) {
+      issues.push({
+        type: 'proportionality',
+        severity: 'warning',
+        message:
+          'Triceps are receiving an unusually high share of total weekly volume. Consider redistributing sets to larger muscle groups.',
+      });
+    }
+    if (bicepsSets / totalSets > 0.08) {
+      issues.push({
+        type: 'proportionality',
+        severity: 'warning',
+        message:
+          'Biceps are receiving an unusually high share of total weekly volume. Consider redistributing sets to larger muscle groups.',
+      });
+    }
+    if (
+      weeklyEffectiveSets['Quads'] !== undefined &&
+      quadsSets / totalSets < 0.18 &&
+      totalSets > 20
+    ) {
+      issues.push({
+        type: 'proportionality',
+        severity: 'warning',
+        message:
+          'Quad volume is low relative to total program volume. Quads are one of the largest muscle groups — consider adding leg volume.',
+      });
+    }
   }
 
   return {
