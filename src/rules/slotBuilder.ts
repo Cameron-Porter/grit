@@ -12,6 +12,86 @@ import type {
 const MAX_SLOTS_PER_SESSION = 5;
 const MIN_SLOTS_PER_SESSION = 4;
 
+// Regions used for Full Body coverage guarantees
+const FB_PUSH_REGION: MuscleGroup[] = ['Chest', 'Shoulders', 'Triceps'];
+const FB_PULL_REGION: MuscleGroup[] = ['Back', 'Biceps', 'Traps', 'Forearms'];
+const FB_LOWER_REGION: MuscleGroup[] = ['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs'];
+
+// ─── Priority score helper ────────────────────────────────────────────────────
+function priorityScore(p: MusclePriority | 'mev' | undefined): number {
+  switch (p) {
+    case 'emphasize': return 3;
+    case 'grow':      return 2;
+    case 'maintain':  return 1;
+    default:          return 0;
+  }
+}
+
+// ─── Full Body region-balanced selection ─────────────────────────────────────
+//
+// Guarantees at least one slot per movement region (push / pull / lower) so a
+// Full Body session always trains the whole body regardless of priority skew.
+// After the three anchors are locked in, remaining capacity is filled by the
+// highest-priority remaining primaries, then secondaries for grow/emphasize.
+function selectIncludedPairsFullBody(
+  dayMuscles: Map<MuscleGroup, MusclePriority | 'mev'>,
+  template: SessionTemplate,
+  maxSlots: number,
+): Set<string> {
+  const included = new Set<string>();
+
+  const templatePrimaryMuscles = new Set(
+    template.slots.filter((s) => s.role === 'Primary').map((s) => s.muscle),
+  );
+
+  // Pick the highest-priority assigned muscle from a region that has a Primary slot.
+  function pickAnchor(region: MuscleGroup[]): string | null {
+    let best: { key: string; score: number } | null = null;
+    for (const muscle of region) {
+      if (!templatePrimaryMuscles.has(muscle)) continue;
+      const p = dayMuscles.get(muscle);
+      if (!p) continue;
+      const score = priorityScore(p);
+      const key = `${muscle}-Primary`;
+      if (!included.has(key) && (!best || score > best.score)) {
+        best = { key, score };
+      }
+    }
+    return best?.key ?? null;
+  }
+
+  // Phase 1: one anchor per region
+  for (const region of [FB_PUSH_REGION, FB_PULL_REGION, FB_LOWER_REGION]) {
+    if (included.size >= maxSlots) break;
+    const anchor = pickAnchor(region);
+    if (anchor) included.add(anchor);
+  }
+
+  // Phase 2: fill remaining capacity with highest-priority primaries
+  const candidates = template.slots
+    .filter((s) => s.role === 'Primary')
+    .map((s) => ({ key: `${s.muscle}-Primary`, score: priorityScore(dayMuscles.get(s.muscle)) }))
+    .filter(({ key, score }) => !included.has(key) && score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  for (const { key } of candidates) {
+    if (included.size >= maxSlots) break;
+    included.add(key);
+  }
+
+  // Phase 3: secondaries for emphasize/grow if there is still room
+  for (const spec of template.slots) {
+    if (included.size >= maxSlots) break;
+    if (spec.role !== 'Secondary') continue;
+    const p = dayMuscles.get(spec.muscle);
+    if (p !== 'emphasize' && p !== 'grow') continue;
+    const key = `${spec.muscle}-Secondary`;
+    if (!included.has(key)) included.add(key);
+  }
+
+  return included;
+}
+
 // ─── Slot allocation algorithm ────────────────────────────────────────────────
 //
 // Phase 1 — Primary slots for every non-MEV muscle.
@@ -124,7 +204,9 @@ export function buildDaySlots(
   maxSlots = MAX_SLOTS_PER_SESSION,
   weekParams?: WeekParams,
 ): ExerciseSlot[] {
-  const includedPairs = selectIncludedPairs(dayMuscles, template, maxSlots);
+  const includedPairs = template.sessionType === 'FullBody'
+    ? selectIncludedPairsFullBody(dayMuscles, template, maxSlots)
+    : selectIncludedPairs(dayMuscles, template, maxSlots);
 
   const result: ExerciseSlot[] = [];
   const usedPairs = new Set<string>();

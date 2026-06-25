@@ -64,6 +64,7 @@ export default function ProgramDayScreen() {
 
   const [day, setDay] = useState<ProgramDay | null>(null);
   const [programName, setProgramName] = useState<string | null>(null);
+  const [musclePriorities, setMusclePriorities] = useState<Record<string, 'emphasize' | 'grow' | 'maintain'>>({});
   const [exercises, setExercises] = useState<ProgramExercise[]>([]);
   const [dayTargets, setDayTargets] = useState<ProgramDayTarget[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -81,6 +82,7 @@ export default function ProgramDayScreen() {
     const [dayData, prog] = await Promise.all([getProgramDay(dayId), getProgram(id)]);
     setDay(dayData);
     setProgramName(prog?.name ?? null);
+    setMusclePriorities((prog?.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'>) ?? {});
 
     if (!dayData) { setLoading(false); return; }
 
@@ -159,6 +161,7 @@ export default function ProgramDayScreen() {
         return {
           name: e.exercise_name,
           muscleGroup: e.muscle_group ?? '',
+          musclePriority: e.muscle_group ? musclePriorities[e.muscle_group] : undefined,
           equipment: e.equipment ?? 'Bodyweight',
           targetSets: aiTarget?.target_sets ?? e.target_sets ?? undefined,
           targetRepsMin: aiTarget?.target_reps_min ?? e.target_reps_min ?? undefined,
@@ -171,6 +174,7 @@ export default function ProgramDayScreen() {
       day?.week_number ?? null,
       day?.day_number ?? null,
       day?.label ?? null,
+      id,
     );
     router.push('/workout');
   };

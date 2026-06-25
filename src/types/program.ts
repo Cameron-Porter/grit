@@ -5,7 +5,8 @@ export type ProgramFocus =
   | 'strength'
   | 'powerbuilding'
   | 'general'
-  | 'maintenance';
+  | 'maintenance'
+  | 'cut';
 
 export type ExperienceLevel = 'beginner' | 'intermediate' | 'advanced';
 export type TrainingPhase = 'bulk' | 'cut' | 'maintenance';

@@ -23,7 +23,7 @@ export interface SessionPerformance {
   sets: { weight: number; reps: number }[];
 }
 
-export type ProgramFocus = 'hypertrophy' | 'strength' | 'powerbuilding' | 'general' | 'maintenance';
+export type ProgramFocus = 'hypertrophy' | 'strength' | 'powerbuilding' | 'general' | 'maintenance' | 'cut';
 export type MusclePriority = 'emphasize' | 'grow' | 'maintain';
 
 export interface ProgressionContext {

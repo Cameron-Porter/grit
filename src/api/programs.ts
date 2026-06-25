@@ -128,6 +128,27 @@ export async function createProgram(
   return program;
 }
 
+export async function renameProgram(id: string, name: string): Promise<void> {
+  const { error } = await supabase.from("programs").update({ name }).eq("id", id);
+  if (error) throw error;
+}
+
+export async function endCurrentProgram(): Promise<void> {
+  const userId = await getUserId();
+  const query = supabase.from("programs").update({ is_current: false });
+  if (userId) query.eq("user_id", userId);
+  const { error } = await query;
+  if (error) throw error;
+}
+
+export async function updateProgramMusclePriorities(
+  id: string,
+  priorities: Record<string, 'emphasize' | 'grow' | 'maintain'>,
+): Promise<void> {
+  const { error } = await supabase.from("programs").update({ muscle_priorities: priorities }).eq("id", id);
+  if (error) throw error;
+}
+
 export async function deleteProgram(id: string): Promise<void> {
   const { error } = await supabase.from("programs").delete().eq("id", id);
   if (error) throw error;

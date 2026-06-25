@@ -17,6 +17,9 @@ const TARGET_EFFECTIVE_SETS: Record<ProgramFocus, Record<MusclePriority | 'mev',
   powerbuilding: { emphasize: 15, grow: 10, maintain: 6,  mev: 4 },
   general:       { emphasize: 12, grow: 9,  maintain: 6,  mev: 4 },
   maintenance:   { emphasize: 8,  grow: 7,  maintain: 6,  mev: 4 },
+  // RC-005: cut phase uses lower volume to match the 90-min session cap.
+  // Target is ~70% of maintenance — enough stimulus to retain muscle under deficit.
+  cut:           { emphasize: 6,  grow: 5,  maintain: 4,  mev: 3 },
 };
 
 const MEV_DIRECT: Record<ProgramFocus, number> = {
@@ -25,6 +28,7 @@ const MEV_DIRECT: Record<ProgramFocus, number> = {
   powerbuilding: 2,
   general:       3,
   maintenance:   2,
+  cut:           2,
 };
 
 // ─── Synergistic scaling ──────────────────────────────────────────────────────

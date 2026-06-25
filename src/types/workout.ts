@@ -22,6 +22,7 @@ export type Exercise = {
   id: string;
   name: string;
   muscleGroup?: string;
+  musclePriority?: 'emphasize' | 'grow' | 'maintain';
   sets: WorkoutSet[];
   equipment: string;
   note?: string;
@@ -51,11 +52,13 @@ export type PendingFeedback = {
 
 export type WorkoutState = {
   activeWorkoutId: string | null;
+  activeProgramId: string | null;
   activeProgramDayId: string | null;
   activeProgramName: string | null;
   activeProgramWeek: number | null;
   activeProgramDayNumber: number | null;
   activeProgramDayLabel: string | null;
+  dayNote: string | null;
   exercises: Exercise[];
   pendingFeedback: PendingFeedback[];
   isSaving: boolean;
@@ -85,6 +88,7 @@ export type WorkoutState = {
   skipAllSets: () => void;
   setExerciseNote: (exerciseId: string, note: string) => void;
   finishWorkout: () => Promise<void>;
+  setDayNote: (note: string | null) => void;
   skipDay: (dayId: string) => Promise<void>;
   startFromProgramDay: (
     dayId: string | null,
@@ -93,6 +97,7 @@ export type WorkoutState = {
       name: string;
       muscleGroup: string;
       equipment: string;
+      musclePriority?: 'emphasize' | 'grow' | 'maintain';
       targetSets?: number;
       targetRepsMin?: number;
       targetRepsMax?: number;
@@ -103,6 +108,8 @@ export type WorkoutState = {
     weekNumber?: number | null,
     dayNumber?: number | null,
     dayLabel?: string | null,
+    programId?: string | null,
   ) => void;
   replaceExercise: (exerciseId: string, newName: string, newMuscleGroup: string, newEquipment: string) => void;
+  updateExercisePriorities: (priorities: Record<string, 'emphasize' | 'grow' | 'maintain'>) => void;
 };

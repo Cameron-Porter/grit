@@ -35,6 +35,7 @@ const FOCUS_OPTIONS: { value: ProgramFocus; label: string; desc: string }[] = [
   { value: 'general',       label: 'General Fitness', desc: 'Balanced strength & cardio' },
   { value: 'powerbuilding', label: 'Powerbuilding',   desc: 'Strength + hypertrophy mix' },
   { value: 'maintenance',   label: 'Maintenance',     desc: 'Preserve muscle, low volume' },
+  { value: 'cut',           label: 'Fat Loss',        desc: 'Retain muscle in a deficit — capped sessions, lower volume' },
 ];
 
 const PRIORITY_MUSCLES: MuscleGroup[] = [
@@ -118,13 +119,19 @@ export default function CreateProgram() {
 
   const handleNextFromFocus = () => {
     const dayLabels = sortedSelected.map((d) => WEEKDAYS_FULL[d]);
+    // Commit display defaults: any muscle not explicitly tapped stays at 'grow'
+    const fullPriorities: Partial<Record<MuscleGroup, Priority>> = { ...musclePriorities };
+    for (const muscle of PRIORITY_MUSCLES) {
+      if (!fullPriorities[muscle]) fullPriorities[muscle] = 'grow';
+    }
+    setMusclePriorities(fullPriorities);
     const generated = buildProgram({
       name: name.trim(),
       focus,
       experienceLevel,
       daysPerWeek,
       selectedDays: dayLabels,
-      musclePriorities,
+      musclePriorities: fullPriorities,
       totalWeeks,
     });
     // Persist the chosen level to the user profile for future programs
@@ -218,6 +225,9 @@ export default function CreateProgram() {
           next.exercises.map((e) => ({
             name: e.exercise_name,
             muscleGroup: e.muscle_group ?? '',
+            musclePriority: e.muscle_group
+              ? (next.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null)?.[e.muscle_group]
+              : undefined,
             equipment: e.equipment ?? 'Bodyweight',
             targetSets: e.target_sets ?? undefined,
             targetRepsMin: e.target_reps_min ?? undefined,
@@ -228,6 +238,7 @@ export default function CreateProgram() {
           next.day.week_number,
           next.day.day_number,
           next.day.label,
+          next.program.id,
         );
         router.replace('/workout');
       } else {

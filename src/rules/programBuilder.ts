@@ -98,7 +98,7 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
       };
     });
 
-    const days = rawDays.map((day) => enforceSessionCaps(day, config.musclePriorities));
+    const days = rawDays.map((day) => enforceSessionCaps(day, config.musclePriorities, config.focus));
     return { weekNumber, isDeload, days };
   });
 

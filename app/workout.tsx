@@ -1,11 +1,11 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { confirm } from '../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
-import { checkMuscleGroupPreviouslyTrained, getNextProgramWorkout, replaceExerciseInTemplate } from '../src/api/programs';
+import { checkMuscleGroupPreviouslyTrained, endCurrentProgram, getNextProgramWorkout, renameProgram, replaceExerciseInTemplate, updateProgramMusclePriorities } from '../src/api/programs';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
@@ -56,18 +56,33 @@ export default function ActiveWorkout() {
     skipAllSets,
     skipDay,
     endWorkout,
+    activeProgramId,
     activeProgramDayId,
     activeProgramName,
     activeProgramWeek,
     activeProgramDayNumber,
     activeProgramDayLabel,
+    dayNote,
+    setDayNote,
     replaceExercise,
+    updateExercisePriorities,
   } = useWorkoutStore();
 
   const bodyWeight = useProfileStore((s) => s.bodyWeight);
+  const setBodyWeight = useProfileStore((s) => s.setBodyWeight);
   const autoMatchWeight = useProfileStore((s) => s.autoMatchWeight);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  // Program menu
+  const [programMenuOpen, setProgramMenuOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameText, setRenameText] = useState('');
+  const [bwOpen, setBwOpen] = useState(false);
+  const [bwText, setBwText] = useState('');
+  const [priorityOpen, setPriorityOpen] = useState(false);
+  const [editPriorities, setEditPriorities] = useState<Record<string, 'emphasize' | 'grow' | 'maintain'>>({});
+  const [dayNoteOpen, setDayNoteOpen] = useState(false);
+  const [dayNoteText, setDayNoteText] = useState('');
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
   const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null);
@@ -109,6 +124,9 @@ export default function ActiveWorkout() {
             n.exercises.map((e) => ({
               name: e.exercise_name,
               muscleGroup: e.muscle_group ?? '',
+              musclePriority: e.muscle_group
+                ? (n.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null)?.[e.muscle_group]
+                : undefined,
               equipment: e.equipment ?? 'Bodyweight',
               targetSets: e.target_sets,
               targetRepsMin: e.target_reps_min ?? 8,
@@ -119,6 +137,7 @@ export default function ActiveWorkout() {
             n.day.week_number,
             n.day.day_number,
             n.day.label,
+            n.program.id,
           );
         } else {
           setNextWorkout(n);
@@ -252,6 +271,73 @@ export default function ActiveWorkout() {
         }
       },
       'Skip Day',
+      true,
+    );
+  };
+
+  const handleOpenRename = () => {
+    setRenameText(activeProgramName ?? '');
+    setProgramMenuOpen(false);
+    setRenameOpen(true);
+  };
+
+  const handleSaveRename = async () => {
+    const trimmed = renameText.trim();
+    if (!trimmed || !activeProgramId) return;
+    try {
+      await renameProgram(activeProgramId, trimmed);
+      useWorkoutStore.setState({ activeProgramName: trimmed });
+    } catch {
+      Alert.alert('Error', 'Could not rename the program.');
+    }
+    setRenameOpen(false);
+  };
+
+  const handleOpenBodyweight = () => {
+    setBwText(bodyWeight != null ? String(bodyWeight) : '');
+    setProgramMenuOpen(false);
+    setBwOpen(true);
+  };
+
+  const handleSaveBodyweight = () => {
+    const val = parseFloat(bwText);
+    if (!isNaN(val) && val > 0) setBodyWeight(val);
+    setBwOpen(false);
+  };
+
+  const handleOpenPriorities = async () => {
+    if (!activeProgramId) return;
+    // Load current priorities from the program (already stored in store via startFromProgramDay,
+    // but simplest source of truth is re-fetching so edits made since launch are reflected)
+    const { getProgram } = await import('../src/api/programs');
+    const prog = await getProgram(activeProgramId);
+    setEditPriorities((prog?.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'>) ?? {});
+    setProgramMenuOpen(false);
+    setPriorityOpen(true);
+  };
+
+  const handleSavePriorities = async () => {
+    if (!activeProgramId) return;
+    try {
+      await updateProgramMusclePriorities(activeProgramId, editPriorities);
+      updateExercisePriorities(editPriorities);
+    } catch {
+      Alert.alert('Error', 'Could not save priorities.');
+    }
+    setPriorityOpen(false);
+  };
+
+  const handleEndProgram = () => {
+    setProgramMenuOpen(false);
+    confirm(
+      'End Program',
+      `This will deactivate "${activeProgramName}" and return you to the programs list. Your workout history is kept.`,
+      async () => {
+        try { await endCurrentProgram(); } catch { /* non-fatal */ }
+        endWorkout();
+        router.replace('/(tabs)/programs');
+      },
+      'End Program',
       true,
     );
   };
@@ -415,35 +501,51 @@ export default function ActiveWorkout() {
 
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700' }}>
-              {activeProgramDayLabel ?? (activeProgramDayNumber ? `Day ${activeProgramDayNumber}` : 'Workout')}
+            {activeProgramWeek != null && activeProgramDayNumber != null ? (
+              <Text style={{ fontSize: 26, fontWeight: '800', lineHeight: 32 }}>
+                <Text style={{ color: colors.text }}>Week {activeProgramWeek} </Text>
+                <Text style={{ color: colors.muted }}>Day {activeProgramDayNumber}</Text>
+              </Text>
+            ) : (
+              <Text style={{ color: colors.text, fontSize: 26, fontWeight: '800' }}>Workout</Text>
+            )}
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
+              {activeProgramName
+                ? `${activeProgramName}${activeProgramDayLabel ? ` · ${activeProgramDayLabel}` : ''}`
+                : 'Quick Workout'}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {totalSets > 0 && (
-              <Text style={{ color: colors.muted, fontSize: 13 }}>
-                {doneSets}/{totalSets} sets
-              </Text>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>{doneSets}/{totalSets}</Text>
             )}
             <Pressable
-              onPress={handleSkipWorkout}
-              style={{ backgroundColor: `${colors.warning}22`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}
+              onPress={() => setProgramMenuOpen(true)}
+              style={{ padding: 6 }}
+              hitSlop={8}
             >
-              <Text style={{ color: colors.warning, fontSize: 13, fontWeight: '700' }}>Skip Workout</Text>
+              <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
             </Pressable>
           </View>
         </View>
-        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
-          {activeProgramName
-            ? `${activeProgramName}${activeProgramDayLabel ? ` · ${activeProgramDayLabel}` : activeProgramDayNumber != null ? ` · Day ${activeProgramDayNumber}` : ''}`
-            : 'Quick Workout'}
-        </Text>
       </View>
 
       {/* Scrollable content */}
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 24 }}>
+        {/* Day note card */}
+        {dayNote ? (
+          <Pressable
+            onPress={() => { setDayNoteText(dayNote); setDayNoteOpen(true); }}
+            style={{ backgroundColor: `${colors.primary}15`, borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: `${colors.primary}30` }}
+          >
+            <MaterialCommunityIcons name="note-text-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
+            <Text style={{ color: colors.text, fontSize: 14, flex: 1, lineHeight: 20 }}>{dayNote}</Text>
+            <MaterialCommunityIcons name="pencil-outline" size={16} color={colors.muted} />
+          </Pressable>
+        ) : null}
+
         {tooFewExercises && exercises.length > 0 && (
           <Pressable
             onPress={() => setPickerOpen(true)}
@@ -668,6 +770,159 @@ export default function ActiveWorkout() {
           onDismiss={() => setPrPopup(null)}
         />
       )}
+
+      {/* ── Program menu bottom sheet ── */}
+      <Modal visible={programMenuOpen} transparent animationType="slide" onRequestClose={() => setProgramMenuOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} onPress={() => setProgramMenuOpen(false)} />
+        <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: insets.bottom + 12 }}>
+          <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.surface2, alignSelf: 'center', marginTop: 10, marginBottom: 6 }} />
+          <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', marginBottom: 8 }}>
+            {activeProgramName ?? 'Program'}
+          </Text>
+
+          {[
+            activeProgramId && { icon: 'pencil-outline',     label: 'Rename Program',           onPress: handleOpenRename },
+            activeProgramId && { icon: 'tune-vertical',      label: 'Update Muscle Priorities', onPress: handleOpenPriorities },
+            { icon: 'note-text-outline',                     label: dayNote ? 'Edit Day Note' : 'Add Day Note', onPress: () => { setDayNoteText(dayNote ?? ''); setProgramMenuOpen(false); setDayNoteOpen(true); } },
+            { icon: 'plus-circle-outline',                   label: 'Add Exercise',             onPress: () => { setProgramMenuOpen(false); setPickerOpen(true); } },
+            { icon: 'weight',                                label: 'Update Bodyweight',        onPress: handleOpenBodyweight },
+            { icon: 'skip-next-outline',                     label: 'Skip Workout',             onPress: () => { setProgramMenuOpen(false); handleSkipWorkout(); } },
+            activeProgramId && { icon: 'stop-circle-outline', label: 'End Program',             onPress: handleEndProgram, destructive: true },
+          ].filter(Boolean).map(({ icon, label, onPress, destructive }: any) => (
+            <Pressable key={label} onPress={onPress}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingVertical: 15, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+              <MaterialCommunityIcons name={icon as any} size={20} color={destructive ? colors.error : colors.text} />
+              <Text style={{ color: destructive ? colors.error : colors.text, fontSize: 15, fontWeight: '500' }}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Modal>
+
+      {/* ── Day note modal ── */}
+      <Modal visible={dayNoteOpen} transparent animationType="fade" onRequestClose={() => setDayNoteOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 14 }}>Day Note</Text>
+            <TextInput
+              value={dayNoteText}
+              onChangeText={setDayNoteText}
+              autoFocus
+              multiline
+              numberOfLines={4}
+              placeholder="Notes for today's session…"
+              placeholderTextColor={colors.muted}
+              style={{ backgroundColor: colors.surface2, color: colors.text, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 16, minHeight: 100, textAlignVertical: 'top' }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable onPress={() => setDayNoteOpen(false)} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center' }}>
+                <Text style={{ color: colors.muted, fontWeight: '600' }}>Cancel</Text>
+              </Pressable>
+              {dayNote && (
+                <Pressable onPress={() => { setDayNote(null); setDayNoteOpen(false); }} style={{ padding: 13, borderRadius: 10, backgroundColor: `${colors.error}22`, alignItems: 'center', paddingHorizontal: 16 }}>
+                  <Text style={{ color: colors.error, fontWeight: '600' }}>Clear</Text>
+                </Pressable>
+              )}
+              <Pressable onPress={() => { setDayNote(dayNoteText.trim() || null); setDayNoteOpen(false); }} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' }}>
+                <Text style={{ color: colors.background, fontWeight: '700' }}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Rename modal ── */}
+      <Modal visible={renameOpen} transparent animationType="fade" onRequestClose={() => setRenameOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 14 }}>Rename Program</Text>
+            <TextInput
+              value={renameText}
+              onChangeText={setRenameText}
+              autoFocus
+              placeholder="Program name"
+              placeholderTextColor={colors.muted}
+              style={{ backgroundColor: colors.surface2, color: colors.text, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 16 }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable onPress={() => setRenameOpen(false)} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center' }}>
+                <Text style={{ color: colors.muted, fontWeight: '600' }}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleSaveRename} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' }}>
+                <Text style={{ color: colors.background, fontWeight: '700' }}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Bodyweight modal ── */}
+      <Modal visible={bwOpen} transparent animationType="fade" onRequestClose={() => setBwOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 14 }}>Update Bodyweight</Text>
+            <TextInput
+              value={bwText}
+              onChangeText={setBwText}
+              autoFocus
+              keyboardType="decimal-pad"
+              placeholder="Weight (lbs)"
+              placeholderTextColor={colors.muted}
+              style={{ backgroundColor: colors.surface2, color: colors.text, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 16 }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable onPress={() => setBwOpen(false)} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center' }}>
+                <Text style={{ color: colors.muted, fontWeight: '600' }}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleSaveBodyweight} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' }}>
+                <Text style={{ color: colors.background, fontWeight: '700' }}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Muscle priorities modal ── */}
+      <Modal visible={priorityOpen} transparent animationType="slide" onRequestClose={() => setPriorityOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%', paddingBottom: insets.bottom + 12 }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.surface2, alignSelf: 'center', marginTop: 10, marginBottom: 4 }} />
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 12, paddingTop: 4 }}>Muscle Priorities</Text>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12, gap: 14 }}>
+              {(['Chest','Back','Shoulders','Biceps','Triceps','Quads','Hamstrings','Glutes','Calves','Abs'] as const).map((muscle) => {
+                const cur = editPriorities[muscle] ?? 'grow';
+                return (
+                  <View key={muscle}>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', marginBottom: 6 }}>{muscle}</Text>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {([
+                        { value: 'emphasize', label: 'Emphasize', color: '#2DD4BF' },
+                        { value: 'grow',      label: 'Grow',      color: colors.primary },
+                        { value: 'maintain',  label: 'Maintain',  color: colors.muted },
+                      ] as const).map((opt) => {
+                        const active = cur === opt.value;
+                        return (
+                          <Pressable key={opt.value} onPress={() => setEditPriorities((p) => ({ ...p, [muscle]: opt.value }))}
+                            style={{ flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1.5, borderColor: active ? opt.color : '#333', backgroundColor: active ? `${opt.color}22` : 'transparent', alignItems: 'center' }}>
+                            <Text style={{ color: active ? opt.color : colors.muted, fontSize: 11, fontWeight: active ? '800' : '500' }}>{opt.label}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+              <Pressable onPress={() => setPriorityOpen(false)} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.surface2, alignItems: 'center' }}>
+                <Text style={{ color: colors.muted, fontWeight: '600' }}>Cancel</Text>
+              </Pressable>
+              <Pressable onPress={handleSavePriorities} style={{ flex: 1, padding: 13, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center' }}>
+                <Text style={{ color: colors.background, fontWeight: '700' }}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

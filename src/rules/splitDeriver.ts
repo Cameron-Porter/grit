@@ -221,6 +221,24 @@ export function deriveSplit(
   const pushScore  = scoreRegion(PUSH_MUSCLES,  musclePriorities);
   const pullScore  = scoreRegion(PULL_MUSCLES,  musclePriorities);
 
+  // ≤2 days/week: Full Body ensures every muscle reaches 2×/week minimum
+  // frequency. Upper/Lower would give 1×/week — below MEV for hypertrophy.
+  if (daysPerWeek <= 2) {
+    const sessionSequence: SessionType[] = Array.from({ length: daysPerWeek }, (): SessionType => 'FullBody');
+    return {
+      sessionSequence,
+      splitType: sessionSequence.map((t) => SESSION_TYPE_SLUG[t]).join('-'),
+      derivation: {
+        upperScore, lowerScore,
+        upperDays: daysPerWeek,
+        lowerDays: 0,
+        pushScore, pullScore,
+        upperTypes: sessionSequence,
+        lowerTypes: [],
+      },
+    };
+  }
+
   const { upperDays, lowerDays } = allocateRegionDays(upperScore, lowerScore, daysPerWeek);
 
   const upperTypes = selectUpperDayTypes(upperDays, pushScore, pullScore);

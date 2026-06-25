@@ -18,25 +18,31 @@ export const useWorkoutStore = create<WorkoutState>()(
   persist(
     (set, get) => ({
       activeWorkoutId: null,
+      activeProgramId: null,
       activeProgramDayId: null,
       activeProgramName: null,
       activeProgramWeek: null,
       activeProgramDayNumber: null,
       activeProgramDayLabel: null,
+      dayNote: null,
       exercises: [],
       pendingFeedback: [],
       isSaving: false,
+
+      setDayNote: (note) => set({ dayNote: note }),
 
       startWorkout: () =>
         set((state) => {
           if (state.activeWorkoutId && state.exercises.length > 0) return state;
           return {
             activeWorkoutId: Date.now().toString(),
+            activeProgramId: null,
             activeProgramDayId: null,
             activeProgramName: null,
             activeProgramWeek: null,
             activeProgramDayNumber: null,
             activeProgramDayLabel: null,
+            dayNote: null,
             exercises: [],
           };
         }),
@@ -44,11 +50,13 @@ export const useWorkoutStore = create<WorkoutState>()(
       endWorkout: () =>
         set({
           activeWorkoutId: null,
+          activeProgramId: null,
           activeProgramDayId: null,
           activeProgramName: null,
           activeProgramWeek: null,
           activeProgramDayNumber: null,
           activeProgramDayLabel: null,
+          dayNote: null,
           exercises: [],
           pendingFeedback: [],
           isSaving: false,
@@ -56,11 +64,13 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       clearProgramState: () =>
         set({
+          activeProgramId: null,
           activeProgramDayId: null,
           activeProgramName: null,
           activeProgramWeek: null,
           activeProgramDayNumber: null,
           activeProgramDayLabel: null,
+          dayNote: null,
         }),
 
       queueFeedback: (muscleGroup, jointPain, pump, volume) =>
@@ -95,6 +105,15 @@ export const useWorkoutStore = create<WorkoutState>()(
           ],
         }));
       },
+
+      updateExercisePriorities: (priorities) =>
+        set((state) => ({
+          exercises: state.exercises.map((ex) =>
+            ex.muscleGroup && priorities[ex.muscleGroup]
+              ? { ...ex, musclePriority: priorities[ex.muscleGroup] }
+              : ex,
+          ),
+        })),
 
       replaceExercise: (exerciseId, newName, newMuscleGroup, newEquipment) => {
         set((state) => ({
@@ -223,7 +242,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
-      startFromProgramDay: (dayId, programName, exerciseTemplates, weekNumber, dayNumber, dayLabel) => {
+      startFromProgramDay: (dayId, programName, exerciseTemplates, weekNumber, dayNumber, dayLabel, programId) => {
         set((state) => {
           // Guard only when the user has already logged completed sets — don't block on a stale/unstarted workout
           const hasCompletedSets = state.exercises.some((ex) => ex.sets.some((s) => s.completed));
@@ -232,6 +251,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           const isWeek2Plus = (weekNumber ?? 1) >= 2;
           return {
             activeWorkoutId: Date.now().toString(),
+            activeProgramId: programId ?? null,
             activeProgramDayId: dayId,
             activeProgramName: programName,
             activeProgramWeek: weekNumber ?? null,
@@ -241,6 +261,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               id: uuidv4(),
               name: t.name,
               muscleGroup: t.muscleGroup,
+              musclePriority: t.musclePriority,
               equipment: t.equipment,
               painWarning: t.painWarning,
               sets: t.targetSets
@@ -275,11 +296,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
         set({
           activeWorkoutId: null,
+          activeProgramId: null,
           activeProgramDayId: null,
           activeProgramName: null,
           activeProgramWeek: null,
           activeProgramDayNumber: null,
           activeProgramDayLabel: null,
+          dayNote: null,
           exercises: [],
           pendingFeedback: [],
           isSaving: false,
@@ -379,11 +402,13 @@ export const useWorkoutStore = create<WorkoutState>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         activeWorkoutId: state.activeWorkoutId,
+        activeProgramId: state.activeProgramId,
         activeProgramDayId: state.activeProgramDayId,
         activeProgramName: state.activeProgramName,
         activeProgramWeek: state.activeProgramWeek,
         activeProgramDayNumber: state.activeProgramDayNumber,
         activeProgramDayLabel: state.activeProgramDayLabel,
+        dayNote: state.dayNote,
         exercises: state.exercises,
         pendingFeedback: state.pendingFeedback,
       }),

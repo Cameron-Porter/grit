@@ -9,6 +9,22 @@ import { useColors } from '../../utils/useColors';
 import NoteModal from './NoteModal';
 import SetRow from './SetRow';
 
+function PriorityBars({ priority, color }: { priority: 'emphasize' | 'grow' | 'maintain'; color: string }) {
+  const filled = priority === 'emphasize' ? 3 : priority === 'grow' ? 2 : 1;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, marginRight: 6 }}>
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={{
+          width: 3,
+          height: 10,
+          borderRadius: 1,
+          backgroundColor: i <= filled ? color : `${color}30`,
+        }} />
+      ))}
+    </View>
+  );
+}
+
 interface ExerciseCardProps {
   exerciseGroup: Exercise[];
   onUpdateSet: (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => void;
@@ -133,6 +149,7 @@ export default function ExerciseCard({
 }: ExerciseCardProps) {
   const colors = useColors();
   const primaryMuscle = exerciseGroup[0]?.muscleGroup;
+  const musclePriority = exerciseGroup[0]?.musclePriority;
   const badgeColor = primaryMuscle
     ? (MuscleGroupColors[primaryMuscle] ?? colors.primary)
     : colors.primary;
@@ -162,7 +179,10 @@ export default function ExerciseCard({
           alignItems: 'center',
           backgroundColor: `${badgeColor}28`,
         }}>
-          <MaterialCommunityIcons name="blur-linear" size={12} color={badgeColor} style={{ marginRight: 4 }} />
+          {musclePriority
+            ? <PriorityBars priority={musclePriority} color={badgeColor} />
+            : <MaterialCommunityIcons name="blur-linear" size={12} color={badgeColor} style={{ marginRight: 4 }} />
+          }
           <Text style={{ color: badgeColor, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {primaryMuscle}
           </Text>

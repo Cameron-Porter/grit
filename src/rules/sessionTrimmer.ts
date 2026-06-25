@@ -1,8 +1,29 @@
-import type { DayPlan, ExerciseSlot, MuscleGroup, MusclePriority } from '../types/program';
+import type { DayPlan, ExerciseSlot, MuscleGroup, MusclePriority, ProgramFocus } from '../types/program';
 
 export const SESSION_MAX_EXERCISES = 5;
 export const SESSION_MAX_SETS = 24;
 export const SESSION_TARGET_SETS_MIN = 8;
+
+// RC-005: cut phase hard cap — 20 sets × 3.5 min ≈ 70 min (well under 90-min limit)
+const SESSION_MAX_SETS_CUT = 20;
+const SESSION_MAX_EXERCISES_CUT = 4;
+
+// Full Body region membership — used to protect the last slot per region from trimming
+const FB_PUSH_REGION: MuscleGroup[] = ['Chest', 'Shoulders', 'Triceps'];
+const FB_PULL_REGION: MuscleGroup[] = ['Back', 'Biceps', 'Traps', 'Forearms'];
+const FB_LOWER_REGION: MuscleGroup[] = ['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs'];
+const FB_REGIONS = [FB_PUSH_REGION, FB_PULL_REGION, FB_LOWER_REGION];
+
+// Returns true when removing this slot would eliminate all representation for
+// its movement region in a Full Body session.
+function isLastInRegion(slot: ExerciseSlot, slots: ExerciseSlot[]): boolean {
+  for (const region of FB_REGIONS) {
+    if (!(region as string[]).includes(slot.muscle)) continue;
+    const regionCount = slots.filter((s) => (region as string[]).includes(s.muscle)).length;
+    return regionCount <= 1;
+  }
+  return false;
+}
 
 // Numeric priority for trimming order: lowest number = removed first
 function trimPriority(priority: MusclePriority | 'mev'): number {
@@ -33,28 +54,41 @@ function byTrimPriority(
 }
 
 // Enforce hard session limits:
-//   1. Remove slots until ≤ SESSION_MAX_EXERCISES (lowest priority first)
-//   2. Trim sets until ≤ SESSION_MAX_SETS (reduce 1 set at a time from lowest
+//   1. Remove slots until ≤ exercise cap (lowest priority first)
+//   2. Trim sets until ≤ set cap (reduce 1 set at a time from lowest
 //      priority). When a slot would drop below 2 sets, remove the whole slot.
 export function enforceSessionCaps(
   day: DayPlan,
   musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>,
+  focus?: ProgramFocus,
 ): DayPlan {
+  const isCut = focus === 'cut';
+  const maxExercises = isCut ? SESSION_MAX_EXERCISES_CUT : SESSION_MAX_EXERCISES;
+  const maxSets = isCut ? SESSION_MAX_SETS_CUT : SESSION_MAX_SETS;
+
+  const isFullBody = day.sessionType === 'FullBody';
   let slots = [...day.slots];
 
   // ── Phase 1: slot count cap ──────────────────────────────────────────────
-  while (slots.length > SESSION_MAX_EXERCISES) {
+  while (slots.length > maxExercises) {
     const sorted = byTrimPriority(slots, musclePriorities);
-    const victimId = sorted[0].id;
-    slots = slots.filter((s) => s.id !== victimId);
+    // For Full Body sessions skip any candidate that is the last slot for its
+    // movement region — we must keep push, pull, and lower represented.
+    const victim = isFullBody
+      ? sorted.find((s) => !isLastInRegion(s, slots))
+      : sorted[0];
+    if (!victim) break; // all remaining slots are region anchors — stop trimming
+    slots = slots.filter((s) => s.id !== victim.id);
   }
 
   // ── Phase 2: set count cap ───────────────────────────────────────────────
   let totalSets = slots.reduce((n, s) => n + s.sets, 0);
 
-  while (totalSets > SESSION_MAX_SETS) {
+  while (totalSets > maxSets) {
     const sorted = byTrimPriority(slots, musclePriorities);
-    const target = sorted[0];
+    const target = isFullBody
+      ? sorted.find((s) => !isLastInRegion(s, slots))
+      : sorted[0];
     if (!target) break;
 
     const ref = slots.find((s) => s.id === target.id)!;
