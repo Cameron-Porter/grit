@@ -183,21 +183,21 @@ export default function SlotExercisePicker({
                 onPress={() => setMusclePickerOpen((prev) => !prev)}
                 style={({ pressed }) => ({
                   paddingVertical: 3, paddingHorizontal: 9, borderRadius: 6,
-                  backgroundColor: `${muscleColor}28`,
-                  borderWidth: musclePickerOpen ? 1 : 0,
-                  borderColor: musclePickerOpen ? muscleColor : 'transparent',
+                  backgroundColor: `${muscleColor}50`,
+                  borderWidth: 1,
+                  borderColor: `${muscleColor}50`,
                   flexDirection: 'row', alignItems: 'center', gap: 4,
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Text style={{ color: muscleColor, fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>
                   {activeMuscle}
                 </Text>
                 {onMuscleChange && (
                   <MaterialCommunityIcons
                     name={musclePickerOpen ? 'chevron-up' : 'chevron-down'}
                     size={12}
-                    color={muscleColor}
+                    color="#FFFFFF"
                   />
                 )}
               </Pressable>

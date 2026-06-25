@@ -339,6 +339,7 @@ export const useWorkoutStore = create<WorkoutState>()(
                 workout_id: workoutId,
                 exercise_name: exercise.name,
                 muscle_group: exercise.muscleGroup ?? null,
+                muscle_priority: exercise.musclePriority ?? null,
                 equipment: exercise.equipment ?? null,
                 note: exercise.note ?? null,
                 set_index: index,

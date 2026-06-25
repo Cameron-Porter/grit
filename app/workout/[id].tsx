@@ -26,7 +26,7 @@ export default function WorkoutDetail() {
     const [{ data: sets }, { data: workoutRows }] = await Promise.all([
       supabase
         .from('workout_sets')
-        .select('exercise_name, muscle_group, equipment, note, weight, reps, set_index, completed')
+        .select('exercise_name, muscle_group, muscle_priority, equipment, note, weight, reps, set_index, completed')
         .eq('workout_id', id)
         .order('exercise_name')
         .order('set_index'),
@@ -46,6 +46,7 @@ export default function WorkoutDetail() {
         map.set(s.exercise_name, {
           name: s.exercise_name,
           muscleGroup: s.muscle_group ?? null,
+          musclePriority: s.muscle_priority ?? undefined,
           equipment: s.equipment ?? null,
           note: s.note ?? null,
           sets: [],

@@ -36,19 +36,20 @@ export const Colors = DarkColors;
 export const BOTTOM_TAB_HEIGHT = 60;
 
 export const MuscleGroupColors: Record<string, string> = {
-  // Push — pink / red / amber
-  Chest:      '#EC4899',
-  Shoulders:  '#EF4444',
-  Triceps:    '#EAB308',
-  // Pull — teal / blue / purple
-  Back:       '#14B8A6',
-  Biceps:     '#3B82F6',
-  Forearms:   '#A855F7',
-  // Lower — green / lime / orange / cyan
-  Quads:      '#22C55E',
-  Hamstrings: '#84CC16',
-  Glutes:     '#F97316',
-  Calves:     '#06B6D4',
-  // Core
-  Abs:        '#8B5CF6',
+  // Pull
+  Back:       '#24B8D9',
+  Biceps:     '#24B8D9',
+  Forearms:   '#24B8D9',
+  // Push
+  Chest:      '#E03EC3',
+  Shoulders:  '#E03EC3',
+  Triceps:    '#E03EC3',
+  // Legs
+  Quads:      '#2FB890',
+  Hamstrings: '#2FB890',
+  Glutes:     '#2FB890',
+  // Accessories
+  Traps:      '#7C49F0',
+  Calves:     '#7C49F0',
+  Abs:        '#7C49F0',
 };

@@ -19,6 +19,7 @@ import {
   unskipProgramDay,
 } from '../../../../src/api/programs';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
+import PriorityBars from '../../../../src/components/workout/PriorityBars';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
 import { useProfileStore } from '../../../../src/store/useProfileStore';
 import { useWorkoutStore } from '../../../../src/store/useWorkoutStore';
@@ -225,7 +226,11 @@ export default function ProgramDayScreen() {
               </Text>
 
               {history.exercises.map((ex) => (
-                <ReadOnlyExerciseCard key={ex.name} exercise={ex} />
+                <ReadOnlyExerciseCard
+                  key={ex.name}
+                  exercise={ex}
+                  musclePriority={ex.muscleGroup ? musclePriorities[ex.muscleGroup] : undefined}
+                />
               ))}
 
               {/* Feedback tags */}
@@ -238,8 +243,8 @@ export default function ProgramDayScreen() {
                     const badgeColor = MuscleGroupColors[fb.muscleGroup] ?? colors.primary;
                     return (
                       <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-                        <View style={{ backgroundColor: `${badgeColor}22`, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
-                          <Text style={{ color: badgeColor, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>
+                        <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
+                          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>
                             {fb.muscleGroup}
                           </Text>
                         </View>
@@ -279,9 +284,12 @@ export default function ProgramDayScreen() {
               return (
                 <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
                   {item.muscle_group && (
-                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}28`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
-                      <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
-                      <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
+                      {musclePriorities[item.muscle_group]
+                        ? <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />
+                        : <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
+                      }
+                      <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                         {item.muscle_group}
                       </Text>
                     </View>
@@ -346,9 +354,12 @@ export default function ProgramDayScreen() {
               return (
                 <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
                   {item.muscle_group && (
-                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}28`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
-                      <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
-                      <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
+                      {musclePriorities[item.muscle_group]
+                        ? <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />
+                        : <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
+                      }
+                      <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                         {item.muscle_group}
                       </Text>
                     </View>

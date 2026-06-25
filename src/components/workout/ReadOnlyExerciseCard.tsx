@@ -2,10 +2,12 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Text, View } from 'react-native';
 import { MuscleGroupColors } from '../../utils/constants';
 import { useColors } from '../../utils/useColors';
+import PriorityBars from './PriorityBars';
 
 export interface ReadOnlyExercise {
   name: string;
   muscleGroup: string | null;
+  musclePriority?: 'emphasize' | 'grow' | 'maintain';
   equipment: string | null;
   note: string | null;
   sets: { weight: number; reps: number; completed: boolean }[];
@@ -60,9 +62,10 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
   );
 }
 
-export default function ReadOnlyExerciseCard({ exercise }: { exercise: ReadOnlyExercise }) {
+export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorityProp }: { exercise: ReadOnlyExercise; musclePriority?: 'emphasize' | 'grow' | 'maintain' }) {
   const colors = useColors();
   const badgeColor = MuscleGroupColors[exercise.muscleGroup ?? ''] ?? colors.primary;
+  const musclePriority = priorityProp ?? exercise.musclePriority;
 
   return (
     <View style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 16, overflow: 'hidden', opacity: 0.72 }}>
@@ -76,10 +79,15 @@ export default function ReadOnlyExerciseCard({ exercise }: { exercise: ReadOnlyE
           borderBottomRightRadius: 8,
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: `${badgeColor}28`,
+          backgroundColor: `${badgeColor}50`,
+          borderWidth: 1,
+          borderColor: `${badgeColor}50`,
         }}>
-          <MaterialCommunityIcons name="blur-linear" size={12} color={badgeColor} style={{ marginRight: 4 }} />
-          <Text style={{ color: badgeColor, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          {musclePriority
+            ? <PriorityBars priority={musclePriority} color={badgeColor} />
+            : <MaterialCommunityIcons name="blur-linear" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+          }
+          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {exercise.muscleGroup}
           </Text>
         </View>
