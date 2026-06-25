@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import PersistentTabBar from '../src/components/navigation/PersistentTabBar';
 import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
@@ -47,7 +48,9 @@ export default function Layout() {
   if (!initialized || !fontsLoaded || (user && rcLoading)) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />
+        <SafeAreaProvider>
+          <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     );
   }
@@ -66,22 +69,26 @@ export default function Layout() {
       <Stack.Screen name="exercise/[id]" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="personal-records" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="growth-over-time" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="privacy" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="terms" options={{ headerShown: false, animation: 'slide_from_right' }} />
     </Stack>
   );
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      {isLandscape && !isLoginScreen ? (
-        <View style={{ flex: 1, flexDirection: 'row' }}>
-          <SideNav />
-          <View style={{ flex: 1 }}>{stack}</View>
-        </View>
-      ) : (
-        <>
-          {stack}
-          <PersistentTabBar />
-        </>
-      )}
+      <SafeAreaProvider>
+        {isLandscape && !isLoginScreen ? (
+          <View style={{ flex: 1, flexDirection: 'row' }}>
+            <SideNav />
+            <View style={{ flex: 1 }}>{stack}</View>
+          </View>
+        ) : (
+          <>
+            {stack}
+            <PersistentTabBar />
+          </>
+        )}
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

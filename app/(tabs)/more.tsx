@@ -285,6 +285,34 @@ export default function ProfileAndSettings() {
           </View>
         </View>
 
+        {/* ── LEGAL ── */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Legal</Text>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden' }}>
+            <Pressable
+              onPress={() => router.push('/privacy')}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', padding: 16, opacity: pressed ? 0.7 : 1 })}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <MaterialCommunityIcons name="shield-check-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', flex: 1 }}>Privacy Policy</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.surface2, marginLeft: 66 }} />
+            <Pressable
+              onPress={() => router.push('/terms')}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', padding: 16, opacity: pressed ? 0.7 : 1 })}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', flex: 1 }}>Terms of Service</Text>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+            </Pressable>
+          </View>
+        </View>
+
         {/* ── SIGN OUT ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Pressable

@@ -32,7 +32,7 @@ export default function useRevenueCat() {
       setLoading(true);
       try {
         if (!configured) {
-          Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+          Purchases.setLogLevel(__DEV__ ? LOG_LEVEL.DEBUG : LOG_LEVEL.ERROR);
           const key = Platform.OS === 'android' ? RC_ANDROID_KEY : RC_IOS_KEY;
           Purchases.configure({ apiKey: key });
           configured = true;
@@ -74,10 +74,9 @@ export default function useRevenueCat() {
     try {
       const { customerInfo: info } = await Purchases.purchasePackage(pkg);
       setCustomerInfo(info);
-      console.log('[RC] active entitlements:', JSON.stringify(info.entitlements.active));
       return !!(info.entitlements.active[RC_ENTITLEMENT]);
     } catch (e) {
-      console.log('[RC] purchasePackage error:', e);
+      if (__DEV__) console.log('[RC] purchasePackage error:', e);
       return false;
     }
   };

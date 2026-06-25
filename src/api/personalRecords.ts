@@ -55,14 +55,14 @@ export async function upsertPR(
         .from("personal_records")
         .update({ weight, reps, achieved_at: now, updated_at: now })
         .eq("id", existing.id);
-      if (error) console.error("upsertPR update:", error);
+      if (error && __DEV__) console.error("upsertPR update:", error);
     }
   } else {
     const userId = await getUserId();
     const { error } = await supabase
       .from("personal_records")
       .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now, user_id: userId });
-    if (error) console.error("upsertPR insert:", error);
+    if (error && __DEV__) console.error("upsertPR insert:", error);
   }
 }
 
