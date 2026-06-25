@@ -49,7 +49,7 @@ export default function TermsOfService() {
 
         <Section title="Agreement">
           <Body>
-            This End User License Agreement ("Agreement" or "Terms") governs your use of the GRIT — Hypertrophy Training mobile application ("App"), owned and operated by Cameron Porter ("we," "us," or "our"). By downloading, installing, or using the App, you agree to these Terms. If you do not agree, do not use the App.
+            This End User License Agreement ("Agreement" or "Terms") governs your use of the GRIT — Hypertrophy Training mobile application ("App"), owned and operated by Porter Programming ("we," "us," or "our"). By downloading, installing, or using the App, you agree to these Terms. If you do not agree, do not use the App.
           </Body>
         </Section>
 

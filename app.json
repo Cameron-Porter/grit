@@ -9,10 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.crporter171.grit"
+      "bundleIdentifier": "com.gritfitness.app"
     },
     "android": {
-      "package": "com.crporter171.grit",
+      "package": "com.gritfitness.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",

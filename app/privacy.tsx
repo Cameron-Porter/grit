@@ -49,7 +49,7 @@ export default function PrivacyPolicy() {
 
         <Section title="Overview">
           <Body>
-            This Privacy Policy governs the manner in which Cameron Porter ("we," "us," or "our") collects, uses, maintains, and discloses information collected from users ("you" or "User") of the GRIT app ("App" or "Service"). Please read this policy carefully to understand how we handle your Personally Identifiable Information ("PII") in connection with the App.
+            This Privacy Policy governs the manner in which Porter Programming ("we," "us," or "our") collects, uses, maintains, and discloses information collected from users ("you" or "User") of the GRIT app ("App" or "Service"). Please read this policy carefully to understand how we handle your Personally Identifiable Information ("PII") in connection with the App.
           </Body>
         </Section>
 
