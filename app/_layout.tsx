@@ -4,13 +4,21 @@ import { useEffect } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Sentry from '@sentry/react-native';
 import PersistentTabBar from '../src/components/navigation/PersistentTabBar';
 import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { RevenueCatProvider } from '../src/contexts/RevenueCatContext';
 import { EntitlementsProvider, useEntitlements } from '../src/contexts/EntitlementsContext';
 
-export default function Layout() {
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  // Send 20% of transactions as performance traces — enough to catch slow screens
+  // without burning through your quota. Raise to 1.0 temporarily when debugging perf.
+  tracesSampleRate: 0.2,
+});
+
+export default Sentry.wrap(function Layout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -22,16 +30,17 @@ export default function Layout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
-}
+});
 
 function LayoutInner() {
   const router = useRouter();
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
   const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
-  const [fontsLoaded] = useFonts({
-    'Square721-BoldExtended': require('../assets/fonts/Square 721 Extended Bold.otf'),
+  const [fontsLoaded, fontError] = useFonts({
+    'Square721-BoldExtended': require('../assets/fonts/Square721ExtendedBold.otf'),
   });
+  if (fontError) console.warn('[Fonts] failed to load:', fontError);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const isLoginScreen = segments[0] === 'login';
@@ -60,7 +69,7 @@ function LayoutInner() {
   }, [initialized, entitlementsLoading, user, hasPremiumAccess, isLoginScreen, isSubscriptionScreen]);
 
   // Hold a blank screen until auth, fonts, and entitlements are all resolved.
-  if (!initialized || !fontsLoaded || (user && entitlementsLoading)) {
+  if (!initialized || (!fontsLoaded && !fontError) || (user && entitlementsLoading)) {
     return <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />;
   }
 

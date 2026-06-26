@@ -39,7 +39,15 @@
         }
       ],
       "expo-image",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "grit-hypertrophy-app",
+          "organization": "grit-7z"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

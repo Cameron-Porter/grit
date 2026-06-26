@@ -1,8 +1,11 @@
 import { Session, User } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { supabase } from '../api/supabase';
+import { useProfileStore } from './useProfileStore';
+import { useWorkoutStore } from './useWorkoutStore';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -57,6 +60,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
+    // Clear persisted data and reset in-memory state so a new user starts fresh
+    await AsyncStorage.multiRemove(['grit-workout-storage', 'grit-profile-storage']);
+    useWorkoutStore.getState().endWorkout();
+    useProfileStore.getState().reset();
     set({ user: null, session: null, initialized: true });
   },
 

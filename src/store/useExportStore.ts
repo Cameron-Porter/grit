@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { create } from 'zustand';
 import { runWorkoutExport } from '../services/export/exportService';
 import { useAuthStore } from './useAuthStore';
@@ -31,6 +32,7 @@ export const useExportStore = create<ExportState>((set, get) => ({
       });
       set({ stage: 'done', message: 'Export complete', progress: 1 });
     } catch (e: any) {
+      Sentry.captureException(e, { tags: { context: 'workoutExport' } });
       console.error('[Export] Export failed:', e);
       set({ stage: 'error', error: 'Export failed. Please try again.', message: 'Export failed' });
     }

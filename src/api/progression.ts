@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react-native';
 import { getExerciseAllSessions } from './history';
 import { getTemplateDayExercises, saveProgramDayTargets } from './programs';
 import { supabase } from './supabase';

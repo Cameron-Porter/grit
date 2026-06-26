@@ -17,6 +17,7 @@ import type { DayPlan, ExerciseSlot, ExperienceLevel, MuscleGroup, ProgramFocus,
 import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 import SlotExercisePicker from '../../src/components/workout/SlotExercisePicker';
+import { getExerciseByName } from '../../src/data/exerciseDatabase';
 
 const WEEKDAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEEKDAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -204,7 +205,7 @@ export default function CreateProgram() {
             dbDay.id,
             slot.selectedExercise,
             slot.muscle,
-            '',   // equipment unknown until exercise picked
+            getExerciseByName(slot.selectedExercise)?.equipment ?? 'Barbell',
             slot.sortOrder,
             slot.sets,
             slot.repsMin,
@@ -228,7 +229,7 @@ export default function CreateProgram() {
             musclePriority: e.muscle_group
               ? (next.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null)?.[e.muscle_group]
               : undefined,
-            equipment: e.equipment ?? 'Bodyweight',
+            equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
             targetSets: e.target_sets ?? undefined,
             targetRepsMin: e.target_reps_min ?? undefined,
             targetRepsMax: e.target_reps_max ?? undefined,
@@ -379,7 +380,7 @@ export default function CreateProgram() {
           </View>
 
         </ScrollView>
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
             <Pressable onPress={handleNextFromSettings} disabled={!canAdvanceSettings}
               style={{ backgroundColor: canAdvanceSettings ? colors.primary : colors.surface2, borderRadius: 14, padding: 17 }}>
               <Text style={{ color: canAdvanceSettings ? colors.background : colors.muted, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
@@ -445,7 +446,7 @@ export default function CreateProgram() {
             })}
           </ScrollView>
 
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
             <Pressable onPress={handleNextFromFocus}
               style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}>
               <Text style={{ color: colors.background, fontWeight: '700', fontSize: 16 }}>Build Plan →</Text>
@@ -523,7 +524,7 @@ export default function CreateProgram() {
             })}
           </ScrollView>
 
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
             {saving ? (
               <View style={{ alignItems: 'center', paddingVertical: 12, gap: 10 }}>
                 <ActivityIndicator color={colors.primary} />

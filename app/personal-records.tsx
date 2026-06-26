@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -66,7 +66,7 @@ export default function PersonalRecords() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
         <Pressable onPress={() => router.back()} style={{ marginBottom: 12 }}>
-          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>← Profile</Text>
+          <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>â† Profile</Text>
         </Pressable>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Personal Records</Text>
@@ -83,7 +83,7 @@ export default function PersonalRecords() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {prs.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
-            <Text style={{ fontSize: 40 }}>🏆</Text>
+            <Text style={{ fontSize: 40 }}>ðŸ†</Text>
             <Text style={{ color: colors.muted, fontSize: 15, marginTop: 12 }}>No PRs recorded yet</Text>
             <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>Add one, or they auto-track during workouts</Text>
           </View>
@@ -96,7 +96,7 @@ export default function PersonalRecords() {
                 style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
               >
                 <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                  <Text style={{ fontSize: 18 }}>🏆</Text>
+                  <Text style={{ fontSize: 18 }}>ðŸ†</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
@@ -107,13 +107,13 @@ export default function PersonalRecords() {
                 <View style={{ alignItems: 'flex-end' }}>
                   {isBodyweightPR ? (
                     <>
-                      <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '—'}</Text>
+                      <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? 'â€”'}</Text>
                       <Text style={{ color: colors.muted, fontSize: 12 }}>reps</Text>
                     </>
                   ) : (
                     <>
                       <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
-                      <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` × ${pr.reps}` : ''}</Text>
+                      <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` Ã— ${pr.reps}` : ''}</Text>
                     </>
                   )}
                 </View>
@@ -126,7 +126,7 @@ export default function PersonalRecords() {
       <Modal visible={addPRVisible} transparent animationType="slide" onRequestClose={() => setAddPRVisible(false)}>
         <KeyboardAvoidingView
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={{ backgroundColor: '#1A1F26', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />

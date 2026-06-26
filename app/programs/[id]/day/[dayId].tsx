@@ -18,6 +18,7 @@ import {
   setCurrentProgram,
   unskipProgramDay,
 } from '../../../../src/api/programs';
+import { getExerciseByName } from '../../../../src/data/exerciseDatabase';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import PriorityBars from '../../../../src/components/workout/PriorityBars';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
@@ -163,7 +164,7 @@ export default function ProgramDayScreen() {
           name: e.exercise_name,
           muscleGroup: e.muscle_group ?? '',
           musclePriority: e.muscle_group ? musclePriorities[e.muscle_group] : undefined,
-          equipment: e.equipment ?? 'Bodyweight',
+          equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
           targetSets: aiTarget?.target_sets ?? e.target_sets ?? undefined,
           targetRepsMin: aiTarget?.target_reps_min ?? e.target_reps_min ?? undefined,
           targetRepsMax: aiTarget?.target_reps_max ?? e.target_reps_max ?? undefined,
@@ -297,7 +298,7 @@ export default function ProgramDayScreen() {
                   <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                      <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment ?? 'Bodyweight'}</Text>
+                      <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{getExerciseByName(item.exercise_name)?.equipment ?? 'Barbell'}</Text>
                     </View>
                     {item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
                       <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
@@ -311,7 +312,7 @@ export default function ProgramDayScreen() {
           </ScrollView>
 
           {/* Unskip footer */}
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2, gap: 10 }}>
+          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2, gap: 10 }}>
             <Pressable
               onPress={() => handleUnskip(true)}
               style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 16, alignItems: 'center' }}
@@ -368,7 +369,7 @@ export default function ProgramDayScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment ?? 'Bodyweight'}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{getExerciseByName(item.exercise_name)?.equipment ?? 'Barbell'}</Text>
                       </View>
                       {isTemplate && (
                         <Pressable onPress={() => handleRemove(item.id)} style={{ padding: 6 }}>
@@ -402,7 +403,7 @@ export default function ProgramDayScreen() {
 
       {/* Footer — only for upcoming (not completed, not skipped) days */}
       {!loading && !day?.completed && !day?.skipped && (
-        <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2, gap: 10 }}>
+        <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2, gap: 10 }}>
           {isTemplate && (
             <Pressable
               onPress={() => setPickerOpen(true)}

@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressa
 import { confirm } from '../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
+import { getExerciseByName } from '../src/data/exerciseDatabase';
 import { checkMuscleGroupPreviouslyTrained, endCurrentProgram, getNextProgramWorkout, renameProgram, replaceExerciseInTemplate, updateProgramMusclePriorities } from '../src/api/programs';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
@@ -102,9 +103,42 @@ export default function ActiveWorkout() {
   const feedbackShownFor = useRef<Set<string>>(new Set());
   const sorenessShownFor = useRef<Set<string>>(new Set());
   const prCache = useRef<Map<string, number>>(new Map());
+  const feedbackMuscleRef = useRef<string | null>(null);
 
   const hasWorkoutSession = !!activeWorkoutId;
   const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
+
+  // Keep ref in sync so the exercises effect can read it without being in deps
+  useEffect(() => { feedbackMuscleRef.current = feedbackMuscle; }, [feedbackMuscle]);
+
+  // Auto-show feedback as soon as a muscle group has no remaining sets to complete
+  useEffect(() => {
+    if (!hasActiveWorkout) return;
+    const status = new Map<string, { hasCompleted: boolean; hasRemaining: boolean }>();
+    for (const ex of exercises) {
+      if (!ex.muscleGroup) continue;
+      const cur = status.get(ex.muscleGroup) ?? { hasCompleted: false, hasRemaining: false };
+      status.set(ex.muscleGroup, {
+        hasCompleted: cur.hasCompleted || ex.sets.some((s) => s.completed),
+        hasRemaining: cur.hasRemaining || ex.sets.some((s) => !s.completed && !s.skipped),
+      });
+    }
+    const ready: string[] = [];
+    status.forEach(({ hasCompleted, hasRemaining }, mg) => {
+      if (hasCompleted && !hasRemaining && !feedbackShownFor.current.has(mg)) {
+        feedbackShownFor.current.add(mg);
+        ready.push(mg);
+      }
+    });
+    if (ready.length === 0) return;
+    if (feedbackMuscleRef.current) {
+      setPendingFeedbackGroups((prev) => [...prev, ...ready]);
+    } else {
+      const [first, ...rest] = ready;
+      if (rest.length > 0) setPendingFeedbackGroups((prev) => [...prev, ...rest]);
+      setFeedbackMuscle(first);
+    }
+  }, [exercises]);
 
   // Auto-load next workout when no session is active
   useEffect(() => {
@@ -127,7 +161,7 @@ export default function ActiveWorkout() {
               musclePriority: e.muscle_group
                 ? (n.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null)?.[e.muscle_group]
                 : undefined,
-              equipment: e.equipment ?? 'Bodyweight',
+              equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
               targetSets: e.target_sets,
               targetRepsMin: e.target_reps_min ?? 8,
               targetRepsMax: e.target_reps_max ?? 12,
@@ -493,7 +527,7 @@ export default function ActiveWorkout() {
     : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
       {/* Progress bar */}
       <View style={{ height: 3, backgroundColor: colors.surface2, width: '100%' }}>
         <View style={{ height: 3, backgroundColor: colors.primary, width: `${progress * 100}%` }} />
@@ -609,7 +643,7 @@ export default function ActiveWorkout() {
       </ScrollView>
 
       {/* Pinned Finish Workout button */}
-      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 16, borderTopWidth: 1, borderTopColor: colors.surface2, backgroundColor: colors.background }}>
+      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16, borderTopWidth: 1, borderTopColor: colors.surface2, backgroundColor: colors.background }}>
         <Pressable
           onPress={onFinishWorkout}
           disabled={!canFinish || isSaving}
@@ -800,7 +834,7 @@ export default function ActiveWorkout() {
 
       {/* ── Day note modal ── */}
       <Modal visible={dayNoteOpen} transparent animationType="fade" onRequestClose={() => setDayNoteOpen(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 14 }}>Day Note</Text>
             <TextInput
@@ -832,7 +866,7 @@ export default function ActiveWorkout() {
 
       {/* ── Rename modal ── */}
       <Modal visible={renameOpen} transparent animationType="fade" onRequestClose={() => setRenameOpen(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 14 }}>Rename Program</Text>
             <TextInput
@@ -857,7 +891,7 @@ export default function ActiveWorkout() {
 
       {/* ── Bodyweight modal ── */}
       <Modal visible={bwOpen} transparent animationType="fade" onRequestClose={() => setBwOpen(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.6)', padding: 24 }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 14 }}>Update Bodyweight</Text>
             <TextInput

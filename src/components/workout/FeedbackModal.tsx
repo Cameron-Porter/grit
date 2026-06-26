@@ -60,7 +60,7 @@ export default function FeedbackModal({
 
   const handleSave = () => {
     onSave({ jointPain, pump, volume });
-    onClose();
+    // onSave in workout.tsx handles advancing and closing — don't also call onClose
   };
 
   return (
@@ -150,7 +150,7 @@ function FeedbackSection({
       <Text style={{ color: mutedColor, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
         {label}
       </Text>
-      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
         {options.map((opt) => {
           const active = opt === selected;
           const color = getColor(opt);
@@ -159,15 +159,17 @@ function FeedbackSection({
               key={opt}
               onPress={() => onSelect(opt)}
               style={{
+                flex: 1,
                 paddingVertical: 10,
-                paddingHorizontal: 16,
+                paddingHorizontal: 6,
                 borderRadius: 10,
                 borderWidth: 1.5,
                 borderColor: active ? color : '#333',
                 backgroundColor: active ? `${color}22` : 'transparent',
+                alignItems: 'center',
               }}
             >
-              <Text style={{ color: active ? color : mutedColor, fontSize: 14, fontWeight: active ? '700' : '500' }}>
+              <Text style={{ color: active ? color : mutedColor, fontSize: 13, fontWeight: active ? '700' : '500', textAlign: 'center' }}>
                 {opt}
               </Text>
             </Pressable>

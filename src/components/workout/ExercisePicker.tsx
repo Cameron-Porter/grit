@@ -69,7 +69,7 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Header */}
@@ -264,7 +264,7 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
     >
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: colors.background }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Header */}
         <View style={{ paddingHorizontal: 16, paddingTop: 56, paddingBottom: 12 }}>

@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -71,7 +71,7 @@ export default function PRsAndProgress() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* ── PERSONAL RECORDS ── */}
+        {/* â”€â”€ PERSONAL RECORDS â”€â”€ */}
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
@@ -88,7 +88,7 @@ export default function PRsAndProgress() {
 
           {prs.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <Text style={{ fontSize: 32 }}>🏆</Text>
+              <Text style={{ fontSize: 32 }}>ðŸ†</Text>
               <Text style={{ color: colors.muted, fontSize: 14, marginTop: 8 }}>No PRs recorded yet</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Add one, or they auto-track during workouts</Text>
             </View>
@@ -101,7 +101,7 @@ export default function PRsAndProgress() {
                   style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
                 >
                   <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Text style={{ fontSize: 18 }}>🏆</Text>
+                    <Text style={{ fontSize: 18 }}>ðŸ†</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
@@ -112,13 +112,13 @@ export default function PRsAndProgress() {
                   <View style={{ alignItems: 'flex-end' }}>
                     {isBodyweightPR ? (
                       <>
-                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '—'}</Text>
+                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? 'â€”'}</Text>
                         <Text style={{ color: colors.muted, fontSize: 12 }}>reps</Text>
                       </>
                     ) : (
                       <>
                         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` × ${pr.reps}` : ''}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` Ã— ${pr.reps}` : ''}</Text>
                       </>
                     )}
                   </View>
@@ -133,7 +133,7 @@ export default function PRsAndProgress() {
       <Modal visible={addPRVisible} transparent animationType="slide" onRequestClose={() => setAddPRVisible(false)}>
         <KeyboardAvoidingView
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={{ backgroundColor: '#1A1F26', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />

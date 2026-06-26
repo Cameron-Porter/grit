@@ -1,10 +1,12 @@
 import { Exercise, WorkoutState } from '@/types/workout';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Sentry from '@sentry/react-native';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { markDayComplete, skipProgramDay } from '../api/programs';
+import { getExerciseByName } from '../data/exerciseDatabase';
 import { computeAndSaveProgressionTargets } from '../api/progression';
 import { supabase } from '../api/supabase';
 import { useProfileStore } from './useProfileStore';
@@ -316,7 +318,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({ isSaving: true });
 
         try {
-          const workoutId = crypto.randomUUID();
+          const workoutId = uuidv4();
 
           const userId = await getUserId();
 
@@ -373,7 +375,9 @@ export const useWorkoutStore = create<WorkoutState>()(
             if (workoutSets.length > 0) {
               await markDayComplete(state.activeProgramDayId).catch(() => {});
               const { experienceLevel } = useProfileStore.getState();
-              computeAndSaveProgressionTargets(state.activeProgramDayId, experienceLevel).catch(() => {});
+              computeAndSaveProgressionTargets(state.activeProgramDayId, experienceLevel).catch((e) => {
+                Sentry.captureException(e, { tags: { context: 'progressionEngine' } });
+              });
             } else {
               // All sets were skipped — mark the day as skipped, not complete
               await skipProgramDay(state.activeProgramDayId).catch(() => {});
@@ -392,6 +396,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             isSaving: false,
           });
         } catch (error) {
+          Sentry.captureException(error, { tags: { context: 'finishWorkout' } });
           console.error('Failed to save workout:', error);
           set({ isSaving: false });
           throw error;

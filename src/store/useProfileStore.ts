@@ -35,6 +35,7 @@ interface ProfileState {
   setPreferredEquipment: (types: string[]) => void;
   setExperienceLevel: (level: ExperienceLevel) => void;
   setTheme: (theme: Theme) => void;
+  reset: () => void;
 }
 
 export const useProfileStore = create<ProfileState>()(
@@ -61,6 +62,14 @@ export const useProfileStore = create<ProfileState>()(
       setPreferredEquipment: (types) => set({ preferredEquipment: types }),
       setExperienceLevel: (level) => set({ experienceLevel: level }),
       setTheme: (theme) => set({ theme }),
+      reset: () => set({
+        bodyWeight: null,
+        bodyWeightLog: [],
+        autoMatchWeight: false,
+        usePreferredEquipment: false,
+        preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
+        experienceLevel: 'intermediate',
+      }),
     }),
     {
       name: 'grit-profile-storage',
