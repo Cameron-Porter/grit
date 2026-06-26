@@ -52,7 +52,7 @@ function LayoutInner() {
 
   useEffect(() => {
     if (!initialized) return;
-    const inAuthGroup = segments[0] === 'login';
+    const inAuthGroup = segments[0] === 'login' || (segments[0] === 'auth' && segments[1] === 'callback');
     if (!user && !inAuthGroup) {
       // Defer one tick so Expo Router's navigation stack is fully mounted
       // before replacing — calling replace synchronously on first render can
@@ -80,6 +80,7 @@ function LayoutInner() {
   const stack = (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="auth/callback" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="subscription" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="workout" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
