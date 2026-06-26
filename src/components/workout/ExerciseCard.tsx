@@ -76,7 +76,7 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
 
       {Array.from(grouped.entries()).map(([programName, programSessions]) => (
         <View key={programName} style={{ marginBottom: 4 }}>
-          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1A1F26' }}>
+          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.surface2 }}>
             <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>
               {programName}
               {programSessions[0]?.programTotalWeeks
@@ -86,7 +86,7 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
           </View>
 
           {programSessions.map((session, si) => (
-            <View key={si} style={{ paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: si > 0 ? 1 : 0, borderTopColor: '#252525' }}>
+            <View key={si} style={{ paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: si > 0 ? 1 : 0, borderTopColor: colors.surface2 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                 <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '700' }}>
                   {session.weekNumber != null && session.dayNumber != null
@@ -110,7 +110,7 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
       {hasMore && (
         <Pressable
           onPress={() => router.push('/(tabs)/history' as any)}
-          style={{ paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#252525', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+          style={{ paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surface2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}
         >
           <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>
             View full history ({sessions.length} sessions)
@@ -204,7 +204,7 @@ export default function ExerciseCard({
 
             {/* Pain warning */}
             {exercise.painWarning ? (
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#2A1E0A', borderRadius: 8, padding: 10, gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: `${colors.warning}22`, borderRadius: 8, padding: 10, gap: 8 }}>
                 <MaterialCommunityIcons name="alert-outline" size={14} color="#F59E0B" style={{ marginTop: 1 }} />
                 <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.painWarning}</Text>
               </View>

@@ -51,8 +51,8 @@ export default function ExerciseMenuModal({
         style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
         onPress={onClose}
       >
-        <View style={{ width: '100%', maxWidth: 300, backgroundColor: '#252525', borderRadius: 12, paddingVertical: 12 }}>
-          <Text style={{ color: colors.muted, fontSize: 14, fontWeight: 'bold', paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#333' }}>
+        <View style={{ width: '100%', maxWidth: 300, backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12 }}>
+          <Text style={{ color: colors.muted, fontSize: 14, fontWeight: 'bold', paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
             Exercise
           </Text>
 
@@ -63,7 +63,7 @@ export default function ExerciseMenuModal({
           <MenuButton icon="fast-forward-outline" text="Skip sets" color={colors.text} onPress={handle(onSkipSets)} />
           <MenuButton icon="medical-bag" text="Exercise feedback" color={colors.text} onPress={handle(onJointPain)} />
 
-          <View style={{ height: 1, backgroundColor: '#333', marginVertical: 4 }} />
+          <View style={{ height: 1, backgroundColor: colors.surface2, marginVertical: 4 }} />
 
           <MenuButton
             icon="trash-can-outline"

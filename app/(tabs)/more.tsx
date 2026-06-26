@@ -29,7 +29,7 @@ function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
       onPress={onToggle}
       style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: value ? colors.primary : colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
     >
-      <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: colors.text, alignSelf: value ? 'flex-end' : 'flex-start' }} />
+      <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: '#FFFFFF', alignSelf: value ? 'flex-end' : 'flex-start' }} />
     </Pressable>
   );
 }

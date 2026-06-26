@@ -118,11 +118,8 @@ export default function SetRow({
     );
   }
 
-  const borderColor = set.completed ? 'transparent' : colors.surface2;
-  const borderWidth = set.completed ? 0 : 1;
-
   return (
-    <View style={{ position: 'relative', marginBottom: 6, overflow: 'hidden' }}>
+    <View style={{ position: 'relative', overflow: 'hidden' }}>
       {/* Delete background */}
       <Animated.View
         style={[deleteStyle, {
@@ -132,7 +129,6 @@ export default function SetRow({
           justifyContent: 'center',
           alignItems: 'flex-end',
           paddingRight: 20,
-          borderRadius: 8,
         }]}
       >
         <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Delete</Text>
@@ -146,7 +142,6 @@ export default function SetRow({
           backgroundColor: colors.primary,
           justifyContent: 'center',
           paddingLeft: 20,
-          borderRadius: 8,
         }]}
       >
         <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Complete</Text>
@@ -156,110 +151,108 @@ export default function SetRow({
         <Animated.View
           style={[
             animatedStyle,
-            {
-              backgroundColor: set.completed ? `${colors.primary}18` : colors.cardSurface,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingVertical: 6,
-              borderRadius: 8,
-              borderWidth,
-              borderColor,
-            },
+            { backgroundColor: set.completed ? `${colors.primary}18` : 'transparent' },
           ]}
         >
-          {/* Row menu */}
-          <Pressable
-            onPress={onMenuPress}
-            style={{ width: 40, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
-          </Pressable>
-
-          {/* Weight Input */}
-          <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-            <TextInput
-              value={String(set.weight || '')}
-              keyboardType="decimal-pad"
-              placeholder="0"
-              placeholderTextColor={colors.muted}
-              onChangeText={(text) => {
-                const clean = text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                onWeightChange(parseFloat(clean) || 0);
-              }}
-              style={{
-                backgroundColor: colors.inputBg,
-                color: colors.text,
-                width: '100%',
-                maxWidth: 100,
-                paddingVertical: 12,
-                borderRadius: 8,
-                textAlign: 'center',
-                fontSize: 18,
-                fontWeight: '600',
-              }}
-            />
-          </View>
-
-          {/* Reps Input */}
-          <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-            <TextInput
-              value={String(set.reps || '')}
-              keyboardType="number-pad"
-              placeholder={
-                set.rir !== undefined
-                  ? `${set.rir} RIR`
-                  : set.targetReps
-                  ? String(set.targetReps)
-                  : '0'
-              }
-              placeholderTextColor={
-                rirError
-                  ? colors.error
-                  : set.rir !== undefined || set.targetReps
-                  ? colors.primary
-                  : colors.muted
-              }
-              onChangeText={(text) => {
-                const clean = text.replace(/[^0-9]/g, '');
-                onRepsChange(parseInt(clean, 10) || 0);
-              }}
-              style={{
-                backgroundColor: colors.inputBg,
-                color: colors.text,
-                width: '100%',
-                maxWidth: 100,
-                paddingVertical: 12,
-                borderRadius: 8,
-                textAlign: 'center',
-                fontSize: 18,
-                fontWeight: '600',
-                borderWidth: rirError ? 1 : 0,
-                borderColor: rirError ? colors.error : 'transparent',
-              }}
-            />
-          </View>
-
-          {/* Log Checkbox */}
-          <View style={{ width: 64, alignItems: 'center' }}>
-            <Pressable onPress={handleComplete} hitSlop={8}>
-              <View
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 10,
-                  backgroundColor: set.completed ? colors.primary : colors.inputBg,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderWidth: set.completed ? 0 : isActive ? 2 : 1,
-                  borderColor: isActive ? colors.primary : colors.surface2,
-                }}
-              >
-                {set.completed && (
-                  <MaterialCommunityIcons name="check" size={22} color="white" />
-                )}
-              </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
+            {/* Row menu */}
+            <Pressable
+              onPress={onMenuPress}
+              style={{ width: 40, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
             </Pressable>
+
+            {/* Weight Input */}
+            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+              <TextInput
+                value={String(set.weight || '')}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.muted}
+                onChangeText={(text) => {
+                  const clean = text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                  onWeightChange(parseFloat(clean) || 0);
+                }}
+                style={{
+                  backgroundColor: colors.inputBg,
+                  color: colors.text,
+                  width: '100%',
+                  maxWidth: 100,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  textAlign: 'center',
+                  fontSize: 18,
+                  fontWeight: '600',
+                }}
+              />
+            </View>
+
+            {/* Reps Input */}
+            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+              <TextInput
+                value={String(set.reps || '')}
+                keyboardType="number-pad"
+                placeholder={
+                  set.rir !== undefined
+                    ? `${set.rir} RIR`
+                    : set.targetReps
+                    ? String(set.targetReps)
+                    : '0'
+                }
+                placeholderTextColor={
+                  rirError
+                    ? colors.error
+                    : set.rir !== undefined || set.targetReps
+                    ? colors.primary
+                    : colors.muted
+                }
+                onChangeText={(text) => {
+                  const clean = text.replace(/[^0-9]/g, '');
+                  onRepsChange(parseInt(clean, 10) || 0);
+                }}
+                style={{
+                  backgroundColor: colors.inputBg,
+                  color: colors.text,
+                  width: '100%',
+                  maxWidth: 100,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  textAlign: 'center',
+                  fontSize: 18,
+                  fontWeight: '600',
+                  borderWidth: rirError ? 1 : 0,
+                  borderColor: rirError ? colors.error : 'transparent',
+                }}
+              />
+            </View>
+
+            {/* Log Checkbox */}
+            <View style={{ width: 64, alignItems: 'center' }}>
+              <Pressable onPress={handleComplete} hitSlop={8}>
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    backgroundColor: set.completed ? colors.primary : colors.inputBg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: set.completed ? 0 : isActive ? 2 : 1,
+                    borderColor: isActive ? colors.primary : colors.surface2,
+                  }}
+                >
+                  {set.completed && (
+                    <MaterialCommunityIcons name="check" size={22} color="white" />
+                  )}
+                </View>
+              </Pressable>
+            </View>
           </View>
+
+          {!set.completed && (
+            <View style={{ height: 1, backgroundColor: colors.surface2, marginHorizontal: 16 }} />
+          )}
         </Animated.View>
       </GestureDetector>
     </View>

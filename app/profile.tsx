@@ -167,7 +167,7 @@ export default function Profile() {
                 onPress={() => setAutoMatchWeight(!autoMatchWeight)}
                 style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: autoMatchWeight ? colors.primary : colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
               >
-                <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: colors.text, alignSelf: autoMatchWeight ? 'flex-end' : 'flex-start' }} />
+                <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: '#FFFFFF', alignSelf: autoMatchWeight ? 'flex-end' : 'flex-start' }} />
               </Pressable>
             </View>
           </View>
@@ -184,7 +184,7 @@ export default function Profile() {
                 onPress={() => setUsePreferredEquipment(!usePreferredEquipment)}
                 style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: usePreferredEquipment ? colors.primary : colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
               >
-                <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: colors.text, alignSelf: usePreferredEquipment ? 'flex-end' : 'flex-start' }} />
+                <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: '#FFFFFF', alignSelf: usePreferredEquipment ? 'flex-end' : 'flex-start' }} />
               </Pressable>
             </View>
             {usePreferredEquipment && (

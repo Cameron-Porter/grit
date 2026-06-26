@@ -20,9 +20,9 @@ const DarkColors = {
 } as const;
 
 const LightColors = {
-  background:   '#FFFFFF',
-  surface:      '#F4F4F5',
-  surface2:     '#E4E4E7',
+  background:   '#F2F2F7',
+  surface:      '#FFFFFF',
+  surface2:     '#E5E5EA',
   primary:      '#0D9488',
   accent:       '#14B8A6',
   text:         '#0F172A',
@@ -30,10 +30,10 @@ const LightColors = {
   success:      '#16A34A',
   warning:      '#D97706',
   error:        '#DC2626',
-  // Exercise cards — slightly darker than surface so they stand out on white bg
-  cardSurface:  '#E8E8EC',
-  // Weight/reps input boxes — white cells pop cleanly on the gray card
-  inputBg:      '#FFFFFF',
+  // White cards sit on the gray page background
+  cardSurface:  '#FFFFFF',
+  // Gray inputs sit inside white cards (recessed look)
+  inputBg:      '#F2F2F7',
   // Muscle badge text (dark on light backgrounds)
   badgeText:    '#111111',
 } as const;

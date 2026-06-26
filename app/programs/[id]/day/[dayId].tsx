@@ -245,7 +245,7 @@ export default function ProgramDayScreen() {
                     return (
                       <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, marginBottom: 8 }}>
                         <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
-                          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>
+                          <Text style={{ color: colors.badgeText, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>
                             {fb.muscleGroup}
                           </Text>
                         </View>
@@ -290,7 +290,7 @@ export default function ProgramDayScreen() {
                         ? <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />
                         : <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
                       }
-                      <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                      <Text style={{ color: colors.badgeText, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                         {item.muscle_group}
                       </Text>
                     </View>
@@ -360,7 +360,7 @@ export default function ProgramDayScreen() {
                         ? <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />
                         : <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
                       }
-                      <Text style={{ color: '#FFFFFF', fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                      <Text style={{ color: colors.badgeText, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                         {item.muscle_group}
                       </Text>
                     </View>
