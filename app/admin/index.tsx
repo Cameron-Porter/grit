@@ -223,6 +223,32 @@ function AdminDashboard() {
         contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32 }}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Quick nav */}
+        <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
+          Tools
+        </Text>
+        <Pressable
+          onPress={() => router.push('/admin/retention')}
+          style={({ pressed }) => ({
+            backgroundColor: colors.surface,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+            <MaterialCommunityIcons name="database-clock" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>Retention Management</Text>
+            <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Archive, restore, and delete inactive user data</Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+        </Pressable>
+
         {/* Search */}
         <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
           Find User by Email

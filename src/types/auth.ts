@@ -9,11 +9,9 @@ export type UserRole =
   | 'user'
   | 'vip'
   | 'admin'
-  // Future roles — uncomment when ready:
-  // | 'coach'
-  // | 'trainer'
-  // | 'beta_tester'
-  // | 'ambassador'
+  | 'coach'
+  | 'ambassador'
+  | 'beta_tester'
   ;
 
 export type SubscriptionStatus =
@@ -26,6 +24,7 @@ export interface UserProfile {
   id: string;
   email: string | null;
   role: UserRole;
+  retention_exempt: boolean;
   subscription_status: SubscriptionStatus;
   created_at: string;
   updated_at: string;
@@ -34,7 +33,10 @@ export interface UserProfile {
 // ── Role sets ─────────────────────────────────────────────────────────────────
 
 /** Roles that grant premium access regardless of subscription state. */
-export const PREMIUM_ROLES: UserRole[] = ['vip', 'admin'];
+export const PREMIUM_ROLES: UserRole[] = ['vip', 'admin', 'coach', 'ambassador', 'beta_tester'];
 
 /** Roles that have admin panel access. */
 export const ADMIN_ROLES: UserRole[] = ['admin'];
+
+/** Roles that are automatically exempt from data retention/deletion. */
+export const RETENTION_EXEMPT_ROLES: UserRole[] = ['admin', 'vip', 'coach', 'ambassador', 'beta_tester'];

@@ -5,7 +5,7 @@
 // never inspect role strings or subscription_status directly.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { UserProfile, UserRole, ADMIN_ROLES, PREMIUM_ROLES } from '../types/auth';
+import { UserProfile, UserRole, ADMIN_ROLES, PREMIUM_ROLES, RETENTION_EXEMPT_ROLES } from '../types/auth';
 
 /**
  * Returns true when the user should have full premium access.
@@ -64,9 +64,22 @@ export function hasAnyRole(profile: UserProfile | null, roles: UserRole[]): bool
  */
 export function roleLabel(role: UserRole): string {
   const labels: Record<UserRole, string> = {
-    user:  'Member',
-    vip:   'VIP',
-    admin: 'Admin',
+    user:        'Member',
+    vip:         'VIP',
+    admin:       'Admin',
+    coach:       'Coach',
+    ambassador:  'Ambassador',
+    beta_tester: 'Beta Tester',
   };
   return labels[role] ?? role;
+}
+
+/**
+ * Returns true when the user's role makes them permanently exempt from
+ * data retention (archival / deletion).  The `retention_exempt` flag on
+ * user_profiles can override this for individual 'user' accounts.
+ */
+export function isRetentionExempt(profile: UserProfile | null): boolean {
+  if (!profile) return false;
+  return profile.retention_exempt || RETENTION_EXEMPT_ROLES.includes(profile.role);
 }
