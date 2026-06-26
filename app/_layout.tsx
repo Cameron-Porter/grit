@@ -54,7 +54,11 @@ function LayoutInner() {
     if (!initialized) return;
     const inAuthGroup = segments[0] === 'login';
     if (!user && !inAuthGroup) {
-      router.replace('/login');
+      // Defer one tick so Expo Router's navigation stack is fully mounted
+      // before replacing — calling replace synchronously on first render can
+      // fail silently on Android production builds.
+      const t = setTimeout(() => router.replace('/login'), 0);
+      return () => clearTimeout(t);
     } else if (user && inAuthGroup) {
       router.replace('/workout');
     }
