@@ -19,6 +19,8 @@ import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useRevenueCatContext } from '../../src/contexts/RevenueCatContext';
 import { useEntitlements } from '../../src/contexts/EntitlementsContext';
 import { useColors } from '../../src/utils/useColors';
+import { useExportStore } from '../../src/store/useExportStore';
+import ExportProgressModal from '../../src/components/export/ExportProgressModal';
 
 function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
   const colors = useColors();
@@ -47,6 +49,7 @@ export default function ProfileAndSettings() {
 
   const { isProMember: rcIsProMember, isTrialing, customerInfo } = useRevenueCatContext();
   const { hasPremiumAccess, isAdmin } = useEntitlements();
+  const { startExport } = useExportStore();
   const isProMember = hasPremiumAccess;
 
   const meta = user?.user_metadata ?? {};
@@ -89,6 +92,7 @@ export default function ProfileAndSettings() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ExportProgressModal />
       {/* User header */}
       <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         {avatarUrl ? (
@@ -226,6 +230,20 @@ export default function ProfileAndSettings() {
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>Growth Over Time</Text>
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Track strength progress by muscle</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+            </Pressable>
+            <View style={{ height: 1, backgroundColor: colors.surface2, marginLeft: 66 }} />
+            <Pressable
+              onPress={startExport}
+              style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', padding: 16, opacity: pressed ? 0.7 : 1 })}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <MaterialCommunityIcons name="download-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>Export Workout Data</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Download all workouts as CSV files</Text>
               </View>
               <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
             </Pressable>
