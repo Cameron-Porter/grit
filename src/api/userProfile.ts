@@ -9,10 +9,7 @@ export async function fetchMyProfile(): Promise<UserProfile | null> {
   // the JWT to outgoing request headers yet when called synchronously from
   // an auth-state-change subscriber.
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.user?.id) {
-    console.warn('[fetchMyProfile] no active session');
-    return null;
-  }
+  if (!session?.user?.id) return null;
 
   const { data, error } = await supabase
     .from('user_profiles')
@@ -20,13 +17,8 @@ export async function fetchMyProfile(): Promise<UserProfile | null> {
     .eq('id', session.user.id)
     .limit(1);
 
-  if (error) {
-    console.warn('[fetchMyProfile] error:', error.code, error.message);
-    return null;
-  }
-  const profile = (data?.[0] ?? null) as UserProfile | null;
-  console.log('[fetchMyProfile] loaded profile:', profile?.role ?? 'none');
-  return profile;
+  if (error) return null;
+  return (data?.[0] ?? null) as UserProfile | null;
 }
 
 // ── Admin: role management ────────────────────────────────────────────────────
