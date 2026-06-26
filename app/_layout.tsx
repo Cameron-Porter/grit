@@ -74,7 +74,7 @@ function LayoutInner() {
 
   // Hold a blank screen until auth, fonts, and entitlements are all resolved.
   if (!initialized || (!fontsLoaded && !fontError) || (user && entitlementsLoading)) {
-    return <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />;
+    return <View style={{ flex: 1, backgroundColor: '#111114' }} />;
   }
 
   const stack = (
