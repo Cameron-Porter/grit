@@ -7,7 +7,6 @@ export default function TabsLayout() {
     <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: 'none' } }}>
       <Tabs.Screen name="programs" />
       <Tabs.Screen name="history" />
-      <Tabs.Screen name="log" />
       <Tabs.Screen name="more" />
       {/* Legacy / deep-link screens — not shown in tab bar */}
       <Tabs.Screen name="templates" options={{ href: null }} />

@@ -6,6 +6,8 @@ import { useAuthStore } from './useAuthStore';
 interface UserProfileState {
   profile: UserProfile | null;
   loading: boolean;
+  /** True once a fetch attempt has completed (success or error). Prevents the paywall gate from firing before the first profile load finishes. */
+  settled: boolean;
   /** Fetch (or re-fetch) the signed-in user's profile from Supabase. */
   fetchProfile: () => Promise<void>;
   /** Clear profile on sign-out. */
@@ -15,14 +17,15 @@ interface UserProfileState {
 export const useUserProfileStore = create<UserProfileState>((set) => ({
   profile: null,
   loading: false,
+  settled: false,
 
   fetchProfile: async () => {
     set({ loading: true });
     const profile = await fetchMyProfile();
-    set({ profile, loading: false });
+    set({ profile, loading: false, settled: true });
   },
 
-  clearProfile: () => set({ profile: null, loading: false }),
+  clearProfile: () => set({ profile: null, loading: false, settled: false }),
 }));
 
 // ── Auto-sync with auth state ─────────────────────────────────────────────────

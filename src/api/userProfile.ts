@@ -5,12 +5,28 @@ import { UserProfile, UserRole } from '../types/auth';
 
 /** Fetch the signed-in user's own profile. Returns null on error or no session. */
 export async function fetchMyProfile(): Promise<UserProfile | null> {
+  // Await the session explicitly — the Supabase client may not have applied
+  // the JWT to outgoing request headers yet when called synchronously from
+  // an auth-state-change subscriber.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) {
+    console.warn('[fetchMyProfile] no active session');
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
-    .single();
-  if (error) return null;
-  return data as UserProfile;
+    .eq('id', session.user.id)
+    .limit(1);
+
+  if (error) {
+    console.warn('[fetchMyProfile] error:', error.code, error.message);
+    return null;
+  }
+  const profile = (data?.[0] ?? null) as UserProfile | null;
+  console.log('[fetchMyProfile] loaded profile:', profile?.role ?? 'none');
+  return profile;
 }
 
 // ── Admin: role management ────────────────────────────────────────────────────

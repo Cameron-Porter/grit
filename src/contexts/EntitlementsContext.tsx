@@ -40,7 +40,7 @@ const EntitlementsContext = createContext<EntitlementsContextValue | null>(null)
 
 export function EntitlementsProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
-  const { profile, loading: profileLoading, fetchProfile, clearProfile } = useUserProfileStore();
+  const { profile, loading: profileLoading, settled: profileSettled, fetchProfile, clearProfile } = useUserProfileStore();
   const { isProMember, loading: rcLoading } = useRevenueCatContext();
 
   // Keep profile in sync with auth state.
@@ -55,7 +55,10 @@ export function EntitlementsProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
 
-  const loading = rcLoading || (!!user && profileLoading && profile === null);
+  // Stay loading until RC is done AND the profile fetch has settled at least once.
+  // Without `profileSettled`, there's a render window where rcLoading flips to false
+  // before profileLoading has been set to true, causing the paywall to fire on stale data.
+  const loading = rcLoading || (!!user && (!profileSettled || profileLoading));
 
   const value: EntitlementsContextValue = {
     hasPremiumAccess: computePremiumAccess(profile, isProMember),
