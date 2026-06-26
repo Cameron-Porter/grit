@@ -19,6 +19,14 @@ G.R.I.T. is a fully functional React Native application targeting iOS and Androi
 - Progress bar tracking completed vs. total sets for the session
 - Minimum exercise enforcement with in-session add prompt
 - Skip Workout option with confirmation
+- Per-exercise notes
+- Active set highlighted with a distinct checkbox border
+
+### Session Feedback
+- Feedback modal auto-triggers per muscle group as soon as all its sets are complete
+- Rates joint pain, pump, and volume adequacy independently per muscle group
+- Soreness check-in the day after training each muscle group
+- All feedback flushed to `workout_feedback` on session save for long-term coaching data
 
 ### Program Builder
 - Multi-step wizard: name → duration → days/week → training days → experience level → focus → muscle priorities → per-day exercise selection
@@ -54,26 +62,32 @@ Weekly volume scales from 70% in Week 1 to 100% at peak, with RIR decreasing by 
 
 ### Personal Records
 - Automatically tracked per exercise across all workout sessions
-- Dedicated personal records screen with history
+- Dedicated tab with trophy-icon listing and date achieved
+- Manual PR entry for historical lifts
 
 ### Workout History
 - Full log of completed sessions
 - Per-session exercise and set detail
-
-### Progress Tracking
-- Growth-over-time charts per exercise
-- Personal record timelines
-
-### Profile & Settings
-- Equipment preference selection
-- Experience level (Beginner / Intermediate / Advanced)
-- Light and dark theme support
 
 ### Programs List
 - Three-state status badge per program: **Active** (currently selected), **Paused** (started but incomplete), **Complete** (all days finished or skipped)
 - Day completion progress displayed inline (`X/Y days done`)
 - Resume, set as current, or delete from the context menu
 - Creating a new program automatically deactivates all others
+
+### Profile & Settings
+- Body weight logging (90-day history) with auto-match to bodyweight exercises
+- Equipment preference selection filters exercise recommendations
+- Experience level (Beginner / Intermediate / Advanced)
+- Light and dark theme support
+- Data export (ZIP of workout history as CSV, shareable via system sheet)
+- Account management and sign-out
+
+### Subscription (GRIT Pro)
+- Free 7-day trial via RevenueCat
+- Pro paywall on advanced program generation features
+- Admin/VIP pre-grant access bypasses paywall
+- Subscription status visible in profile with trial countdown
 
 ---
 
@@ -86,135 +100,12 @@ Weekly volume scales from 70% in Week 1 to 100% at peak, with RIR decreasing by 
 | Navigation | [Expo Router](https://expo.github.io/router) v56 (file-based, typed routes) |
 | State Management | [Zustand](https://zustand-demo.pmnd.rs) v5 with persist middleware |
 | Backend | [Supabase](https://supabase.com) (PostgreSQL, Auth, Row Level Security) |
+| Monetization | [RevenueCat](https://www.revenuecat.com) (`react-native-purchases`) |
+| Error Monitoring | [Sentry](https://sentry.io) (`@sentry/react-native`) |
 | Animations | React Native Reanimated v4 |
 | Gestures | React Native Gesture Handler v2 |
-| Data Fetching | TanStack Query v5 |
+| Charts | React Native SVG v15 |
 | Haptics | Expo Haptics |
-
----
-
-## Project Structure
-
-```
-app/
-  _layout.tsx                    # Root Stack + PersistentTabBar overlay
-  (tabs)/
-    _layout.tsx                  # Tab screen registration (tab bar is custom overlay)
-    index.tsx                    # Home / active workout redirect
-    programs.tsx                 # Programs list
-    history.tsx                  # Workout history
-    log.tsx                      # Session log
-    more.tsx                     # Profile & settings
-  workout.tsx                    # Active workout screen (full-screen Stack route)
-  workout/[id].tsx               # Completed workout detail
-  programs/
-    create.tsx                   # Multi-step program creation wizard
-    [id].tsx                     # Program detail (week × day grid)
-    [id]/day/[dayId].tsx         # Day exercise list + start workout
-  exercise/[id].tsx              # Exercise detail
-  personal-records.tsx           # Personal records screen
-  growth-over-time.tsx           # Progress chart screen
-  profile.tsx                    # Profile editor
-  login.tsx                      # Authentication
-
-src/
-  api/                           # Supabase query functions
-    exercises.ts
-    programs.ts
-    workouts.ts
-    history.ts
-    personalRecords.ts
-    progression.ts
-  data/                          # Static reference data (scoring engine)
-    exerciseDatabase.ts          # Local exercise metadata (SFR tiers, movement patterns)
-    sessionTemplates.ts          # Session type → slot shape definitions
-    slotRoleConfig.ts            # Set/rep/RIR configs per role × priority
-    slotTemplates.ts             # Muscle slot templates per session type
-    roleOverlap.ts               # Synergistic muscle overlap table
-  rules/                         # Program generation engine
-    programBuilder.ts            # Orchestrates all rule modules
-    splitDeriver.ts
-    volumeBudget.ts
-    assignment.ts
-    slotBuilder.ts
-    exerciseRecommender.ts
-    progressionEngine.ts
-    sessionTrimmer.ts
-    validation.ts
-  store/
-    useWorkoutStore.ts           # Active workout state (Zustand)
-    useProfileStore.ts           # User preferences and profile (Zustand + persist)
-    useAuthStore.ts              # Authentication state
-  types/
-    program.ts                   # Core domain types
-    workout.ts                   # Workout session types
-  components/
-    navigation/PersistentTabBar.tsx
-    workout/ExerciseCard.tsx
-    workout/SetRow.tsx
-    workout/SlotExercisePicker.tsx
-  utils/
-    useColors.ts                 # Theme-aware color hook
-    constants.ts                 # MuscleGroupColors, layout constants
-
-supabase/
-  migrations/                    # Ordered SQL migration files
-```
-
----
-
-## Database Schema
-
-| Table | Purpose |
-|---|---|
-| `exercises` | Master exercise library (200+ rows, open read via RLS) |
-| `workouts` | Individual workout sessions |
-| `workout_sets` | Per-set log rows (exercise, weight, reps, RIR, muscle group) |
-| `workout_feedback` | Post-session perceived effort and soreness |
-| `personal_records` | Auto-updated best lifts per user per exercise |
-| `programs` | Training program definitions (name, weeks, days/week, focus, muscle priorities) |
-| `program_days` | All week × day rows for a program (completed, skipped flags) |
-| `program_exercises` | Exercise prescriptions for each program day (sets, reps, RIR, weight targets) |
-| `program_day_targets` | AI/engine-generated weekly targets per day |
-
-All user-owned tables are protected by Row Level Security policies. The `exercises` table is open for reads to support unauthenticated exercise browsing.
-
----
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 20+
-- [Expo CLI](https://docs.expo.dev/get-started/installation/)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (for running migrations locally)
-- iOS Simulator or Android Emulator (or [Expo Go](https://expo.dev/go))
-
-### Setup
-
-```bash
-# Install dependencies
-npm install
-
-# Copy environment template and fill in your Supabase credentials
-cp .env.example .env
-# EXPO_PUBLIC_SUPABASE_URL=...
-# EXPO_PUBLIC_SUPABASE_ANON_KEY=...
-
-# Apply database migrations
-supabase db push
-
-# Start the dev server
-npx expo start
-```
-
-### Running Tests
-
-```bash
-npm test
-```
-
-Unit tests cover the progression engine, exercise recommender, and program builder rules.
 
 ---
 
