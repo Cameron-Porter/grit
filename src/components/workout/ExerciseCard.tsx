@@ -151,7 +151,7 @@ export default function ExerciseCard({
     : null;
 
   return (
-    <View style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+    <View style={{ backgroundColor: colors.cardSurface, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
 
       {/* Muscle Group Badge */}
       {primaryMuscle && (
@@ -168,9 +168,9 @@ export default function ExerciseCard({
         }}>
           {musclePriority
             ? <PriorityBars priority={musclePriority} color={badgeColor} />
-            : <MaterialCommunityIcons name="blur-linear" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+            : <MaterialCommunityIcons name="blur-linear" size={12} color={colors.badgeText} style={{ marginRight: 4 }} />
           }
-          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          <Text style={{ color: colors.badgeText, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {primaryMuscle}
           </Text>
         </View>
@@ -214,7 +214,7 @@ export default function ExerciseCard({
             {exercise.note ? (
               <Pressable
                 onPress={() => setNoteExerciseId(exercise.id)}
-                style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: '#1E2A2A', borderRadius: 8, padding: 10, gap: 8 }}
+                style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.surface2, borderRadius: 8, padding: 10, gap: 8 }}
               >
                 <MaterialCommunityIcons name="note-text-outline" size={14} color={colors.primary} style={{ marginTop: 1 }} />
                 <Text style={{ color: colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
@@ -225,7 +225,7 @@ export default function ExerciseCard({
             {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
 
             {/* Column headers */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#252525', marginBottom: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.surface2, marginBottom: 6 }}>
               <View style={{ width: 40 }} />
               <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
               <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>

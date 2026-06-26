@@ -190,14 +190,14 @@ export default function SlotExercisePicker({
                   opacity: pressed ? 0.7 : 1,
                 })}
               >
-                <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                <Text style={{ color: colors.badgeText, fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>
                   {activeMuscle}
                 </Text>
                 {onMuscleChange && (
                   <MaterialCommunityIcons
                     name={musclePickerOpen ? 'chevron-up' : 'chevron-down'}
                     size={12}
-                    color="#FFFFFF"
+                    color={colors.badgeText}
                   />
                 )}
               </Pressable>

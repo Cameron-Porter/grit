@@ -1,29 +1,41 @@
 export type Theme = 'dark' | 'light';
 
 const DarkColors = {
-  background: '#111114',
-  surface:    '#1C1C1F',
-  surface2:   '#28282C',
-  primary:    '#14B8A6',
-  accent:     '#2DD4BF',
-  text:       '#E5E7EB',
-  muted:      '#9CA3AF',
-  success:    '#22C55E',
-  warning:    '#F59E0B',
-  error:      '#EF4444',
+  background:   '#111114',
+  surface:      '#1C1C1F',
+  surface2:     '#28282C',
+  primary:      '#14B8A6',
+  accent:       '#2DD4BF',
+  text:         '#E5E7EB',
+  muted:        '#9CA3AF',
+  success:      '#22C55E',
+  warning:      '#F59E0B',
+  error:        '#EF4444',
+  // Exercise cards — same as surface in dark
+  cardSurface:  '#1C1C1F',
+  // Weight/reps input boxes
+  inputBg:      '#1E1E1E',
+  // Muscle badge text (white on dark backgrounds)
+  badgeText:    '#FFFFFF',
 } as const;
 
 const LightColors = {
-  background: '#FFFFFF',
-  surface:    '#F4F4F5',
-  surface2:   '#E4E4E7',
-  primary:    '#0D9488',
-  accent:     '#14B8A6',
-  text:       '#0F172A',
-  muted:      '#64748B',
-  success:    '#16A34A',
-  warning:    '#D97706',
-  error:      '#DC2626',
+  background:   '#FFFFFF',
+  surface:      '#F4F4F5',
+  surface2:     '#E4E4E7',
+  primary:      '#0D9488',
+  accent:       '#14B8A6',
+  text:         '#0F172A',
+  muted:        '#64748B',
+  success:      '#16A34A',
+  warning:      '#D97706',
+  error:        '#DC2626',
+  // Exercise cards — slightly darker than surface so they stand out on white bg
+  cardSurface:  '#E8E8EC',
+  // Weight/reps input boxes — white cells pop cleanly on the gray card
+  inputBg:      '#FFFFFF',
+  // Muscle badge text (dark on light backgrounds)
+  badgeText:    '#111111',
 } as const;
 
 export const ThemeColors = { dark: DarkColors, light: LightColors } as const;

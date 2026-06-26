@@ -17,7 +17,6 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
   const colors = useColors();
   return (
     <View style={{
-      backgroundColor: colors.surface,
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 6,
@@ -29,7 +28,7 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
 
       {/* Weight */}
       <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-        <View style={{ backgroundColor: '#1E1E1E', width: '100%', maxWidth: 90, paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}>
+        <View style={{ backgroundColor: colors.inputBg, width: '100%', maxWidth: 90, paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}>
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
             {set.weight || '0'}
           </Text>
@@ -38,7 +37,7 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
 
       {/* Reps */}
       <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-        <View style={{ backgroundColor: '#1E1E1E', width: '100%', maxWidth: 90, paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}>
+        <View style={{ backgroundColor: colors.inputBg, width: '100%', maxWidth: 90, paddingVertical: 8, borderRadius: 6, alignItems: 'center' }}>
           <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
             {set.reps || '0'}
           </Text>
@@ -51,7 +50,7 @@ function ReadOnlySetRow({ set }: { set: ReadOnlyExercise['sets'][number] }) {
           width: 30,
           height: 30,
           borderRadius: 6,
-          backgroundColor: set.completed ? colors.primary : '#1E1E1E',
+          backgroundColor: set.completed ? colors.primary : colors.inputBg,
           alignItems: 'center',
           justifyContent: 'center',
         }}>
@@ -68,7 +67,7 @@ export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorit
   const musclePriority = priorityProp ?? exercise.musclePriority;
 
   return (
-    <View style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 16, overflow: 'hidden', opacity: 0.72 }}>
+    <View style={{ backgroundColor: colors.cardSurface, borderRadius: 12, marginBottom: 16, overflow: 'hidden', opacity: 0.72 }}>
 
       {/* Muscle group badge — pixel-for-pixel match of ExerciseCard */}
       {exercise.muscleGroup && (
@@ -85,9 +84,9 @@ export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorit
         }}>
           {musclePriority
             ? <PriorityBars priority={musclePriority} color={badgeColor} />
-            : <MaterialCommunityIcons name="blur-linear" size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
+            : <MaterialCommunityIcons name="blur-linear" size={12} color={colors.badgeText} style={{ marginRight: 4 }} />
           }
-          <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          <Text style={{ color: colors.badgeText, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {exercise.muscleGroup}
           </Text>
         </View>
@@ -109,7 +108,7 @@ export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorit
             alignItems: 'flex-start',
             marginHorizontal: 16,
             marginBottom: 8,
-            backgroundColor: '#1E2A2A',
+            backgroundColor: colors.surface2,
             borderRadius: 8,
             padding: 10,
             gap: 8,
@@ -120,7 +119,7 @@ export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorit
         ) : null}
 
         {/* Column headers — identical to ExerciseCard */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: '#252525', marginBottom: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.surface2, marginBottom: 6 }}>
           <View style={{ width: 40 }} />
           <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
           <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>

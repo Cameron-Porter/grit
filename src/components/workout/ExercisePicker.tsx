@@ -364,7 +364,7 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
                   </Text>
                 </View>
                 <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>
+                  <Text style={{ color: colors.badgeText, fontSize: 12, fontWeight: '700' }}>
                     {item.muscle_group}
                   </Text>
                 </View>

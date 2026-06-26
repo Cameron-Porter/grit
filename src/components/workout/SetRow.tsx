@@ -162,7 +162,7 @@ export default function SetRow({
           style={[
             animatedStyle,
             {
-              backgroundColor: set.completed ? `${colors.primary}18` : colors.surface,
+              backgroundColor: set.completed ? `${colors.primary}18` : colors.cardSurface,
               flexDirection: 'row',
               alignItems: 'center',
               paddingVertical: 6,
@@ -192,7 +192,7 @@ export default function SetRow({
                 onWeightChange(parseFloat(clean) || 0);
               }}
               style={{
-                backgroundColor: colors.surface2,
+                backgroundColor: colors.inputBg,
                 color: colors.text,
                 width: '100%',
                 maxWidth: 100,
@@ -229,7 +229,7 @@ export default function SetRow({
                 onRepsChange(parseInt(clean, 10) || 0);
               }}
               style={{
-                backgroundColor: colors.surface2,
+                backgroundColor: colors.inputBg,
                 color: colors.text,
                 width: '100%',
                 maxWidth: 100,
@@ -252,7 +252,7 @@ export default function SetRow({
                   width: 40,
                   height: 40,
                   borderRadius: 10,
-                  backgroundColor: set.completed ? colors.primary : colors.surface2,
+                  backgroundColor: set.completed ? colors.primary : colors.inputBg,
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: set.completed ? 0 : isActive ? 2 : 1,
