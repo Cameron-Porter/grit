@@ -118,13 +118,8 @@ export default function SetRow({
     );
   }
 
-  // Border styling: active = green, completed = none, future = subtle
-  const borderColor = set.completed
-    ? 'transparent'
-    : isActive
-    ? colors.primary
-    : colors.surface2;
-  const borderWidth = set.completed ? 0 : isActive ? 2 : 1;
+  const borderColor = set.completed ? 'transparent' : colors.surface2;
+  const borderWidth = set.completed ? 0 : 1;
 
   return (
     <View style={{ position: 'relative', marginBottom: 6, overflow: 'hidden' }}>
@@ -261,9 +256,6 @@ export default function SetRow({
               >
                 {set.completed && (
                   <MaterialCommunityIcons name="check" size={22} color="white" />
-                )}
-                {!set.completed && isActive && (
-                  <MaterialCommunityIcons name="circle-medium" size={16} color={colors.primary} />
                 )}
               </View>
             </Pressable>

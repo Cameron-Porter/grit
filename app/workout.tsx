@@ -108,37 +108,8 @@ export default function ActiveWorkout() {
   const hasWorkoutSession = !!activeWorkoutId;
   const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
 
-  // Keep ref in sync so the exercises effect can read it without being in deps
+  // Keep ref in sync so exercise-deletion handler can read current value without stale closure
   useEffect(() => { feedbackMuscleRef.current = feedbackMuscle; }, [feedbackMuscle]);
-
-  // Auto-show feedback as soon as a muscle group has no remaining sets to complete
-  useEffect(() => {
-    if (!hasActiveWorkout) return;
-    const status = new Map<string, { hasCompleted: boolean; hasRemaining: boolean }>();
-    for (const ex of exercises) {
-      if (!ex.muscleGroup) continue;
-      const cur = status.get(ex.muscleGroup) ?? { hasCompleted: false, hasRemaining: false };
-      status.set(ex.muscleGroup, {
-        hasCompleted: cur.hasCompleted || ex.sets.some((s) => s.completed),
-        hasRemaining: cur.hasRemaining || ex.sets.some((s) => !s.completed && !s.skipped),
-      });
-    }
-    const ready: string[] = [];
-    status.forEach(({ hasCompleted, hasRemaining }, mg) => {
-      if (hasCompleted && !hasRemaining && !feedbackShownFor.current.has(mg)) {
-        feedbackShownFor.current.add(mg);
-        ready.push(mg);
-      }
-    });
-    if (ready.length === 0) return;
-    if (feedbackMuscleRef.current) {
-      setPendingFeedbackGroups((prev) => [...prev, ...ready]);
-    } else {
-      const [first, ...rest] = ready;
-      if (rest.length > 0) setPendingFeedbackGroups((prev) => [...prev, ...rest]);
-      setFeedbackMuscle(first);
-    }
-  }, [exercises]);
 
   // Auto-load next workout when no session is active
   useEffect(() => {
@@ -263,7 +234,9 @@ export default function ActiveWorkout() {
     const covered = new Set(
       pendingFeedback.filter((f) => f.pump && f.volume && f.jointPain).map((f) => f.muscleGroup),
     );
-    const uncovered = musclesWithSets.filter((mg) => !covered.has(mg));
+    const uncovered = musclesWithSets.filter(
+      (mg) => !covered.has(mg) && !feedbackShownFor.current.has(mg),
+    );
 
     if (uncovered.length > 0) {
       setPendingFeedbackGroups(uncovered.slice(1));
@@ -677,7 +650,26 @@ export default function ActiveWorkout() {
       <ExerciseMenuModal
         visible={!!activeExerciseId}
         onClose={() => setActiveExerciseId(null)}
-        onRemove={() => activeExerciseId && removeExercise(activeExerciseId)}
+        onRemove={() => {
+          if (!activeExerciseId) return;
+          const removedExercise = exercises.find((ex) => ex.id === activeExerciseId);
+          removeExercise(activeExerciseId);
+          // After removal, check if that muscle group now has no remaining sets
+          const muscle = removedExercise?.muscleGroup;
+          if (muscle && !feedbackShownFor.current.has(muscle)) {
+            const remaining = exercises.filter((ex) => ex.id !== activeExerciseId && ex.muscleGroup === muscle);
+            const hasCompleted = exercises.some((ex) => ex.muscleGroup === muscle && ex.sets.some((s) => s.completed));
+            const hasRemaining = remaining.some((ex) => ex.sets.some((s) => !s.completed && !s.skipped));
+            if (hasCompleted && !hasRemaining) {
+              feedbackShownFor.current.add(muscle);
+              if (feedbackMuscleRef.current) {
+                setPendingFeedbackGroups((prev) => [...prev, muscle]);
+              } else {
+                setFeedbackMuscle(muscle);
+              }
+            }
+          }
+        }}
         onMoveUp={() => activeExerciseId && moveExerciseUp(activeExerciseId)}
         onMoveDown={() => activeExerciseId && moveExerciseDown(activeExerciseId)}
         onSkipSets={() => activeExerciseId && skipSets(activeExerciseId)}
@@ -689,6 +681,7 @@ export default function ActiveWorkout() {
         }}
         onJointPain={() => {
           if (activeExercise?.muscleGroup) {
+            feedbackShownFor.current.add(activeExercise.muscleGroup);
             setFeedbackMuscle(activeExercise.muscleGroup);
             setActiveExerciseId(null);
           }

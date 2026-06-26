@@ -1,4 +1,4 @@
-﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -66,12 +66,12 @@ export default function PRsAndProgress() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-        <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>PRs & Progress</Text>
+        <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Personal Records</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* â”€â”€ PERSONAL RECORDS â”€â”€ */}
+        {/* Personal Records */}
         <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
@@ -88,7 +88,7 @@ export default function PRsAndProgress() {
 
           {prs.length === 0 ? (
             <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-              <Text style={{ fontSize: 32 }}>ðŸ†</Text>
+              <MaterialCommunityIcons name="trophy-outline" size={48} color={colors.muted} />
               <Text style={{ color: colors.muted, fontSize: 14, marginTop: 8 }}>No PRs recorded yet</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>Add one, or they auto-track during workouts</Text>
             </View>
@@ -100,8 +100,8 @@ export default function PRsAndProgress() {
                   key={pr.id}
                   style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}
                 >
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: `${colors.warning}22`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Text style={{ fontSize: 18 }}>ðŸ†</Text>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <MaterialCommunityIcons name="trophy" size={18} color={colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>{pr.exercise_name}</Text>
@@ -112,13 +112,13 @@ export default function PRsAndProgress() {
                   <View style={{ alignItems: 'flex-end' }}>
                     {isBodyweightPR ? (
                       <>
-                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? 'â€”'}</Text>
+                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '-'}</Text>
                         <Text style={{ color: colors.muted, fontSize: 12 }}>reps</Text>
                       </>
                     ) : (
                       <>
                         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.weight}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` Ã— ${pr.reps}` : ''}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 12 }}>lbs{pr.reps ? ` x ${pr.reps}` : ''}</Text>
                       </>
                     )}
                   </View>

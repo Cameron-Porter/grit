@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import GritWordmark from '../../src/components/GritWordmark';
 import {
   Alert,
   Image,
@@ -11,16 +10,17 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { confirm } from '../../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuthStore } from '../../src/store/useAuthStore';
-import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStore';
-import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
-import { useRevenueCatContext } from '../../src/contexts/RevenueCatContext';
-import { useEntitlements } from '../../src/contexts/EntitlementsContext';
-import { useColors } from '../../src/utils/useColors';
-import { useExportStore } from '../../src/store/useExportStore';
 import ExportProgressModal from '../../src/components/export/ExportProgressModal';
+import GritWordmark from '../../src/components/GritWordmark';
+import { useEntitlements } from '../../src/contexts/EntitlementsContext';
+import { useRevenueCatContext } from '../../src/contexts/RevenueCatContext';
+import { useAuthStore } from '../../src/store/useAuthStore';
+import { useExportStore } from '../../src/store/useExportStore';
+import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStore';
+import { confirm } from '../../src/utils/confirm';
+import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
+import { useColors } from '../../src/utils/useColors';
 
 function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
   const colors = useColors();
@@ -392,7 +392,7 @@ export default function ProfileAndSettings() {
           </Pressable>
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 36, opacity: 0.4 }}>
+        <View style={{ alignItems: 'center', marginTop: 36, opacity: 0.95 }}>
           <GritWordmark size="sm" />
         </View>
       </ScrollView>

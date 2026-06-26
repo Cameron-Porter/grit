@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
 import { useColors } from '../../utils/useColors';
 
 type JointPain = 'None' | 'Low' | 'Moderate' | 'A lot';
@@ -70,21 +70,20 @@ export default function FeedbackModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-        <View style={{ backgroundColor: '#1A1F26', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
+      <Pressable style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }} onPress={onClose}>
+        <Pressable onPress={() => {}}>
+        <View style={{ backgroundColor: '#1A1F26', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 }}>
             {/* Handle */}
-            <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            <View style={{ width: 36, height: 4, backgroundColor: '#444', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
 
             {/* Title */}
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 4 }}>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 2 }}>
               How did it go?
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 14, marginBottom: 24 }}>
+            <Text style={{ color: colors.muted, fontSize: 14, marginBottom: 16 }}>
               {muscleGroup} · Rate this session
             </Text>
 
-            {/* Joint Pain */}
             <FeedbackSection
               label="Joint Pain"
               options={JOINT_PAIN}
@@ -94,7 +93,6 @@ export default function FeedbackModal({
               onSelect={(v) => setJointPain(v as JointPain)}
             />
 
-            {/* Pump */}
             <FeedbackSection
               label="Pump"
               options={PUMP}
@@ -104,7 +102,6 @@ export default function FeedbackModal({
               onSelect={(v) => setPump(v as Pump)}
             />
 
-            {/* Volume */}
             <FeedbackSection
               label="Adequate Volume"
               options={VOLUME}
@@ -114,18 +111,15 @@ export default function FeedbackModal({
               onSelect={(v) => setVolume(v as Volume)}
             />
 
-            {/* Actions */}
-            <View style={{ marginTop: 8 }}>
-              <Pressable
-                onPress={handleSave}
-                style={{ padding: 16, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
-              >
-                <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Save Feedback</Text>
-              </Pressable>
-            </View>
-          </ScrollView>
+            <Pressable
+              onPress={handleSave}
+              style={{ marginTop: 4, padding: 16, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' }}
+            >
+              <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Save Feedback</Text>
+            </Pressable>
         </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -146,8 +140,8 @@ function FeedbackSection({
   onSelect: (v: string) => void;
 }) {
   return (
-    <View style={{ marginBottom: 24 }}>
-      <Text style={{ color: mutedColor, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 10 }}>
+    <View style={{ marginBottom: 16 }}>
+      <Text style={{ color: mutedColor, fontSize: 11, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 8 }}>
         {label}
       </Text>
       <View style={{ flexDirection: 'row', gap: 8 }}>
