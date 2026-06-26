@@ -11,8 +11,10 @@ import {
   Text,
   View,
 } from 'react-native';
+
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import useRevenueCat from '../src/hooks/useRevenueCat';
+import { useRevenueCatContext } from '../src/contexts/RevenueCatContext';
+import { useEntitlements } from '../src/contexts/EntitlementsContext';
 import { useColors } from '../src/utils/useColors';
 
 const BENEFITS = [
@@ -27,18 +29,24 @@ export default function SubscriptionScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const {
-    loading,
-    isProMember,
+    loading: rcLoading,
     isTrialing,
     monthlyPackage,
     annualPackage,
     savingsPct,
     purchasePackage,
     restorePurchases,
-  } = useRevenueCat();
+  } = useRevenueCatContext();
+  // hasPremiumAccess covers role-based access (admin/vip) AND active RC subscription
+  const { hasPremiumAccess, loading: entLoading } = useEntitlements();
+  const isProMember = hasPremiumAccess;
+  const loading = rcLoading || entLoading;
 
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
+
+  const goToApp = () => router.replace('/(tabs)/programs');
+  const handleClose = () => router.canGoBack() ? router.back() : goToApp();
 
   const handlePurchase = async (type: 'monthly' | 'annual') => {
     const pkg = type === 'monthly' ? monthlyPackage : annualPackage;
@@ -46,11 +54,7 @@ export default function SubscriptionScreen() {
     setPurchasing(true);
     const success = await purchasePackage(pkg);
     setPurchasing(false);
-    if (success) {
-      Alert.alert('Welcome to GRIT Pro!', 'Your 7-day free trial is now active. Enjoy full access.', [
-        { text: 'Let\'s go', onPress: () => router.replace('/workout') },
-      ]);
-    }
+    if (success) goToApp();
   };
 
   const handleRestore = async () => {
@@ -59,9 +63,7 @@ export default function SubscriptionScreen() {
     const restored = await restorePurchases();
     setRestoring(false);
     if (restored) {
-      Alert.alert('Purchases Restored', 'Your Pro membership has been restored.', [
-        { text: 'Done', onPress: () => router.back() },
-      ]);
+      goToApp();
     } else {
       Alert.alert('Nothing to Restore', 'No active subscriptions were found for this account.');
     }
@@ -72,7 +74,7 @@ export default function SubscriptionScreen() {
       {/* Header — only show close button for active subscribers managing their plan */}
       {isProMember && (
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <Pressable onPress={() => router.back()} hitSlop={12} style={{ padding: 4 }}>
+          <Pressable onPress={handleClose} hitSlop={12} style={{ padding: 4 }}>
             <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
           </Pressable>
         </View>

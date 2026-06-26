@@ -16,7 +16,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/store/useAuthStore';
 import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStore';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
-import useRevenueCat from '../../src/hooks/useRevenueCat';
+import { useRevenueCatContext } from '../../src/contexts/RevenueCatContext';
+import { useEntitlements } from '../../src/contexts/EntitlementsContext';
 import { useColors } from '../../src/utils/useColors';
 
 function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
@@ -44,7 +45,9 @@ export default function ProfileAndSettings() {
     theme, setTheme,
   } = useProfileStore();
 
-  const { isProMember, isTrialing, customerInfo } = useRevenueCat();
+  const { isProMember: rcIsProMember, isTrialing, customerInfo } = useRevenueCatContext();
+  const { hasPremiumAccess, isAdmin } = useEntitlements();
+  const isProMember = hasPremiumAccess;
 
   const meta = user?.user_metadata ?? {};
   const identityEmail = user?.identities?.[0]?.identity_data?.email as string | undefined;
@@ -109,7 +112,18 @@ export default function ProfileAndSettings() {
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Membership</Text>
           {isProMember ? (
-            <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Pressable
+              onPress={() => router.push('/subscription')}
+              style={({ pressed }) => ({
+                backgroundColor: colors.surface,
+                borderRadius: 14,
+                padding: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center' }}>
                 <MaterialCommunityIcons name="crown" size={22} color={colors.primary} />
               </View>
@@ -126,10 +140,8 @@ export default function ProfileAndSettings() {
                   {isTrialing ? '7-day free trial' : customerInfo?.activeSubscriptions?.[0] ? 'Subscription active' : 'Full access enabled'}
                 </Text>
               </View>
-              <Pressable onPress={() => router.push('/subscription')} style={{ padding: 4 }} hitSlop={8}>
-                <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
-              </Pressable>
-            </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+            </Pressable>
           ) : (
             <Pressable
               onPress={() => router.push('/subscription')}
@@ -156,6 +168,35 @@ export default function ProfileAndSettings() {
             </Pressable>
           )}
         </View>
+
+        {/* ── ADMIN PANEL (admin only) ── */}
+        {isAdmin && (
+          <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Admin</Text>
+            <Pressable
+              onPress={() => router.push('/admin')}
+              style={({ pressed }) => ({
+                backgroundColor: colors.surface,
+                borderRadius: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 16,
+                borderWidth: 1,
+                borderColor: `${colors.primary}40`,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                <MaterialCommunityIcons name="shield-crown-outline" size={20} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>Admin Panel</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>Manage user roles</Text>
+              </View>
+              <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+            </Pressable>
+          </View>
+        )}
 
         {/* ── MY PROGRESS ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>

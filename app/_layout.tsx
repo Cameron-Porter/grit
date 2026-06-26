@@ -7,13 +7,28 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import PersistentTabBar from '../src/components/navigation/PersistentTabBar';
 import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
-import useRevenueCat from '../src/hooks/useRevenueCat';
+import { RevenueCatProvider } from '../src/contexts/RevenueCatContext';
+import { EntitlementsProvider, useEntitlements } from '../src/contexts/EntitlementsContext';
 
 export default function Layout() {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <RevenueCatProvider>
+          <EntitlementsProvider>
+            <LayoutInner />
+          </EntitlementsProvider>
+        </RevenueCatProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}
+
+function LayoutInner() {
   const router = useRouter();
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
-  const { isProMember, loading: rcLoading } = useRevenueCat();
+  const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
   const [fontsLoaded] = useFonts({
     'Square721-BoldExtended': require('../assets/fonts/Square 721 Extended Bold.otf'),
   });
@@ -36,23 +51,17 @@ export default function Layout() {
     }
   }, [user, initialized]);
 
-  // Paywall gate: send authenticated non-subscribers to /subscription
+  // Paywall gate: send authenticated non-premium users to /subscription
   useEffect(() => {
-    if (!initialized || rcLoading) return;
-    if (user && !isProMember && !isLoginScreen && !isSubscriptionScreen) {
+    if (!initialized || entitlementsLoading) return;
+    if (user && !hasPremiumAccess && !isLoginScreen && !isSubscriptionScreen) {
       router.replace('/subscription');
     }
-  }, [initialized, rcLoading, user, isProMember, isLoginScreen, isSubscriptionScreen]);
+  }, [initialized, entitlementsLoading, user, hasPremiumAccess, isLoginScreen, isSubscriptionScreen]);
 
-  // Hold a blank screen until auth, fonts, and RevenueCat state are known to prevent flashing.
-  if (!initialized || !fontsLoaded || (user && rcLoading)) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SafeAreaProvider>
-          <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />
-        </SafeAreaProvider>
-      </GestureHandlerRootView>
-    );
+  // Hold a blank screen until auth, fonts, and entitlements are all resolved.
+  if (!initialized || !fontsLoaded || (user && entitlementsLoading)) {
+    return <View style={{ flex: 1, backgroundColor: '#0B0F14' }} />;
   }
 
   const stack = (
@@ -71,24 +80,23 @@ export default function Layout() {
       <Stack.Screen name="growth-over-time" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="privacy" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="terms" options={{ headerShown: false, animation: 'slide_from_right' }} />
+      <Stack.Screen name="admin/index" options={{ headerShown: false, animation: 'slide_from_right' }} />
     </Stack>
   );
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        {isLandscape && !isLoginScreen ? (
-          <View style={{ flex: 1, flexDirection: 'row' }}>
-            <SideNav />
-            <View style={{ flex: 1 }}>{stack}</View>
-          </View>
-        ) : (
-          <>
-            {stack}
-            <PersistentTabBar />
-          </>
-        )}
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <>
+      {isLandscape && !isLoginScreen ? (
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          <SideNav />
+          <View style={{ flex: 1 }}>{stack}</View>
+        </View>
+      ) : (
+        <>
+          {stack}
+          <PersistentTabBar />
+        </>
+      )}
+    </>
   );
 }

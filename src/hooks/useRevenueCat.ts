@@ -20,8 +20,14 @@ export default function useRevenueCat() {
   const user = useAuthStore((s) => s.user);
   const [currentOffering, setCurrentOffering] = useState<PurchasesOffering | null>(null);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingRaw, setLoading] = useState(true);
+  // Track which user ID we last successfully loaded for, so we don't treat
+  // a stale anonymous result as valid when the authenticated user appears.
+  const [loadedForUserId, setLoadedForUserId] = useState<string | null | undefined>(undefined);
   const listenerRef = useRef(false);
+
+  // RC is only "ready" once we've finished loading for the current user identity.
+  const loading = loadingRaw || loadedForUserId !== (user?.id ?? null);
 
   const activeEntitlement = customerInfo?.entitlements.active[RC_ENTITLEMENT];
   const isProMember = !!activeEntitlement;
@@ -50,8 +56,10 @@ export default function useRevenueCat() {
 
         setCurrentOffering(offerings.current);
         setCustomerInfo(info);
+        setLoadedForUserId(user?.id ?? null);
       } catch (e) {
-        // SDK unavailable in Expo Go — silently no-op
+        // SDK unavailable in Expo Go — treat as loaded (non-subscriber) so app doesn't hang
+        setLoadedForUserId(user?.id ?? null);
       } finally {
         setLoading(false);
       }
