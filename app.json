@@ -15,7 +15,7 @@
       "package": "com.gritfitness.app",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#111114",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
