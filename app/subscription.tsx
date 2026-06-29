@@ -71,15 +71,15 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header — only show close button for active subscribers managing their plan */}
-      {isProMember && (
+      {/* Header — show close for subscribers managing plan, or when navigated here voluntarily */}
+      {(isProMember || router.canGoBack()) && (
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
           <Pressable onPress={handleClose} hitSlop={12} style={{ padding: 4 }}>
             <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
           </Pressable>
         </View>
       )}
-      {!isProMember && <View style={{ height: insets.top + 12 }} />}
+      {!isProMember && !router.canGoBack() && <View style={{ height: insets.top + 12 }} />}
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 32 }} showsVerticalScrollIndicator={false}>
 
@@ -236,11 +236,17 @@ export default function SubscriptionScreen() {
             )}
 
             {!annualPackage && !monthlyPackage && (
-              <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 24, alignItems: 'center' }}>
-                <MaterialCommunityIcons name="wifi-off" size={32} color={colors.muted} style={{ marginBottom: 8 }} />
-                <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center' }}>
+              <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 24, alignItems: 'center', gap: 12 }}>
+                <MaterialCommunityIcons name="wifi-off" size={32} color={colors.muted} />
+                <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
                   Subscription plans unavailable.{'\n'}Check your connection and try again.
                 </Text>
+                <Pressable
+                  onPress={() => router.replace('/subscription')}
+                  style={({ pressed }) => ({ backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 24, opacity: pressed ? 0.7 : 1 })}
+                >
+                  <Text style={{ color: colors.background, fontSize: 14, fontWeight: '700' }}>Retry</Text>
+                </Pressable>
               </View>
             )}
           </View>
