@@ -84,3 +84,9 @@ export async function listPregrants(): Promise<RolePreGrant[]> {
   if (error) throw new Error(error.message);
   return (data ?? []) as RolePreGrant[];
 }
+
+/** Permanently delete the signed-in user's account and all their data. */
+export async function deleteMyAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw new Error(error.message);
+}

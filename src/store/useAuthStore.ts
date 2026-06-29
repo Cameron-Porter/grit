@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { create } from 'zustand';
 import { supabase } from '../api/supabase';
+import { deleteMyAccount } from '../api/userProfile';
 import { useProfileStore } from './useProfileStore';
 import { useWorkoutStore } from './useWorkoutStore';
 
@@ -21,6 +22,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   signInWithGoogle: () => Promise<string | null>;
 }
 
@@ -61,6 +63,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     // Clear persisted data and reset in-memory state so a new user starts fresh
+    await AsyncStorage.multiRemove(['grit-workout-storage', 'grit-profile-storage']);
+    useWorkoutStore.getState().endWorkout();
+    useProfileStore.getState().reset();
+    set({ user: null, session: null, initialized: true });
+  },
+
+  deleteAccount: async () => {
+    await deleteMyAccount();
     await AsyncStorage.multiRemove(['grit-workout-storage', 'grit-profile-storage']);
     useWorkoutStore.getState().endWorkout();
     useProfileStore.getState().reset();

@@ -38,7 +38,7 @@ export default function ProfileAndSettings() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const colors = useColors();
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, deleteAccount } = useAuthStore();
   const {
     bodyWeight, setBodyWeight,
     autoMatchWeight, setAutoMatchWeight,
@@ -86,6 +86,26 @@ export default function ProfileAndSettings() {
         signOut().catch((e) => Alert.alert('Error', `Could not log out: ${String(e)}`));
       },
       'Log Out',
+      true,
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    confirm(
+      'Delete Account',
+      'This will permanently delete your account and all your data. This cannot be undone.\n\nIf you have an active GRIT Pro subscription, cancel it in Google Play or the App Store first — deleting your account does not cancel billing.',
+      () => {
+        confirm(
+          'Are you absolutely sure?',
+          'Your workouts, programs, and progress will be gone forever.',
+          () => {
+            deleteAccount().catch((e) => Alert.alert('Error', `Could not delete account: ${String(e)}`));
+          },
+          'Delete My Account',
+          true,
+        );
+      },
+      'Delete Account',
       true,
     );
   };
@@ -392,7 +412,21 @@ export default function ProfileAndSettings() {
           </Pressable>
         </View>
 
-        <View style={{ alignItems: 'center', marginTop: 36, opacity: 0.95 }}>
+        {/* ── DELETE ACCOUNT ── */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+          <Pressable
+            onPress={handleDeleteAccount}
+            style={({ pressed }) => ({
+              alignItems: 'center',
+              padding: 15,
+              opacity: pressed ? 0.5 : 1,
+            })}
+          >
+            <Text style={{ color: colors.muted, fontSize: 13 }}>Delete Account</Text>
+          </Pressable>
+        </View>
+
+        <View style={{ alignItems: 'center', marginTop: 8, opacity: 0.95 }}>
           <GritWordmark size="sm" />
         </View>
       </ScrollView>
