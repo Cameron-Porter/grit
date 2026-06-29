@@ -131,6 +131,7 @@ export default function LoginScreen() {
             placeholder="••••••••"
             placeholderTextColor={colors.muted}
             secureTextEntry={!showPassword}
+            autoCapitalize="none"
             autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             style={{ flex: 1, color: colors.text, padding: 16, fontSize: 15 }}
           />
@@ -149,6 +150,7 @@ export default function LoginScreen() {
               placeholder="••••••••"
               placeholderTextColor={colors.muted}
               secureTextEntry={!showPassword}
+              autoCapitalize="none"
               autoComplete="new-password"
               style={{ backgroundColor: colors.surface, color: colors.text, borderRadius: 12, padding: 16, fontSize: 15, marginBottom: 28 }}
             />
