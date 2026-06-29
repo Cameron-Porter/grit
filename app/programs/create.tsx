@@ -394,7 +394,7 @@ export default function CreateProgram() {
       {/* ── Step 1: Focus + Priorities ── */}
       {step === 1 && (
         <>
-          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_TAB_HEIGHT + 100 }}>
+          <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 100 }}>
             <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Program Focus</Text>
             <View style={{ gap: 8, marginBottom: 32 }}>
               {FOCUS_OPTIONS.map((opt) => {
