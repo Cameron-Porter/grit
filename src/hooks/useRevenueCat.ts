@@ -49,16 +49,30 @@ export default function useRevenueCat() {
           await Purchases.logIn(user.id);
         }
 
-        const [offerings, info] = await Promise.all([
-          Purchases.getOfferings(),
-          Purchases.getCustomerInfo(),
-        ]);
+        // Race against an 8-second timeout so a billing-client hang never
+        // blocks the app indefinitely.
+        const timeout = new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('RC timeout')), 8000),
+        );
+        const [offerings, info] = await Promise.race([
+          Promise.all([Purchases.getOfferings(), Purchases.getCustomerInfo()]),
+          timeout,
+        ]) as [Awaited<ReturnType<typeof Purchases.getOfferings>>, CustomerInfo];
 
         setCurrentOffering(offerings.current);
         setCustomerInfo(info);
         setLoadedForUserId(user?.id ?? null);
+
+        // Register listener only after SDK is confirmed configured
+        if (!listenerRef.current) {
+          listenerRef.current = true;
+          Purchases.addCustomerInfoUpdateListener((updatedInfo) => {
+            setCustomerInfo(updatedInfo);
+          });
+        }
       } catch (e) {
-        // SDK unavailable in Expo Go — treat as loaded (non-subscriber) so app doesn't hang
+        // Billing unavailable, timeout, or Expo Go — treat as non-subscriber so app doesn't hang
+        if (__DEV__) console.log('[RC] init error:', e);
         setLoadedForUserId(user?.id ?? null);
       } finally {
         setLoading(false);
@@ -67,16 +81,6 @@ export default function useRevenueCat() {
 
     init();
   }, [user?.id]);
-
-  // Listen for subscription state changes (e.g. after purchase completes)
-  useEffect(() => {
-    if (listenerRef.current) return;
-    listenerRef.current = true;
-
-    Purchases.addCustomerInfoUpdateListener((info) => {
-      setCustomerInfo(info);
-    });
-  }, []);
 
   const purchasePackage = async (pkg: PurchasesPackage): Promise<boolean> => {
     try {
