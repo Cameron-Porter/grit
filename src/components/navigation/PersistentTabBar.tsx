@@ -54,7 +54,7 @@ export default function PersistentTabBar() {
         return (
           <Pressable
             key={tab.name}
-            onPress={() => router.push(tab.route as any)}
+            onPress={() => router.replace(tab.route as any)}
             style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 8, gap: 3 }}
           >
             <MaterialCommunityIcons
