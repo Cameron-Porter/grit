@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useState, useCallback } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -37,7 +37,6 @@ export default function SubscriptionScreen() {
     savingsPct,
     purchasePackage,
     restorePurchases,
-    refreshCustomerInfo,
   } = useRevenueCatContext();
   // hasPremiumAccess covers role-based access (admin/vip) AND active RC subscription
   const { hasPremiumAccess, loading: entLoading } = useEntitlements();
@@ -48,9 +47,6 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
-  useFocusEffect(useCallback(() => {
-    refreshCustomerInfo();
-  }, []));
 
   const goToApp = () => router.replace('/(tabs)/programs');
   const handleClose = () => router.canGoBack() ? router.back() : goToApp();
