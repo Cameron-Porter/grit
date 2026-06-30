@@ -48,6 +48,7 @@
     "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
     "jest-expo": "^56.0.4",
+    "jest-matcher-utils": "^29.7.0",
     "puppeteer": "^25.1.0",
     "sharp": "^0.35.2",
     "typescript": "~6.0.3"
@@ -68,8 +69,12 @@
     "setupFiles": [
       "./jest.setup.ts"
     ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/.claude/"
+    ],
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@testing-library/.*|zustand|uuid)"
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@testing-library/.*|@sentry/.*|zustand|uuid)"
     ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"

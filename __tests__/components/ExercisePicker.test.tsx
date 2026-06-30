@@ -130,7 +130,7 @@ describe('ExercisePicker — render', () => {
     await act(async () => {
       render(<ExercisePicker visible={true} onClose={onClose} onSelect={onSelect} />);
     });
-    expect(screen.getByText('Select Exercise')).toBeTruthy();
+    expect(screen.getByText('Add Exercise')).toBeTruthy();
   });
 
   it('renders a search input', async () => {

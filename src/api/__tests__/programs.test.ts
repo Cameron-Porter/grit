@@ -50,7 +50,7 @@ describe('getPrograms', () => {
     const programs = [{ id: 'p1', name: 'PPL', total_weeks: 4, days_per_week: 3, is_current: true }];
     mockFrom.mockReturnValue(makeChain({ data: programs, error: null }));
     const result = await getPrograms();
-    expect(result).toEqual(programs);
+    expect(result).toEqual([{ ...programs[0], completedDays: 0, totalDays: 0 }]);
     expect(mockFrom).toHaveBeenCalledWith('programs');
   });
 

@@ -1,0 +1,31 @@
+Files confirmed to be dead code (zero imports):
+
+1. src/screens/HomeScreen.tsx
+   Search pattern: "HomeScreen"
+   
+2. src/screens/WorkoutScreen.tsx
+   Search pattern: "WorkoutScreen"
+   
+3. src/screens/ExerciseLibraryScreen.tsx
+   Search pattern: "ExerciseLibraryScreen"
+   
+4. src/api/gemini.ts
+   Search pattern: "generateProgressiveOverload" or "from.*gemini"
+   
+5. src/api/workouts.ts
+   Search pattern: "saveWorkout" or "from.*api/workouts"
+   
+6. src/components/ui/Card.tsx
+   Search pattern: "from.*ui/Card" or "Card" (note: file appears empty)
+   
+7. src/components/ui/PrimaryButton.tsx
+   Search pattern: "from.*PrimaryButton" or "PrimaryButton" (note: file appears empty)
+   
+8. src/constants/theme.ts
+   Search pattern: "from.*theme" or "import.*theme"
+   
+9. src/data/slotTemplates.ts
+   Search pattern: "SLOT_TEMPLATES" or "getApprovedExercises"
+   
+10. src/rules/exerciseRecommender.ts
+    Search pattern: "getRecommendedExercises" or "from.*exerciseRecommender"
