@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRevenueCatContext } from '../src/contexts/RevenueCatContext';
 import { useEntitlements } from '../src/contexts/EntitlementsContext';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { useColors } from '../src/utils/useColors';
 
 const BENEFITS = [
@@ -42,6 +43,7 @@ export default function SubscriptionScreen() {
   const isProMember = hasPremiumAccess;
   const loading = rcLoading || entLoading;
 
+  const { signOut } = useAuthStore();
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
@@ -274,6 +276,15 @@ export default function SubscriptionScreen() {
           auto-renews unless cancelled at least 24 hours before the renewal date.{'\n'}
           Manage or cancel in your App Store account settings.
         </Text>
+
+        {!isProMember && (
+          <Pressable
+            onPress={() => signOut()}
+            style={({ pressed }) => ({ marginTop: 16, alignItems: 'center', paddingVertical: 12, opacity: pressed ? 0.5 : 1 })}
+          >
+            <Text style={{ color: colors.muted, fontSize: 12 }}>Sign Out</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
