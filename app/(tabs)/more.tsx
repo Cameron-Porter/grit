@@ -118,9 +118,7 @@ export default function ProfileAndSettings() {
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface2 }} />
         ) : (
-          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: `${colors.primary}22`, borderWidth: 1.5, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
-            <MaterialCommunityIcons name="account" size={28} color={colors.primary} />
-          </View>
+          <Image source={require('../../assets/images/icon.png')} style={{ width: 56, height: 56, borderRadius: 28 }} />
         )}
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{displayName}</Text>
