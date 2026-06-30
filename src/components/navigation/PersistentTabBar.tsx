@@ -30,8 +30,8 @@ export default function PersistentTabBar() {
   const segments = useSegments() as string[];
   const insets = useSafeAreaInsets();
 
-  // Hide on login screen and before auth initialises
-  if (segments[0] === 'login' || segments.length === 0) return null;
+  // Hide on login, subscription gate, and before auth initialises
+  if (segments[0] === 'login' || segments[0] === 'subscription' || segments.length === 0) return null;
 
   const activeTab = getActiveTab(segments);
   const bottomPad = insets.bottom > 0 ? insets.bottom : 8;

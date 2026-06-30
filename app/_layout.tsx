@@ -1,6 +1,6 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useWindowDimensions, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -37,9 +37,6 @@ function LayoutInner() {
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
   const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
-  // Prevent the paywall gate from re-firing after the user has already been
-  // shown the subscription screen once — resets on sign-out (user change).
-  const paywallShownRef = useRef(false);
   const [fontsLoaded, fontError] = useFonts({
     'Square721-BoldExtended': require('../assets/fonts/Square721ExtendedBold.otf'),
   });
@@ -67,15 +64,10 @@ function LayoutInner() {
     }
   }, [user, initialized]);
 
-  // Reset paywall ref when user changes (sign-out/sign-in)
-  useEffect(() => { paywallShownRef.current = false; }, [user?.id]);
-
-  // Paywall gate: send authenticated non-premium users to /subscription once per session
+  // Paywall gate: send authenticated non-premium users to /subscription
   useEffect(() => {
     if (!initialized || entitlementsLoading) return;
-    if (hasPremiumAccess) { paywallShownRef.current = false; return; }
-    if (user && !hasPremiumAccess && !isLoginScreen && !isSubscriptionScreen && !paywallShownRef.current) {
-      paywallShownRef.current = true;
+    if (user && !hasPremiumAccess && !isLoginScreen && !isSubscriptionScreen) {
       router.replace('/subscription');
     }
   }, [initialized, entitlementsLoading, user, hasPremiumAccess, isLoginScreen, isSubscriptionScreen]);

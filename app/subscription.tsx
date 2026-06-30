@@ -71,15 +71,15 @@ export default function SubscriptionScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header — show close for subscribers managing plan, or when navigated here voluntarily */}
-      {(isProMember || router.canGoBack()) && (
+      {/* Header — only show close button for active subscribers managing their plan */}
+      {isProMember && (
         <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
           <Pressable onPress={handleClose} hitSlop={12} style={{ padding: 4 }}>
             <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
           </Pressable>
         </View>
       )}
-      {!isProMember && !router.canGoBack() && <View style={{ height: insets.top + 12 }} />}
+      {!isProMember && <View style={{ height: insets.top + 12 }} />}
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 32 }} showsVerticalScrollIndicator={false}>
 
