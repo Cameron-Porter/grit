@@ -103,6 +103,15 @@ export default function useRevenueCat() {
     }
   };
 
+  const refreshCustomerInfo = async (): Promise<void> => {
+    try {
+      const info = await Purchases.getCustomerInfo();
+      setCustomerInfo(info);
+    } catch {
+      // silently ignore — stale cache is fine
+    }
+  };
+
   // Convenience: packages from current offering
   const monthlyPackage = currentOffering?.monthly ?? null;
   const annualPackage = currentOffering?.annual ?? null;
@@ -124,6 +133,7 @@ export default function useRevenueCat() {
     monthlyPackage,
     annualPackage,
     savingsPct,
+    refreshCustomerInfo,
     purchasePackage,
     restorePurchases,
   };
