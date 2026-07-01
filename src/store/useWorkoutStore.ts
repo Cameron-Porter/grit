@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { markDayComplete, skipProgramDay } from '../api/programs';
+import { enqueueWorkout, isNetworkError } from '../api/pendingWorkouts';
 import { getExerciseByName } from '../data/exerciseDatabase';
 import { computeAndSaveProgressionTargets } from '../api/progression';
 import { supabase } from '../api/supabase';
@@ -15,6 +16,44 @@ const getUserId = async (): Promise<string | null> => {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
 };
+
+function buildPayload(
+  workoutId: string,
+  userId: string | null,
+  name: string,
+  completedAt: string,
+  state: Pick<WorkoutState, 'activeProgramName' | 'activeProgramDayId' | 'exercises' | 'pendingFeedback'>,
+) {
+  return {
+    workoutId,
+    userId: userId ?? '',
+    name,
+    programName: state.activeProgramName,
+    programDayId: state.activeProgramDayId,
+    completedAt,
+    enqueuedAt: new Date().toISOString(),
+    exercises: state.exercises.map((ex) => ({
+      name: ex.name,
+      muscleGroup: ex.muscleGroup ?? null,
+      musclePriority: ex.musclePriority ?? null,
+      equipment: ex.equipment ?? null,
+      note: ex.note ?? null,
+      sets: ex.sets.map((s) => ({
+        reps: s.reps,
+        weight: s.weight,
+        rir: s.rir ?? null,
+        completed: s.completed,
+      })),
+    })),
+    feedback: state.pendingFeedback.map((f) => ({
+      muscleGroup: f.muscleGroup,
+      jointPain: f.jointPain || null,
+      pump: f.pump || null,
+      volume: f.volume || null,
+      soreness: f.soreness ?? null,
+    })),
+  };
+}
 
 export const useWorkoutStore = create<WorkoutState>()(
   persist(
@@ -313,25 +352,47 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       finishWorkout: async () => {
         const state = get();
-        if (state.isSaving || state.exercises.length === 0) return;
+        if (state.isSaving || state.exercises.length === 0) return { savedOffline: false };
 
         set({ isSaving: true });
 
-        try {
-          const workoutId = uuidv4();
+        const workoutId = uuidv4();
+        const completedAt = new Date().toISOString();
+        const name = state.activeProgramName ?? 'Workout';
 
+        const clearWorkoutState = () =>
+          set({
+            activeWorkoutId: null,
+            activeProgramDayId: null,
+            activeProgramName: null,
+            activeProgramWeek: null,
+            activeProgramDayNumber: null,
+            activeProgramDayLabel: null,
+            exercises: [],
+            pendingFeedback: [],
+            isSaving: false,
+          });
+
+        try {
           const userId = await getUserId();
 
           const { error: workoutError } = await supabase.from('workouts').insert({
             id: workoutId,
             user_id: userId,
-            name: state.activeProgramName ?? 'Workout',
+            name,
             program_name: state.activeProgramName,
             program_day_id: state.activeProgramDayId,
-            completed_at: new Date().toISOString(),
+            completed_at: completedAt,
           });
 
-          if (workoutError) throw workoutError;
+          if (workoutError) {
+            if (isNetworkError(workoutError)) {
+              await enqueueWorkout(buildPayload(workoutId, userId, name, completedAt, state));
+              clearWorkoutState();
+              return { savedOffline: true };
+            }
+            throw workoutError;
+          }
 
           // Only save sets the user actually completed — skipped sets are not logged
           const workoutSets = state.exercises.flatMap((exercise) =>
@@ -384,17 +445,8 @@ export const useWorkoutStore = create<WorkoutState>()(
             }
           }
 
-          set({
-            activeWorkoutId: null,
-            activeProgramDayId: null,
-            activeProgramName: null,
-            activeProgramWeek: null,
-            activeProgramDayNumber: null,
-            activeProgramDayLabel: null,
-            exercises: [],
-            pendingFeedback: [],
-            isSaving: false,
-          });
+          clearWorkoutState();
+          return { savedOffline: false };
         } catch (error) {
           Sentry.captureException(error, { tags: { context: 'finishWorkout' } });
           console.error('Failed to save workout:', error);

@@ -218,10 +218,17 @@ export default function ActiveWorkout() {
 
   const doFinish = async () => {
     try {
-      await finishWorkout();
+      const { savedOffline } = await finishWorkout();
+      if (savedOffline) {
+        Alert.alert(
+          'Saved Offline',
+          "Your workout is saved on this device and will sync automatically next time you're connected.",
+        );
+      }
       // Next workout auto-loads via the useEffect watching hasWorkoutSession
     } catch (e) {
       console.error(e);
+      Alert.alert('Save Failed', 'Could not save your workout. Please check your connection and try again.');
     }
   };
 

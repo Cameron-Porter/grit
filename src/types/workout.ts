@@ -87,7 +87,7 @@ export type WorkoutState = {
   skipSets: (exerciseId: string) => void;
   skipAllSets: () => void;
   setExerciseNote: (exerciseId: string, note: string) => void;
-  finishWorkout: () => Promise<void>;
+  finishWorkout: () => Promise<{ savedOffline: boolean }>;
   setDayNote: (note: string | null) => void;
   skipDay: (dayId: string) => Promise<void>;
   startFromProgramDay: (

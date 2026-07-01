@@ -1,7 +1,8 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { AppState, useWindowDimensions, View } from 'react-native';
+import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
@@ -48,6 +49,12 @@ function LayoutInner() {
 
   useEffect(() => {
     initialize();
+    // Drain any workouts saved offline when the app starts or returns to foreground
+    drainPendingWorkouts();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') drainPendingWorkouts();
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -64,11 +71,14 @@ function LayoutInner() {
     }
   }, [user, initialized]);
 
-  // Paywall gate: send authenticated non-premium users to /subscription
+  // Paywall gate: send authenticated non-premium users to /subscription.
+  // 800 ms debounce prevents a transient RC state change (e.g. listener firing
+  // mid-navigation before the SDK cache catches up) from locking the user out.
   useEffect(() => {
     if (!initialized || entitlementsLoading) return;
     if (user && !hasPremiumAccess && !isLoginScreen && !isSubscriptionScreen) {
-      router.replace('/subscription');
+      const t = setTimeout(() => router.replace('/subscription'), 800);
+      return () => clearTimeout(t);
     }
   }, [initialized, entitlementsLoading, user, hasPremiumAccess, isLoginScreen, isSubscriptionScreen]);
 

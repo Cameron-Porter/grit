@@ -47,6 +47,7 @@ export default function SubscriptionScreen() {
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
 
+
   const goToApp = () => router.replace('/(tabs)/programs');
   const handleClose = () => router.canGoBack() ? router.back() : goToApp();
 

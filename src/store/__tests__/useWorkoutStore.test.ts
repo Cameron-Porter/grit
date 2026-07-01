@@ -493,8 +493,11 @@ describe('startFromProgramDay', () => {
     expect(set.reps).toBe(0);
   });
 
-  it('does not override an active workout with exercises', () => {
-    useWorkoutStore.setState({ activeWorkoutId: 'existing', exercises: [{ id: 'ex1', name: 'Deadlift', muscleGroup: 'Back', equipment: 'Barbell', sets: [] }] });
+  it('does not override an active workout with completed sets', () => {
+    useWorkoutStore.setState({
+      activeWorkoutId: 'existing',
+      exercises: [{ id: 'ex1', name: 'Deadlift', muscleGroup: 'Back', equipment: 'Barbell', sets: [{ id: 's1', reps: 5, weight: 100, rir: 2, completed: true }] }],
+    });
     useWorkoutStore.getState().startFromProgramDay('day-x', 'New', [], 1, 1, null);
     expect(useWorkoutStore.getState().activeWorkoutId).toBe('existing');
   });
