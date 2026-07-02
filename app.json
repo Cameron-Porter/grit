@@ -8,7 +8,7 @@
     "scheme": "grit",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.gritfitness.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
