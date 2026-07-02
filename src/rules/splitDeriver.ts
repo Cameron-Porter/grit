@@ -62,15 +62,18 @@ const SESSION_TYPE_SLUG: Record<SessionType, string> = {
 };
 
 // ─── Regional day allocation ──────────────────────────────────────────────────
-// Cap at 60 % prevents degenerate outcomes (e.g. 4 upper + 1 lower even when
-// lower score is non-zero). Spec examples confirm: upper=12, lower=3, 5 days
-// → 3 upper + 2 lower (not 4+1).
+// The 60 % cap prevents degenerate skews (e.g. 4 upper + 1 lower) when both
+// regions have meaningful growth targets. But when the minority region has ONLY
+// maintenance-level muscles it only needs one session per week (MEV), so the
+// cap would over-allocate days to legs at the expense of the user's real goals.
+// We relax the cap to (n-1)/n when no lower muscle is above "maintain".
 const MAX_REGION_FRACTION = 0.60;
 
 function allocateRegionDays(
   upperScore: number,
   lowerScore: number,
   total: number,
+  musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>,
 ): { upperDays: number; lowerDays: number } {
   const totalScore = upperScore + lowerScore;
   if (totalScore === 0) {
@@ -80,10 +83,23 @@ function allocateRegionDays(
   const upperRatio = upperScore / totalScore;
   let upperDays = Math.round(upperRatio * total);
 
-  // Dominant region capped at 60 % — applies symmetrically to both sides
-  const maxDominant = Math.ceil(total * MAX_REGION_FRACTION);
-  upperDays = Math.min(upperDays, maxDominant);           // upper can't over-dominate
-  upperDays = Math.max(upperDays, total - maxDominant);   // lower can't over-dominate
+  // Only apply the 60 % symmetrical cap when the minority region has ≥1 muscle
+  // at grow/emphasize priority. Pure-maintenance lower bodies only need 1 day —
+  // enforcing the cap there gives the user extra leg days they didn't ask for.
+  const anyLowerGrowth = LOWER_MUSCLES.some(
+    (m) => (musclePriorities[m] === 'grow' || musclePriorities[m] === 'emphasize'),
+  );
+  const anyUpperGrowth = UPPER_MUSCLES.some(
+    (m) => (musclePriorities[m] === 'grow' || musclePriorities[m] === 'emphasize'),
+  );
+
+  if (anyLowerGrowth && anyUpperGrowth) {
+    // Both sides have real growth targets — enforce the balance cap.
+    const maxDominant = Math.ceil(total * MAX_REGION_FRACTION);
+    upperDays = Math.min(upperDays, maxDominant);
+    upperDays = Math.max(upperDays, total - maxDominant);
+  }
+  // Otherwise let the natural ratio stand; only the ≥1 guard below applies.
 
   // Each region that has any priority weight gets ≥ 1 day
   if (lowerScore > 0) upperDays = Math.min(upperDays, total - 1);
@@ -160,14 +176,30 @@ function selectLowerDayTypes(
 // trains on back-to-back days when the other region still has work remaining.
 // When one side has more days, its extra sessions are distributed around the
 // other side's sessions (e.g., 3L + 2U → L U L U L, not L L U U L).
+//
+// Special case: a single lower day is placed at the midpoint of the week
+// (e.g. Push/Pull/Legs/Push/Pull) rather than after the first upper session.
+// This feels more natural — the leg day falls mid-week as a break rather than
+// interrupting the first pair of upper sessions.
 function orderDaysForRecovery(
   upperTypes: SessionType[],
   lowerTypes: SessionType[],
 ): SessionType[] {
+  const total = upperTypes.length + lowerTypes.length;
+
+  if (lowerTypes.length === 1) {
+    const midpoint = Math.floor(total / 2);
+    const result: SessionType[] = [];
+    let ui = 0;
+    for (let i = 0; i < total; i++) {
+      result.push(i === midpoint ? lowerTypes[0] : upperTypes[ui++]);
+    }
+    return result;
+  }
+
   const result: SessionType[] = [];
   let ui = 0;
   let li = 0;
-  const total = upperTypes.length + lowerTypes.length;
   const upperFirst = upperTypes.length >= lowerTypes.length;
 
   for (let i = 0; i < total; i++) {
@@ -239,7 +271,7 @@ export function deriveSplit(
     };
   }
 
-  const { upperDays, lowerDays } = allocateRegionDays(upperScore, lowerScore, daysPerWeek);
+  const { upperDays, lowerDays } = allocateRegionDays(upperScore, lowerScore, daysPerWeek, musclePriorities);
 
   const upperTypes = selectUpperDayTypes(upperDays, pushScore, pullScore);
   const lowerTypes = selectLowerDayTypes(lowerDays, musclePriorities);

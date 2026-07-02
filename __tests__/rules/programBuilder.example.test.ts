@@ -51,10 +51,10 @@ describe('buildProgram — 5-day Chest/Shoulders/Triceps emphasize example', () 
     expect(program.days).toHaveLength(5);
   });
 
-  it('derives push-dominant upper split (3 upper + 2 lower days)', () => {
-    // Chest/Shoulders/Triceps all emphasize → push-heavy; all lower maintain → fewer lower days
-    expect(program.derivation.upperDays).toBe(3);
-    expect(program.derivation.lowerDays).toBe(2);
+  it('derives push-dominant upper split (4 upper + 1 lower days)', () => {
+    // All lower muscles are maintain-only → balance cap relaxed → natural ratio 4+1
+    expect(program.derivation.upperDays).toBe(4);
+    expect(program.derivation.lowerDays).toBe(1);
     expect(program.derivation.pushScore).toBeGreaterThan(program.derivation.pullScore);
   });
 

@@ -47,32 +47,35 @@ describe('deriveSplit — priority scoring and regional allocation', () => {
   });
 
   // ── Case B: upper-dominant ──────────────────────────────────────────────────
-  it('Case B: heavy upper emphasis → 3 upper, 2 lower for 5 days', () => {
+  it('Case B: heavy upper emphasis → 4 upper, 1 lower when lower is all maintain', () => {
+    // All lower muscles are maintain-only → cap relaxed → natural ratio stands (4+1)
     const { derivation } = deriveSplit(5, {
       Chest: 'emphasize', Shoulders: 'emphasize', Triceps: 'emphasize',
       Back: 'emphasize', Biceps: 'grow',
       Quads: 'maintain', Hamstrings: 'maintain', Glutes: 'maintain',
     });
-    expect(derivation.upperDays).toBe(3);
-    expect(derivation.lowerDays).toBe(2);
+    expect(derivation.upperDays).toBe(4);
+    expect(derivation.lowerDays).toBe(1);
   });
 
-  it('Case B: upper score capped at 60 % even with score=12 vs lower=3', () => {
-    // Upper can't take > ceil(5 * 0.6) = 3 days regardless of score ratio
+  it('Case B: upper score capped at 60 % when lower has a grow muscle', () => {
+    // Quads: grow triggers the balance cap → ceil(5 * 0.6) = 3 upper days max
     const { derivation } = deriveSplit(5, {
       Chest: 'emphasize', Shoulders: 'emphasize', Triceps: 'emphasize', Back: 'emphasize',
-      Quads: 'maintain', Hamstrings: 'maintain', Glutes: 'maintain',
+      Quads: 'grow', Hamstrings: 'maintain', Glutes: 'maintain',
     });
     expect(derivation.upperDays).toBeLessThanOrEqual(3);
     expect(derivation.lowerDays).toBeGreaterThanOrEqual(2);
   });
 
   // ── Push vs pull sub-allocation ────────────────────────────────────────────
+  // Use 4 days/week so upper gets 3 days (odd count), which lets the dominant
+  // side claim the extra session clearly (2 push + 1 pull or 1 push + 2 pull).
   it('push-dominant upper: Push days > Pull days', () => {
-    const { sessionSequence } = deriveSplit(5, {
+    const { sessionSequence } = deriveSplit(4, {
       Chest: 'emphasize', Shoulders: 'emphasize', Triceps: 'emphasize',
       Back: 'grow', Biceps: 'grow',
-      Quads: 'maintain', Hamstrings: 'maintain', Glutes: 'maintain',
+      Quads: 'maintain',
     });
     const push = sessionSequence.filter((s) => s === 'Push').length;
     const pull = sessionSequence.filter((s) => s === 'Pull').length;
@@ -80,10 +83,10 @@ describe('deriveSplit — priority scoring and regional allocation', () => {
   });
 
   it('pull-dominant upper: Pull days > Push days', () => {
-    const { sessionSequence } = deriveSplit(5, {
+    const { sessionSequence } = deriveSplit(4, {
       Back: 'emphasize', Biceps: 'emphasize', Traps: 'grow',
       Chest: 'maintain', Shoulders: 'maintain', Triceps: 'maintain',
-      Quads: 'maintain', Hamstrings: 'maintain', Glutes: 'maintain',
+      Quads: 'maintain',
     });
     const push = sessionSequence.filter((s) => s === 'Push').length;
     const pull = sessionSequence.filter((s) => s === 'Pull').length;
