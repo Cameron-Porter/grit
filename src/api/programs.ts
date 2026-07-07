@@ -154,7 +154,7 @@ export async function deleteProgram(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function duplicateProgram(id: string): Promise<Program> {
+export async function duplicateProgram(id: string, newName?: string): Promise<Program> {
   const original = await getProgram(id);
   if (!original) throw new Error('Program not found');
 
@@ -166,7 +166,7 @@ export async function duplicateProgram(id: string): Promise<Program> {
   const dayLabels = week1Original.map((d) => d.label ?? '');
 
   const copy = await createProgram(
-    original.name,
+    newName?.trim() || original.name,
     original.total_weeks,
     original.days_per_week,
     dayLabels,

@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteProgram, duplicateProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
 import { confirm } from '../../src/utils/confirm';
@@ -26,6 +26,8 @@ export default function Programs() {
   const [programs, setPrograms] = useState<any[]>([]);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copyTarget, setCopyTarget] = useState<{ id: string; name: string } | null>(null);
+  const [copyName, setCopyName] = useState('');
 
   useEffect(() => {
     load();
@@ -66,19 +68,19 @@ export default function Programs() {
   };
 
   const handleRestart = (id: string, name: string) => {
-    confirm(
-      'Copy Program',
-      `Create a fresh copy of "${name}" starting from Week 1? Your completed history will be preserved.`,
-      async () => {
-        setMenuOpen(null);
-        const copy = await duplicateProgram(id);
-        await setCurrentProgram(copy.id);
-        clearProgramState();
-        load();
-      },
-      'Copy Program',
-      false,
-    );
+    setMenuOpen(null);
+    setCopyName(name);
+    setCopyTarget({ id, name });
+  };
+
+  const handleConfirmCopy = async () => {
+    if (!copyTarget) return;
+    const { id } = copyTarget;
+    setCopyTarget(null);
+    const copy = await duplicateProgram(id, copyName);
+    await setCurrentProgram(copy.id);
+    clearProgramState();
+    load();
   };
 
   return (
@@ -205,6 +207,42 @@ export default function Programs() {
         )}
       />
       )}
+
+      {/* Copy-program name modal */}
+      <Modal visible={copyTarget !== null} transparent animationType="fade" onRequestClose={() => setCopyTarget(null)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }} onPress={() => setCopyTarget(null)}>
+          <Pressable style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, width: '100%', gap: 16 }} onPress={() => {}}>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>Copy Program</Text>
+            <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}>
+              A fresh copy will be created starting from Week 1. Your completed history is preserved.
+            </Text>
+            <TextInput
+              value={copyName}
+              onChangeText={setCopyName}
+              placeholder="Program name"
+              placeholderTextColor={colors.muted}
+              autoFocus
+              selectTextOnFocus
+              style={{ backgroundColor: colors.surface2, color: colors.text, borderRadius: 12, padding: 14, fontSize: 16 }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Pressable
+                onPress={() => setCopyTarget(null)}
+                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.surface2, alignItems: 'center' }}
+              >
+                <Text style={{ color: colors.muted, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleConfirmCopy}
+                disabled={!copyName.trim()}
+                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: copyName.trim() ? colors.primary : colors.surface2, alignItems: 'center' }}
+              >
+                <Text style={{ color: copyName.trim() ? colors.background : colors.muted, fontWeight: '700', fontSize: 15 }}>Create Copy</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </GradientBackground>
   );
 }
