@@ -64,6 +64,7 @@ export default function ActiveWorkout() {
     activeProgramWeek,
     activeProgramDayNumber,
     activeProgramDayLabel,
+    activeProgramMusclePriorities,
     dayNote,
     setDayNote,
     replaceExercise,
@@ -154,6 +155,16 @@ export default function ActiveWorkout() {
       .finally(() => { if (!cancelled) setLoadingNext(false); });
     return () => { cancelled = true; };
   }, [hasWorkoutSession]);
+
+  // Hydrate muscle priorities for persisted sessions that pre-date the activeProgramMusclePriorities field
+  useEffect(() => {
+    if (!activeProgramId || activeProgramMusclePriorities) return;
+    import('../src/api/programs').then(({ getProgram }) => getProgram(activeProgramId)).then((prog) => {
+      if (prog?.muscle_priorities) {
+        updateExercisePriorities(prog.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'>);
+      }
+    }).catch(() => {});
+  }, [activeProgramId]);
 
   // Load PRs when exercises change â€” runs before any conditional return (hooks rule)
   useEffect(() => {

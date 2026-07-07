@@ -144,9 +144,12 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       addExercise: (name, muscleGroup, equipment = 'Bodyweight') => {
         set((state) => {
-          const musclePriority = muscleGroup && state.activeProgramMusclePriorities
-            ? state.activeProgramMusclePriorities[muscleGroup]
-            : undefined;
+          // Prefer stored map; fall back to inferring from an existing exercise of the same muscle group
+          const musclePriority: 'emphasize' | 'grow' | 'maintain' | undefined =
+            (muscleGroup && state.activeProgramMusclePriorities?.[muscleGroup]) ||
+            (muscleGroup
+              ? state.exercises.find((ex) => ex.muscleGroup === muscleGroup && ex.musclePriority)?.musclePriority
+              : undefined);
           return {
             exercises: [
               ...state.exercises,
@@ -158,6 +161,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       updateExercisePriorities: (priorities) =>
         set((state) => ({
+          activeProgramMusclePriorities: priorities,
           exercises: state.exercises.map((ex) =>
             ex.muscleGroup && priorities[ex.muscleGroup]
               ? { ...ex, musclePriority: priorities[ex.muscleGroup] }
