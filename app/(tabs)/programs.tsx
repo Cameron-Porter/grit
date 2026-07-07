@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { deleteProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
+import { deleteProgram, getPrograms, restartProgram, setCurrentProgram, type Program } from '../../src/api/programs';
 import { confirm } from '../../src/utils/confirm';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import GradientBackground from '../../src/components/GradientBackground';
@@ -65,17 +65,42 @@ export default function Programs() {
     );
   };
 
+  const handleRestart = (id: string, name: string) => {
+    confirm(
+      'Start Over',
+      `Reset all progress in "${name}" and start from Week 1 Day 1?`,
+      async () => {
+        setMenuOpen(null);
+        await restartProgram(id);
+        await setCurrentProgram(id);
+        clearProgramState();
+        load();
+      },
+      'Start Over',
+      true,
+    );
+  };
+
   return (
     <GradientBackground>
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Programs</Text>
-        <Pressable
-          onPress={() => router.push('/programs/create')}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder, marginBottom: 4 }}
-        >
-          <MaterialCommunityIcons name="plus" size={22} color={colors.primary} />
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+          <Pressable
+            onPress={() => router.push('/programs/templates')}
+            style={{ height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder, paddingHorizontal: 12, flexDirection: 'row', gap: 5 }}
+          >
+            <MaterialCommunityIcons name="view-grid-outline" size={16} color={colors.primary} />
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>Templates</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/programs/create')}
+            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder }}
+          >
+            <MaterialCommunityIcons name="plus" size={22} color={colors.primary} />
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -166,7 +191,11 @@ export default function Programs() {
                     </Pressable>
                   );
                 })()}
-                <Pressable onPress={() => handleDelete(item.id, item.name, item.is_current)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
+                <Pressable onPress={() => handleRestart(item.id, item.name)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
+                  <MaterialCommunityIcons name="restart" size={18} color={colors.warning} />
+                  <Text style={{ color: colors.warning, fontSize: 15 }}>Start over</Text>
+                </Pressable>
+                <Pressable onPress={() => handleDelete(item.id, item.name, item.is_current)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
                   <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
                   <Text style={{ color: colors.error, fontSize: 15 }}>Delete program</Text>
                 </Pressable>

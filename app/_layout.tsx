@@ -3,6 +3,8 @@ import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import { AppState, useWindowDimensions, View } from 'react-native';
 import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
+import { getBodyWeight } from '../src/api/userProfile';
+import { useProfileStore } from '../src/store/useProfileStore';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
@@ -38,6 +40,7 @@ function LayoutInner() {
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
   const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
+  const hydrateBodyWeight = useProfileStore((s) => s.hydrateBodyWeight);
   const [fontsLoaded, fontError] = useFonts({
     'Square721-BoldExtended': require('../assets/fonts/Square721ExtendedBold.otf'),
   });
@@ -56,6 +59,14 @@ function LayoutInner() {
     });
     return () => sub.remove();
   }, []);
+
+  // Fetch body weight from Supabase whenever the user logs in so it syncs across devices
+  useEffect(() => {
+    if (!user) return;
+    getBodyWeight().then((bw) => {
+      if (bw != null) hydrateBodyWeight(bw);
+    }).catch(() => {});
+  }, [user?.id]);
 
   useEffect(() => {
     if (!initialized) return;
@@ -97,6 +108,7 @@ function LayoutInner() {
       <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="programs/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="programs/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="programs/templates" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       <Stack.Screen name="programs/[id]/day/[dayId]" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false, animation: 'slide_from_right' }} />
       <Stack.Screen name="exercise/[id]" options={{ headerShown: false, animation: 'slide_from_right' }} />

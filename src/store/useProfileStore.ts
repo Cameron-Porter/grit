@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import { upsertBodyWeight } from '../api/userProfile';
 import type { ExperienceLevel } from '../types/program';
 import type { Theme } from '../utils/constants';
 
@@ -30,6 +31,7 @@ interface ProfileState {
   experienceLevel: ExperienceLevel;
   theme: Theme;
   setBodyWeight: (weight: number) => void;
+  hydrateBodyWeight: (weight: number) => void;
   setAutoMatchWeight: (value: boolean) => void;
   setUsePreferredEquipment: (value: boolean) => void;
   setPreferredEquipment: (types: string[]) => void;
@@ -48,7 +50,18 @@ export const useProfileStore = create<ProfileState>()(
       preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
       experienceLevel: 'intermediate',
       theme: 'dark',
-      setBodyWeight: (weight) =>
+      setBodyWeight: (weight) => {
+        set((state) => {
+          const today = new Date().toISOString().split('T')[0];
+          const filtered = state.bodyWeightLog.filter((e) => e.date !== today);
+          const newLog = [...filtered, { date: today, weight }]
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .slice(-90);
+          return { bodyWeight: weight, bodyWeightLog: newLog };
+        });
+        upsertBodyWeight(weight).catch(() => {});
+      },
+      hydrateBodyWeight: (weight) =>
         set((state) => {
           const today = new Date().toISOString().split('T')[0];
           const filtered = state.bodyWeightLog.filter((e) => e.date !== today);

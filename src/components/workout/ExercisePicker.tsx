@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { createCustomExercise, getExercises } from '../../api/exercises';
 import { useProfileStore } from '../../store/useProfileStore';
+import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { MuscleGroupColors } from '../../utils/constants';
 import { useColors } from '../../utils/useColors';
 
@@ -191,6 +192,7 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
 export default function ExercisePicker({ visible, onClose, onSelect }: ExercisePickerProps) {
   const colors = useColors();
   const { usePreferredEquipment, preferredEquipment } = useProfileStore();
+  const currentExercises = useWorkoutStore((s) => s.exercises);
   const [searchQuery, setSearchQuery] = useState('');
   const [allExercises, setAllExercises] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -237,6 +239,26 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
   });
 
   const noResults = filteredExercises.length === 0 && !loading && searchQuery.length > 1;
+
+  // Compute recommended exercises based on which muscles are already in the workout
+  const recommendedExercises = (() => {
+    if (searchQuery.length > 0 || muscleFilter !== 'All' || allExercises.length === 0) return [];
+    const currentNames = new Set(currentExercises.map((e) => e.name.toLowerCase()));
+    const currentMuscles = [...new Set(currentExercises.map((e) => e.muscleGroup).filter(Boolean))];
+    if (currentMuscles.length === 0) return [];
+    return allExercises
+      .filter((ex) => {
+        const muscleMatch = currentMuscles.includes(ex.muscle_group);
+        const notAlreadyIn = !currentNames.has(ex.name.toLowerCase());
+        const equipMatch =
+          !usePreferredEquipment ||
+          preferredEquipment.length === 0 ||
+          preferredEquipment.some((e) => e.toLowerCase() === (ex.equipment ?? '').toLowerCase()) ||
+          ex.equipment === 'Bodyweight';
+        return muscleMatch && notAlreadyIn && equipMatch;
+      })
+      .slice(0, 6);
+  })();
 
   if (showCustomForm) {
     return (
@@ -336,6 +358,55 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 40 }}
+          ListHeaderComponent={
+            recommendedExercises.length > 0 ? (
+              <View style={{ marginBottom: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
+                  <MaterialCommunityIcons name="star" size={14} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                    Recommended for Today
+                  </Text>
+                </View>
+                {recommendedExercises.map((item) => {
+                  const badgeColor = MuscleGroupColors[item.muscle_group] ?? colors.muted;
+                  return (
+                    <Pressable
+                      key={`rec-${item.id}`}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        borderBottomWidth: 1,
+                        borderBottomColor: colors.surface2,
+                        opacity: pressed ? 0.6 : 1,
+                        backgroundColor: `${colors.primary}08`,
+                      })}
+                      onPress={() => {
+                        onSelect(item.name, item.muscle_group ?? '', item.equipment ?? 'Bodyweight');
+                        setSearchQuery('');
+                        onClose();
+                      }}
+                    >
+                      <MaterialCommunityIcons name="star" size={14} color={colors.primary} style={{ marginRight: 10 }} />
+                      <View style={{ flex: 1, paddingRight: 10 }}>
+                        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.name}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment}</Text>
+                      </View>
+                      <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
+                        <Text style={{ color: colors.badgeText, fontSize: 12, fontWeight: '700' }}>{item.muscle_group}</Text>
+                      </View>
+                      <MaterialCommunityIcons name="chevron-right" size={20} color={colors.surface2} style={{ marginLeft: 8 }} />
+                    </Pressable>
+                  );
+                })}
+                <View style={{ height: 1, backgroundColor: colors.surface2, marginTop: 8, marginBottom: 4 }} />
+                <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '600', paddingHorizontal: 16, paddingBottom: 8, letterSpacing: 0.5 }}>
+                  ALL EXERCISES
+                </Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => {
             const badgeColor = MuscleGroupColors[item.muscle_group] ?? colors.muted;
             return (

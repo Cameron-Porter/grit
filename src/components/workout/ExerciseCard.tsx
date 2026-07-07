@@ -165,7 +165,9 @@ export default function ExerciseCard({
             <View style={{ flex: 1, paddingRight: 8 }}>
               <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
               <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
-                {exercise.equipment || 'Bodyweight'}
+                {exercise.equipment === 'Bodyweight' && bodyWeight
+                  ? `Bodyweight @ ${bodyWeight} lbs`
+                  : exercise.equipment || 'Bodyweight'}
               </Text>
             </View>
             <Pressable onPress={() => toggleHistory(exercise.id)} style={{ padding: 6 }}>

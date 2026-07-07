@@ -154,6 +154,14 @@ export async function deleteProgram(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function restartProgram(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("program_days")
+    .update({ completed: false, skipped: false, completed_at: null })
+    .eq("program_id", id);
+  if (error) throw error;
+}
+
 export async function setCurrentProgram(id: string): Promise<void> {
   const userId = await getUserId();
   // Clear all flags for this user, then set the selected one
