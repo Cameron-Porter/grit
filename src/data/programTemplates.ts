@@ -57,7 +57,7 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
           ex('Barbell Row',           'Back',      3, 8,  12, 2),
           ex('Barbell Overhead Press','Shoulders', 3, 10, 15, 2),
           ex('EZ-Bar Curl',           'Biceps',    2, 10, 15, 1),
-          ex('Tricep Rope Pushdown',  'Triceps',   2, 12, 16, 1),
+          ex('Cable Tricep Pushdown',  'Triceps',   2, 12, 16, 1),
         ],
       },
       {
@@ -104,7 +104,7 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
           ex('Barbell Overhead Press',    'Shoulders', 3, 8,  12, 2),
           ex('Dumbbell Lateral Raise',    'Shoulders', 3, 15, 20, 1),
           ex('Rear Delt Fly',             'Shoulders', 3, 15, 20, 1),
-          ex('Tricep Rope Pushdown',      'Triceps',   3, 12, 16, 1),
+          ex('Cable Tricep Pushdown',      'Triceps',   3, 12, 16, 1),
           ex('Skull Crusher',             'Triceps',   3, 10, 15, 1),
         ],
       },
@@ -154,7 +154,7 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
           ex('Barbell Overhead Press',    'Shoulders', 3, 6,  10, 2),
           ex('Lat Pulldown',              'Back',      3, 8,  12, 2),
           ex('EZ-Bar Curl',               'Biceps',    3, 10, 15, 1),
-          ex('Tricep Rope Pushdown',      'Triceps',   3, 12, 16, 1),
+          ex('Cable Tricep Pushdown',      'Triceps',   3, 12, 16, 1),
         ],
       },
       {
@@ -282,7 +282,7 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
           ex('Lat Pulldown',              'Back',      3, 10, 15, 2),
           ex('Dumbbell Lateral Raise',    'Shoulders', 3, 15, 20, 1),
           ex('EZ-Bar Curl',               'Biceps',    3, 10, 15, 1),
-          ex('Tricep Rope Pushdown',      'Triceps',   3, 12, 16, 1),
+          ex('Cable Tricep Pushdown',      'Triceps',   3, 12, 16, 1),
         ],
       },
       {

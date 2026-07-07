@@ -1,12 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  SectionList,
   Text,
   TextInput,
   View,
@@ -26,6 +26,14 @@ interface ExercisePickerProps {
 const MUSCLE_FILTERS = [
   'All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps',
   'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs',
+];
+
+const CATEGORY_ORDER = [
+  'Horizontal Press', 'Incline Press', 'Vertical Press', 'Lateral Raise', 'Rear Delt',
+  'Vertical Pull', 'Horizontal Pull', 'Scapular Elevation',
+  'Quad Dominant', 'Hip Hinge', 'Knee Flexion', 'Glute Dominant', 'Calf Raise',
+  'Elbow Flexion', 'Elbow Extension', 'Wrist Flexion',
+  'Core', 'Other',
 ];
 
 // ─── Custom Exercise Form ─────────────────────────────────────────────────────
@@ -240,7 +248,27 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
 
   const noResults = filteredExercises.length === 0 && !loading && searchQuery.length > 1;
 
-  // Compute recommended exercises based on which muscles are already in the workout
+  // Group filtered exercises into sections by movement category
+  const sections = (() => {
+    const grouped: Record<string, any[]> = {};
+    for (const ex of filteredExercises) {
+      const cat = (ex as any).movement_category || 'Other';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(ex);
+    }
+    const ordered = CATEGORY_ORDER.filter((c) => grouped[c]?.length > 0).map((c) => ({ title: c, data: grouped[c] }));
+    // Any category not in CATEGORY_ORDER goes to Other
+    for (const cat of Object.keys(grouped)) {
+      if (!CATEGORY_ORDER.includes(cat)) {
+        const other = ordered.find((s) => s.title === 'Other');
+        if (other) other.data.push(...grouped[cat]);
+        else ordered.push({ title: 'Other', data: grouped[cat] });
+      }
+    }
+    return ordered;
+  })();
+
+  // Recommended: exercises matching current workout muscles, shown as a top section
   const recommendedExercises = (() => {
     if (searchQuery.length > 0 || muscleFilter !== 'All' || allExercises.length === 0) return [];
     const currentNames = new Set(currentExercises.map((e) => e.name.toLowerCase()));
@@ -259,6 +287,10 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
       })
       .slice(0, 6);
   })();
+
+  const allSections = recommendedExercises.length > 0
+    ? [{ title: 'Recommended for Today', data: recommendedExercises, isRecommended: true }, ...sections]
+    : sections;
 
   if (showCustomForm) {
     return (
@@ -352,73 +384,52 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
           </ScrollView>
         </View>
 
-        {/* List */}
-        <FlatList
-          data={filteredExercises}
-          keyExtractor={(item) => item.id}
+        {/* Sectioned exercise list */}
+        <SectionList
+          sections={allSections}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: 40 }}
-          ListHeaderComponent={
-            recommendedExercises.length > 0 ? (
-              <View style={{ marginBottom: 4 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 }}>
-                  <MaterialCommunityIcons name="star" size={14} color={colors.primary} />
-                  <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                    Recommended for Today
-                  </Text>
-                </View>
-                {recommendedExercises.map((item) => {
-                  const badgeColor = MuscleGroupColors[item.muscle_group] ?? colors.muted;
-                  return (
-                    <Pressable
-                      key={`rec-${item.id}`}
-                      style={({ pressed }) => ({
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingVertical: 14,
-                        paddingHorizontal: 16,
-                        borderBottomWidth: 1,
-                        borderBottomColor: colors.surface2,
-                        opacity: pressed ? 0.6 : 1,
-                        backgroundColor: `${colors.primary}08`,
-                      })}
-                      onPress={() => {
-                        onSelect(item.name, item.muscle_group ?? '', item.equipment ?? 'Bodyweight');
-                        setSearchQuery('');
-                        onClose();
-                      }}
-                    >
-                      <MaterialCommunityIcons name="star" size={14} color={colors.primary} style={{ marginRight: 10 }} />
-                      <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.name}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment}</Text>
-                      </View>
-                      <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
-                        <Text style={{ color: colors.badgeText, fontSize: 12, fontWeight: '700' }}>{item.muscle_group}</Text>
-                      </View>
-                      <MaterialCommunityIcons name="chevron-right" size={20} color={colors.surface2} style={{ marginLeft: 8 }} />
-                    </Pressable>
-                  );
-                })}
-                <View style={{ height: 1, backgroundColor: colors.surface2, marginTop: 8, marginBottom: 4 }} />
-                <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '600', paddingHorizontal: 16, paddingBottom: 8, letterSpacing: 0.5 }}>
-                  ALL EXERCISES
+          stickySectionHeadersEnabled={false}
+          renderSectionHeader={({ section }) => {
+            const isRec = (section as any).isRecommended;
+            return (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                paddingHorizontal: 16,
+                paddingTop: 16,
+                paddingBottom: 6,
+                backgroundColor: colors.background,
+              }}>
+                {isRec && <MaterialCommunityIcons name="star" size={13} color={colors.primary} />}
+                <Text style={{
+                  color: isRec ? colors.primary : colors.muted,
+                  fontSize: 11,
+                  fontWeight: '800',
+                  letterSpacing: 1.4,
+                  textTransform: 'uppercase',
+                }}>
+                  {section.title}
                 </Text>
               </View>
-            ) : null
-          }
-          renderItem={({ item }) => {
+            );
+          }}
+          renderItem={({ item, section }) => {
+            const isRec = (section as any).isRecommended;
             const badgeColor = MuscleGroupColors[item.muscle_group] ?? colors.muted;
             return (
               <Pressable
                 style={({ pressed }) => ({
                   flexDirection: 'row',
                   alignItems: 'center',
-                  paddingVertical: 14,
+                  paddingVertical: 13,
                   paddingHorizontal: 16,
                   borderBottomWidth: 1,
                   borderBottomColor: colors.surface2,
                   opacity: pressed ? 0.6 : 1,
+                  backgroundColor: isRec ? `${colors.primary}08` : undefined,
                 })}
                 onPress={() => {
                   onSelect(item.name, item.muscle_group ?? '', item.equipment ?? 'Bodyweight');
@@ -426,18 +437,13 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
                   onClose();
                 }}
               >
+                {isRec && <MaterialCommunityIcons name="star" size={13} color={colors.primary} style={{ marginRight: 10 }} />}
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>
-                    {item.name}
-                  </Text>
-                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
-                    {item.equipment}
-                  </Text>
+                  <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.name}</Text>
+                  <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment}</Text>
                 </View>
                 <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
-                  <Text style={{ color: colors.badgeText, fontSize: 12, fontWeight: '700' }}>
-                    {item.muscle_group}
-                  </Text>
+                  <Text style={{ color: colors.badgeText, fontSize: 12, fontWeight: '700' }}>{item.muscle_group}</Text>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={20} color={colors.surface2} style={{ marginLeft: 8 }} />
               </Pressable>
@@ -471,7 +477,7 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
             </View>
           }
           ListFooterComponent={
-            filteredExercises.length > 0 ? (
+            allSections.length > 0 ? (
               <Pressable
                 onPress={() => setShowCustomForm(true)}
                 style={{ marginHorizontal: 16, marginTop: 20, marginBottom: 8, padding: 14, borderRadius: 10, borderWidth: 1, borderColor: colors.surface2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
