@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
 import { confirm } from '../../src/utils/confirm';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
+import GradientBackground from '../../src/components/GradientBackground';
+import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
 type ProgramStatus = 'active' | 'complete' | 'paused';
@@ -64,13 +66,13 @@ export default function Programs() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <GradientBackground>
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Programs</Text>
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Programs</Text>
         <Pressable
           onPress={() => router.push('/programs/create')}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}
+          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder, marginBottom: 4 }}
         >
           <MaterialCommunityIcons name="plus" size={22} color={colors.primary} />
         </Pressable>
@@ -84,7 +86,7 @@ export default function Programs() {
       <FlatList
         data={programs}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16 }}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 60 }}>
             <MaterialCommunityIcons name="calendar-multiselect" size={48} color={colors.surface2} />
@@ -103,10 +105,12 @@ export default function Programs() {
             onPress={() => router.push({ pathname: '/programs/[id]', params: { id: item.id } })}
             style={({ pressed }) => ({
               backgroundColor: colors.surface,
-              borderRadius: 14,
+              borderRadius: 20,
               padding: 16,
               marginBottom: 10,
               opacity: pressed ? 0.8 : 1,
+              borderWidth: 1,
+              borderColor: colors.glassBorder,
             })}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -172,6 +176,6 @@ export default function Programs() {
         )}
       />
       )}
-    </View>
+    </GradientBackground>
   );
 }

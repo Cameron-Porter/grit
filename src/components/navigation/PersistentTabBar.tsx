@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { GlassView } from 'expo-glass-effect';
 import { useRouter, useSegments } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BOTTOM_TAB_HEIGHT } from '../../utils/constants';
+import { useProfileStore } from '../../store/useProfileStore';
 import { useColors } from '../../utils/useColors';
 
 type TabName = 'today' | 'programs' | 'progress' | 'profile';
@@ -13,6 +14,10 @@ const TABS: { name: TabName; label: string; icon: string; route: string }[] = [
   { name: 'progress', label: 'History',  icon: 'history',              route: '/(tabs)/history' },
   { name: 'profile',  label: 'Profile',  icon: 'account-circle',       route: '/(tabs)/more' },
 ];
+
+const PILL_HEIGHT = 64;
+const PILL_MARGIN = 16;
+const PILL_GAP = 12;
 
 function getActiveTab(segments: string[]): TabName | null {
   const s0 = segments[0];
@@ -26,42 +31,40 @@ function getActiveTab(segments: string[]): TabName | null {
 
 export default function PersistentTabBar() {
   const colors = useColors();
+  const theme = useProfileStore((s) => s.theme);
   const router = useRouter();
   const segments = useSegments() as string[];
   const insets = useSafeAreaInsets();
 
-  // Hide on login, subscription gate, and before auth initialises
   if (segments[0] === 'login' || segments[0] === 'subscription' || segments.length === 0) return null;
 
   const activeTab = getActiveTab(segments);
-  const bottomPad = insets.bottom > 0 ? insets.bottom : 8;
+  const pillBottom = (insets.bottom > 0 ? insets.bottom : 8) + PILL_GAP;
 
-  return (
-    <View style={{
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: BOTTOM_TAB_HEIGHT + bottomPad,
-      backgroundColor: colors.background,
-      borderTopWidth: 1,
-      borderTopColor: colors.surface2,
-      flexDirection: 'row',
-      paddingBottom: bottomPad,
-    }}>
+  const tabButtons = (
+    <>
       {TABS.map((tab) => {
         const active = activeTab === tab.name;
         return (
           <Pressable
             key={tab.name}
             onPress={() => router.replace(tab.route as any)}
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 8, gap: 3 }}
+            style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 }}
           >
-            <MaterialCommunityIcons
-              name={tab.icon as any}
-              size={22}
-              color={active ? colors.primary : colors.muted}
-            />
+            <View style={{
+              width: 48,
+              height: 32,
+              borderRadius: 16,
+              backgroundColor: active ? `${colors.primary}20` : 'transparent',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <MaterialCommunityIcons
+                name={tab.icon as any}
+                size={22}
+                color={active ? colors.primary : colors.muted}
+              />
+            </View>
             <Text style={{
               color: active ? colors.primary : colors.muted,
               fontSize: 10,
@@ -72,6 +75,47 @@ export default function PersistentTabBar() {
           </Pressable>
         );
       })}
+    </>
+  );
+
+  const shadowStyle = {
+    position: 'absolute' as const,
+    bottom: pillBottom,
+    left: PILL_MARGIN,
+    right: PILL_MARGIN,
+    height: PILL_HEIGHT,
+    borderRadius: PILL_HEIGHT / 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 20,
+    elevation: 14,
+  };
+
+  if (Platform.OS === 'ios') {
+    return (
+      <View style={shadowStyle}>
+        <GlassView
+          style={{ flex: 1, borderRadius: PILL_HEIGHT / 2, flexDirection: 'row', overflow: 'hidden' }}
+          glassEffectStyle="regular"
+          colorScheme={theme === 'dark' ? 'dark' : 'light'}
+        >
+          {tabButtons}
+        </GlassView>
+      </View>
+    );
+  }
+
+  // Android + web: solid semi-opaque pill
+  return (
+    <View style={[shadowStyle, {
+      backgroundColor: theme === 'dark' ? 'rgba(20,20,26,0.96)' : 'rgba(242,242,247,0.97)',
+      borderWidth: 1,
+      borderColor: theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+      overflow: 'hidden',
+      flexDirection: 'row',
+    }]}>
+      {tabButtons}
     </View>
   );
 }

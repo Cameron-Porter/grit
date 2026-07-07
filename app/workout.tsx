@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
 import { getExerciseByName } from '../src/data/exerciseDatabase';
 import { checkMuscleGroupPreviouslyTrained, endCurrentProgram, getNextProgramWorkout, renameProgram, replaceExerciseInTemplate, updateProgramMusclePriorities } from '../src/api/programs';
+import GradientBackground from '../src/components/GradientBackground';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
@@ -172,14 +173,14 @@ export default function ActiveWorkout() {
   // â”€â”€ Idle view â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!hasWorkoutSession) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-          <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Today's Workout</Text>
+      <GradientBackground>
+        <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 12 }}>
+          <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Today's Workout</Text>
         </View>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
           {loadingNext && <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />}
           {!loadingNext && !nextWorkout && (
-            <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 18, alignItems: 'center' }}>
+            <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 18, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
               <MaterialCommunityIcons name="trophy-outline" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
               <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 4 }}>All caught up!</Text>
               <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginBottom: 16 }}>
@@ -202,11 +203,11 @@ export default function ActiveWorkout() {
             </View>
           )}
         </ScrollView>
-      </View>
+      </GradientBackground>
     );
   }
 
-  // â”€â”€ Active workout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  //â”€â”€ Active workout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets.length, 0);
   const doneSets = exercises.reduce(
@@ -507,23 +508,23 @@ export default function ActiveWorkout() {
     : null;
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+    <GradientBackground style={{ paddingTop: insets.top }}>
       {/* Progress bar */}
       <View style={{ height: 3, backgroundColor: colors.surface2, width: '100%' }}>
         <View style={{ height: 3, backgroundColor: colors.primary, width: `${progress * 100}%` }} />
       </View>
 
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
             {activeProgramWeek != null && activeProgramDayNumber != null ? (
-              <Text style={{ fontSize: 26, fontWeight: '800', lineHeight: 32 }}>
+              <Text style={{ fontSize: 28, fontWeight: '800', letterSpacing: -0.5, lineHeight: 34 }}>
                 <Text style={{ color: colors.text }}>Week {activeProgramWeek} </Text>
                 <Text style={{ color: colors.muted }}>Day {activeProgramDayNumber}</Text>
               </Text>
             ) : (
-              <Text style={{ color: colors.text, fontSize: 26, fontWeight: '800' }}>Workout</Text>
+              <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Workout</Text>
             )}
             <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
               {activeProgramName
@@ -547,7 +548,7 @@ export default function ActiveWorkout() {
       </View>
 
       {/* Scrollable content */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 24 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
         {/* Day note card */}
         {dayNote ? (
           <Pressable
@@ -605,9 +606,9 @@ export default function ActiveWorkout() {
             marginTop: 4,
             padding: 14,
             backgroundColor: colors.surface,
-            borderRadius: 12,
+            borderRadius: 16,
             borderWidth: 1,
-            borderColor: colors.surface2,
+            borderColor: colors.glassBorder,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -623,15 +624,17 @@ export default function ActiveWorkout() {
       </ScrollView>
 
       {/* Pinned Finish Workout button */}
-      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16, borderTopWidth: 1, borderTopColor: colors.surface2, backgroundColor: colors.background }}>
+      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16, backgroundColor: colors.background }}>
         <Pressable
           onPress={onFinishWorkout}
           disabled={!canFinish || isSaving}
           style={{
             backgroundColor: canFinish ? colors.primary : colors.surface2,
-            padding: 17,
-            borderRadius: 14,
+            paddingVertical: 18,
+            borderRadius: 16,
             opacity: isSaving ? 0.7 : 1,
+            borderWidth: 1,
+            borderColor: canFinish ? 'rgba(255,255,255,0.15)' : colors.glassBorder,
           }}
         >
           <Text
@@ -957,6 +960,6 @@ export default function ActiveWorkout() {
           </View>
         </View>
       </Modal>
-    </View>
+    </GradientBackground>
   );
 }

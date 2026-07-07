@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { GlassView } from 'expo-glass-effect';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { getExerciseSessionHistory, HistorySessionEntry } from '../../api/history';
+import { useProfileStore } from '../../store/useProfileStore';
 import { Exercise, WorkoutSet } from '../../types/workout';
 import { MuscleGroupColors } from '../../utils/constants';
 import { useColors } from '../../utils/useColors';
@@ -22,6 +24,9 @@ interface ExerciseCardProps {
 }
 
 const MAX_HISTORY_SESSIONS = 5;
+const BADGE_HEIGHT = 30;
+const BADGE_ABOVE = 10; // 1/3 above card
+const BADGE_ON_CARD = 20; // 2/3 on card
 
 function HistoryPanel({ exerciseName }: { exerciseName: string }) {
   const colors = useColors();
@@ -58,7 +63,6 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
   const displayed = sessions.slice(0, MAX_HISTORY_SESSIONS);
   const hasMore = sessions.length > MAX_HISTORY_SESSIONS;
 
-  // Group displayed sessions by program name
   const grouped = new Map<string, HistorySessionEntry[]>();
   displayed.forEach((s) => {
     const key = s.programName ?? 'Quick Workout';
@@ -133,6 +137,7 @@ export default function ExerciseCard({
   bodyWeight,
 }: ExerciseCardProps) {
   const colors = useColors();
+  const theme = useProfileStore((s) => s.theme);
   const primaryMuscle = exerciseGroup[0]?.muscleGroup;
   const musclePriority = exerciseGroup[0]?.musclePriority;
   const badgeColor = primaryMuscle
@@ -150,138 +155,165 @@ export default function ExerciseCard({
     ? exerciseGroup.find((ex) => ex.id === noteExerciseId)
     : null;
 
-  return (
-    <View style={{ backgroundColor: colors.cardSurface, borderRadius: 12, marginBottom: 16, overflow: 'hidden' }}>
+  const cardInner = (
+    <View style={{ paddingBottom: 10, paddingTop: primaryMuscle ? BADGE_ON_CARD + 8 : 10 }}>
+      {exerciseGroup.map((exercise, index) => (
+        <View key={exercise.id} style={{ marginTop: index > 0 ? 20 : 0, marginBottom: index === exerciseGroup.length - 1 ? 0 : 10 }}>
 
-      {/* Muscle Group Badge */}
+          {/* Exercise title row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, marginBottom: 4 }}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
+                {exercise.equipment || 'Bodyweight'}
+              </Text>
+            </View>
+            <Pressable onPress={() => toggleHistory(exercise.id)} style={{ padding: 6 }}>
+              <MaterialCommunityIcons
+                name="history"
+                size={20}
+                color={historyOpen[exercise.id] ? colors.primary : colors.muted}
+              />
+            </Pressable>
+            <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={{ padding: 6 }}>
+              <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
+            </Pressable>
+          </View>
+
+          {/* Pain warning */}
+          {exercise.painWarning ? (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: `${colors.warning}22`, borderRadius: 8, padding: 10, gap: 8 }}>
+              <MaterialCommunityIcons name="alert-outline" size={14} color={colors.warning} style={{ marginTop: 1 }} />
+              <Text style={{ color: colors.warning, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.painWarning}</Text>
+            </View>
+          ) : null}
+
+          {/* Pinned note */}
+          {exercise.note ? (
+            <Pressable
+              onPress={() => setNoteExerciseId(exercise.id)}
+              style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.surface2, borderRadius: 8, padding: 10, gap: 8 }}
+            >
+              <MaterialCommunityIcons name="note-text-outline" size={14} color={colors.primary} style={{ marginTop: 1 }} />
+              <Text style={{ color: colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
+            </Pressable>
+          ) : null}
+
+          {/* History panel */}
+          {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
+
+          {/* Column headers */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.surface2, marginBottom: 6 }}>
+            <View style={{ width: 40 }} />
+            <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
+            <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>
+            <Text style={{ width: 60, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>LOG</Text>
+          </View>
+
+          {/* Set rows */}
+          {(() => {
+            const activeSetIndex = exercise.sets.findIndex((s) => !s.completed && !s.skipped);
+            return exercise.sets.map((set, setIndex) => (
+              <SetRow
+                key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
+                set={set}
+                isActive={setIndex === activeSetIndex}
+                onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
+                onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
+                onComplete={(autoReps) => {
+                  if (set.skipped) {
+                    onUpdateSet(exercise.id, setIndex, { skipped: false, completed: false });
+                    return;
+                  }
+                  if (autoReps !== undefined) {
+                    onUpdateSet(exercise.id, setIndex, { reps: autoReps, completed: true });
+                  } else {
+                    onUpdateSet(exercise.id, setIndex, { completed: !set.completed });
+                  }
+                }}
+                onRemove={() => onRemoveSet(exercise.id, setIndex)}
+                onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
+              />
+            ));
+          })()}
+
+          {/* Add Set */}
+          <Pressable
+            onPress={() => {
+              const isBodyweight = exercise.equipment === 'Bodyweight';
+              const lastSet = exercise.sets[exercise.sets.length - 1];
+              const defaultWeight = isBodyweight
+                ? (bodyWeight ?? lastSet?.weight)
+                : lastSet?.weight;
+              onAddSet(exercise.id, defaultWeight, lastSet?.rir);
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10 }}
+          >
+            <MaterialCommunityIcons name="plus" size={16} color={colors.primary} style={{ marginRight: 4 }} />
+            <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>Add Set</Text>
+          </Pressable>
+
+        </View>
+      ))}
+    </View>
+  );
+
+  const cardStyle = {
+    borderRadius: 20,
+    overflow: 'hidden' as const,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  };
+
+  return (
+    <View style={{ marginTop: primaryMuscle ? BADGE_ABOVE : 0, marginBottom: 16 }}>
+
+      {/* Raised muscle group badge — 1/3 above, 2/3 on card */}
       {primaryMuscle && (
         <View style={{
-          alignSelf: 'flex-start',
-          paddingVertical: 4,
-          paddingHorizontal: 12,
-          borderBottomRightRadius: 8,
+          position: 'absolute',
+          top: -BADGE_ABOVE,
+          left: 14,
+          zIndex: 10,
           flexDirection: 'row',
           alignItems: 'center',
-          backgroundColor: `${badgeColor}50`,
-          borderWidth: 1,
-          borderColor: `${badgeColor}50`,
+          gap: 5,
+          paddingHorizontal: 11,
+          height: BADGE_HEIGHT,
+          borderRadius: BADGE_HEIGHT / 2,
+          backgroundColor: badgeColor,
+          shadowColor: badgeColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.55,
+          shadowRadius: 8,
+          elevation: 6,
         }}>
-          {musclePriority
-            ? <PriorityBars priority={musclePriority} color={badgeColor} />
-            : <MaterialCommunityIcons name="blur-linear" size={12} color={colors.badgeText} style={{ marginRight: 4 }} />
-          }
-          <Text style={{ color: colors.badgeText, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+          {musclePriority && (
+            <PriorityBars priority={musclePriority} color="#FFFFFF" />
+          )}
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
             {primaryMuscle}
           </Text>
         </View>
       )}
 
-      <View style={{ paddingVertical: 10 }}>
-        {exerciseGroup.map((exercise, index) => (
-          <View key={exercise.id} style={{ marginTop: index > 0 ? 20 : 6, marginBottom: index === exerciseGroup.length - 1 ? 0 : 10 }}>
+      {/* Card body — glass on iOS, solid on Android/web */}
+      {Platform.OS === 'ios' ? (
+        <GlassView
+          glassEffectStyle="regular"
+          colorScheme={theme === 'dark' ? 'dark' : 'light'}
+          tintColor={`${badgeColor}28`}
+          style={cardStyle}
+        >
+          {cardInner}
+        </GlassView>
+      ) : (
+        <View style={[cardStyle, { backgroundColor: colors.cardSurface }]}>
+          {cardInner}
+        </View>
+      )}
 
-            {/* Exercise title row */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, marginBottom: 4 }}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
-                <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
-                  {exercise.equipment || 'Bodyweight'}
-                </Text>
-              </View>
-              {/* History icon */}
-              <Pressable onPress={() => toggleHistory(exercise.id)} style={{ padding: 6 }}>
-                <MaterialCommunityIcons
-                  name="history"
-                  size={20}
-                  color={historyOpen[exercise.id] ? colors.primary : colors.muted}
-                />
-              </Pressable>
-              {/* 3-dot menu */}
-              <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={{ padding: 6 }}>
-                <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
-              </Pressable>
-            </View>
-
-            {/* Pain warning */}
-            {exercise.painWarning ? (
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: `${colors.warning}22`, borderRadius: 8, padding: 10, gap: 8 }}>
-                <MaterialCommunityIcons name="alert-outline" size={14} color="#F59E0B" style={{ marginTop: 1 }} />
-                <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.painWarning}</Text>
-              </View>
-            ) : null}
-
-            {/* Pinned note */}
-            {exercise.note ? (
-              <Pressable
-                onPress={() => setNoteExerciseId(exercise.id)}
-                style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.surface2, borderRadius: 8, padding: 10, gap: 8 }}
-              >
-                <MaterialCommunityIcons name="note-text-outline" size={14} color={colors.primary} style={{ marginTop: 1 }} />
-                <Text style={{ color: colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
-              </Pressable>
-            ) : null}
-
-            {/* Last session panel */}
-            {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
-
-            {/* Column headers */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.surface2, marginBottom: 6 }}>
-              <View style={{ width: 40 }} />
-              <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
-              <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>
-              <Text style={{ width: 60, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>LOG</Text>
-            </View>
-
-            {/* Set rows */}
-            {(() => {
-              const activeSetIndex = exercise.sets.findIndex(
-                (s) => !s.completed && !s.skipped,
-              );
-              return exercise.sets.map((set, setIndex) => (
-                <SetRow
-                  key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
-                  set={set}
-                  isActive={setIndex === activeSetIndex}
-                  onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
-                  onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
-                  onComplete={(autoReps) => {
-                    if (set.skipped) {
-                      onUpdateSet(exercise.id, setIndex, { skipped: false, completed: false });
-                      return;
-                    }
-                    if (autoReps !== undefined) {
-                      onUpdateSet(exercise.id, setIndex, { reps: autoReps, completed: true });
-                    } else {
-                      onUpdateSet(exercise.id, setIndex, { completed: !set.completed });
-                    }
-                  }}
-                  onRemove={() => onRemoveSet(exercise.id, setIndex)}
-                  onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
-                />
-              ));
-            })()}
-
-            {/* Add Set */}
-            <Pressable
-              onPress={() => {
-                const isBodyweight = exercise.equipment === 'Bodyweight';
-                const lastSet = exercise.sets[exercise.sets.length - 1];
-                const defaultWeight = isBodyweight
-                  ? (bodyWeight ?? lastSet?.weight)
-                  : lastSet?.weight;
-                onAddSet(exercise.id, defaultWeight, lastSet?.rir);
-              }}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10 }}
-            >
-              <MaterialCommunityIcons name="plus" size={16} color={colors.primary} style={{ marginRight: 4 }} />
-              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>Add Set</Text>
-            </Pressable>
-
-          </View>
-        ))}
-      </View>
-
-      {/* Note Modal (local to card) */}
+      {/* Note modal — outside card so it renders at root level */}
       {noteExercise && (
         <NoteModal
           visible={!!noteExerciseId}
