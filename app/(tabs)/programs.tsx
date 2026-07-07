@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { deleteProgram, getPrograms, restartProgram, setCurrentProgram, type Program } from '../../src/api/programs';
+import { deleteProgram, duplicateProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
 import { confirm } from '../../src/utils/confirm';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import GradientBackground from '../../src/components/GradientBackground';
@@ -67,17 +67,17 @@ export default function Programs() {
 
   const handleRestart = (id: string, name: string) => {
     confirm(
-      'Start Over',
-      `Reset all progress in "${name}" and start from Week 1 Day 1?`,
+      'Copy Program',
+      `Create a fresh copy of "${name}" starting from Week 1? Your completed history will be preserved.`,
       async () => {
         setMenuOpen(null);
-        await restartProgram(id);
-        await setCurrentProgram(id);
+        const copy = await duplicateProgram(id);
+        await setCurrentProgram(copy.id);
         clearProgramState();
         load();
       },
-      'Start Over',
-      true,
+      'Copy Program',
+      false,
     );
   };
 
@@ -192,8 +192,8 @@ export default function Programs() {
                   );
                 })()}
                 <Pressable onPress={() => handleRestart(item.id, item.name)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
-                  <MaterialCommunityIcons name="restart" size={18} color={colors.warning} />
-                  <Text style={{ color: colors.warning, fontSize: 15 }}>Start over</Text>
+                  <MaterialCommunityIcons name="content-copy" size={18} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 15 }}>Copy program</Text>
                 </Pressable>
                 <Pressable onPress={() => handleDelete(item.id, item.name, item.is_current)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
                   <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
