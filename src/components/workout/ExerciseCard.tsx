@@ -304,7 +304,6 @@ export default function ExerciseCard({
         <GlassView
           glassEffectStyle="regular"
           colorScheme={theme === 'dark' ? 'dark' : 'light'}
-          tintColor={`${badgeColor}28`}
           style={cardStyle}
         >
           {cardInner}
