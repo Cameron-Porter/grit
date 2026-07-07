@@ -9,9 +9,9 @@ interface Props {
 }
 
 const SIZES = {
-  sm: { wordmark: 28 },
-  md: { wordmark: 44 },
-  lg: { wordmark: 64 },
+  sm: { wordmark: 32 },
+  md: { wordmark: 52 },
+  lg: { wordmark: 72 },
 };
 
 export default function GritWordmark({ size = 'md', letterColor, showTagline = true }: Props) {
@@ -24,7 +24,7 @@ export default function GritWordmark({ size = 'md', letterColor, showTagline = t
     <View style={{ alignItems: 'center' }}>
       <Text
         onLayout={(e) => setWordmarkWidth(e.nativeEvent.layout.width)}
-        style={{ fontFamily: 'Square721-BoldExtended', fontSize: wordmark, letterSpacing: 2, lineHeight: wordmark * 1.15 }}
+        style={{ fontFamily: 'Inter_900Black', fontSize: wordmark, letterSpacing: -1, lineHeight: wordmark * 1.1 }}
       >
         <Text style={{ color: gritColor }}>G</Text>
         <Text style={{ color: colors.primary }}>.</Text>
@@ -42,11 +42,12 @@ export default function GritWordmark({ size = 'md', letterColor, showTagline = t
             minimumFontScale={0.01}
             numberOfLines={1}
             style={{
-              fontFamily: 'Square721-BoldExtended',
-              fontSize: wordmark * 0.21,
+              fontFamily: 'Inter_600SemiBold',
+              fontSize: wordmark * 0.22,
               color: colors.primary,
-              letterSpacing: 0,
+              letterSpacing: 2,
               textAlign: 'center',
+              textTransform: 'uppercase',
             }}
           >
             Guided Results & Intelligent Training

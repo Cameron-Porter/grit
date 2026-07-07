@@ -1,7 +1,19 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+  Inter_900Black,
+} from '@expo-google-fonts/inter';
 import { useEffect } from 'react';
-import { AppState, useWindowDimensions, View } from 'react-native';
+import { AppState, Text, useWindowDimensions, View } from 'react-native';
+
+// Apply Inter as the global default for all Text components that don't override fontFamily
+(Text as any).defaultProps = (Text as any).defaultProps ?? {};
+(Text as any).defaultProps.style = { fontFamily: 'Inter_400Regular' };
 import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
 import { getBodyWeight } from '../src/api/userProfile';
 import { useProfileStore } from '../src/store/useProfileStore';
@@ -42,7 +54,12 @@ function LayoutInner() {
   const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
   const hydrateBodyWeight = useProfileStore((s) => s.hydrateBodyWeight);
   const [fontsLoaded, fontError] = useFonts({
-    'Square721-BoldExtended': require('../assets/fonts/Square721ExtendedBold.otf'),
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+    Inter_900Black,
   });
   if (fontError) console.warn('[Fonts] failed to load:', fontError);
   const { width, height } = useWindowDimensions();
