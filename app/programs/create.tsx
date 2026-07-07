@@ -240,6 +240,7 @@ export default function CreateProgram() {
           next.day.day_number,
           next.day.label,
           next.program.id,
+          (next.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null) ?? undefined,
         );
         router.replace('/workout');
       } else {

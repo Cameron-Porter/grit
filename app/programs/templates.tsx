@@ -164,6 +164,7 @@ export default function ProgramTemplates() {
           next.day.day_number,
           next.day.label,
           next.program.id,
+          undefined,
         );
         router.replace('/workout');
       } else {

@@ -65,6 +65,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       activeProgramWeek: null,
       activeProgramDayNumber: null,
       activeProgramDayLabel: null,
+      activeProgramMusclePriorities: null,
       dayNote: null,
       exercises: [],
       pendingFeedback: [],
@@ -83,6 +84,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             activeProgramWeek: null,
             activeProgramDayNumber: null,
             activeProgramDayLabel: null,
+            activeProgramMusclePriorities: null,
             dayNote: null,
             exercises: [],
           };
@@ -97,6 +99,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           activeProgramWeek: null,
           activeProgramDayNumber: null,
           activeProgramDayLabel: null,
+          activeProgramMusclePriorities: null,
           dayNote: null,
           exercises: [],
           pendingFeedback: [],
@@ -111,6 +114,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           activeProgramWeek: null,
           activeProgramDayNumber: null,
           activeProgramDayLabel: null,
+          activeProgramMusclePriorities: null,
           dayNote: null,
         }),
 
@@ -139,12 +143,17 @@ export const useWorkoutStore = create<WorkoutState>()(
         })),
 
       addExercise: (name, muscleGroup, equipment = 'Bodyweight') => {
-        set((state) => ({
-          exercises: [
-            ...state.exercises,
-            { id: uuidv4(), name, muscleGroup, equipment, sets: [] } as Exercise,
-          ],
-        }));
+        set((state) => {
+          const musclePriority = muscleGroup && state.activeProgramMusclePriorities
+            ? state.activeProgramMusclePriorities[muscleGroup]
+            : undefined;
+          return {
+            exercises: [
+              ...state.exercises,
+              { id: uuidv4(), name, muscleGroup, equipment, musclePriority, sets: [] } as Exercise,
+            ],
+          };
+        });
       },
 
       updateExercisePriorities: (priorities) =>
@@ -283,7 +292,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
-      startFromProgramDay: (dayId, programName, exerciseTemplates, weekNumber, dayNumber, dayLabel, programId) => {
+      startFromProgramDay: (dayId, programName, exerciseTemplates, weekNumber, dayNumber, dayLabel, programId, musclePriorities) => {
         set((state) => {
           // Guard only when the user has already logged completed sets — don't block on a stale/unstarted workout
           const hasCompletedSets = state.exercises.some((ex) => ex.sets.some((s) => s.completed));
@@ -294,6 +303,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             activeWorkoutId: Date.now().toString(),
             activeProgramId: programId ?? null,
             activeProgramDayId: dayId,
+            activeProgramMusclePriorities: musclePriorities ?? null,
             activeProgramName: programName,
             activeProgramWeek: weekNumber ?? null,
             activeProgramDayNumber: dayNumber ?? null,

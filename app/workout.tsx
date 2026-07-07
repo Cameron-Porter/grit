@@ -144,6 +144,7 @@ export default function ActiveWorkout() {
             n.day.day_number,
             n.day.label,
             n.program.id,
+            (n.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null) ?? undefined,
           );
         } else {
           setNextWorkout(n);
