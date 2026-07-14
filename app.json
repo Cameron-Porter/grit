@@ -8,8 +8,11 @@
     "scheme": "grit",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.gritfitness.app"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.gritfitness.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.gritfitness.app",
@@ -26,10 +29,11 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#111114",
+          "backgroundColor": "#000000",
           "android": {
             "image": "./assets/images/icon.png",
             "imageWidth": 160

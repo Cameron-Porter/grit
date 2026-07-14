@@ -1,4 +1,5 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useState } from 'react';
 import GritWordmark from '../src/components/GritWordmark';
 import {
@@ -15,7 +16,7 @@ import { useColors } from '../src/utils/useColors';
 
 export default function LoginScreen() {
   const colors = useColors();
-  const { signIn, signUp, signInWithGoogle, loading } = useAuthStore();
+  const { signIn, signUp, signInWithGoogle, signInWithApple, loading } = useAuthStore();
 
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -60,10 +61,13 @@ export default function LoginScreen() {
   const handleGoogle = async () => {
     setError(null);
     const err = await signInWithGoogle();
-    if (err) {
-      setError(err);
-    }
-    // Navigation handled by auth guard in _layout.tsx
+    if (err) setError(err);
+  };
+
+  const handleApple = async () => {
+    setError(null);
+    const err = await signInWithApple();
+    if (err) setError(err);
   };
 
   return (
@@ -179,11 +183,22 @@ export default function LoginScreen() {
         <Pressable
           onPress={handleGoogle}
           disabled={loading}
-          style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: colors.surface2, opacity: loading ? 0.7 : 1 }}
+          style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: colors.surface2, opacity: loading ? 0.7 : 1, marginBottom: 12 }}
         >
           <MaterialCommunityIcons name="google" size={20} color={colors.text} />
           <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>Continue with Google</Text>
         </Pressable>
+
+        {/* Apple SSO — iOS only; Apple requires their native button */}
+        {Platform.OS === 'ios' && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={14}
+            style={{ width: '100%', height: 50 }}
+            onPress={handleApple}
+          />
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );

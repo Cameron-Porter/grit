@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ExportProgressModal from '../../src/components/export/ExportProgressModal';
+import GradientBackground from '../../src/components/GradientBackground';
 import GritWordmark from '../../src/components/GritWordmark';
 import { useEntitlements } from '../../src/contexts/EntitlementsContext';
 import { useRevenueCatContext } from '../../src/contexts/RevenueCatContext';
@@ -29,7 +30,7 @@ function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
       onPress={onToggle}
       style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: value ? colors.primary : colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
     >
-      <View style={{ width: 27, height: 27, borderRadius: 14, backgroundColor: '#FFFFFF', alignSelf: value ? 'flex-end' : 'flex-start' }} />
+      <View style={{ width: 27, height: 27, borderRadius: 20, backgroundColor: '#FFFFFF', alignSelf: value ? 'flex-end' : 'flex-start' }} />
     </Pressable>
   );
 }
@@ -111,10 +112,10 @@ export default function ProfileAndSettings() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <GradientBackground>
       <ExportProgressModal />
       {/* User header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: colors.surface2, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface2 }} />
         ) : (
@@ -138,12 +139,14 @@ export default function ProfileAndSettings() {
               onPress={() => router.push('/subscription')}
               style={({ pressed }) => ({
                 backgroundColor: colors.surface,
-                borderRadius: 14,
+                borderRadius: 20,
                 padding: 16,
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 14,
                 opacity: pressed ? 0.8 : 1,
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
               })}
             >
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: `${colors.primary}22`, alignItems: 'center', justifyContent: 'center' }}>
@@ -169,7 +172,7 @@ export default function ProfileAndSettings() {
               onPress={() => router.push('/subscription')}
               style={({ pressed }) => ({
                 backgroundColor: colors.surface,
-                borderRadius: 14,
+                borderRadius: 20,
                 padding: 16,
                 borderWidth: 1.5,
                 borderColor: `${colors.primary}50`,
@@ -199,7 +202,7 @@ export default function ProfileAndSettings() {
               onPress={() => router.push('/admin')}
               style={({ pressed }) => ({
                 backgroundColor: colors.surface,
-                borderRadius: 14,
+                borderRadius: 20,
                 flexDirection: 'row',
                 alignItems: 'center',
                 padding: 16,
@@ -223,7 +226,7 @@ export default function ProfileAndSettings() {
         {/* ── MY PROGRESS ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>My Progress</Text>
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden' }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder }}>
             <Pressable
               onPress={() => router.push('/personal-records')}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', padding: 16, opacity: pressed ? 0.7 : 1 })}
@@ -271,7 +274,7 @@ export default function ProfileAndSettings() {
         {/* ── BODY WEIGHT ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Body Weight</Text>
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>Body weight</Text>
               {bodyWeight != null && (
@@ -302,7 +305,7 @@ export default function ProfileAndSettings() {
           <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Settings</Text>
 
           {/* Theme */}
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder }}>
             <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Appearance</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, paddingRight: 16 }}>
@@ -316,7 +319,7 @@ export default function ProfileAndSettings() {
           </View>
 
           {/* Auto match weight */}
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder }}>
             <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Exercise Sets</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flex: 1, paddingRight: 16 }}>
@@ -330,7 +333,7 @@ export default function ProfileAndSettings() {
           </View>
 
           {/* Equipment preferences */}
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
             <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Exercise Types</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <View style={{ flex: 1, paddingRight: 16 }}>
@@ -365,7 +368,7 @@ export default function ProfileAndSettings() {
         {/* ── LEGAL ── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Legal</Text>
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden' }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder }}>
             <Pressable
               onPress={() => router.push('/privacy')}
               style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', padding: 16, opacity: pressed ? 0.7 : 1 })}
@@ -400,9 +403,11 @@ export default function ProfileAndSettings() {
               justifyContent: 'center',
               gap: 8,
               padding: 15,
-              borderRadius: 14,
+              borderRadius: 20,
               backgroundColor: colors.surface,
               opacity: pressed ? 0.7 : 1,
+              borderWidth: 1,
+              borderColor: colors.glassBorder,
             })}
           >
             <MaterialCommunityIcons name="logout" size={18} color="#EF4444" />
@@ -428,6 +433,6 @@ export default function ProfileAndSettings() {
           <GritWordmark size="sm" />
         </View>
       </ScrollView>
-    </View>
+    </GradientBackground>
   );
 }

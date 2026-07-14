@@ -90,3 +90,26 @@ export async function deleteMyAccount(): Promise<void> {
   const { error } = await supabase.rpc('delete_my_account');
   if (error) throw new Error(error.message);
 }
+
+// ── Body weight (cross-device sync) ──────────────────────────────────────────
+
+export async function getBodyWeight(): Promise<number | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return null;
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('body_weight')
+    .eq('id', session.user.id)
+    .limit(1)
+    .single();
+  return (data as any)?.body_weight ?? null;
+}
+
+export async function upsertBodyWeight(weight: number): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return;
+  await supabase
+    .from('user_profiles')
+    .update({ body_weight: weight } as any)
+    .eq('id', session.user.id);
+}

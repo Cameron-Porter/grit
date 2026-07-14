@@ -154,6 +154,54 @@ export async function deleteProgram(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function duplicateProgram(id: string, newName?: string): Promise<Program> {
+  const original = await getProgram(id);
+  if (!original) throw new Error('Program not found');
+
+  const allOriginalDays = await getProgramDays(id);
+  const week1Original = allOriginalDays
+    .filter((d) => d.week_number === 1)
+    .sort((a, b) => a.day_number - b.day_number);
+
+  const dayLabels = week1Original.map((d) => d.label ?? '');
+
+  const copy = await createProgram(
+    newName?.trim() || original.name,
+    original.total_weeks,
+    original.days_per_week,
+    dayLabels,
+    original.focus ?? 'hypertrophy',
+    (original.muscle_priorities ?? {}) as Record<string, string>,
+  );
+
+  const allNewDays = await getProgramDays(copy.id);
+  const week1New = allNewDays
+    .filter((d) => d.week_number === 1)
+    .sort((a, b) => a.day_number - b.day_number);
+
+  for (let i = 0; i < week1Original.length; i++) {
+    const origDay = week1Original[i];
+    const newDay = week1New[i];
+    if (!origDay || !newDay) continue;
+    const exercises = await getProgramExercises(origDay.id);
+    for (const ex of exercises) {
+      await addProgramExercise(
+        newDay.id,
+        ex.exercise_name,
+        ex.muscle_group ?? '',
+        ex.equipment ?? 'Barbell',
+        ex.sort_order,
+        ex.target_sets,
+        ex.target_reps_min ?? undefined,
+        ex.target_reps_max ?? undefined,
+        ex.rir ?? undefined,
+      );
+    }
+  }
+
+  return copy;
+}
+
 export async function setCurrentProgram(id: string): Promise<void> {
   const userId = await getUserId();
   // Clear all flags for this user, then set the selected one

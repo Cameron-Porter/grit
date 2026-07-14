@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getWorkouts } from '../../src/api/history';
+import GradientBackground from '../../src/components/GradientBackground';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
@@ -79,9 +80,9 @@ export default function Progress() {
   }, [workouts]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-        <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Progress</Text>
+    <GradientBackground>
+      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 8 }}>
+        <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Progress</Text>
       </View>
 
       {loading ? (
@@ -89,7 +90,7 @@ export default function Progress() {
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + 24 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
 
           {/* ── Stats row ── */}
           {workouts.length > 0 && (
@@ -116,12 +117,14 @@ export default function Progress() {
               style={({ pressed }) => ({
                 backgroundColor: colors.surface,
                 padding: 16,
-                borderRadius: 14,
+                borderRadius: 20,
                 marginBottom: 10,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 opacity: pressed ? 0.7 : 1,
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
               })}
             >
               <View>
@@ -137,14 +140,14 @@ export default function Progress() {
           ))}
         </ScrollView>
       )}
-    </View>
+    </GradientBackground>
   );
 }
 
 function StatCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   const colors = useColors();
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 14, padding: 14, alignItems: 'center', gap: 2 }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.glassBorder }}>
       <Text style={{ color: colors.text, fontSize: 28, fontWeight: '800', lineHeight: 32 }}>{value}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '600' }}>{unit}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, marginTop: 2 }}>{label}</Text>

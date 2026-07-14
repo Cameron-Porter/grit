@@ -17,6 +17,7 @@ import type { DayPlan, ExerciseSlot, ExperienceLevel, MuscleGroup, ProgramFocus,
 import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 import SlotExercisePicker from '../../src/components/workout/SlotExercisePicker';
+import ExercisePicker from '../../src/components/workout/ExercisePicker';
 import { getExerciseByName } from '../../src/data/exerciseDatabase';
 
 const WEEKDAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -84,6 +85,8 @@ export default function CreateProgram() {
 
   // Exercise picker state
   const [pickerTarget, setPickerTarget] = useState<{ dayIdx: number; slotIdx: number } | null>(null);
+  // Add-exercise picker (free-form, used when user adds a slot manually)
+  const [addPickerDayIdx, setAddPickerDayIdx] = useState<number | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [savingStatus, setSavingStatus] = useState('');
@@ -172,6 +175,41 @@ export default function CreateProgram() {
     );
   };
 
+  const handleRemoveSlot = (dayIdx: number, slotIdx: number) => {
+    setProgramDays((prev) =>
+      prev.map((d, di) => {
+        if (di !== dayIdx) return d;
+        const slots = d.slots.filter((_, si) => si !== slotIdx);
+        return { ...d, slots, totalSets: slots.reduce((s, sl) => s + sl.sets, 0) };
+      }),
+    );
+  };
+
+  const handleAddExerciseSelect = (name: string, muscleGroup: string) => {
+    if (addPickerDayIdx === null) return;
+    const dayIdx = addPickerDayIdx;
+    setAddPickerDayIdx(null);
+    setProgramDays((prev) =>
+      prev.map((d, di) => {
+        if (di !== dayIdx) return d;
+        const newSlot: import('../../src/types/program').ExerciseSlot = {
+          id: `custom-${Date.now()}-${d.slots.length}`,
+          muscle: muscleGroup as MuscleGroup,
+          role: 'Accessory',
+          priority: musclePriorities[muscleGroup as MuscleGroup] ?? 'grow',
+          sets: 3,
+          repsMin: 10,
+          repsMax: 15,
+          rir: 2,
+          sortOrder: d.slots.length,
+          selectedExercise: name,
+        };
+        const slots = [...d.slots, newSlot];
+        return { ...d, slots, totalSets: slots.reduce((s, sl) => s + sl.sets, 0) };
+      }),
+    );
+  };
+
   const handleNext = () => {
     if (step < daysPerWeek + 1) setStep(step + 1);
     else handleCreate();
@@ -240,6 +278,7 @@ export default function CreateProgram() {
           next.day.day_number,
           next.day.label,
           next.program.id,
+          (next.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null) ?? undefined,
         );
         router.replace('/workout');
       } else {
@@ -513,15 +552,33 @@ export default function CreateProgram() {
                         {slot.sets} sets · {slot.repsMin}–{slot.repsMax} reps · RIR {slot.rir}
                       </Text>
                     </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <MaterialCommunityIcons
                       name={hasExercise ? 'swap-horizontal' : 'chevron-right'}
                       size={20}
                       color={hasExercise ? colors.primary : colors.muted}
                     />
+                    <Pressable
+                      onPress={() => handleRemoveSlot(exerciseStepIndex, slotIdx)}
+                      hitSlop={8}
+                      style={{ padding: 4 }}
+                    >
+                      <MaterialCommunityIcons name="minus-circle-outline" size={20} color={colors.error ?? '#ef4444'} />
+                    </Pressable>
+                  </View>
                   </View>
                 </Pressable>
               );
             })}
+
+            {/* Add exercise */}
+            <Pressable
+              onPress={() => setAddPickerDayIdx(exerciseStepIndex)}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.surface2, marginTop: 4, marginBottom: 8 }}
+            >
+              <MaterialCommunityIcons name="plus" size={18} color={colors.muted} />
+              <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '600' }}>Add Exercise</Text>
+            </Pressable>
           </ScrollView>
 
           <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
@@ -547,7 +604,14 @@ export default function CreateProgram() {
         </View>
       )}
 
-      {/* ── Exercise picker ── */}
+      {/* ── Free-form add exercise picker ── */}
+      <ExercisePicker
+        visible={addPickerDayIdx !== null}
+        onClose={() => setAddPickerDayIdx(null)}
+        onSelect={(name, muscleGroup) => handleAddExerciseSelect(name, muscleGroup)}
+      />
+
+      {/* ── Slot exercise picker ── */}
       <SlotExercisePicker
         visible={!!pickerTarget}
         slot={pickerSlot}

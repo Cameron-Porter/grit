@@ -58,6 +58,7 @@ export type WorkoutState = {
   activeProgramWeek: number | null;
   activeProgramDayNumber: number | null;
   activeProgramDayLabel: string | null;
+  activeProgramMusclePriorities: Record<string, 'emphasize' | 'grow' | 'maintain'> | null;
   dayNote: string | null;
   exercises: Exercise[];
   pendingFeedback: PendingFeedback[];
@@ -109,6 +110,7 @@ export type WorkoutState = {
     dayNumber?: number | null,
     dayLabel?: string | null,
     programId?: string | null,
+    musclePriorities?: Record<string, 'emphasize' | 'grow' | 'maintain'> | null,
   ) => void;
   replaceExercise: (exerciseId: string, newName: string, newMuscleGroup: string, newEquipment: string) => void;
   updateExercisePriorities: (priorities: Record<string, 'emphasize' | 'grow' | 'maintain'>) => void;
