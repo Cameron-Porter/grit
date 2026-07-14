@@ -1,4 +1,5 @@
 import { Session, User } from '@supabase/supabase-js';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -24,6 +25,7 @@ interface AuthState {
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   signInWithGoogle: () => Promise<string | null>;
+  signInWithApple: () => Promise<string | null>;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -130,6 +132,54 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       set({ loading: false });
       return 'Unable to sign in with Google. Please try again.';
+    }
+  },
+  signInWithApple: async () => {
+    set({ loading: true });
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        set({ loading: false });
+        return 'Unable to sign in with Apple. Please try again.';
+      }
+
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: 'apple',
+        token: credential.identityToken,
+      });
+
+      if (error) {
+        set({ loading: false });
+        return 'Unable to sign in with Apple. Please try again.';
+      }
+
+      // Apple only provides full name on the very first sign-in — save it immediately
+      if (credential.fullName) {
+        const { givenName, middleName, familyName } = credential.fullName;
+        const parts = [givenName, middleName, familyName].filter(Boolean);
+        if (parts.length > 0) {
+          await supabase.auth.updateUser({
+            data: {
+              full_name: parts.join(' '),
+              given_name: givenName,
+              family_name: familyName,
+            },
+          });
+        }
+      }
+
+      set({ loading: false });
+      return null;
+    } catch (e: any) {
+      set({ loading: false });
+      if (e.code === 'ERR_REQUEST_CANCELED') return null;
+      return 'Unable to sign in with Apple. Please try again.';
     }
   },
 }));
