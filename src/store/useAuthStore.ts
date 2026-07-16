@@ -155,9 +155,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (error) {
-        console.error('[Apple Auth] signInWithIdToken error:', error.message, error);
         set({ loading: false });
-        return `Apple auth error: ${error.message}`;
+        return 'Unable to sign in with Apple. Please try again.';
       }
 
       // Apple only provides full name on the very first sign-in — save it immediately
@@ -178,10 +177,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ loading: false });
       return null;
     } catch (e: any) {
-      console.error('[Apple Auth] caught error:', e?.code, e?.message, e);
       set({ loading: false });
       if (e.code === 'ERR_REQUEST_CANCELED') return null;
-      return `Apple auth caught: ${e?.code} ${e?.message}`;
+      return 'Unable to sign in with Apple. Please try again.';
     }
   },
 }));
