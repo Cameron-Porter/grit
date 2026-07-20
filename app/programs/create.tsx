@@ -419,14 +419,16 @@ export default function CreateProgram() {
           </View>
 
         </ScrollView>
-          <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
-            <Pressable onPress={handleNextFromSettings} disabled={!canAdvanceSettings}
-              style={{ backgroundColor: canAdvanceSettings ? colors.primary : colors.surface2, borderRadius: 14, padding: 17 }}>
-              <Text style={{ color: canAdvanceSettings ? colors.background : colors.muted, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
-                Set Training Focus →
-              </Text>
-            </Pressable>
-          </View>
+          {canAdvanceSettings && (
+            <View style={{ position: 'absolute', bottom: BOTTOM_TAB_HEIGHT + insets.bottom, left: 0, right: 0, padding: 16, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.surface2 }}>
+              <Pressable onPress={handleNextFromSettings}
+                style={{ backgroundColor: colors.primary, borderRadius: 14, padding: 17 }}>
+                <Text style={{ color: colors.background, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
+                  Set Training Focus →
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </>
       )}
 

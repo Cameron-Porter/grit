@@ -25,6 +25,7 @@ import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { RevenueCatProvider } from '../src/contexts/RevenueCatContext';
 import { EntitlementsProvider, useEntitlements } from '../src/contexts/EntitlementsContext';
+import { useWidgetSync } from '../src/hooks/useWidgetSync';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -48,6 +49,7 @@ export default Sentry.wrap(function Layout() {
 });
 
 function LayoutInner() {
+  useWidgetSync();
   const router = useRouter();
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
