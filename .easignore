@@ -1,0 +1,33 @@
+# Git history — not needed for builds
+.git/
+
+# Claude Code local session data
+.claude/
+
+# Local knowledge base / docs
+knowledge/
+docs/
+sangha/
+
+# Tests and test output
+__tests__/
+coverage/
+
+# Local dev / IDE config
+.vscode/
+.expo/
+
+# Environment files — secrets are set via EAS secrets, not uploaded
+.env
+.env.local
+
+# Android local build artifacts (EAS builds fresh)
+android/app/build/
+android/.gradle/
+android/app/.cxx/
+
+# macOS
+.DS_Store
+
+# Puppeteer / local scripts not needed for mobile builds
+node_modules/puppeteer/
