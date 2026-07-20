@@ -635,32 +635,27 @@ export default function ActiveWorkout() {
         </Pressable>
       </ScrollView>
 
-      {/* Pinned Finish Workout button */}
-      <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16, backgroundColor: colors.background }}>
-        <Pressable
-          onPress={onFinishWorkout}
-          disabled={!canFinish || isSaving}
-          style={{
-            backgroundColor: canFinish ? colors.primary : colors.surface2,
-            paddingVertical: 18,
-            borderRadius: 16,
-            opacity: isSaving ? 0.7 : 1,
-            borderWidth: 1,
-            borderColor: canFinish ? 'rgba(255,255,255,0.15)' : colors.glassBorder,
-          }}
-        >
-          <Text
+      {/* Pinned Finish Workout button — only shown once all sets are logged */}
+      {(canFinish || isSaving) && (
+        <View style={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16, backgroundColor: colors.background }}>
+          <Pressable
+            onPress={onFinishWorkout}
+            disabled={isSaving}
             style={{
-              color: canFinish ? colors.background : colors.muted,
-              textAlign: 'center',
-              fontWeight: '700',
-              fontSize: 16,
+              backgroundColor: colors.primary,
+              paddingVertical: 18,
+              borderRadius: 16,
+              opacity: isSaving ? 0.7 : 1,
+              borderWidth: 1,
+              borderColor: 'rgba(255,255,255,0.15)',
             }}
           >
-            {isSaving ? 'Saving...' : allSkipped ? 'Skip Day & Continue' : 'Finish Workout'}
-          </Text>
-        </Pressable>
-      </View>
+            <Text style={{ color: colors.background, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
+              {isSaving ? 'Saving...' : allSkipped ? 'Skip Day & Continue' : 'Finish Workout'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* Modals */}
       <ExercisePicker

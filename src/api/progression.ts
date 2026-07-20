@@ -76,9 +76,13 @@ export async function computeAndSaveProgressionTargets(
               .filter((s) => s.sets.length > 0);
 
             const exerciseDef = getExerciseByName(ex.exercise_name);
+            // Use actual sets logged last session so the distribution the user established
+            // (e.g. 1 set EZ Curl + 3 sets Cable Curl) carries forward instead of reverting
+            // to the evenly-split week-1 template. Falls back to template when no history.
+            const lastActualSets = sessions.length > 0 ? sessions[0].sets.length : null;
             const rec = recommendProgression(
               {
-                sets: ex.target_sets,
+                sets: lastActualSets ?? ex.target_sets,
                 repsMin: ex.target_reps_min ?? 8,
                 repsMax: ex.target_reps_max ?? 12,
                 rir: ex.rir ?? 3,

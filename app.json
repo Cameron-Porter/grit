@@ -10,6 +10,10 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.gritfitness.app",
+      "appleTeamId": "24N9RVYR8K",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.gritfitness.app"]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -29,6 +33,7 @@
     },
     "plugins": [
       "expo-router",
+      "@bacons/apple-targets",
       "expo-apple-authentication",
       [
         "expo-splash-screen",
