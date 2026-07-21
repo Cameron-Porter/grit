@@ -15,6 +15,8 @@ export interface PersonalRecord {
 }
 
 export async function getAllPRs(): Promise<PersonalRecord[]> {
+  const userId = await getUserId();
+  if (!userId) return [];
   const { data, error } = await supabase
     .from("personal_records")
     .select("*")
@@ -24,11 +26,13 @@ export async function getAllPRs(): Promise<PersonalRecord[]> {
 }
 
 export async function getPRForExercise(exerciseName: string): Promise<PersonalRecord | null> {
+  const userId = await getUserId();
+  if (!userId) return null;
   const { data } = await supabase
     .from("personal_records")
     .select("*")
     .ilike("exercise_name", exerciseName)
-    .single();
+    .maybeSingle();
   return data ?? null;
 }
 
@@ -38,11 +42,13 @@ export async function upsertPR(
   reps: number | null,
   isBodyweight = false,
 ): Promise<void> {
+  const userId = await getUserId();
+  if (!userId) return;
   const { data: existing } = await supabase
     .from("personal_records")
     .select("id, weight, reps")
     .ilike("exercise_name", exerciseName)
-    .single();
+    .maybeSingle();
 
   const now = new Date().toISOString();
 
@@ -58,7 +64,6 @@ export async function upsertPR(
       if (error && __DEV__) console.error("upsertPR update:", error);
     }
   } else {
-    const userId = await getUserId();
     const { error } = await supabase
       .from("personal_records")
       .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now, user_id: userId });
@@ -71,12 +76,14 @@ export async function createManualPR(
   weight: number,
   reps: number | null,
 ): Promise<void> {
+  const userId = await getUserId();
+  if (!userId) throw new Error('Not authenticated');
   const now = new Date().toISOString();
   const { data: existing } = await supabase
     .from("personal_records")
     .select("id")
     .ilike("exercise_name", exerciseName)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     const { error } = await supabase
@@ -85,7 +92,6 @@ export async function createManualPR(
       .eq("id", existing.id);
     if (error) throw error;
   } else {
-    const userId = await getUserId();
     const { error } = await supabase
       .from("personal_records")
       .insert({ exercise_name: exerciseName, weight, reps, achieved_at: now, user_id: userId });
