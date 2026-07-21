@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge } from '../../src/components/Badge';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
@@ -48,12 +49,8 @@ export default function TemplatesScreen() {
             </View>
             <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>{t.description}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-              <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{t.weeks} weeks</Text>
-              </View>
-              <View style={{ backgroundColor: `${colors.primary}20`, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '600' }}>{t.daysPerWeek}×/week</Text>
-              </View>
+              <Badge label={`${t.weeks} weeks`} color={colors.primary} variant="tint" size="sm" uppercase={false} />
+              <Badge label={`${t.daysPerWeek}×/week`} color={colors.primary} variant="tint" size="sm" uppercase={false} />
             </View>
           </View>
         ))}

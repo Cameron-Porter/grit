@@ -1,15 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RestTimerControls, RestTimerState } from '../../hooks/useRestTimer';
 import { useColors } from '../../utils/useColors';
 import { FontFamily, TypeScale, Space, Radius } from '../../utils/tokens';
-import { BOTTOM_TAB_HEIGHT } from '../../utils/constants';
+
+const INLINE_HEIGHT = 52;
 
 interface Props {
   timer: RestTimerState;
   controls: RestTimerControls;
   defaultSeconds?: number;
+  inline?: boolean;
 }
 
 function fmt(s: number) {
@@ -18,19 +19,18 @@ function fmt(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export default function RestTimerBar({ timer, controls, defaultSeconds = 90 }: Props) {
+export default function RestTimerBar({ timer, controls, inline = false }: Props) {
   const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const slideAnim = useRef(new Animated.Value(80)).current;
+  const heightAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Slide in / out
+  // Expand / collapse height
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: timer.active ? 0 : 80,
-      useNativeDriver: true,
-      damping: 20,
-      stiffness: 200,
+    Animated.spring(heightAnim, {
+      toValue: timer.active ? INLINE_HEIGHT : 0,
+      useNativeDriver: false,
+      damping: 22,
+      stiffness: 220,
     }).start();
   }, [timer.active]);
 
@@ -43,18 +43,16 @@ export default function RestTimerBar({ timer, controls, defaultSeconds = 90 }: P
     }).start();
   }, [timer.progress]);
 
-  const bottom = BOTTOM_TAB_HEIGHT + insets.bottom + Space[1];
-
   return (
     <Animated.View
       pointerEvents={timer.active ? 'auto' : 'none'}
       style={[
         styles.container,
         {
-          bottom,
-          backgroundColor: colors.surface,
-          borderColor: colors.cardBorder,
-          transform: [{ translateY: slideAnim }],
+          height: heightAnim,
+          backgroundColor: colors.surface2,
+          borderBottomWidth: StyleSheet.hairlineWidth,
+          borderBottomColor: colors.cardBorder,
         },
       ]}
     >
@@ -105,11 +103,6 @@ export default function RestTimerBar({ timer, controls, defaultSeconds = 90 }: P
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    left: Space[2],
-    right: Space[2],
-    borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
   progressFill: {

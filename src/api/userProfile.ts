@@ -113,3 +113,46 @@ export async function upsertBodyWeight(weight: number): Promise<void> {
     .update({ body_weight: weight } as any)
     .eq('id', session.user.id);
 }
+
+// ── Settings (cross-device sync) ──────────────────────────────────────────────
+
+export interface RemoteSettings {
+  autoMatchWeight: boolean;
+  usePreferredEquipment: boolean;
+  preferredEquipment: string[];
+  theme: string;
+  workoutRemindersEnabled: boolean;
+}
+
+export async function getSettings(): Promise<RemoteSettings | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return null;
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('auto_match_weight, use_preferred_equipment, preferred_equipment, theme, workout_reminders_enabled')
+    .eq('id', session.user.id)
+    .limit(1)
+    .single();
+  if (!data) return null;
+  const d = data as any;
+  return {
+    autoMatchWeight: d.auto_match_weight ?? false,
+    usePreferredEquipment: d.use_preferred_equipment ?? false,
+    preferredEquipment: d.preferred_equipment ?? ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
+    theme: d.theme ?? 'dark',
+    workoutRemindersEnabled: d.workout_reminders_enabled ?? false,
+  };
+}
+
+export async function upsertSettings(partial: Partial<RemoteSettings>): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user?.id) return;
+  const patch: Record<string, unknown> = {};
+  if (partial.autoMatchWeight !== undefined) patch.auto_match_weight = partial.autoMatchWeight;
+  if (partial.usePreferredEquipment !== undefined) patch.use_preferred_equipment = partial.usePreferredEquipment;
+  if (partial.preferredEquipment !== undefined) patch.preferred_equipment = partial.preferredEquipment;
+  if (partial.theme !== undefined) patch.theme = partial.theme;
+  if (partial.workoutRemindersEnabled !== undefined) patch.workout_reminders_enabled = partial.workoutRemindersEnabled;
+  if (Object.keys(patch).length === 0) return;
+  await supabase.from('user_profiles').update(patch as any).eq('id', session.user.id);
+}

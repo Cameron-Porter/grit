@@ -67,32 +67,26 @@ export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorit
   const musclePriority = priorityProp ?? exercise.musclePriority;
 
   return (
-    <View style={{ backgroundColor: colors.cardSurface, borderRadius: 12, marginBottom: 16, overflow: 'hidden', opacity: 0.72 }}>
+    <View style={{ marginBottom: 16 }}>
 
-      {/* Muscle group badge — pixel-for-pixel match of ExerciseCard */}
-      {exercise.muscleGroup && (
-        <View style={{
-          alignSelf: 'flex-start',
-          paddingVertical: 4,
-          paddingHorizontal: 12,
-          borderBottomRightRadius: 8,
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: `${badgeColor}50`,
-          borderWidth: 1,
-          borderColor: `${badgeColor}50`,
-        }}>
-          {musclePriority
-            ? <PriorityBars priority={musclePriority} color={badgeColor} />
-            : <MaterialCommunityIcons name="blur-linear" size={12} color={colors.badgeText} style={{ marginRight: 4 }} />
-          }
-          <Text style={{ color: colors.badgeText, fontSize: 10, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            {exercise.muscleGroup}
-          </Text>
-        </View>
-      )}
-
+      <View style={{ backgroundColor: colors.cardSurface, borderRadius: 12, overflow: 'hidden', opacity: 0.72 }}>
       <View style={{ paddingVertical: 10 }}>
+
+        {/* Left accent stripe */}
+        {exercise.muscleGroup && (
+          <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: badgeColor }} />
+        )}
+
+        {/* Muscle group label */}
+        {exercise.muscleGroup && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 16, marginBottom: 3 }}>
+            {musclePriority && <PriorityBars priority={musclePriority} color={badgeColor} />}
+            <Text style={{ color: badgeColor, fontSize: 10, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+              {exercise.muscleGroup}
+            </Text>
+          </View>
+        )}
+
         {/* Exercise title row — same as ExerciseCard, no action icons */}
         <View style={{ paddingHorizontal: 16, marginBottom: 4 }}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
@@ -130,6 +124,7 @@ export default function ReadOnlyExerciseCard({ exercise, musclePriority: priorit
         {exercise.sets.map((s, i) => (
           <ReadOnlySetRow key={i} set={s} />
         ))}
+      </View>
       </View>
     </View>
   );

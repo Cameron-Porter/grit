@@ -90,7 +90,7 @@ export default function Progress() {
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
             {[0, 1, 2].map((i) => (
-              <View key={i} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <View key={i} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 24, padding: 14, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.glassBorder }}>
                 <Skeleton width={40} height={28} radius={6} />
                 <Skeleton width="70%" height={10} radius={4} />
                 <Skeleton width="50%" height={10} radius={4} />
@@ -98,7 +98,7 @@ export default function Progress() {
             ))}
           </View>
           {[0, 1, 2, 3].map((i) => (
-            <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.glassBorder, gap: 8 }}>
+            <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 24, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.glassBorder, gap: 8 }}>
               <Skeleton width="55%" height={16} radius={5} />
               <Skeleton width="30%" height={12} radius={4} />
             </View>
@@ -142,7 +142,7 @@ export default function Progress() {
               style={({ pressed }) => ({
                 backgroundColor: colors.surface,
                 padding: 16,
-                borderRadius: 20,
+                borderRadius: 24,
                 marginBottom: 10,
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -172,7 +172,7 @@ export default function Progress() {
 function StatCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   const colors = useColors();
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.glassBorder }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 24, padding: 14, alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.glassBorder }}>
       <Text style={{ color: colors.text, fontSize: 28, fontWeight: '800', lineHeight: 32 }}>{value}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '600' }}>{unit}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, marginTop: 2 }}>{label}</Text>

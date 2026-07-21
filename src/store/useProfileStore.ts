@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { upsertBodyWeight } from '../api/userProfile';
+import { upsertBodyWeight, upsertSettings, RemoteSettings } from '../api/userProfile';
 import type { ExperienceLevel } from '../types/program';
 import type { Theme } from '../utils/constants';
 
@@ -30,6 +30,7 @@ interface ProfileState {
   preferredEquipment: string[];
   experienceLevel: ExperienceLevel;
   theme: Theme;
+  workoutRemindersEnabled: boolean;
   setBodyWeight: (weight: number) => void;
   hydrateBodyWeight: (weight: number) => void;
   setAutoMatchWeight: (value: boolean) => void;
@@ -37,6 +38,8 @@ interface ProfileState {
   setPreferredEquipment: (types: string[]) => void;
   setExperienceLevel: (level: ExperienceLevel) => void;
   setTheme: (theme: Theme) => void;
+  setWorkoutRemindersEnabled: (value: boolean) => void;
+  hydrateSettings: (settings: RemoteSettings) => void;
   reset: () => void;
 }
 
@@ -50,6 +53,7 @@ export const useProfileStore = create<ProfileState>()(
       preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
       experienceLevel: 'intermediate',
       theme: 'dark',
+      workoutRemindersEnabled: false,
       setBodyWeight: (weight) => {
         set((state) => {
           const today = new Date().toISOString().split('T')[0];
@@ -70,11 +74,34 @@ export const useProfileStore = create<ProfileState>()(
             .slice(-90);
           return { bodyWeight: weight, bodyWeightLog: newLog };
         }),
-      setAutoMatchWeight: (value) => set({ autoMatchWeight: value }),
-      setUsePreferredEquipment: (value) => set({ usePreferredEquipment: value }),
-      setPreferredEquipment: (types) => set({ preferredEquipment: types }),
+      setAutoMatchWeight: (value) => {
+        set({ autoMatchWeight: value });
+        upsertSettings({ autoMatchWeight: value }).catch(() => {});
+      },
+      setUsePreferredEquipment: (value) => {
+        set({ usePreferredEquipment: value });
+        upsertSettings({ usePreferredEquipment: value }).catch(() => {});
+      },
+      setPreferredEquipment: (types) => {
+        set({ preferredEquipment: types });
+        upsertSettings({ preferredEquipment: types }).catch(() => {});
+      },
       setExperienceLevel: (level) => set({ experienceLevel: level }),
-      setTheme: (theme) => set({ theme }),
+      setTheme: (theme) => {
+        set({ theme });
+        upsertSettings({ theme }).catch(() => {});
+      },
+      setWorkoutRemindersEnabled: (value) => {
+        set({ workoutRemindersEnabled: value });
+        upsertSettings({ workoutRemindersEnabled: value }).catch(() => {});
+      },
+      hydrateSettings: (settings) => set({
+        autoMatchWeight: settings.autoMatchWeight,
+        usePreferredEquipment: settings.usePreferredEquipment,
+        preferredEquipment: settings.preferredEquipment,
+        theme: settings.theme as Theme,
+        workoutRemindersEnabled: settings.workoutRemindersEnabled,
+      }),
       reset: () => set({
         bodyWeight: null,
         bodyWeightLog: [],
@@ -82,6 +109,7 @@ export const useProfileStore = create<ProfileState>()(
         usePreferredEquipment: false,
         preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
         experienceLevel: 'intermediate',
+        workoutRemindersEnabled: false,
       }),
     }),
     {

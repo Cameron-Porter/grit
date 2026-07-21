@@ -14,6 +14,7 @@ import { buildProgram } from '../../src/rules/programBuilder';
 import { useProfileStore } from '../../src/store/useProfileStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import type { DayPlan, ExerciseSlot, ExperienceLevel, MuscleGroup, ProgramFocus, SlotRole } from '../../src/types/program';
+import { Badge } from '../../src/components/Badge';
 import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 import SlotExercisePicker from '../../src/components/workout/SlotExercisePicker';
@@ -513,11 +514,7 @@ export default function CreateProgram() {
               <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
                 {currentDay.primaryMuscles.map((m) => {
                   const c = MuscleGroupColors[m] ?? colors.primary;
-                  return (
-                    <View key={m} style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, backgroundColor: `${c}22` }}>
-                      <Text style={{ color: c, fontSize: 10, fontWeight: '800' }}>{m}</Text>
-                    </View>
-                  );
+                  return <Badge key={m} label={m} color={c} variant="tint" size="sm" />;
                 })}
               </View>
             </View>
@@ -534,12 +531,8 @@ export default function CreateProgram() {
                 >
                   {/* Muscle + role header */}
                   <View style={{ paddingHorizontal: 12, paddingTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <View style={{ paddingVertical: 2, paddingHorizontal: 8, borderRadius: 5, backgroundColor: `${badgeColor}28` }}>
-                      <Text style={{ color: badgeColor, fontSize: 9, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>{slot.muscle}</Text>
-                    </View>
-                    <View style={{ paddingVertical: 2, paddingHorizontal: 7, borderRadius: 5, backgroundColor: `${roleColor}22` }}>
-                      <Text style={{ color: roleColor, fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>{slot.role.toUpperCase()}</Text>
-                    </View>
+                    <Badge label={slot.muscle} color={badgeColor} variant="tint" size="sm" />
+                    <Badge label={slot.role} color={roleColor} variant="tint" size="sm" />
                   </View>
 
                   {/* Exercise name or prompt */}

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExercises } from '../../src/api/exercises';
+import { Badge, FilterChip } from '../../src/components/Badge';
 import { MuscleGroupColors } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
@@ -78,21 +79,12 @@ export default function Exercises() {
           const active = selectedMuscle === item;
           const color = item ? (MuscleGroupColors[item] ?? colors.primary) : colors.primary;
           return (
-            <Pressable
+            <FilterChip
+              label={item ?? 'All'}
+              active={active}
+              color={color}
               onPress={() => setSelectedMuscle(active ? null : item)}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 7,
-                borderRadius: 20,
-                backgroundColor: active ? `${color}22` : colors.surface,
-                borderWidth: 1.5,
-                borderColor: active ? color : colors.surface2,
-              }}
-            >
-              <Text style={{ color: active ? color : colors.muted, fontSize: 13, fontWeight: '700' }}>
-                {item ?? 'All'}
-              </Text>
-            </Pressable>
+            />
           );
         }}
       />
@@ -132,9 +124,7 @@ export default function Exercises() {
                 <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{item.name}</Text>
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{item.equipment}</Text>
               </View>
-              <View style={{ backgroundColor: `${badgeColor}28`, paddingVertical: 3, paddingHorizontal: 8, borderRadius: 5, marginRight: 10 }}>
-                <Text style={{ color: badgeColor, fontSize: 11, fontWeight: '700' }}>{item.muscle_group}</Text>
-              </View>
+              {item.muscle_group && <Badge label={item.muscle_group} color={badgeColor} variant="tint" size="sm" style={{ marginRight: 10 }} />}
               <MaterialCommunityIcons name="chevron-right" size={18} color={colors.surface2} />
             </Pressable>
           );

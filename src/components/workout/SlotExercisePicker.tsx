@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { createCustomExercise, getExercises } from '../../api/exercises';
 import type { ExerciseRow } from '../../api/exercises';
+import { Badge, FilterChip } from '../Badge';
 import { useProfileStore } from '../../store/useProfileStore';
 import type { ExerciseSlot, ExperienceLevel, MuscleGroup, SlotRole } from '../../types/program';
 import { MuscleGroupColors } from '../../utils/constants';
@@ -181,33 +182,20 @@ export default function SlotExercisePicker({
               {/* Tappable muscle badge */}
               <Pressable
                 onPress={() => setMusclePickerOpen((prev) => !prev)}
-                style={({ pressed }) => ({
-                  paddingVertical: 3, paddingHorizontal: 9, borderRadius: 6,
-                  backgroundColor: `${muscleColor}50`,
-                  borderWidth: 1,
-                  borderColor: `${muscleColor}50`,
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  opacity: pressed ? 0.7 : 1,
-                })}
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1, flexDirection: 'row', alignItems: 'center', gap: 4 })}
               >
-                <Text style={{ color: colors.badgeText, fontSize: 10, fontWeight: '900', letterSpacing: 1.2, textTransform: 'uppercase' }}>
-                  {activeMuscle}
-                </Text>
+                <Badge label={activeMuscle} color={muscleColor} variant="tint" size="sm" />
                 {onMuscleChange && (
                   <MaterialCommunityIcons
                     name={musclePickerOpen ? 'chevron-up' : 'chevron-down'}
                     size={12}
-                    color={colors.badgeText}
+                    color={muscleColor}
                   />
                 )}
               </Pressable>
 
               {/* Role badge */}
-              <View style={{ paddingVertical: 3, paddingHorizontal: 8, borderRadius: 6, backgroundColor: `${roleColor}22` }}>
-                <Text style={{ color: roleColor, fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>
-                  {slot.role.toUpperCase()}
-                </Text>
-              </View>
+              <Badge label={slot.role} color={roleColor} variant="tint" size="sm" />
 
               <Pressable onPress={onClose} style={{ marginLeft: 'auto', padding: 4 }} hitSlop={8}>
                 <MaterialCommunityIcons name="close" size={20} color={colors.muted} />
@@ -224,21 +212,14 @@ export default function SlotExercisePicker({
               >
                 {ALL_MUSCLES.map((m) => {
                   const mc = MuscleGroupColors[m] ?? colors.primary;
-                  const isActive = m === activeMuscle;
                   return (
-                    <Pressable
+                    <FilterChip
                       key={m}
+                      label={m}
+                      active={m === activeMuscle}
+                      color={mc}
                       onPress={() => handleMuscleSelect(m)}
-                      style={{
-                        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
-                        backgroundColor: isActive ? mc : `${mc}20`,
-                        borderWidth: 1, borderColor: isActive ? mc : `${mc}60`,
-                      }}
-                    >
-                      <Text style={{ color: isActive ? colors.background : mc, fontSize: 12, fontWeight: '700' }}>
-                        {m}
-                      </Text>
-                    </Pressable>
+                    />
                   );
                 })}
               </ScrollView>
@@ -273,24 +254,15 @@ export default function SlotExercisePicker({
                   Equipment
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, flexDirection: 'row' }}>
-                  {EQUIPMENT_OPTIONS.map((e) => {
-                    const active = createEquipment === e;
-                    return (
-                      <Pressable
-                        key={e}
-                        onPress={() => setCreateEquipment(e)}
-                        style={{
-                          paddingVertical: 7, paddingHorizontal: 13, borderRadius: 16,
-                          backgroundColor: active ? `${colors.primary}22` : colors.background,
-                          borderWidth: 1, borderColor: active ? colors.primary : colors.surface2,
-                        }}
-                      >
-                        <Text style={{ color: active ? colors.primary : colors.muted, fontSize: 12, fontWeight: '600' }}>
-                          {e}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                  {EQUIPMENT_OPTIONS.map((e) => (
+                    <FilterChip
+                      key={e}
+                      label={e}
+                      active={createEquipment === e}
+                      color={colors.primary}
+                      onPress={() => setCreateEquipment(e)}
+                    />
+                  ))}
                 </ScrollView>
               </View>
 
@@ -367,11 +339,7 @@ export default function SlotExercisePicker({
                         {item.name}
                       </Text>
 
-                      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5, backgroundColor: `${equipColor}20` }}>
-                        <Text style={{ color: equipColor, fontSize: 11, fontWeight: '700' }}>
-                          {item.equipment}
-                        </Text>
-                      </View>
+                      <Badge label={item.equipment ?? ''} color={equipColor} variant="tint" size="sm" uppercase={false} />
                     </Pressable>
                   );
                 }}

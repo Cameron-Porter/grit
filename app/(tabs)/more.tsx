@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Badge } from '../../src/components/Badge';
 import ExportProgressModal from '../../src/components/export/ExportProgressModal';
 import GradientBackground from '../../src/components/GradientBackground';
 import GritWordmark from '../../src/components/GritWordmark';
@@ -23,7 +24,6 @@ import { confirm } from '../../src/utils/confirm';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 import {
-  hasWorkoutReminders,
   scheduleWorkoutReminders,
   cancelWorkoutReminders,
 } from '../../src/lib/notifications';
@@ -51,6 +51,7 @@ export default function ProfileAndSettings() {
     usePreferredEquipment, setUsePreferredEquipment,
     preferredEquipment, setPreferredEquipment,
     theme, setTheme,
+    workoutRemindersEnabled, setWorkoutRemindersEnabled,
   } = useProfileStore();
 
   const { isProMember: rcIsProMember, isTrialing, customerInfo } = useRevenueCatContext();
@@ -65,11 +66,6 @@ export default function ProfileAndSettings() {
   const avatarUrl: string | null = meta.avatar_url ?? meta.picture ?? null;
 
   const [bwInput, setBwInput] = useState(bodyWeight != null ? String(bodyWeight) : '');
-  const [remindersEnabled, setRemindersEnabled] = useState(false);
-
-  useEffect(() => {
-    hasWorkoutReminders().then(setRemindersEnabled).catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (bodyWeight != null) setBwInput(String(bodyWeight));
@@ -165,11 +161,7 @@ export default function ProfileAndSettings() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <Text style={{ color: colors.text, fontSize: 15, fontWeight: '700' }}>GRIT Pro</Text>
-                  <View style={{ backgroundColor: isTrialing ? colors.warning : colors.primary, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
-                    <Text style={{ color: colors.background, fontSize: 10, fontWeight: '900' }}>
-                      {isTrialing ? 'TRIAL' : 'ACTIVE'}
-                    </Text>
-                  </View>
+                  <Badge label={isTrialing ? 'TRIAL' : 'ACTIVE'} color={isTrialing ? colors.warning : colors.primary} variant="solid" size="sm" />
                 </View>
                 <Text style={{ color: colors.muted, fontSize: 12 }}>
                   {isTrialing ? '7-day free trial' : customerInfo?.activeSubscriptions?.[0] ? 'Subscription active' : 'Full access enabled'}
@@ -339,15 +331,14 @@ export default function ProfileAndSettings() {
                 </Text>
               </View>
               <Toggle
-                value={remindersEnabled}
+                value={workoutRemindersEnabled}
                 onToggle={async () => {
-                  if (remindersEnabled) {
+                  if (workoutRemindersEnabled) {
                     await cancelWorkoutReminders();
-                    setRemindersEnabled(false);
+                    setWorkoutRemindersEnabled(false);
                   } else {
-                    // Default to Mon/Wed/Fri (1,3,5) if no program days known
                     await scheduleWorkoutReminders([1, 3, 5], 8);
-                    setRemindersEnabled(true);
+                    setWorkoutRemindersEnabled(true);
                   }
                 }}
               />

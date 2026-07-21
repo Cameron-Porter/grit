@@ -1,57 +1,84 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import BottomSheet from '../BottomSheet';
 import { useColors } from '../../utils/useColors';
+import { Space } from '../../utils/tokens';
 
-interface SetMenuModalProps {
+interface Props {
   visible: boolean;
   onClose: () => void;
   onDelete: () => void;
   onSkip: () => void;
 }
 
-function MenuAction({ icon, text, color, onPress }: { icon: string; text: string; color: string; onPress: () => void }) {
+function Row({
+  icon,
+  label,
+  color,
+  onPress,
+  border = true,
+}: {
+  icon: string;
+  label: string;
+  color: string;
+  onPress: () => void;
+  border?: boolean;
+}) {
+  const colors = useColors();
   return (
-    <Pressable style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 }} onPress={onPress}>
-      <MaterialCommunityIcons name={icon as any} size={20} color={color} style={{ width: 28 }} />
-      <Text style={{ color, fontSize: 16, fontWeight: '500' }}>{text}</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        border && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
+        { opacity: pressed ? 0.6 : 1 },
+      ]}
+    >
+      <View style={[styles.iconWrap, { backgroundColor: `${color}18` }]}>
+        <MaterialCommunityIcons name={icon as any} size={18} color={color} />
+      </View>
+      <Text style={[styles.label, { color }]}>{label}</Text>
     </Pressable>
   );
 }
 
-export default function SetMenuModal({
-  visible,
-  onClose,
-  onDelete,
-  onSkip,
-}: SetMenuModalProps) {
+export default function SetMenuModal({ visible, onClose, onDelete, onSkip }: Props) {
   const colors = useColors();
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
-        onPress={onClose}
-      >
-        <View style={{ width: '100%', maxWidth: 300, backgroundColor: '#252525', borderRadius: 12, paddingVertical: 12 }}>
-          <Text style={{ color: colors.muted, fontSize: 14, fontWeight: 'bold', paddingHorizontal: 16, paddingBottom: 8, paddingTop: 8 }}>
-            Set
-          </Text>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={[styles.title, { color: colors.textTertiary }]}>SET</Text>
 
-          <MenuAction icon="plus" text="Add set below" color={colors.text} onPress={onClose} />
-          <MenuAction icon="fast-forward-outline" text="Skip set" color={colors.text} onPress={() => { onSkip(); onClose(); }} />
-          <MenuAction
-            icon="trash-can-outline"
-            text="Delete set"
-            color={colors.error}
-            onPress={() => { onDelete(); onClose(); }}
-          />
-        </View>
-      </Pressable>
-    </Modal>
+      <Row icon="fast-forward-outline" label="Skip set"    color={colors.text}  onPress={() => { onSkip();   onClose(); }} border={false} />
+      <Row icon="trash-can-outline"    label="Delete set"  color={colors.error} onPress={() => { onDelete(); onClose(); }} />
+    </BottomSheet>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    paddingHorizontal: Space[2],
+    paddingBottom: Space[1],
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: Space[2],
+    gap: Space[2],
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});

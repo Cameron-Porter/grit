@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import BottomSheet from '../BottomSheet';
 import { useColors } from '../../utils/useColors';
+import { Space } from '../../utils/tokens';
 
-interface ExerciseMenuModalProps {
+interface Props {
   visible: boolean;
   onClose: () => void;
   onRemove: () => void;
@@ -12,67 +14,87 @@ interface ExerciseMenuModalProps {
   onNewNote: () => void;
   onJointPain: () => void;
   onReplace: () => void;
+  onViewHistory?: () => void;
 }
 
-function MenuButton({ icon, text, color, onPress }: { icon: string; text: string; color: string; onPress: () => void }) {
+function Row({
+  icon,
+  label,
+  color,
+  onPress,
+  border = true,
+}: {
+  icon: string;
+  label: string;
+  color: string;
+  onPress: () => void;
+  border?: boolean;
+}) {
+  const colors = useColors();
   return (
-    <Pressable style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 }} onPress={onPress}>
-      <MaterialCommunityIcons name={icon as any} size={20} color={color} style={{ width: 28 }} />
-      <Text style={{ color, fontSize: 16, fontWeight: '500' }}>{text}</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        border && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator },
+        { opacity: pressed ? 0.6 : 1 },
+      ]}
+    >
+      <View style={[styles.iconWrap, { backgroundColor: `${color}18` }]}>
+        <MaterialCommunityIcons name={icon as any} size={18} color={color} />
+      </View>
+      <Text style={[styles.label, { color }]}>{label}</Text>
     </Pressable>
   );
 }
 
 export default function ExerciseMenuModal({
-  visible,
-  onClose,
-  onRemove,
-  onMoveUp,
-  onMoveDown,
-  onSkipSets,
-  onNewNote,
-  onJointPain,
-  onReplace,
-}: ExerciseMenuModalProps) {
+  visible, onClose,
+  onRemove, onMoveUp, onMoveDown, onSkipSets, onNewNote, onJointPain, onReplace, onViewHistory,
+}: Props) {
   const colors = useColors();
-  const handle = (cb: () => void) => () => {
-    cb();
-    onClose();
-  };
+  const handle = (cb: () => void) => () => { cb(); onClose(); };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}
-        onPress={onClose}
-      >
-        <View style={{ width: '100%', maxWidth: 300, backgroundColor: colors.surface, borderRadius: 12, paddingVertical: 12 }}>
-          <Text style={{ color: colors.muted, fontSize: 14, fontWeight: 'bold', paddingHorizontal: 16, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.surface2 }}>
-            Exercise
-          </Text>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={[styles.title, { color: colors.textTertiary }]}>EXERCISE</Text>
 
-          <MenuButton icon="arrow-up" text="Move up" color={colors.text} onPress={handle(onMoveUp)} />
-          <MenuButton icon="arrow-down" text="Move down" color={colors.text} onPress={handle(onMoveDown)} />
-          <MenuButton icon="swap-horizontal" text="Replace exercise" color={colors.text} onPress={handle(onReplace)} />
-          <MenuButton icon="note-plus-outline" text="New note" color={colors.text} onPress={handle(onNewNote)} />
-          <MenuButton icon="fast-forward-outline" text="Skip sets" color={colors.text} onPress={handle(onSkipSets)} />
-          <MenuButton icon="medical-bag" text="Exercise feedback" color={colors.text} onPress={handle(onJointPain)} />
-
-          <View style={{ height: 1, backgroundColor: colors.surface2, marginVertical: 4 }} />
-
-          <MenuButton
-            icon="trash-can-outline"
-            text="Remove exercise"
-            color={colors.error}
-            onPress={handle(onRemove)}
-          />
-        </View>
-      </Pressable>
-    </Modal>
+      {onViewHistory && <Row icon="history"        label="View history"       color={colors.text}  onPress={handle(onViewHistory)} border={false} />}
+      <Row icon="arrow-up"           label="Move up"            color={colors.text}  onPress={handle(onMoveUp)}    border={!onViewHistory} />
+      <Row icon="arrow-down"         label="Move down"          color={colors.text}  onPress={handle(onMoveDown)} />
+      <Row icon="swap-horizontal"    label="Replace exercise"   color={colors.text}  onPress={handle(onReplace)} />
+      <Row icon="note-plus-outline"  label="Add note"           color={colors.text}  onPress={handle(onNewNote)} />
+      <Row icon="fast-forward-outline" label="Skip remaining sets" color={colors.text} onPress={handle(onSkipSets)} />
+      <Row icon="medical-bag"        label="Exercise feedback"  color={colors.text}  onPress={handle(onJointPain)} />
+      <Row icon="trash-can-outline"  label="Remove exercise"    color={colors.error} onPress={handle(onRemove)} />
+    </BottomSheet>
   );
 }
+
+const styles = StyleSheet.create({
+  title: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    paddingHorizontal: Space[2],
+    paddingBottom: Space[1],
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: Space[2],
+    gap: Space[2],
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+});

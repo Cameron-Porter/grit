@@ -52,16 +52,16 @@ const Palette = {
 // ---------------------------------------------------------------------------
 
 export const DarkTokens = {
-  // Surfaces
+  // Surfaces — micro blue-tint makes teal accents feel intentional
   background:    Palette.black,
-  surface:       Palette.grey800,    // card, sheet
-  surface2:      Palette.grey700,    // nested card, input bg
-  surface3:      Palette.grey600,    // pressed / active state
+  surface:       '#1C1C22',          // card, sheet
+  surface2:      '#2A2A32',          // nested card, input bg
+  surface3:      '#383840',          // pressed / active state
   overlay:       'rgba(0,0,0,0.6)',
 
   // Glass (blur overlays)
-  glass:         'rgba(28,28,30,0.82)',
-  glassBorder:   'rgba(255,255,255,0.10)',
+  glass:         'rgba(28,28,34,0.82)',
+  glassBorder:   'rgba(255,255,255,0.13)',
 
   // Text
   text:          Palette.white,
@@ -84,18 +84,18 @@ export const DarkTokens = {
   // Workout-specific semantic
   setComplete:   Palette.teal500,
   setSkipped:    Palette.grey400,
-  setPending:    Palette.grey700,
+  setPending:    '#2A2A32',
   prBadge:       Palette.orange,
   restTimer:     Palette.teal300,
 
   // Borders & separators
   border:        'rgba(255,255,255,0.08)',
   separator:     'rgba(255,255,255,0.06)',
-  cardBorder:    'rgba(255,255,255,0.07)',
+  cardBorder:    'rgba(255,255,255,0.09)',
 
   // Inputs
-  inputBg:       Palette.grey700,
-  inputBorder:   'rgba(255,255,255,0.10)',
+  inputBg:       '#2A2A32',
+  inputBorder:   'rgba(255,255,255,0.13)',
   inputText:     Palette.white,
   placeholder:   Palette.grey400,
 
@@ -108,9 +108,9 @@ export const DarkTokens = {
   badgeText:     Palette.white,
 
   // Backward-compat aliases
-  surface2:      Palette.grey700,
-  cardSurface:   Palette.grey800,
-  inputBg2:      Palette.grey600,
+  surface2:      '#2A2A32',
+  cardSurface:   '#1C1C22',
+  inputBg2:      '#383840',
 } as const;
 
 export type ColorTokens = typeof DarkTokens;
@@ -159,7 +159,7 @@ export const LightTokens: ColorTokens = {
   tabInactive:   '#636366',
   scrim:         'rgba(0,0,0,0.4)',
 
-  badgeText:     Palette.black,
+  badgeText:     Palette.white,
 
   // Backward-compat aliases
   surface2:      '#E5E5EA',
@@ -222,7 +222,7 @@ export const TypeScale = {
   l2: { fontFamily: FontFamily.bodyMed,    fontSize: 11, lineHeight: 14, letterSpacing: 0.5 },
 
   // Caps — eyebrow labels (uppercase applied separately)
-  cap: { fontFamily: FontFamily.bodySemi, fontSize: 10, lineHeight: 12, letterSpacing: 1.2 },
+  cap: { fontFamily: FontFamily.bodySemi, fontSize: 10, lineHeight: 12, letterSpacing: 1.5 },
 } as const;
 
 export type TypeScaleKey = keyof typeof TypeScale;
@@ -236,6 +236,7 @@ export const Radius = {
   md:   10,
   lg:   14,
   xl:   20,
+  '2xl': 24,
   pill: 999,
 } as const;
 

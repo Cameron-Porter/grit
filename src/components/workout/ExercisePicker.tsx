@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { createCustomExercise, getExercises } from '../../api/exercises';
+import { Badge, FilterChip } from '../Badge';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useWorkoutStore } from '../../store/useWorkoutStore';
 import { MuscleGroupColors } from '../../utils/constants';
@@ -120,25 +121,15 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {MUSCLE_OPTIONS.map((m) => {
-                const selected = muscle === m;
                 const c = MuscleGroupColors[m] ?? colors.primary;
                 return (
-                  <Pressable
+                  <FilterChip
                     key={m}
+                    label={m}
+                    active={muscle === m}
+                    color={c}
                     onPress={() => setMuscle(m)}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 20,
-                      backgroundColor: selected ? `${c}30` : colors.surface,
-                      borderWidth: 1,
-                      borderColor: selected ? c : colors.surface2,
-                    }}
-                  >
-                    <Text style={{ color: selected ? c : colors.muted, fontSize: 13, fontWeight: '600' }}>
-                      {m}
-                    </Text>
-                  </Pressable>
+                  />
                 );
               })}
             </View>
@@ -150,27 +141,15 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
               Equipment
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {EQUIPMENT_OPTIONS.map((e) => {
-                const selected = equipment === e;
-                return (
-                  <Pressable
-                    key={e}
-                    onPress={() => setEquipment(e)}
-                    style={{
-                      paddingVertical: 8,
-                      paddingHorizontal: 14,
-                      borderRadius: 20,
-                      backgroundColor: selected ? `${colors.primary}22` : colors.surface,
-                      borderWidth: 1,
-                      borderColor: selected ? colors.primary : colors.surface2,
-                    }}
-                  >
-                    <Text style={{ color: selected ? colors.primary : colors.muted, fontSize: 13, fontWeight: '600' }}>
-                      {e}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {EQUIPMENT_OPTIONS.map((e) => (
+                <FilterChip
+                  key={e}
+                  label={e}
+                  active={equipment === e}
+                  color={colors.primary}
+                  onPress={() => setEquipment(e)}
+                />
+              ))}
             </View>
           </View>
 
@@ -360,25 +339,15 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
             {MUSCLE_FILTERS.map((m) => {
-              const isSelected = muscleFilter === m;
               const color = m === 'All' ? colors.primary : (MuscleGroupColors[m] ?? colors.primary);
               return (
-                <Pressable
+                <FilterChip
                   key={m}
+                  label={m}
+                  active={muscleFilter === m}
+                  color={color}
                   onPress={() => setMuscleFilter(m)}
-                  style={{
-                    paddingVertical: 7,
-                    paddingHorizontal: 14,
-                    borderRadius: 20,
-                    backgroundColor: isSelected ? `${color}28` : colors.surface,
-                    borderWidth: 1,
-                    borderColor: isSelected ? color : colors.surface2,
-                  }}
-                >
-                  <Text style={{ color: isSelected ? color : colors.muted, fontSize: 13, fontWeight: '600' }}>
-                    {m}
-                  </Text>
-                </Pressable>
+                />
               );
             })}
           </ScrollView>
@@ -442,9 +411,7 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
                   <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.name}</Text>
                   <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment}</Text>
                 </View>
-                <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6 }}>
-                  <Text style={{ color: colors.badgeText, fontSize: 12, fontWeight: '700' }}>{item.muscle_group}</Text>
-                </View>
+                {item.muscle_group && <Badge label={item.muscle_group} color={badgeColor} variant="tint" size="sm" />}
                 <MaterialCommunityIcons name="chevron-right" size={20} color={colors.surface2} style={{ marginLeft: 8 }} />
               </Pressable>
             );

@@ -7,6 +7,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getExerciseSessionHistory, HistorySessionEntry } from '../../api/history';
 import { useProfileStore } from '../../store/useProfileStore';
 import { Exercise, WorkoutSet } from '../../types/workout';
+import { Badge } from '../Badge';
 import { MuscleColors } from '../../utils/tokens';
 import { useColors } from '../../utils/useColors';
 import { FontFamily, Radius, Shadow, Space, TypeScale } from '../../utils/tokens';
@@ -26,11 +27,10 @@ interface ExerciseCardProps {
   onSaveNote: (exerciseId: string, note: string) => void;
   bodyWeight?: number;
   weeklySetsByMuscle?: Record<string, number>;
+  forceHistoryId?: string;
 }
 
 const MAX_HISTORY_SESSIONS = 5;
-const BADGE_HEIGHT = 28;
-const BADGE_ABOVE = 10;
 
 // Epley formula — estimates 1RM from a working set
 function epley1RM(weight: number, reps: number): number {
@@ -107,11 +107,7 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
           Exercise History
         </Text>
         {best1RM > 0 && (
-          <View style={[styles.oneRMBadge, { backgroundColor: `${colors.prBadge}22` }]}>
-            <Text style={[TypeScale.cap, { color: colors.prBadge, letterSpacing: 1 }]}>
-              ~{best1RM} lbs e1RM
-            </Text>
-          </View>
+          <Badge label={`~${best1RM} lbs e1RM`} color={colors.prBadge} variant="tint" size="sm" uppercase={false} />
         )}
       </View>
 
@@ -172,6 +168,7 @@ export default function ExerciseCard({
   onSaveNote,
   bodyWeight,
   weeklySetsByMuscle,
+  forceHistoryId,
 }: ExerciseCardProps) {
   const colors = useColors();
   const theme = useProfileStore((s) => s.theme);
@@ -181,6 +178,12 @@ export default function ExerciseCard({
 
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (forceHistoryId) {
+      setHistoryOpen((prev) => ({ ...prev, [forceHistoryId]: true }));
+    }
+  }, [forceHistoryId]);
 
   const noteExercise = noteExerciseId ? exerciseGroup.find((ex) => ex.id === noteExerciseId) : null;
 
@@ -197,7 +200,10 @@ export default function ExerciseCard({
   }
 
   const cardInner = (
-    <View style={{ paddingBottom: Space[1.5], paddingTop: primaryMuscle ? BADGE_HEIGHT + Space[1] : Space[1.5] }}>
+    <View style={{ paddingBottom: Space[1.5], paddingTop: Space[1.5] }}>
+      {primaryMuscle && (
+        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: badgeColor }} />
+      )}
       {exerciseGroup.map((exercise, index) => {
         const live1RM = get1RM(exercise);
         const muscle = exercise.muscleGroup;
@@ -206,6 +212,16 @@ export default function ExerciseCard({
 
         return (
           <View key={exercise.id} style={index > 0 ? { marginTop: Space[2.5] } : undefined}>
+
+            {/* Muscle group label */}
+            {exercise.muscleGroup && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: Space[2], marginBottom: 3 }}>
+                {exercise.musclePriority && <PriorityBars priority={exercise.musclePriority} color={MuscleColors[exercise.muscleGroup] ?? colors.primary} />}
+                <Text style={[TypeScale.cap, { color: MuscleColors[exercise.muscleGroup] ?? colors.primary, letterSpacing: 1.2, textTransform: 'uppercase' }]}>
+                  {exercise.muscleGroup}
+                </Text>
+              </View>
+            )}
 
             {/* Title row */}
             <View style={styles.titleRow}>
@@ -220,11 +236,7 @@ export default function ExerciseCard({
                       : exercise.equipment || 'Bodyweight'}
                   </Text>
                   {live1RM > 0 && (
-                    <View style={[styles.liveOneRM, { backgroundColor: `${colors.prBadge}20` }]}>
-                      <Text style={[TypeScale.cap, { color: colors.prBadge, letterSpacing: 0.8 }]}>
-                        ~{live1RM} e1RM
-                      </Text>
-                    </View>
+                    <Badge label={`~${live1RM} e1RM`} color={colors.prBadge} variant="tint" size="sm" uppercase={false} />
                   )}
                 </View>
                 {volumeInfo && weeklySets > 0 && (
@@ -233,16 +245,8 @@ export default function ExerciseCard({
                   </View>
                 )}
               </View>
-              <Pressable onPress={() => setHistoryOpen((p) => ({ ...p, [exercise.id]: !p[exercise.id] }))} style={styles.iconBtn} hitSlop={8}>
-                <Icon
-                  ios="clock.arrow.circlepath"
-                  android="history"
-                  size={18}
-                  color={historyOpen[exercise.id] ? colors.primary : colors.textTertiary}
-                />
-              </Pressable>
               <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={styles.iconBtn} hitSlop={8}>
-                <Icon ios="ellipsis" android="dots-vertical" size={18} color={colors.textTertiary} />
+                <Icon ios="ellipsis.vertical" android="dots-vertical" size={18} color={colors.textTertiary} />
               </Pressable>
             </View>
 
@@ -269,7 +273,7 @@ export default function ExerciseCard({
             {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
 
             {/* Column headers */}
-            <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>
+            <View style={[styles.colHeaders, { borderBottomColor: colors.separator, opacity: 0.45 }]}>
               <View style={{ width: 40 }} />
               <Text style={[styles.colLabel, { color: colors.textTertiary }]}>WEIGHT</Text>
               <Text style={[styles.colLabel, { color: colors.textTertiary }]}>REPS</Text>
@@ -329,15 +333,7 @@ export default function ExerciseCard({
   ];
 
   return (
-    <View style={{ marginTop: primaryMuscle ? BADGE_ABOVE : 0, marginBottom: Space[2] }}>
-
-      {/* Muscle group badge */}
-      {primaryMuscle && (
-        <View style={[styles.badge, { backgroundColor: badgeColor, shadowColor: badgeColor }]}>
-          {musclePriority && <PriorityBars priority={musclePriority} color="#FFFFFF" />}
-          <Text style={styles.badgeText}>{primaryMuscle}</Text>
-        </View>
-      )}
+    <View style={{ marginBottom: Space[2] }}>
 
       {/* Card — glass on iOS, elevated surface on Android */}
       {Platform.OS === 'ios' ? (
@@ -372,32 +368,9 @@ export default function ExerciseCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.xl,
+    borderRadius: Radius['2xl'],
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-  },
-  badge: {
-    position: 'absolute',
-    top: -BADGE_ABOVE,
-    left: 14,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    height: BADGE_HEIGHT,
-    borderRadius: BADGE_HEIGHT / 2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.5,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  badgeText: {
-    color: '#FFF',
-    fontFamily: FontFamily.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
   },
   titleRow: {
     flexDirection: 'row',

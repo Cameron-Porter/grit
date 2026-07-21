@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteProgram, duplicateProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
+import { Badge } from '../../src/components/Badge';
 import { confirm } from '../../src/utils/confirm';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import GradientBackground from '../../src/components/GradientBackground';
@@ -109,7 +110,7 @@ export default function Programs() {
       {loading ? (
         <View style={{ padding: 16, gap: 10 }}>
           {[0, 1, 2].map((i) => (
-            <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 24, padding: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <Skeleton width="50%" height={18} radius={6} />
                 <Skeleton width={52} height={20} radius={4} />
@@ -151,7 +152,7 @@ export default function Programs() {
             onPress={() => router.push({ pathname: '/programs/[id]', params: { id: item.id } })}
             style={({ pressed }) => ({
               backgroundColor: colors.surface,
-              borderRadius: 20,
+              borderRadius: 24,
               padding: 16,
               marginBottom: 10,
               opacity: pressed ? 0.8 : 1,
@@ -165,25 +166,9 @@ export default function Programs() {
                   <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700' }}>{item.name}</Text>
                   {(() => {
                     const status = getProgramStatus(item as Program);
-                    if (status === 'active') {
-                      return (
-                        <View style={{ backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                          <Text style={{ color: colors.background, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>ACTIVE</Text>
-                        </View>
-                      );
-                    }
-                    if (status === 'complete') {
-                      return (
-                        <View style={{ backgroundColor: '#22C55E', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>COMPLETE</Text>
-                        </View>
-                      );
-                    }
-                    return (
-                      <View style={{ backgroundColor: colors.surface2, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
-                        <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 0.5 }}>PAUSED</Text>
-                      </View>
-                    );
+                    if (status === 'active') return <Badge label="ACTIVE" color={colors.primary} variant="solid" size="sm" />;
+                    if (status === 'complete') return <Badge label="COMPLETE" color={colors.success} variant="solid" size="sm" />;
+                    return <Badge label="PAUSED" color={colors.muted} variant="ghost" size="sm" />;
                   })()}
                 </View>
                 <Text style={{ color: colors.muted, fontSize: 13 }}>

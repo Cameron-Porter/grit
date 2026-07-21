@@ -69,7 +69,7 @@ export function RowSkeleton({ lines = 2 }: { lines?: number }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius.xl,
+    borderRadius: Radius['2xl'],
     borderWidth: StyleSheet.hairlineWidth,
     marginBottom: 16,
     overflow: 'hidden',

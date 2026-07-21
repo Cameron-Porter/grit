@@ -27,7 +27,7 @@ interface SetRowProps {
 
 function MenuIcon({ color }: { color: string }) {
   if (Platform.OS === 'ios') {
-    return <SymbolView name="ellipsis" size={20} tintColor={color} />;
+    return <SymbolView name="ellipsis.vertical" size={20} tintColor={color} />;
   }
   return <MaterialCommunityIcons name="dots-vertical" size={22} color={color} />;
 }
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Space['0.5'],
+    paddingVertical: Space[1],
   },
   skippedRow: {
     flexDirection: 'row',

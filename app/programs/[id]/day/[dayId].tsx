@@ -19,6 +19,7 @@ import {
   unskipProgramDay,
 } from '../../../../src/api/programs';
 import { getExerciseByName } from '../../../../src/data/exerciseDatabase';
+import { Badge } from '../../../../src/components/Badge';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import PriorityBars from '../../../../src/components/workout/PriorityBars';
 import ReadOnlyExerciseCard from '../../../../src/components/workout/ReadOnlyExerciseCard';
@@ -49,11 +50,7 @@ const volumeColor = (v: string, primary: string) => {
 };
 
 function FeedbackTag({ label, color }: { label: string; color: string }) {
-  return (
-    <View style={{ backgroundColor: `${color}22`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: `${color}44` }}>
-      <Text style={{ color, fontSize: 12, fontWeight: '700' }}>{label}</Text>
-    </View>
-  );
+  return <Badge label={label} color={color} variant="tint" size="sm" uppercase={false} />;
 }
 
 export default function ProgramDayScreen() {
@@ -198,16 +195,8 @@ export default function ProgramDayScreen() {
               {weekLabel}{!isTemplate && ' · Using Week 1 template'}
             </Text>
           </View>
-          {day?.completed && (
-            <View style={{ backgroundColor: `${colors.success}22`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-              <Text style={{ color: colors.success, fontSize: 12, fontWeight: '700' }}>Completed</Text>
-            </View>
-          )}
-          {day?.skipped && (
-            <View style={{ backgroundColor: `${colors.warning}22`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-              <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>Skipped</Text>
-            </View>
-          )}
+          {day?.completed && <Badge label="Completed" color={colors.success} variant="tint" size="sm" uppercase={false} />}
+          {day?.skipped && <Badge label="Skipped" color={colors.warning} variant="tint" size="sm" uppercase={false} />}
         </View>
       </View>
 
@@ -244,11 +233,7 @@ export default function ProgramDayScreen() {
                     const badgeColor = MuscleGroupColors[fb.muscleGroup] ?? colors.primary;
                     return (
                       <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-                        <View style={{ backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
-                          <Text style={{ color: colors.badgeText, fontSize: 11, fontWeight: '800', letterSpacing: 1, textTransform: 'uppercase' }}>
-                            {fb.muscleGroup}
-                          </Text>
-                        </View>
+                        <Badge label={fb.muscleGroup} color={badgeColor} variant="solid" size="sm" style={{ marginBottom: 8 }} />
                         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                           {fb.pump && <FeedbackTag label={`Pump: ${fb.pump}`} color={pumpColor(fb.pump, colors.primary, colors.muted)} />}
                           {fb.jointPain && fb.jointPain !== 'None' && <FeedbackTag label={`Pain: ${fb.jointPain}`} color={painColor(fb.jointPain)} />}
@@ -283,28 +268,30 @@ export default function ProgramDayScreen() {
             {exercises.map((item) => {
               const badgeColor = item.muscle_group ? (MuscleGroupColors[item.muscle_group] ?? colors.primary) : colors.primary;
               return (
-                <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
-                  {item.muscle_group && (
-                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
-                      {musclePriorities[item.muscle_group]
-                        ? <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />
-                        : <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
-                      }
-                      <Text style={{ color: colors.badgeText, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-                        {item.muscle_group}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                      <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{getExerciseByName(item.exercise_name)?.equipment ?? 'Barbell'}</Text>
-                    </View>
-                    {item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
-                      <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
-                        {item.target_sets}×{item.target_reps_min}–{item.target_reps_max}
-                      </Text>
+                <View key={item.id} style={{ marginBottom: 10 }}>
+                  <View style={{ backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden' }}>
+                    {item.muscle_group && (
+                      <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: badgeColor }} />
                     )}
+                    {item.muscle_group && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingTop: 10 }}>
+                        {musclePriorities[item.muscle_group] && <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />}
+                        <Text style={{ color: badgeColor, fontSize: 10, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>
+                          {item.muscle_group}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={{ padding: 14, paddingTop: item.muscle_group ? 4 : 14, flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{getExerciseByName(item.exercise_name)?.equipment ?? 'Barbell'}</Text>
+                      </View>
+                      {item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
+                        <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
+                          {item.target_sets}×{item.target_reps_min}–{item.target_reps_max}
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 </View>
               );
@@ -353,19 +340,20 @@ export default function ProgramDayScreen() {
               const displayWeight = target?.target_weight ?? item.target_weight ?? 0;
               const hasTarget = displaySets != null && (displayRepsMin ?? 0) > 0;
               return (
-                <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+                <View key={item.id} style={{ marginBottom: 10 }}>
+                  <View style={{ backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden' }}>
                   {item.muscle_group && (
-                    <View style={{ alignSelf: 'flex-start', paddingVertical: 3, paddingHorizontal: 10, backgroundColor: `${badgeColor}50`, borderWidth: 1, borderColor: `${badgeColor}50`, flexDirection: 'row', alignItems: 'center', borderBottomRightRadius: 6 }}>
-                      {musclePriorities[item.muscle_group]
-                        ? <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />
-                        : <MaterialCommunityIcons name="blur-linear" size={10} color={badgeColor} style={{ marginRight: 4 }} />
-                      }
-                      <Text style={{ color: colors.badgeText, fontSize: 9, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                    <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: badgeColor }} />
+                  )}
+                  {item.muscle_group && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingTop: 10 }}>
+                      {musclePriorities[item.muscle_group] && <PriorityBars priority={musclePriorities[item.muscle_group]} color={badgeColor} />}
+                      <Text style={{ color: badgeColor, fontSize: 10, fontWeight: '800', letterSpacing: 1.2, textTransform: 'uppercase' }}>
                         {item.muscle_group}
                       </Text>
                     </View>
                   )}
-                  <View style={{ padding: 14 }}>
+                  <View style={{ padding: 14, paddingTop: item.muscle_group ? 4 : 14 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
@@ -379,13 +367,14 @@ export default function ProgramDayScreen() {
                     </View>
                     {hasTarget && (
                       <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                        <View style={{ backgroundColor: `${colors.primary}22`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <MaterialCommunityIcons name="lightning-bolt" size={10} color={colors.primary} />
-                          <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '700' }}>
-                            {displaySets}×{displayRepsMin}–{displayRepsMax} @ {displayRir} RIR
-                            {displayWeight > 0 ? `  ·  ${displayWeight} lbs` : ''}
-                          </Text>
-                        </View>
+                        <Badge
+                          label={`${displaySets}×${displayRepsMin}–${displayRepsMax} @ ${displayRir} RIR${displayWeight > 0 ? ` · ${displayWeight} lbs` : ''}`}
+                          color={colors.primary}
+                          variant="tint"
+                          size="sm"
+                          uppercase={false}
+                          leftSlot={<MaterialCommunityIcons name="lightning-bolt" size={10} color={colors.primary} />}
+                        />
                         {target?.ai_rationale ? (
                           <Text style={{ color: colors.muted, fontSize: 11, flex: 1, marginTop: 2 }} numberOfLines={2}>
                             {target.ai_rationale}
@@ -393,6 +382,7 @@ export default function ProgramDayScreen() {
                         ) : null}
                       </View>
                     )}
+                  </View>
                   </View>
                 </View>
               );

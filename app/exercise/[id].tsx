@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExercises } from '../../src/api/exercises';
 import { getExerciseAllSessions } from '../../src/api/history';
+import { Badge } from '../../src/components/Badge';
 import { MuscleGroupColors } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
@@ -57,12 +58,14 @@ export default function ExerciseDetail() {
         </Pressable>
 
         {exercise.muscle_group && (
-          <View style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', backgroundColor: `${badgeColor}28`, paddingVertical: 4, paddingHorizontal: 10, borderRadius: 6, marginBottom: 8 }}>
-            <MaterialCommunityIcons name="blur-linear" size={12} color={badgeColor} style={{ marginRight: 5 }} />
-            <Text style={{ color: badgeColor, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              {exercise.muscle_group}
-            </Text>
-          </View>
+          <Badge
+            label={exercise.muscle_group}
+            color={badgeColor}
+            variant="tint"
+            size="sm"
+            leftSlot={<MaterialCommunityIcons name="blur-linear" size={12} color={badgeColor} />}
+            style={{ marginBottom: 8 }}
+          />
         )}
 
         <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700', marginBottom: 4 }}>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProgramDays, getPrograms, Program, ProgramDay } from '../../src/api/programs';
+import { Badge } from '../../src/components/Badge';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { useColors } from '../../src/utils/useColors';
 
@@ -57,9 +58,7 @@ export default function ProgramDetail() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Text style={{ color: colors.text, fontSize: 24, fontWeight: '700', flex: 1 }}>{program.name}</Text>
           {program.is_current && (
-            <View style={{ backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5 }}>
-              <Text style={{ color: colors.background, fontSize: 11, fontWeight: '800' }}>CURRENT</Text>
-            </View>
+            <Badge label="CURRENT" color={colors.primary} variant="solid" size="sm" />
           )}
         </View>
         <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>

@@ -1,7 +1,7 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRestTimer } from '../src/hooks/useRestTimer';
+import { useRestTimerContext } from '../src/contexts/RestTimerContext';
 import RestTimerBar from '../src/components/workout/RestTimerBar';
 import { countSetsByMuscle } from '../src/utils/volumeLandmarks';
 import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
@@ -79,7 +79,7 @@ export default function ActiveWorkout() {
   const setBodyWeight = useProfileStore((s) => s.setBodyWeight);
   const autoMatchWeight = useProfileStore((s) => s.autoMatchWeight);
 
-  const [restTimer, restTimerControls] = useRestTimer();
+  const { timer: restTimer, controls: restTimerControls } = useRestTimerContext();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   // Program menu
@@ -93,6 +93,7 @@ export default function ActiveWorkout() {
   const [dayNoteOpen, setDayNoteOpen] = useState(false);
   const [dayNoteText, setDayNoteText] = useState('');
   const [activeExerciseId, setActiveExerciseId] = useState<string | null>(null);
+  const [historyExerciseId, setHistoryExerciseId] = useState<string | null>(null);
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
   const [feedbackMuscle, setFeedbackMuscle] = useState<string | null>(null);
   const [pendingFeedbackGroups, setPendingFeedbackGroups] = useState<string[]>([]);
@@ -115,6 +116,9 @@ export default function ActiveWorkout() {
 
   const hasWorkoutSession = !!activeWorkoutId;
   const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
+
+  // Must be above the early return — hooks can't be called conditionally
+  const weeklySetsByMuscle = useMemo(() => countSetsByMuscle(exercises), [exercises]);
 
   // Keep ref in sync so exercise-deletion handler can read current value without stale closure
   useEffect(() => { feedbackMuscleRef.current = feedbackMuscle; }, [feedbackMuscle]);
@@ -423,8 +427,6 @@ export default function ActiveWorkout() {
     exercises.every(exerciseDone) &&
     (exercises.some((ex) => ex.sets.some((s) => s.completed)) || allSkipped);
 
-  const weeklySetsByMuscle = useMemo(() => countSetsByMuscle(exercises), [exercises]);
-
   const handleUpdateSet = (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => {
     updateSet(exerciseId, setIndex, data, data.weight !== undefined ? autoMatchWeight : false);
 
@@ -578,13 +580,16 @@ export default function ActiveWorkout() {
         </View>
       </View>
 
+      {/* Rest timer — inline bar between header and cards, collapses when inactive */}
+      <RestTimerBar timer={restTimer} controls={restTimerControls} />
+
       {/* Scrollable content */}
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
         {/* Day note card */}
         {dayNote ? (
           <Pressable
             onPress={() => { setDayNoteText(dayNote); setDayNoteOpen(true); }}
-            style={{ backgroundColor: `${colors.primary}15`, borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: `${colors.primary}30` }}
+            style={{ backgroundColor: `${colors.primary}15`, borderRadius: 12, padding: 14, marginBottom: 14, marginHorizontal: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderColor: `${colors.primary}30` }}
           >
             <MaterialCommunityIcons name="note-text-outline" size={18} color={colors.primary} style={{ marginTop: 1 }} />
             <Text style={{ color: colors.text, fontSize: 14, flex: 1, lineHeight: 20 }}>{dayNote}</Text>
@@ -595,7 +600,7 @@ export default function ActiveWorkout() {
         {tooFewExercises && exercises.length > 0 && (
           <Pressable
             onPress={() => setPickerOpen(true)}
-            style={{ backgroundColor: `${colors.primary}15`, borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: `${colors.primary}40` }}
+            style={{ backgroundColor: `${colors.primary}15`, borderRadius: 10, padding: 12, marginBottom: 12, marginHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: `${colors.primary}40` }}
           >
             <MaterialCommunityIcons name="information-outline" size={18} color={colors.primary} />
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600', flex: 1 }}>
@@ -628,6 +633,7 @@ export default function ActiveWorkout() {
             onSaveNote={(id, note) => setExerciseNote(id, note)}
             bodyWeight={bodyWeight ?? undefined}
             weeklySetsByMuscle={weeklySetsByMuscle}
+            forceHistoryId={historyExerciseId ?? undefined}
           />
         ))}
 
@@ -636,6 +642,7 @@ export default function ActiveWorkout() {
           onPress={() => setPickerOpen(true)}
           style={({ pressed }) => ({
             marginTop: 4,
+            marginHorizontal: 16,
             padding: 14,
             backgroundColor: colors.surface,
             borderRadius: 16,
@@ -677,8 +684,6 @@ export default function ActiveWorkout() {
         </View>
       )}
 
-      {/* Rest timer — floats above tab bar */}
-      <RestTimerBar timer={restTimer} controls={restTimerControls} />
 
       {/* Modals */}
       <ExercisePicker
@@ -728,6 +733,10 @@ export default function ActiveWorkout() {
         }}
         onReplace={() => {
           setReplaceTargetId(activeExerciseId);
+          setActiveExerciseId(null);
+        }}
+        onViewHistory={() => {
+          setHistoryExerciseId(activeExerciseId);
           setActiveExerciseId(null);
         }}
       />

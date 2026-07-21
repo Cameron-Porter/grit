@@ -11,6 +11,7 @@ import {
   setCurrentProgram,
 } from '../../src/api/programs';
 import { PROGRAM_TEMPLATES, ProgramTemplate, getEquipmentForTemplateExercise } from '../../src/data/programTemplates';
+import { Badge } from '../../src/components/Badge';
 import ExercisePicker from '../../src/components/workout/ExercisePicker';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants';
@@ -232,9 +233,7 @@ export default function ProgramTemplates() {
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{template.name}</Text>
-                        <View style={{ backgroundColor: `${colors.primary}22`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
-                          <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '800' }}>{template.tagline}</Text>
-                        </View>
+                        <Badge label={template.tagline} color={colors.primary} variant="tint" size="sm" />
                       </View>
                       <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 6 }}>{template.bestFor}</Text>
                       {!isExpanded && (

@@ -18,9 +18,10 @@ import { AppState, Text, useWindowDimensions, View } from 'react-native';
 (Text as any).defaultProps = (Text as any).defaultProps ?? {};
 (Text as any).defaultProps.style = { fontFamily: 'Inter_400Regular' };
 import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
-import { getBodyWeight } from '../src/api/userProfile';
+import { getBodyWeight, getSettings } from '../src/api/userProfile';
 import { supabase } from '../src/api/supabase';
 import { useProfileStore } from '../src/store/useProfileStore';
+import { hasWorkoutReminders, scheduleWorkoutReminders } from '../src/lib/notifications';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { RevenueCatProvider } from '../src/contexts/RevenueCatContext';
 import { EntitlementsProvider, useEntitlements } from '../src/contexts/EntitlementsContext';
+import { RestTimerProvider } from '../src/contexts/RestTimerContext';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -44,7 +46,9 @@ export default Sentry.wrap(function Layout() {
       <SafeAreaProvider>
         <RevenueCatProvider>
           <EntitlementsProvider>
-            <LayoutInner />
+            <RestTimerProvider>
+              <LayoutInner />
+            </RestTimerProvider>
           </EntitlementsProvider>
         </RevenueCatProvider>
       </SafeAreaProvider>
@@ -70,6 +74,7 @@ function LayoutInner() {
   const { user, initialized, initialize } = useAuthStore();
   const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
   const hydrateBodyWeight = useProfileStore((s) => s.hydrateBodyWeight);
+  const hydrateSettings = useProfileStore((s) => s.hydrateSettings);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -100,11 +105,20 @@ function LayoutInner() {
     return () => sub.remove();
   }, []);
 
-  // Fetch body weight from Supabase whenever the user logs in so it syncs across devices
+  // Fetch body weight and settings from Supabase whenever the user logs in so they sync across devices
   useEffect(() => {
     if (!user) return;
     getBodyWeight().then((bw) => {
       if (bw != null) hydrateBodyWeight(bw);
+    }).catch(() => {});
+    getSettings().then(async (settings) => {
+      if (!settings) return;
+      hydrateSettings(settings);
+      // If the server says reminders should be on but this device has none, reschedule
+      if (settings.workoutRemindersEnabled) {
+        const already = await hasWorkoutReminders().catch(() => false);
+        if (!already) scheduleWorkoutReminders([1, 3, 5], 8).catch(() => {});
+      }
     }).catch(() => {});
   }, [user?.id]);
 
@@ -178,3 +192,4 @@ function LayoutInner() {
     </>
   );
 }
+
