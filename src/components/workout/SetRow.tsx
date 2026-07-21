@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -10,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SymbolView } from 'expo-symbols';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+
 import { WorkoutSet } from '../../types/workout';
 import { useColors } from '../../utils/useColors';
 import { haptic } from '../../utils/haptics';
@@ -26,9 +28,6 @@ interface SetRowProps {
 }
 
 function MenuIcon({ color }: { color: string }) {
-  if (Platform.OS === 'ios') {
-    return <SymbolView name="ellipsis.vertical" size={20} tintColor={color} />;
-  }
   return <MaterialCommunityIcons name="dots-vertical" size={22} color={color} />;
 }
 
@@ -58,34 +57,56 @@ export default function SetRow({
   const colors = useColors();
   const translateX = useSharedValue(0);
   const shakeX = useSharedValue(0);
+  const swipeDir = useSharedValue<0 | 1 | -1>(0); // 0=none, 1=right, -1=left
   const checkScale = useSharedValue(1);
   const [rirError, setRirError] = useState(false);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
-    .onUpdate((e) => { translateX.value = e.translationX; })
+    .onUpdate((e) => {
+      'worklet';
+      translateX.value = e.translationX;
+      swipeDir.value = e.translationX > 8 ? 1 : e.translationX < -8 ? -1 : 0;
+    })
     .onEnd(() => {
+      'worklet';
       if (translateX.value > 100) {
-        haptic.setLogged();
-        handleComplete();
+        runOnJS(haptic.setLogged)();
+        runOnJS(handleComplete)();
+      } else if (translateX.value < -100) {
+        runOnJS(haptic.destructive)();
+        runOnJS(onRemove)();
       }
-      if (translateX.value < -100) {
-        haptic.destructive();
-        onRemove();
-      }
-      translateX.value = withSpring(0, { damping: 18, stiffness: 180 });
+      swipeDir.value = 0;
+      translateX.value = withTiming(0, { duration: 180 });
     });
 
   const rowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value + shakeX.value }],
+    transform: [{ translateX: shakeX.value }],
   }));
 
-  const deleteReveal = useAnimatedStyle(() => ({
-    opacity: translateX.value < -8 ? 1 : 0,
+  // Color floods from swipeDir — never flips sign during spring-back
+  const rowColorStyle = useAnimatedStyle(() => {
+    'worklet';
+    if (swipeDir.value === 0) return {};
+    const alpha = Math.min(Math.abs(translateX.value) / 90, 0.72).toFixed(2);
+    return {
+      backgroundColor: swipeDir.value === 1
+        ? `rgba(90,140,106,${alpha})`
+        : `rgba(196,88,74,${alpha})`,
+    };
+  });
+
+  const labelOpacity = useAnimatedStyle(() => ({
+    opacity: Math.min(Math.abs(translateX.value) / 60, 1),
   }));
 
-  const completeReveal = useAnimatedStyle(() => ({
-    opacity: translateX.value > 8 ? 1 : 0,
+  const isSwipingRight = useAnimatedStyle(() => ({
+    opacity: swipeDir.value === 1 ? 1 : 0,
+  }));
+
+  const isSwipingLeft = useAnimatedStyle(() => ({
+    opacity: swipeDir.value === -1 ? 1 : 0,
   }));
 
   const checkStyle = useAnimatedStyle(() => ({
@@ -151,22 +172,12 @@ export default function SetRow({
 
   return (
     <View style={styles.wrapper}>
-      {/* Swipe-right reveal: Complete */}
-      <Animated.View style={[styles.revealComplete, { backgroundColor: colors.setComplete }, completeReveal]}>
-        <Text style={styles.revealText}>Complete</Text>
-      </Animated.View>
-
-      {/* Swipe-left reveal: Delete */}
-      <Animated.View style={[styles.revealDelete, { backgroundColor: colors.danger }, deleteReveal]}>
-        <Text style={styles.revealText}>Delete</Text>
-      </Animated.View>
-
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[rowStyle, { backgroundColor: completedBg }]}>
+        <Animated.View style={[{ backgroundColor: completedBg }, rowColorStyle, rowStyle]}>
           <View style={styles.row}>
             {/* Menu */}
             <Pressable onPress={onMenuPress} style={styles.menuCell} hitSlop={8}>
-              <MenuIcon color={colors.textTertiary} />
+              <MenuIcon color={colors.muted} />
             </Pressable>
 
             {/* Weight */}
@@ -240,6 +251,12 @@ export default function SetRow({
           {!set.completed && (
             <View style={[styles.separator, { backgroundColor: colors.separator }]} />
           )}
+
+          {/* Floating labels — Text is JS-rendered, stacks correctly over inputs */}
+          <Animated.View pointerEvents="none" style={[styles.labelContainer, labelOpacity]}>
+            <Animated.Text style={[styles.revealText, isSwipingRight]}>✓  Complete</Animated.Text>
+            <Animated.Text style={[styles.revealText, isSwipingLeft]}>✕  Delete</Animated.Text>
+          </Animated.View>
         </Animated.View>
       </GestureDetector>
     </View>
@@ -304,20 +321,15 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginHorizontal: Space[2],
   },
-  revealComplete: {
+  labelContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
-    paddingLeft: Space[2],
-  },
-  revealDelete: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    paddingRight: Space[2],
+    alignItems: 'center',
   },
   revealText: {
     color: '#fff',
     fontFamily: FontFamily.bodySemi,
     fontSize: 14,
+    letterSpacing: 0.5,
   },
 });

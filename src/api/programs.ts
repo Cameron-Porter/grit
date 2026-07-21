@@ -34,7 +34,7 @@ export interface ProgramExercise {
   program_day_id: string;
   exercise_name: string;
   muscle_group: string | null;
-  equipment: string | null;
+  equipment: string;
   sort_order: number;
   target_sets: number;
   target_reps_min: number | null;
@@ -189,7 +189,7 @@ export async function duplicateProgram(id: string, newName?: string): Promise<Pr
         newDay.id,
         ex.exercise_name,
         ex.muscle_group ?? '',
-        ex.equipment ?? 'Barbell',
+        ex.equipment,
         ex.sort_order,
         ex.target_sets,
         ex.target_reps_min ?? undefined,

@@ -86,12 +86,12 @@ export default function WorkoutDetail() {
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 40 }}>
           {exercises.map((ex) => (
             <ReadOnlyExerciseCard key={ex.name} exercise={ex} />
           ))}
           {exercises.length === 0 && (
-            <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 40 }}>No sets recorded.</Text>
+            <Text style={{ color: colors.muted, textAlign: 'center', marginTop: 40, paddingHorizontal: 16 }}>No sets recorded.</Text>
           )}
         </ScrollView>
       )}

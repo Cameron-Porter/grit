@@ -456,5 +456,7 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
 ];
 
 export function getEquipmentForTemplateExercise(name: string): string {
-  return getExerciseByName(name)?.equipment ?? 'Barbell';
+  const exercise = getExerciseByName(name);
+  if (!exercise) throw new Error(`Exercise not found in database: "${name}"`);
+  return exercise.equipment;
 }

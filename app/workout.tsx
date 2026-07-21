@@ -9,7 +9,6 @@ import { ExerciseCardSkeleton } from '../src/components/Skeleton';
 import { confirm } from '../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
-import { getExerciseByName } from '../src/data/exerciseDatabase';
 import { checkMuscleGroupPreviouslyTrained, endCurrentProgram, getNextProgramWorkout, renameProgram, replaceExerciseInTemplate, updateProgramMusclePriorities } from '../src/api/programs';
 import GradientBackground from '../src/components/GradientBackground';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
@@ -144,7 +143,7 @@ export default function ActiveWorkout() {
               musclePriority: e.muscle_group
                 ? (n.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null)?.[e.muscle_group]
                 : undefined,
-              equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
+              equipment: e.equipment,
               targetSets: e.target_sets,
               targetRepsMin: e.target_reps_min ?? 8,
               targetRepsMax: e.target_reps_max ?? 12,

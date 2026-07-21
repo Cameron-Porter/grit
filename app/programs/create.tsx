@@ -244,7 +244,7 @@ export default function CreateProgram() {
             dbDay.id,
             slot.selectedExercise,
             slot.muscle,
-            getExerciseByName(slot.selectedExercise)?.equipment ?? 'Barbell',
+            getExerciseByName(slot.selectedExercise)?.equipment ?? '',
             slot.sortOrder,
             slot.sets,
             slot.repsMin,
@@ -268,7 +268,7 @@ export default function CreateProgram() {
             musclePriority: e.muscle_group
               ? (next.program.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'> | null)?.[e.muscle_group]
               : undefined,
-            equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
+            equipment: e.equipment,
             targetSets: e.target_sets ?? undefined,
             targetRepsMin: e.target_reps_min ?? undefined,
             targetRepsMax: e.target_reps_max ?? undefined,

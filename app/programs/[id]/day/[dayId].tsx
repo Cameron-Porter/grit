@@ -18,7 +18,6 @@ import {
   setCurrentProgram,
   unskipProgramDay,
 } from '../../../../src/api/programs';
-import { getExerciseByName } from '../../../../src/data/exerciseDatabase';
 import { Badge } from '../../../../src/components/Badge';
 import ExercisePicker from '../../../../src/components/workout/ExercisePicker';
 import PriorityBars from '../../../../src/components/workout/PriorityBars';
@@ -161,7 +160,7 @@ export default function ProgramDayScreen() {
           name: e.exercise_name,
           muscleGroup: e.muscle_group ?? '',
           musclePriority: e.muscle_group ? musclePriorities[e.muscle_group] : undefined,
-          equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
+          equipment: e.equipment,
           targetSets: aiTarget?.target_sets ?? e.target_sets ?? undefined,
           targetRepsMin: aiTarget?.target_reps_min ?? e.target_reps_min ?? undefined,
           targetRepsMax: aiTarget?.target_reps_max ?? e.target_reps_max ?? undefined,
@@ -206,10 +205,10 @@ export default function ProgramDayScreen() {
         </View>
       ) : day?.completed ? (
         /* ── COMPLETED VIEW — read-only, mirrors workout screen ── */
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+        <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 100 }}>
           {history ? (
             <>
-              <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 20 }}>
+              <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 20, paddingHorizontal: 16 }}>
                 {new Date(history.completedAt).toLocaleDateString('en-US', {
                   weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
                 })}
@@ -225,7 +224,7 @@ export default function ProgramDayScreen() {
 
               {/* Feedback tags */}
               {history.feedback.length > 0 && (
-                <View style={{ marginTop: 4 }}>
+                <View style={{ marginTop: 4, paddingHorizontal: 16 }}>
                   <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
                     Session Feedback
                   </Text>
@@ -246,15 +245,15 @@ export default function ProgramDayScreen() {
               )}
             </>
           ) : (
-            <Text style={{ color: colors.muted, fontSize: 14, marginTop: 20 }}>No workout log found for this day.</Text>
+            <Text style={{ color: colors.muted, fontSize: 14, marginTop: 20, paddingHorizontal: 16 }}>No workout log found for this day.</Text>
           )}
         </ScrollView>
       ) : day?.skipped ? (
         /* ── SKIPPED VIEW ── */
         <>
-          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 180 }}>
+          <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 180 }}>
             {/* Skipped notice */}
-            <View style={{ backgroundColor: `${colors.warning}18`, borderRadius: 12, padding: 16, marginBottom: 20, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderColor: `${colors.warning}40` }}>
+            <View style={{ backgroundColor: `${colors.warning}18`, borderRadius: 12, padding: 16, marginBottom: 20, marginHorizontal: 16, flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderColor: `${colors.warning}40` }}>
               <MaterialCommunityIcons name="minus-circle-outline" size={22} color={colors.warning} style={{ marginTop: 1 }} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.warning, fontSize: 15, fontWeight: '700', marginBottom: 3 }}>This workout was skipped</Text>
@@ -284,7 +283,7 @@ export default function ProgramDayScreen() {
                     <View style={{ padding: 14, paddingTop: item.muscle_group ? 4 : 14, flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{getExerciseByName(item.exercise_name)?.equipment ?? 'Barbell'}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment}</Text>
                       </View>
                       {item.target_sets != null && (item.target_reps_min ?? 0) > 0 && (
                         <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
@@ -317,9 +316,9 @@ export default function ProgramDayScreen() {
       ) : (
         /* ── TEMPLATE / UPCOMING VIEW — editable ── */
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-          <View style={{ padding: 16 }}>
+          <View style={{ paddingTop: 16 }}>
             {exercises.length === 0 && (
-              <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <View style={{ alignItems: 'center', marginTop: 40, paddingHorizontal: 16 }}>
                 <MaterialCommunityIcons name="dumbbell" size={40} color={colors.surface2} />
                 <Text style={{ color: colors.muted, marginTop: 10, fontSize: 15 }}>No exercises yet</Text>
                 {isTemplate && (
@@ -357,7 +356,7 @@ export default function ProgramDayScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <View style={{ flex: 1 }}>
                         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{item.exercise_name}</Text>
-                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{getExerciseByName(item.exercise_name)?.equipment ?? 'Barbell'}</Text>
+                        <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>{item.equipment}</Text>
                       </View>
                       {isTemplate && (
                         <Pressable onPress={() => handleRemove(item.id)} style={{ padding: 6 }}>

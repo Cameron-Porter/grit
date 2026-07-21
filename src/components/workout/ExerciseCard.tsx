@@ -211,7 +211,10 @@ export default function ExerciseCard({
         const volumeInfo = muscle ? classifyVolume(muscle, weeklySets) : null;
 
         return (
-          <View key={exercise.id} style={index > 0 ? { marginTop: Space[2.5] } : undefined}>
+          <View key={exercise.id}>
+            {index > 0 && (
+              <View style={{ borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator, marginHorizontal: Space[2], marginTop: Space[2.5], marginBottom: Space[2.5] }} />
+            )}
 
             {/* Muscle group label */}
             {exercise.muscleGroup && (
@@ -246,7 +249,7 @@ export default function ExerciseCard({
                 )}
               </View>
               <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={styles.iconBtn} hitSlop={8}>
-                <Icon ios="ellipsis.vertical" android="dots-vertical" size={18} color={colors.textTertiary} />
+                <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
               </Pressable>
             </View>
 
@@ -273,11 +276,11 @@ export default function ExerciseCard({
             {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
 
             {/* Column headers */}
-            <View style={[styles.colHeaders, { borderBottomColor: colors.separator, opacity: 0.45 }]}>
+            <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>
               <View style={{ width: 40 }} />
-              <Text style={[styles.colLabel, { color: colors.textTertiary }]}>WEIGHT</Text>
-              <Text style={[styles.colLabel, { color: colors.textTertiary }]}>REPS</Text>
-              <Text style={[styles.colLabelRight, { color: colors.textTertiary }]}>LOG</Text>
+              <Text style={[styles.colLabel, { color: colors.textSecondary }]}>WEIGHT</Text>
+              <Text style={[styles.colLabel, { color: colors.textSecondary }]}>REPS</Text>
+              <Text style={[styles.colLabelRight, { color: colors.textSecondary }]}>LOG</Text>
             </View>
 
             {/* Set rows */}
@@ -285,7 +288,7 @@ export default function ExerciseCard({
               const activeSetIndex = exercise.sets.findIndex((s) => !s.completed && !s.skipped);
               return exercise.sets.map((set, setIndex) => (
                 <SetRow
-                  key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
+                  key={`${exercise.id}-${exercise.sets.length}-${setIndex}-${set.completed}-${set.skipped}`}
                   set={set}
                   isActive={setIndex === activeSetIndex}
                   onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
@@ -394,9 +397,9 @@ const styles = StyleSheet.create({
   colHeaders: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: Space[1],
+    paddingBottom: Space['0.5'],
     borderBottomWidth: StyleSheet.hairlineWidth,
-    marginBottom: Space[1],
+    marginBottom: Space['0.5'],
   },
   colLabel: {
     flex: 1,

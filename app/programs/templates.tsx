@@ -16,8 +16,6 @@ import ExercisePicker from '../../src/components/workout/ExercisePicker';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
-import { getExerciseByName } from '../../src/data/exerciseDatabase';
-
 const WEEK_OPTIONS = [4, 6, 8, 10, 12];
 
 interface EditableExercise {
@@ -154,7 +152,7 @@ export default function ProgramTemplates() {
             name: e.exercise_name,
             muscleGroup: e.muscle_group ?? '',
             musclePriority: undefined,
-            equipment: getExerciseByName(e.exercise_name)?.equipment ?? 'Barbell',
+            equipment: e.equipment,
             targetSets: e.target_sets ?? undefined,
             targetRepsMin: e.target_reps_min ?? undefined,
             targetRepsMax: e.target_reps_max ?? undefined,
