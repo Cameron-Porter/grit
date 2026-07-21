@@ -16,7 +16,10 @@ import { AppState, Text, useWindowDimensions, View } from 'react-native';
 (Text as any).defaultProps.style = { fontFamily: 'Inter_400Regular' };
 import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
 import { getBodyWeight } from '../src/api/userProfile';
+import { supabase } from '../src/api/supabase';
 import { useProfileStore } from '../src/store/useProfileStore';
+import { useWorkoutStore } from '../src/store/useWorkoutStore';
+import { writeWeekStats } from '../src/lib/widgetBridge';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
@@ -48,6 +51,46 @@ export default Sentry.wrap(function Layout() {
   );
 });
 
+// Checks if the active program day was completed on another device and clears stale local state.
+async function syncCrossDevice() {
+  const { activeProgramDayId, endWorkout } = useWorkoutStore.getState();
+  if (!activeProgramDayId) return;
+  const { data } = await supabase
+    .from('program_days')
+    .select('completed, skipped')
+    .eq('id', activeProgramDayId)
+    .maybeSingle();
+  if (data?.completed || data?.skipped) endWorkout();
+}
+
+// Writes this week's workout count to shared UserDefaults for the iOS widget.
+async function refreshWeekStats() {
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+
+  const { data: workouts } = await supabase
+    .from('workouts')
+    .select('id')
+    .gte('completed_at', weekStart.toISOString());
+
+  const { data: program } = await supabase
+    .from('programs')
+    .select('days_per_week')
+    .eq('is_current', true)
+    .maybeSingle();
+
+  const completed = workouts?.length ?? 0;
+  const target = (program as any)?.days_per_week ?? 4;
+
+  writeWeekStats({
+    setsCompleted: 0,
+    setsTarget: 0,
+    workoutsCompleted: completed,
+    workoutsTarget: target,
+  });
+}
+
 function LayoutInner() {
   useWidgetSync();
   const router = useRouter();
@@ -71,10 +114,16 @@ function LayoutInner() {
 
   useEffect(() => {
     initialize();
-    // Drain any workouts saved offline when the app starts or returns to foreground
     drainPendingWorkouts();
+    syncCrossDevice();
+    refreshWeekStats();
+
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') drainPendingWorkouts();
+      if (state === 'active') {
+        drainPendingWorkouts();
+        syncCrossDevice();
+        refreshWeekStats();
+      }
     });
     return () => sub.remove();
   }, []);
@@ -124,6 +173,7 @@ function LayoutInner() {
       <Stack.Screen name="subscription" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="workout" options={{ headerShown: false, animation: 'none' }} />
+      <Stack.Screen name="workout/quick" options={{ headerShown: false, animation: 'fade' }} />
       <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="programs/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="programs/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />

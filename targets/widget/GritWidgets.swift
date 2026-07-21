@@ -39,7 +39,7 @@ struct QuickStartWidgetView: View {
     var entry: QuickStartEntry
 
     var body: some View {
-        Link(destination: URL(string: "grit://")!) {
+        Link(destination: URL(string: "grit://workout/quick")!) {
             ZStack {
                 Color.black
                 VStack(spacing: 8) {
@@ -170,12 +170,12 @@ struct ContinueWidgetView: View {
     }
 
     private var idleView: some View {
-        Link(destination: URL(string: "grit://")!) {
+        Link(destination: URL(string: "grit://workout/quick")!) {
             VStack(spacing: 8) {
                 Image(systemName: "dumbbell.fill")
                     .font(.system(size: 26, weight: .bold))
                     .foregroundColor(.white.opacity(0.5))
-                Text("No active workout")
+                Text("Tap to start")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white.opacity(0.35))
                     .multilineTextAlignment(.center)
@@ -247,19 +247,19 @@ struct WeekStatsWidgetView: View {
                             .tracking(1.5)
                         Spacer()
                         HStack(alignment: .bottom, spacing: 4) {
-                            Text("\(stats.setsCompleted)")
+                            Text("\(stats.workoutsCompleted)")
                                 .font(.system(size: 32, weight: .black))
                                 .foregroundColor(.white)
-                            Text("/\(stats.setsTarget)")
+                            Text("/\(stats.workoutsTarget)")
                                 .font(.system(size: 16, weight: .bold))
                                 .foregroundColor(.white.opacity(0.4))
                                 .padding(.bottom, 4)
                         }
-                        Text("sets completed")
+                        Text("workouts this week")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.white.opacity(0.5))
                         // Progress bar
-                        let pct = stats.setsTarget > 0 ? min(1.0, Double(stats.setsCompleted) / Double(stats.setsTarget)) : 0
+                        let pct = stats.workoutsTarget > 0 ? min(1.0, Double(stats.workoutsCompleted) / Double(stats.workoutsTarget)) : 0
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 Capsule().fill(Color.white.opacity(0.12)).frame(height: 5)
@@ -269,9 +269,9 @@ struct WeekStatsWidgetView: View {
                             }
                         }
                         .frame(height: 5)
-                        Text("\(stats.workoutsCompleted)/\(stats.workoutsTarget) workouts")
+                        Text(pct >= 1.0 ? "Week complete 🔥" : "\(stats.workoutsTarget - stats.workoutsCompleted) left")
                             .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(accent)
+                            .foregroundColor(pct >= 1.0 ? accent : .white.opacity(0.4))
                     }
                     .padding(14)
                 } else {
