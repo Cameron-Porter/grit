@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   addProgramExercise,
   createProgram,
+  deleteProgram,
   getProgramDays,
   getNextProgramWorkout,
   setCurrentProgram,
@@ -221,11 +222,13 @@ export default function CreateProgram() {
   const handleCreate = async () => {
     if (saving) return;
     setSaving(true);
+    let createdProgramId: string | null = null;
     try {
       const dayLabels = sortedSelected.map((d) => WEEKDAYS_FULL[d]);
 
       setSavingStatus('Creating program…');
       const program = await createProgram(name.trim(), totalWeeks, daysPerWeek, dayLabels, focus, musclePriorities as Record<string, string>);
+      createdProgramId = program.id;
       await setCurrentProgram(program.id);
 
       const allDays = await getProgramDays(program.id);
@@ -286,8 +289,14 @@ export default function CreateProgram() {
         router.replace({ pathname: '/programs/[id]', params: { id: program.id } });
       }
     } catch (e) {
+      // Best-effort rollback — delete the partial program so the user doesn't
+      // see an empty program on next load.
+      if (createdProgramId) {
+        deleteProgram(createdProgramId).catch(() => {});
+      }
       setSaving(false);
       setSavingStatus('');
+      Alert.alert('Save failed', 'Something went wrong saving your program. Check your connection and try again.');
     }
   };
 
