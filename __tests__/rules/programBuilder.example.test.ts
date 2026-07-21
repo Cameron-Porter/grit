@@ -265,3 +265,162 @@ describe('buildProgram — 5-day lower body emphasis example', () => {
     expect(true).toBe(true);
   });
 });
+
+// ─── Strength focus example (ST-001 / ST-002 / ST-003) ───────────────────────
+
+const STRENGTH_CONFIG = {
+  name: '4-Day Strength',
+  focus: 'strength' as const,
+  daysPerWeek: 4,
+  selectedDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  musclePriorities: {
+    Chest: 'emphasize' as const,
+    Back: 'emphasize' as const,
+    Quads: 'grow' as const,
+    Hamstrings: 'grow' as const,
+    Shoulders: 'maintain' as const,
+    Triceps: 'maintain' as const,
+    Biceps: 'maintain' as const,
+    Glutes: 'maintain' as const,
+  },
+  totalWeeks: 5,
+  experienceLevel: 'intermediate' as const,
+};
+
+describe('buildProgram — 4-day strength focus', () => {
+  const program = buildProgram(STRENGTH_CONFIG);
+
+  it('returns valid: true', () => {
+    expect(program.validation.valid).toBe(true);
+  });
+
+  it('has no error-severity validation issues', () => {
+    expect(program.validation.issues.filter((i) => i.severity === 'error')).toHaveLength(0);
+  });
+
+  it(`never exceeds ${SESSION_MAX_EXERCISES} exercises or ${SESSION_MAX_SETS} sets per session`, () => {
+    for (const day of program.days) {
+      expect(day.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
+      expect(day.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
+    }
+  });
+
+  // ST-001: Primary emphasize slots must stay in the Prilepin 85-95% zone (1-3 reps)
+  it('ST-001: Primary emphasize slots have repsMax ≤ 5 (Prilepin strength zone)', () => {
+    for (const day of program.days) {
+      for (const slot of day.slots) {
+        if (slot.role === 'Primary' && slot.priority === 'emphasize') {
+          expect(slot.repsMax).toBeLessThanOrEqual(5);
+        }
+      }
+    }
+  });
+
+  // ST-002: Secondary slots stay in the myofibrillar zone (4-7 reps)
+  it('ST-002: Secondary emphasize slots have repsMax ≤ 8 (Prilepin 75-85% zone)', () => {
+    for (const day of program.days) {
+      for (const slot of day.slots) {
+        if (slot.role === 'Secondary' && slot.priority === 'emphasize') {
+          expect(slot.repsMax).toBeLessThanOrEqual(8);
+        }
+      }
+    }
+  });
+
+  it('deload week has fewer sets than peak training week', () => {
+    const weeks = program.weeks;
+    const peakWeek = weeks[weeks.length - 2];
+    const deloadWeek = weeks[weeks.length - 1];
+    const peakTotal = peakWeek.days.reduce((n, d) => n + d.totalSets, 0);
+    const deloadTotal = deloadWeek.days.reduce((n, d) => n + d.totalSets, 0);
+    expect(deloadTotal).toBeLessThan(peakTotal);
+  });
+});
+
+// ─── Powerbuilding focus example (PB-001 / PB-002 / PB-003) ─────────────────
+
+const POWERBUILDING_CONFIG = {
+  name: '4-Day Powerbuilding',
+  focus: 'powerbuilding' as const,
+  daysPerWeek: 4,
+  selectedDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  musclePriorities: {
+    Chest: 'emphasize' as const,
+    Back: 'emphasize' as const,
+    Quads: 'grow' as const,
+    Hamstrings: 'grow' as const,
+    Shoulders: 'maintain' as const,
+    Triceps: 'maintain' as const,
+    Biceps: 'maintain' as const,
+    Glutes: 'maintain' as const,
+  },
+  totalWeeks: 5,
+  experienceLevel: 'intermediate' as const,
+};
+
+describe('buildProgram — 4-day powerbuilding focus', () => {
+  const program = buildProgram(POWERBUILDING_CONFIG);
+
+  it('returns valid: true', () => {
+    expect(program.validation.valid).toBe(true);
+  });
+
+  it('has no error-severity validation issues', () => {
+    expect(program.validation.issues.filter((i) => i.severity === 'error')).toHaveLength(0);
+  });
+
+  it(`never exceeds ${SESSION_MAX_EXERCISES} exercises or ${SESSION_MAX_SETS} sets per session`, () => {
+    for (const day of program.days) {
+      expect(day.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
+      expect(day.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
+    }
+  });
+
+  // PB-001: Primary slots bridge strength and size — 3-7 rep range
+  it('PB-001: Primary emphasize slots land in 3-7 rep range (myofibrillar bridge zone)', () => {
+    for (const day of program.days) {
+      for (const slot of day.slots) {
+        if (slot.role === 'Primary' && slot.priority === 'emphasize') {
+          expect(slot.repsMin).toBeGreaterThanOrEqual(3);
+          expect(slot.repsMax).toBeLessThanOrEqual(7);
+        }
+      }
+    }
+  });
+
+  // PB-003: Accessory slots drive sarcoplasmic adaptation — ≥ 10 reps
+  it('PB-003: Accessory emphasize slots use ≥ 10 reps (pump/hypertrophy zone)', () => {
+    for (const day of program.days) {
+      for (const slot of day.slots) {
+        if (slot.role === 'Accessory' && slot.priority === 'emphasize') {
+          expect(slot.repsMin).toBeGreaterThanOrEqual(10);
+        }
+      }
+    }
+  });
+
+  // PB-001 vs ST-001: powerbuilding Primary must use more reps than strength Primary
+  it('powerbuilding Primary repsMin > strength Primary repsMin for same priority', () => {
+    const pbPrimaryMin = Math.min(
+      ...program.days.flatMap((d) =>
+        d.slots.filter((s) => s.role === 'Primary' && s.priority === 'emphasize').map((s) => s.repsMin),
+      ),
+    );
+    const strengthProgram = buildProgram({ ...POWERBUILDING_CONFIG, focus: 'strength' as const });
+    const stPrimaryMin = Math.min(
+      ...strengthProgram.days.flatMap((d) =>
+        d.slots.filter((s) => s.role === 'Primary' && s.priority === 'emphasize').map((s) => s.repsMin),
+      ),
+    );
+    expect(pbPrimaryMin).toBeGreaterThan(stPrimaryMin);
+  });
+
+  it('deload week has fewer sets than peak training week', () => {
+    const weeks = program.weeks;
+    const peakWeek = weeks[weeks.length - 2];
+    const deloadWeek = weeks[weeks.length - 1];
+    const peakTotal = peakWeek.days.reduce((n, d) => n + d.totalSets, 0);
+    const deloadTotal = deloadWeek.days.reduce((n, d) => n + d.totalSets, 0);
+    expect(deloadTotal).toBeLessThan(peakTotal);
+  });
+});

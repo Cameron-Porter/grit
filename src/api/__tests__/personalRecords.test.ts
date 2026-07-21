@@ -20,6 +20,7 @@ const makeChain = (result: { data: any; error: any }) => {
     order: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue(result),
+    maybeSingle: jest.fn().mockResolvedValue(result),
   };
   Object.defineProperty(chain, 'then', {
     get() {
@@ -187,5 +188,40 @@ describe('upsertPR', () => {
 
     await upsertPR('Pull-Up', 0, 15, true);
     expect(mockFrom).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth guard — unauthenticated user
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('auth guard — unauthenticated user', () => {
+  const mockGetUser = () =>
+    (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({ data: { user: null } });
+
+  it('getAllPRs returns [] without hitting Supabase', async () => {
+    mockGetUser();
+    const result = await getAllPRs();
+    expect(result).toEqual([]);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('getPRForExercise returns null without hitting Supabase', async () => {
+    mockGetUser();
+    const result = await getPRForExercise('Squat');
+    expect(result).toBeNull();
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('upsertPR is a no-op without hitting Supabase', async () => {
+    mockGetUser();
+    await upsertPR('Deadlift', 405, 1);
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('createManualPR throws Not authenticated without hitting Supabase', async () => {
+    mockGetUser();
+    await expect(createManualPR('Bench Press', 225, 5)).rejects.toThrow('Not authenticated');
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });
