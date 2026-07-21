@@ -73,12 +73,20 @@ export default function SetRow({
       if (translateX.value > 100) {
         runOnJS(haptic.setLogged)();
         runOnJS(handleComplete)();
+        swipeDir.value = 0;
+        translateX.value = withTiming(0, { duration: 180 });
       } else if (translateX.value < -100) {
         runOnJS(haptic.destructive)();
         runOnJS(onRemove)();
+        swipeDir.value = 0;
+        translateX.value = withTiming(0, { duration: 180 });
+      } else {
+        // Partial swipe — fade color out as alpha drops with translateX, then clear
+        translateX.value = withTiming(0, { duration: 180 }, (finished) => {
+          'worklet';
+          if (finished) swipeDir.value = 0;
+        });
       }
-      swipeDir.value = 0;
-      translateX.value = withTiming(0, { duration: 180 });
     });
 
   const rowStyle = useAnimatedStyle(() => ({
@@ -88,7 +96,7 @@ export default function SetRow({
   // Color floods from swipeDir — never flips sign during spring-back
   const rowColorStyle = useAnimatedStyle(() => {
     'worklet';
-    if (swipeDir.value === 0) return {};
+    if (swipeDir.value === 0) return { backgroundColor: 'transparent' };
     const alpha = Math.min(Math.abs(translateX.value) / 90, 0.72).toFixed(2);
     return {
       backgroundColor: swipeDir.value === 1
