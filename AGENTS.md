@@ -1,3 +1,164 @@
-# Expo HAS CHANGED
+# Grit — Agent Guidance
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any code.
+## Framework
+
+Expo has changed significantly. Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any Expo or React Native code.
+
+---
+
+## Training Doctrine
+
+### Tag system
+
+Every parameter in the rules engine that encodes a training science decision **must** carry an inline doctrine tag. Tags live as `// TAG-NNN` inline comments or `// ─── TAG-NNN: … ───` block headers.
+
+| Prefix | Domain | Files |
+|--------|--------|-------|
+| `HV`   | Hypertrophy / general rep ranges, slot rules | `slotRoleConfig.ts`, `slotBuilder.ts`, `validation.ts` |
+| `ST`   | Strength (Prilepin, NSCA) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts` |
+| `PB`   | Powerbuilding (PHAT / Kizen) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts` |
+| `RC`   | Session caps and structural constraints | `sessionTrimmer.ts`, `validation.ts` |
+| `VA`   | Volume adjustments (beginner scaling, deload) | `volumeBudget.ts`, `progressionEngine.ts` |
+
+Rules for adding a tag:
+1. **Every new numeric training parameter needs a tag.** If you write `sets: 5` or `{ emphasize: 18 }`, it needs a tag that explains why.
+2. **Tags must cite a source.** Acceptable sources: named research (Prilepin's Chart, ACSM Guidelines), named program (Kizen 16-Week, PHAT), or named coach/researcher (Dr. Mike Israetel, Greg Nuckols). Do not add unsourced values.
+3. **Tags within a prefix must not contradict each other.** Before adding `ST-007`, read all existing `ST-XXX` tags and confirm there is no conflict.
+4. **Never duplicate doctrine into a separate markdown file.** The source files are the single source of truth.
+
+### Focus coverage
+
+| Focus | Primary source | Status |
+|-------|----------------|--------|
+| `hypertrophy` | Dr. Mike Israetel / RP Hypertrophy | Covered |
+| `strength` | Prilepin's Chart, NSCA | Covered (ST-001 – ST-006) |
+| `powerbuilding` | Kizen 16-Week, PHAT (Layne Norton) | Covered (PB-001 – PB-005) |
+| `general` | ACSM Guidelines / Greg Nuckols "General Gainz" | Partially — flag gaps before adding rules |
+| `maintenance` | Conservative MEV retention | Covered |
+| `cut` | RC-005 70%-of-maintenance heuristic | Covered |
+
+---
+
+## Data Sources
+
+### Supabase is the source of truth for exercise data
+
+- `equipment` on `ProgramExercise` rows comes from Supabase. Never fall back to the local exercise database for equipment.
+- `ExerciseSlot.equipment` is populated at picker selection time (from `ExerciseRow.equipment`), not at save time.
+
+### Legitimate uses of `getExerciseByName()` (local exercise DB)
+
+The local `exerciseDatabase.ts` holds static exercise metadata not stored in Supabase:
+- `exerciseTags` — used by `validateDayExercises` (HV-013, deadlift + barbell-row check)
+- `movementPattern` — used by Back slot validation
+- `exerciseType` — used by Triceps slot validation
+
+These are intentional. Do not remove these uses. Do not use `getExerciseByName()` to supply `equipment`.
+
+---
+
+## Rules Engine
+
+Files in `src/rules/` are pure functions with no side effects. They take plain data and return plain data. Keep them that way.
+
+### File responsibilities
+
+| File | Responsibility |
+|------|----------------|
+| `splitDeriver.ts` | Derive session split type from priorities |
+| `slotBuilder.ts` | Build `ExerciseSlot[]` for a given day |
+| `sessionTrimmer.ts` | Enforce RC-series session caps |
+| `volumeBudget.ts` | Calculate weekly set targets per muscle |
+| `progressionEngine.ts` | Recommend load/rep progression week-to-week |
+| `validation.ts` | HV-series structural validation |
+| `programBuilder.ts` | Orchestrates all of the above |
+| `assignment.ts` | Muscle-to-session assignment |
+| `../data/slotRoleConfig.ts` | Slot rep/set tables per focus × priority |
+
+### Extending the rules engine
+
+1. Identify which file owns the rule.
+2. Add or update the relevant doctrine tag(s) with source citation.
+3. Write a test that *fails without the rule* and *passes with it* (see Testing below).
+4. Run `npx jest --testPathPattern="rules"` and confirm all existing tests still pass before committing.
+
+---
+
+## Testing
+
+### Where tests live
+
+```
+__tests__/
+  rules/
+    progressionRules.test.ts   — progressionEngine + validation
+    splitDeriver.test.ts       — deriveSplit
+    programBuilder.example.test.ts — full-program integration smoke test
+  stores/
+    useProfileStore.test.ts
+    useWorkoutStore.test.ts
+  components/
+    ExercisePicker.test.tsx
+  navigation/
+    redirect.test.tsx
+  api/
+    programs.test.ts
+src/
+  api/__tests__/
+    exercises.test.ts
+    programs.test.ts
+    personalRecords.test.ts
+  store/__tests__/
+    useWorkoutStore.test.ts
+```
+
+### Rules engine test standards
+
+**Test outcomes, not internals.** Assert on the output of `buildProgram`, `buildDaySlots`, `deriveSplit`, `recommendProgression`. Do not spy on internal functions or assert call counts.
+
+**No mocks for pure functions.** The rules engine is pure — test it directly with data. Only mock Supabase calls (`api/`) and React Native modules that aren't available in Node.
+
+**Every doctrine rule needs a test that can fail.** If you add ST-007 (a new strength parameter), write a test where violating that rule produces a wrong output, and confirm the correct rule fixes it.
+
+**Snapshot pattern for integration tests.** `programBuilder.example.test.ts` builds a complete program and asserts structural invariants (slot counts, set caps, validation passing, split ratios). When adding a new focus, add an example test config for that focus.
+
+**Behavioral invariants to protect** (these must never regress):
+- No session exceeds `SESSION_MAX_EXERCISES` slots or `SESSION_MAX_SETS` total sets
+- `validation.valid` is `true` for any well-formed config
+- Primary slots sort before Accessory slots for the same muscle
+- Forearm slots appear after the last Back/Biceps/Traps slot (HV-008)
+- Emphasized muscles always receive direct sets
+- Deload weeks always have fewer sets than the final training week
+- `strength` focus slots use repsMax ≤ 5 for Primary (Prilepin zone)
+- `powerbuilding` Primary sets land in 3–7 rep range
+
+### Running tests
+
+```bash
+npx jest                            # full suite
+npx jest --testPathPattern="rules"  # rules engine only
+npx jest --testPathPattern="rules" --verbose  # with output
+```
+
+Always run the rules suite before committing any change to `src/rules/` or `src/data/slotRoleConfig.ts`.
+
+---
+
+## Agent Behavior
+
+### Before touching `src/rules/`
+
+1. Read the relevant rule file(s) to identify which doctrine tags are in scope.
+2. Confirm no existing tag contradicts the intended change.
+3. If adding a numeric parameter, identify the source citation before writing code.
+
+### Before committing rules changes
+
+Run `npx jest --testPathPattern="rules"` and confirm zero failures. If a test fails due to a legitimate doctrine change (e.g., rep ranges shifted), update the test to match the new doctrine and document why in the test comment.
+
+### Sub-agent usage
+
+- **Broad rules-engine exploration** (which files reference a given tag, what doctrine covers a muscle group): spawn an `Explore` agent.
+- **Pre-implementation planning** for anything touching 4+ rules files: spawn a `Plan` agent first.
+- **Test runs**: can run in background; report only failures and uncovered behavioral invariants.
+- **Single-file edits or targeted lookups**: do inline, not via sub-agent.
