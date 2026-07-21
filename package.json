@@ -3,8 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
-    "@bacons/apple-targets": "^5.0.0",
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/ui": "~56.0.16",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -24,6 +24,7 @@
     "expo-image": "~56.0.11",
     "expo-linear-gradient": "~56.0.4",
     "expo-linking": "~56.0.13",
+    "expo-notifications": "~56.0.21",
     "expo-router": "~56.2.9",
     "expo-sharing": "~56.0.18",
     "expo-splash-screen": "~56.0.10",
@@ -41,7 +42,6 @@
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
-    "react-native-shared-group-preferences": "^1.1.24",
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-worklets": "0.8.3",
@@ -90,8 +90,5 @@
       "!**/*.d.ts"
     ]
   },
-  "private": true,
-  "overrides": {
-    "typescript": "~6.0.3"
-  }
+  "private": true
 }

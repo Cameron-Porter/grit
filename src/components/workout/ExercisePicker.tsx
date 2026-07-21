@@ -450,29 +450,36 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
             );
           }}
           ListEmptyComponent={
-            <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 32 }}>
-              <MaterialCommunityIcons name="dumbbell" size={52} color={colors.surface2} />
+            <View style={{ alignItems: 'center', marginTop: 72, paddingHorizontal: 32 }}>
               {loading ? (
-                <Text style={{ color: colors.muted, marginTop: 16, fontSize: 15 }}>Loading exercises...</Text>
+                <Text style={{ color: colors.muted, fontSize: 15 }}>Loading exercises...</Text>
               ) : noResults ? (
                 <>
-                  <Text style={{ color: colors.text, marginTop: 16, fontSize: 17, fontWeight: '600' }}>
+                  <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+                    <MaterialCommunityIcons name="magnify-close" size={32} color={colors.primary} />
+                  </View>
+                  <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
                     No results for "{searchQuery}"
                   </Text>
-                  <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
-                    Can't find what you're looking for? Add it as a custom exercise.
+                  <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 24 }}>
+                    Can't find what you're looking for? Create a custom exercise and it'll be saved for future workouts.
                   </Text>
                   <Pressable
                     onPress={() => setShowCustomForm(true)}
-                    style={{ marginTop: 20, backgroundColor: colors.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}
+                    style={{ backgroundColor: colors.primary, paddingVertical: 13, paddingHorizontal: 24, borderRadius: 12 }}
                   >
                     <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>
-                      + Create Custom Exercise
+                      Create "{searchQuery}"
                     </Text>
                   </Pressable>
                 </>
               ) : (
-                <Text style={{ color: colors.muted, marginTop: 16, fontSize: 15 }}>No exercises found.</Text>
+                <>
+                  <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+                    <MaterialCommunityIcons name="dumbbell" size={32} color={colors.muted} />
+                  </View>
+                  <Text style={{ color: colors.muted, fontSize: 15, textAlign: 'center' }}>No exercises found.</Text>
+                </>
               )}
             </View>
           }

@@ -8,10 +8,13 @@ import {
   Inter_800ExtraBold,
   Inter_900Black,
 } from '@expo-google-fonts/inter';
+import {
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import { useEffect } from 'react';
 import { AppState, Text, useWindowDimensions, View } from 'react-native';
 
-// Apply Inter as the global default for all Text components that don't override fontFamily
 (Text as any).defaultProps = (Text as any).defaultProps ?? {};
 (Text as any).defaultProps.style = { fontFamily: 'Inter_400Regular' };
 import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
@@ -19,7 +22,6 @@ import { getBodyWeight } from '../src/api/userProfile';
 import { supabase } from '../src/api/supabase';
 import { useProfileStore } from '../src/store/useProfileStore';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
-import { writeWeekStats } from '../src/lib/widgetBridge';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
@@ -28,7 +30,6 @@ import SideNav from '../src/components/navigation/SideNav';
 import { useAuthStore } from '../src/store/useAuthStore';
 import { RevenueCatProvider } from '../src/contexts/RevenueCatContext';
 import { EntitlementsProvider, useEntitlements } from '../src/contexts/EntitlementsContext';
-import { useWidgetSync } from '../src/hooks/useWidgetSync';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -63,36 +64,7 @@ async function syncCrossDevice() {
   if (data?.completed || data?.skipped) endWorkout();
 }
 
-// Writes this week's workout count to shared UserDefaults for the iOS widget.
-async function refreshWeekStats() {
-  const weekStart = new Date();
-  weekStart.setHours(0, 0, 0, 0);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
-
-  const { data: workouts } = await supabase
-    .from('workouts')
-    .select('id')
-    .gte('completed_at', weekStart.toISOString());
-
-  const { data: program } = await supabase
-    .from('programs')
-    .select('days_per_week')
-    .eq('is_current', true)
-    .maybeSingle();
-
-  const completed = workouts?.length ?? 0;
-  const target = (program as any)?.days_per_week ?? 4;
-
-  writeWeekStats({
-    setsCompleted: 0,
-    setsTarget: 0,
-    workoutsCompleted: completed,
-    workoutsTarget: target,
-  });
-}
-
 function LayoutInner() {
-  useWidgetSync();
   const router = useRouter();
   const segments = useSegments();
   const { user, initialized, initialize } = useAuthStore();
@@ -105,6 +77,8 @@ function LayoutInner() {
     Inter_700Bold,
     Inter_800ExtraBold,
     Inter_900Black,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_800ExtraBold,
   });
   if (fontError) console.warn('[Fonts] failed to load:', fontError);
   const { width, height } = useWindowDimensions();
@@ -116,13 +90,11 @@ function LayoutInner() {
     initialize();
     drainPendingWorkouts();
     syncCrossDevice();
-    refreshWeekStats();
 
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         drainPendingWorkouts();
         syncCrossDevice();
-        refreshWeekStats();
       }
     });
     return () => sub.remove();
@@ -174,6 +146,7 @@ function LayoutInner() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="workout" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="workout/quick" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="plate-calculator" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
       <Stack.Screen name="workout/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="programs/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="programs/create" options={{ headerShown: false, animation: 'slide_from_bottom' }} />

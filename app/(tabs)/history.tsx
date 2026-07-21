@@ -1,10 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getWorkouts } from '../../src/api/history';
 import GradientBackground from '../../src/components/GradientBackground';
+import { Skeleton } from '../../src/components/Skeleton';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
@@ -86,9 +87,23 @@ export default function Progress() {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 20, padding: 14, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: colors.glassBorder }}>
+                <Skeleton width={40} height={28} radius={6} />
+                <Skeleton width="70%" height={10} radius={4} />
+                <Skeleton width="50%" height={10} radius={4} />
+              </View>
+            ))}
+          </View>
+          {[0, 1, 2, 3].map((i) => (
+            <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: colors.glassBorder, gap: 8 }}>
+              <Skeleton width="55%" height={16} radius={5} />
+              <Skeleton width="30%" height={12} radius={4} />
+            </View>
+          ))}
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
 
@@ -103,10 +118,20 @@ export default function Progress() {
 
           {/* ── Workout list ── */}
           {workouts.length === 0 && (
-            <View style={{ alignItems: 'center', marginTop: 60 }}>
-              <MaterialCommunityIcons name="chart-line" size={48} color={colors.surface2} />
-              <Text style={{ color: colors.muted, marginTop: 12, fontSize: 16 }}>No workouts yet</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>Completed workouts will appear here</Text>
+            <View style={{ alignItems: 'center', marginTop: 80, paddingHorizontal: 32 }}>
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: colors.glassBorder }}>
+                <MaterialCommunityIcons name="dumbbell" size={36} color={colors.primary} />
+              </View>
+              <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>No workouts logged</Text>
+              <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 28 }}>
+                Complete your first workout to see your training history and progress here.
+              </Text>
+              <Pressable
+                onPress={() => router.push('/workout')}
+                style={{ backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 }}
+              >
+                <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Start a Workout</Text>
+              </Pressable>
             </View>
           )}
 

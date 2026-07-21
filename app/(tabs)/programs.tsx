@@ -1,12 +1,13 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteProgram, duplicateProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
 import { confirm } from '../../src/utils/confirm';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
 import GradientBackground from '../../src/components/GradientBackground';
+import { Skeleton } from '../../src/components/Skeleton';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 
@@ -106,8 +107,16 @@ export default function Programs() {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={colors.primary} />
+        <View style={{ padding: 16, gap: 10 }}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <Skeleton width="50%" height={18} radius={6} />
+                <Skeleton width={52} height={20} radius={4} />
+              </View>
+              <Skeleton width="38%" height={13} radius={4} />
+            </View>
+          ))}
         </View>
       ) : (
       <FlatList
@@ -115,15 +124,25 @@ export default function Programs() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 16 }}
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', marginTop: 60 }}>
-            <MaterialCommunityIcons name="calendar-multiselect" size={48} color={colors.surface2} />
-            <Text style={{ color: colors.muted, marginTop: 12, fontSize: 16 }}>No programs yet</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 4 }}>Tap + to create your first program</Text>
+          <View style={{ alignItems: 'center', marginTop: 80, paddingHorizontal: 32 }}>
+            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <MaterialCommunityIcons name="calendar-multiselect" size={36} color={colors.primary} />
+            </View>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>No programs yet</Text>
+            <Text style={{ color: colors.muted, fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 28 }}>
+              Build your first program to get started with structured, progressive training.
+            </Text>
             <Pressable
               onPress={() => router.push('/programs/create')}
-              style={{ marginTop: 20, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 }}
+              style={{ backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 14 }}
             >
               <Text style={{ color: colors.background, fontWeight: '700', fontSize: 15 }}>Create Program</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => router.push('/programs/templates')}
+              style={{ marginTop: 14, paddingVertical: 8 }}
+            >
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>Browse templates →</Text>
             </Pressable>
           </View>
         }

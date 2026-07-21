@@ -1,7 +1,5 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useAnimatedStyle,
@@ -10,18 +8,42 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { SymbolView } from 'expo-symbols';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { WorkoutSet } from '../../types/workout';
 import { useColors } from '../../utils/useColors';
+import { haptic } from '../../utils/haptics';
+import { FontFamily, Radius, Space, TypeScale } from '../../utils/tokens';
 
 interface SetRowProps {
   set: WorkoutSet;
   isActive: boolean;
   onWeightChange: (val: number) => void;
   onRepsChange: (val: number) => void;
-  // autoReps provided when set should be completed with auto-filled reps
   onComplete: (autoReps?: number) => void;
   onRemove: () => void;
   onMenuPress: () => void;
+}
+
+function MenuIcon({ color }: { color: string }) {
+  if (Platform.OS === 'ios') {
+    return <SymbolView name="ellipsis" size={20} tintColor={color} />;
+  }
+  return <MaterialCommunityIcons name="dots-vertical" size={22} color={color} />;
+}
+
+function CheckIcon({ color }: { color: string }) {
+  if (Platform.OS === 'ios') {
+    return <SymbolView name="checkmark" size={16} tintColor={color} weight="bold" />;
+  }
+  return <MaterialCommunityIcons name="check" size={18} color={color} />;
+}
+
+function SkipIcon({ color }: { color: string }) {
+  if (Platform.OS === 'ios') {
+    return <SymbolView name="minus.circle" size={26} tintColor={color} />;
+  }
+  return <MaterialCommunityIcons name="minus-circle-outline" size={28} color={color} />;
 }
 
 export default function SetRow({
@@ -36,47 +58,55 @@ export default function SetRow({
   const colors = useColors();
   const translateX = useSharedValue(0);
   const shakeX = useSharedValue(0);
+  const checkScale = useSharedValue(1);
   const [rirError, setRirError] = useState(false);
 
   const panGesture = Gesture.Pan()
     .activeOffsetX([-10, 10])
-    .onUpdate((event) => {
-      translateX.value = event.translationX;
-    })
+    .onUpdate((e) => { translateX.value = e.translationX; })
     .onEnd(() => {
       if (translateX.value > 100) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptic.setLogged();
         handleComplete();
       }
       if (translateX.value < -100) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        haptic.destructive();
         onRemove();
       }
       translateX.value = withSpring(0, { damping: 18, stiffness: 180 });
     });
 
-  const animatedStyle = useAnimatedStyle(() => ({
+  const rowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value + shakeX.value }],
   }));
 
-  const deleteStyle = useAnimatedStyle(() => ({
+  const deleteReveal = useAnimatedStyle(() => ({
     opacity: translateX.value < -8 ? 1 : 0,
   }));
 
-  const completeStyle = useAnimatedStyle(() => ({
+  const completeReveal = useAnimatedStyle(() => ({
     opacity: translateX.value > 8 ? 1 : 0,
   }));
 
+  const checkStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+  }));
+
+  function springPop() {
+    checkScale.value = withSequence(
+      withSpring(1.35, { damping: 8, stiffness: 400 }),
+      withSpring(1, { damping: 12, stiffness: 300 }),
+    );
+  }
+
   function handleComplete() {
     if (set.completed) {
-      onComplete(); // uncomplete — no auto-fill
+      onComplete();
       return;
     }
-
-    // RIR sets require actual rep entry
     if (set.rir !== undefined && set.reps === 0) {
       setRirError(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptic.error();
       shakeX.value = withSequence(
         withTiming(-6, { duration: 50 }),
         withTiming(6, { duration: 50 }),
@@ -87,174 +117,207 @@ export default function SetRow({
       setTimeout(() => setRirError(false), 1500);
       return;
     }
-
-    // Non-RIR sets: auto-fill target reps if blank
+    springPop();
+    haptic.setLogged();
     if (set.reps === 0 && set.rir === undefined) {
       onComplete(set.targetReps ?? 8);
       return;
     }
-
     onComplete();
   }
 
   if (set.skipped) {
     return (
-      <View style={{ marginBottom: 6, paddingVertical: 8, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', opacity: 0.45 }}>
+      <View style={[styles.skippedRow]}>
         <View style={{ width: 40 }} />
-        <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 16, textDecorationLine: 'line-through' }}>
+        <Text style={[styles.skippedValue, { color: colors.setSkipped }]}>
           {set.weight > 0 ? String(set.weight) : '—'}
         </Text>
-        <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 16, textDecorationLine: 'line-through' }}>
+        <Text style={[styles.skippedValue, { color: colors.setSkipped }]}>
           {set.reps > 0 ? String(set.reps) : '—'}
         </Text>
         <Pressable
           onPress={() => onComplete()}
           hitSlop={8}
-          style={{ width: 60, alignItems: 'center', justifyContent: 'center' }}
+          style={styles.checkCell}
         >
-          <MaterialCommunityIcons name="minus-circle-outline" size={28} color="#555" />
+          <SkipIcon color={colors.textTertiary} />
         </Pressable>
       </View>
     );
   }
 
+  const completedBg = set.completed ? `${colors.setComplete}18` : 'transparent';
+
   return (
-    <View style={{ position: 'relative', overflow: 'hidden' }}>
-      {/* Delete background */}
-      <Animated.View
-        style={[deleteStyle, {
-          position: 'absolute',
-          left: 0, right: 0, top: 0, bottom: 0,
-          backgroundColor: colors.error,
-          justifyContent: 'center',
-          alignItems: 'flex-end',
-          paddingRight: 20,
-        }]}
-      >
-        <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Delete</Text>
+    <View style={styles.wrapper}>
+      {/* Swipe-right reveal: Complete */}
+      <Animated.View style={[styles.revealComplete, { backgroundColor: colors.setComplete }, completeReveal]}>
+        <Text style={styles.revealText}>Complete</Text>
       </Animated.View>
 
-      {/* Complete background */}
-      <Animated.View
-        style={[completeStyle, {
-          position: 'absolute',
-          left: 0, right: 0, top: 0, bottom: 0,
-          backgroundColor: colors.primary,
-          justifyContent: 'center',
-          paddingLeft: 20,
-        }]}
-      >
-        <Text style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>Complete</Text>
+      {/* Swipe-left reveal: Delete */}
+      <Animated.View style={[styles.revealDelete, { backgroundColor: colors.danger }, deleteReveal]}>
+        <Text style={styles.revealText}>Delete</Text>
       </Animated.View>
 
       <GestureDetector gesture={panGesture}>
-        <Animated.View
-          style={[
-            animatedStyle,
-            { backgroundColor: set.completed ? `${colors.primary}18` : 'transparent' },
-          ]}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
-            {/* Row menu */}
-            <Pressable
-              onPress={onMenuPress}
-              style={{ width: 40, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
+        <Animated.View style={[rowStyle, { backgroundColor: completedBg }]}>
+          <View style={styles.row}>
+            {/* Menu */}
+            <Pressable onPress={onMenuPress} style={styles.menuCell} hitSlop={8}>
+              <MenuIcon color={colors.textTertiary} />
             </Pressable>
 
-            {/* Weight Input */}
-            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+            {/* Weight */}
+            <View style={styles.inputCell}>
               <TextInput
                 value={String(set.weight || '')}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor={colors.muted}
-                onChangeText={(text) => {
-                  const clean = text.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                placeholderTextColor={colors.placeholder}
+                onChangeText={(t) => {
+                  const clean = t.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
                   onWeightChange(parseFloat(clean) || 0);
                 }}
-                style={{
-                  backgroundColor: colors.inputBg,
-                  color: colors.text,
-                  width: '100%',
-                  maxWidth: 100,
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                  textAlign: 'center',
-                  fontSize: 18,
-                  fontWeight: '600',
-                }}
+                style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
               />
             </View>
 
-            {/* Reps Input */}
-            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+            {/* Reps */}
+            <View style={styles.inputCell}>
               <TextInput
                 value={String(set.reps || '')}
                 keyboardType="number-pad"
                 placeholder={
                   set.rir !== undefined
                     ? `${set.rir} RIR`
-                    : set.targetReps
-                    ? String(set.targetReps)
-                    : '0'
+                    : set.targetReps ? String(set.targetReps) : '0'
                 }
                 placeholderTextColor={
                   rirError
                     ? colors.error
                     : set.rir !== undefined || set.targetReps
                     ? colors.primary
-                    : colors.muted
+                    : colors.placeholder
                 }
-                onChangeText={(text) => {
-                  const clean = text.replace(/[^0-9]/g, '');
+                onChangeText={(t) => {
+                  const clean = t.replace(/[^0-9]/g, '');
                   onRepsChange(parseInt(clean, 10) || 0);
                 }}
-                style={{
-                  backgroundColor: colors.inputBg,
-                  color: colors.text,
-                  width: '100%',
-                  maxWidth: 100,
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                  textAlign: 'center',
-                  fontSize: 18,
-                  fontWeight: '600',
-                  borderWidth: rirError ? 1 : 0,
-                  borderColor: rirError ? colors.error : 'transparent',
-                }}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.inputBg,
+                    color: colors.text,
+                    borderWidth: rirError ? 1 : 0,
+                    borderColor: rirError ? colors.error : 'transparent',
+                  },
+                ]}
               />
             </View>
 
-            {/* Log Checkbox */}
-            <View style={{ width: 64, alignItems: 'center' }}>
+            {/* Check */}
+            <View style={styles.checkCell}>
               <Pressable onPress={handleComplete} hitSlop={8}>
-                <View
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    backgroundColor: set.completed ? colors.primary : colors.inputBg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderWidth: set.completed ? 0 : isActive ? 2 : 1,
-                    borderColor: isActive ? colors.primary : colors.surface2,
-                  }}
+                <Animated.View
+                  style={[
+                    styles.checkBox,
+                    {
+                      backgroundColor: set.completed ? colors.setComplete : colors.inputBg,
+                      borderColor: isActive ? colors.primary : colors.border,
+                      borderWidth: set.completed ? 0 : isActive ? 2 : StyleSheet.hairlineWidth,
+                    },
+                    checkStyle,
+                  ]}
                 >
-                  {set.completed && (
-                    <MaterialCommunityIcons name="check" size={22} color="white" />
-                  )}
-                </View>
+                  {set.completed && <CheckIcon color="#fff" />}
+                </Animated.View>
               </Pressable>
             </View>
           </View>
 
           {!set.completed && (
-            <View style={{ height: 1, backgroundColor: colors.surface2, marginHorizontal: 16 }} />
+            <View style={[styles.separator, { backgroundColor: colors.separator }]} />
           )}
         </Animated.View>
       </GestureDetector>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrapper: {
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Space['0.5'],
+  },
+  skippedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Space[1],
+    paddingHorizontal: Space[2],
+    opacity: 0.45,
+  },
+  skippedValue: {
+    flex: 1,
+    textAlign: 'center',
+    ...TypeScale.b1,
+    textDecorationLine: 'line-through',
+  },
+  menuCell: {
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inputCell: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: Space['0.5'],
+  },
+  input: {
+    width: '100%',
+    maxWidth: 100,
+    paddingVertical: 12,
+    borderRadius: Radius.md,
+    textAlign: 'center',
+    ...TypeScale.h2,
+    fontFamily: FontFamily.bodySemi,
+  },
+  checkCell: {
+    width: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBox: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: Space[2],
+  },
+  revealComplete: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    paddingLeft: Space[2],
+  },
+  revealDelete: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: Space[2],
+  },
+  revealText: {
+    color: '#fff',
+    fontFamily: FontFamily.bodySemi,
+    fontSize: 14,
+  },
+});

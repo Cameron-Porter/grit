@@ -1,16 +1,20 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
 import { useRouter } from 'expo-router';
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getExerciseSessionHistory, HistorySessionEntry } from '../../api/history';
 import { useProfileStore } from '../../store/useProfileStore';
 import { Exercise, WorkoutSet } from '../../types/workout';
-import { MuscleGroupColors } from '../../utils/constants';
+import { MuscleColors } from '../../utils/tokens';
 import { useColors } from '../../utils/useColors';
+import { FontFamily, Radius, Shadow, Space, TypeScale } from '../../utils/tokens';
+import { classifyVolume } from '../../utils/volumeLandmarks';
 import NoteModal from './NoteModal';
 import PriorityBars from './PriorityBars';
 import SetRow from './SetRow';
+import VolumePill from './VolumePill';
 
 interface ExerciseCardProps {
   exerciseGroup: Exercise[];
@@ -21,12 +25,26 @@ interface ExerciseCardProps {
   onSetMenuPress: (exerciseId: string, setIndex: number) => void;
   onSaveNote: (exerciseId: string, note: string) => void;
   bodyWeight?: number;
+  weeklySetsByMuscle?: Record<string, number>;
 }
 
 const MAX_HISTORY_SESSIONS = 5;
-const BADGE_HEIGHT = 30;
-const BADGE_ABOVE = 10; // 1/3 above card
-const BADGE_ON_CARD = 20; // 2/3 on card
+const BADGE_HEIGHT = 28;
+const BADGE_ABOVE = 10;
+
+// Epley formula — estimates 1RM from a working set
+function epley1RM(weight: number, reps: number): number {
+  if (reps === 1) return weight;
+  if (reps <= 0 || weight <= 0) return 0;
+  return Math.round(weight * (1 + reps / 30));
+}
+
+function Icon({ ios, android, size, color }: { ios: string; android: string; size: number; color: string }) {
+  if (Platform.OS === 'ios') {
+    return <SymbolView name={ios as any} size={size} tintColor={color} />;
+  }
+  return <MaterialCommunityIcons name={android as any} size={size} color={color} />;
+}
 
 function HistoryPanel({ exerciseName }: { exerciseName: string }) {
   const colors = useColors();
@@ -36,26 +54,29 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
 
   useEffect(() => {
     getExerciseSessionHistory(exerciseName)
-      .then((data) => setSessions(data))
+      .then(setSessions)
       .catch(() => setSessions([]))
       .finally(() => setLoading(false));
   }, [exerciseName]);
 
   if (loading) {
     return (
-      <View style={{ backgroundColor: colors.surface2, borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 8 }}>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>Loading...</Text>
+      <View style={[styles.historyShell, { backgroundColor: colors.surface2 }]}>
+        <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }]}>
+          Exercise History
+        </Text>
+        <Text style={[TypeScale.b2, { color: colors.textSecondary }]}>Loading…</Text>
       </View>
     );
   }
 
   if (sessions.length === 0) {
     return (
-      <View style={{ backgroundColor: colors.surface2, borderRadius: 8, padding: 12, marginHorizontal: 16, marginBottom: 8 }}>
-        <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }}>
+      <View style={[styles.historyShell, { backgroundColor: colors.surface2 }]}>
+        <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }]}>
           Exercise History
         </Text>
-        <Text style={{ color: colors.muted, fontSize: 13 }}>No previous data</Text>
+        <Text style={[TypeScale.b2, { color: colors.textSecondary }]}>No previous data</Text>
       </View>
     );
   }
@@ -70,42 +91,57 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
     grouped.get(key)!.push(s);
   });
 
+  // Best estimated 1RM across all displayed sessions
+  let best1RM = 0;
+  displayed.forEach((s) => {
+    s.sets.forEach((set) => {
+      const est = epley1RM(set.weight, set.reps);
+      if (est > best1RM) best1RM = est;
+    });
+  });
+
   return (
-    <View style={{ backgroundColor: colors.surface2, borderRadius: 8, marginHorizontal: 16, marginBottom: 8, overflow: 'hidden' }}>
-      <View style={{ paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6 }}>
-        <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+    <View style={[styles.historyShell, { backgroundColor: colors.surface2 }]}>
+      <View style={styles.historyHeader}>
+        <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase' }]}>
           Exercise History
         </Text>
+        {best1RM > 0 && (
+          <View style={[styles.oneRMBadge, { backgroundColor: `${colors.prBadge}22` }]}>
+            <Text style={[TypeScale.cap, { color: colors.prBadge, letterSpacing: 1 }]}>
+              ~{best1RM} lbs e1RM
+            </Text>
+          </View>
+        )}
       </View>
 
       {Array.from(grouped.entries()).map(([programName, programSessions]) => (
-        <View key={programName} style={{ marginBottom: 4 }}>
-          <View style={{ paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.surface2 }}>
-            <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>
-              {programName}
-              {programSessions[0]?.programTotalWeeks
-                ? ` — ${programSessions[0].programTotalWeeks} wks`
-                : ''}
-            </Text>
-          </View>
+        <View key={programName} style={{ marginTop: Space['0.5'] }}>
+          <Text style={[TypeScale.l1, { color: colors.text, fontFamily: FontFamily.bodySemi, paddingVertical: Space['0.5'] }]}>
+            {programName}
+            {programSessions[0]?.programTotalWeeks ? ` — ${programSessions[0].programTotalWeeks} wks` : ''}
+          </Text>
 
           {programSessions.map((session, si) => (
-            <View key={si} style={{ paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: si > 0 ? 1 : 0, borderTopColor: colors.surface2 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '700' }}>
-                  {session.weekNumber != null && session.dayNumber != null
-                    ? `Week ${session.weekNumber} · Day ${session.dayNumber}`
-                    : 'Quick Workout'}
-                </Text>
-                <Text style={{ color: colors.muted, fontSize: 11 }}>
-                  {new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                </Text>
+            <View key={si} style={[styles.sessionRow, si > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.separator }]}>
+              <Text style={[TypeScale.l2, { color: colors.textTertiary, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
+                {session.weekNumber != null && session.dayNumber != null
+                  ? `Wk ${session.weekNumber} · Day ${session.dayNumber}`
+                  : 'Quick Workout'}
+              </Text>
+              <Text style={[TypeScale.l2, { color: colors.textTertiary }]}>
+                {new Date(session.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </Text>
+              <View style={{ marginTop: 4, gap: 2 }}>
+                {session.sets.map((s, i) => (
+                  <Text key={i} style={[TypeScale.b2, { color: colors.textSecondary }]}>
+                    <Text style={[TypeScale.b2, { color: colors.text, fontFamily: FontFamily.bodySemi }]}>
+                      {s.weight} lbs × {s.reps}
+                    </Text>
+                    {' '}reps
+                  </Text>
+                ))}
               </View>
-              {session.sets.map((s, i) => (
-                <Text key={i} style={{ color: colors.muted, fontSize: 13, marginBottom: 2 }}>
-                  <Text style={{ color: colors.text, fontWeight: '600' }}>{s.weight} lbs × {s.reps} reps</Text>
-                </Text>
-              ))}
             </View>
           ))}
         </View>
@@ -114,12 +150,12 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
       {hasMore && (
         <Pressable
           onPress={() => router.push('/(tabs)/history' as any)}
-          style={{ paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surface2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}
+          style={[styles.historyMore, { borderTopColor: colors.separator }]}
         >
-          <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>
+          <Text style={[TypeScale.l1, { color: colors.primary, fontFamily: FontFamily.bodySemi }]}>
             View full history ({sessions.length} sessions)
           </Text>
-          <MaterialCommunityIcons name="chevron-right" size={14} color={colors.primary} />
+          <Icon ios="chevron.right" android="chevron-right" size={12} color={colors.primary} />
         </Pressable>
       )}
     </View>
@@ -135,171 +171,175 @@ export default function ExerciseCard({
   onSetMenuPress,
   onSaveNote,
   bodyWeight,
+  weeklySetsByMuscle,
 }: ExerciseCardProps) {
   const colors = useColors();
   const theme = useProfileStore((s) => s.theme);
   const primaryMuscle = exerciseGroup[0]?.muscleGroup;
   const musclePriority = exerciseGroup[0]?.musclePriority;
-  const badgeColor = primaryMuscle
-    ? (MuscleGroupColors[primaryMuscle] ?? colors.primary)
-    : colors.primary;
+  const badgeColor = primaryMuscle ? (MuscleColors[primaryMuscle] ?? colors.primary) : colors.primary;
 
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
 
-  const toggleHistory = (exerciseId: string) => {
-    setHistoryOpen((prev) => ({ ...prev, [exerciseId]: !prev[exerciseId] }));
-  };
+  const noteExercise = noteExerciseId ? exerciseGroup.find((ex) => ex.id === noteExerciseId) : null;
 
-  const noteExercise = noteExerciseId
-    ? exerciseGroup.find((ex) => ex.id === noteExerciseId)
-    : null;
+  // Best live e1RM across all completed sets in this card
+  function get1RM(exercise: Exercise): number {
+    let best = 0;
+    exercise.sets.forEach((s) => {
+      if (s.completed && s.weight > 0 && s.reps > 0) {
+        const est = epley1RM(s.weight, s.reps);
+        if (est > best) best = est;
+      }
+    });
+    return best;
+  }
 
   const cardInner = (
-    <View style={{ paddingBottom: 10, paddingTop: primaryMuscle ? BADGE_ON_CARD + 8 : 10 }}>
-      {exerciseGroup.map((exercise, index) => (
-        <View key={exercise.id} style={{ marginTop: index > 0 ? 20 : 0, marginBottom: index === exerciseGroup.length - 1 ? 0 : 10 }}>
+    <View style={{ paddingBottom: Space[1.5], paddingTop: primaryMuscle ? BADGE_HEIGHT + Space[1] : Space[1.5] }}>
+      {exerciseGroup.map((exercise, index) => {
+        const live1RM = get1RM(exercise);
+        const muscle = exercise.muscleGroup;
+        const weeklySets = muscle && weeklySetsByMuscle ? (weeklySetsByMuscle[muscle] ?? 0) : 0;
+        const volumeInfo = muscle ? classifyVolume(muscle, weeklySets) : null;
 
-          {/* Exercise title row */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: 16, marginBottom: 4 }}>
-            <View style={{ flex: 1, paddingRight: 8 }}>
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>{exercise.name}</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
-                {exercise.equipment === 'Bodyweight' && bodyWeight
-                  ? `Bodyweight @ ${bodyWeight} lbs`
-                  : exercise.equipment || 'Bodyweight'}
-              </Text>
+        return (
+          <View key={exercise.id} style={index > 0 ? { marginTop: Space[2.5] } : undefined}>
+
+            {/* Title row */}
+            <View style={styles.titleRow}>
+              <View style={{ flex: 1, paddingRight: Space[1] }}>
+                <Text style={[TypeScale.h1, { color: colors.text, fontFamily: FontFamily.displayMed }]}>
+                  {exercise.name}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                  <Text style={[TypeScale.b2, { color: colors.textSecondary }]}>
+                    {exercise.equipment === 'Bodyweight' && bodyWeight
+                      ? `Bodyweight @ ${bodyWeight} lbs`
+                      : exercise.equipment || 'Bodyweight'}
+                  </Text>
+                  {live1RM > 0 && (
+                    <View style={[styles.liveOneRM, { backgroundColor: `${colors.prBadge}20` }]}>
+                      <Text style={[TypeScale.cap, { color: colors.prBadge, letterSpacing: 0.8 }]}>
+                        ~{live1RM} e1RM
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                {volumeInfo && weeklySets > 0 && (
+                  <View style={{ marginTop: 4 }}>
+                    <VolumePill status={volumeInfo.status} label={volumeInfo.label} />
+                  </View>
+                )}
+              </View>
+              <Pressable onPress={() => setHistoryOpen((p) => ({ ...p, [exercise.id]: !p[exercise.id] }))} style={styles.iconBtn} hitSlop={8}>
+                <Icon
+                  ios="clock.arrow.circlepath"
+                  android="history"
+                  size={18}
+                  color={historyOpen[exercise.id] ? colors.primary : colors.textTertiary}
+                />
+              </Pressable>
+              <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={styles.iconBtn} hitSlop={8}>
+                <Icon ios="ellipsis" android="dots-vertical" size={18} color={colors.textTertiary} />
+              </Pressable>
             </View>
-            <Pressable onPress={() => toggleHistory(exercise.id)} style={{ padding: 6 }}>
-              <MaterialCommunityIcons
-                name="history"
-                size={20}
-                color={historyOpen[exercise.id] ? colors.primary : colors.muted}
-              />
-            </Pressable>
-            <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={{ padding: 6 }}>
-              <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
-            </Pressable>
-          </View>
 
-          {/* Pain warning */}
-          {exercise.painWarning ? (
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: `${colors.warning}22`, borderRadius: 8, padding: 10, gap: 8 }}>
-              <MaterialCommunityIcons name="alert-outline" size={14} color={colors.warning} style={{ marginTop: 1 }} />
-              <Text style={{ color: colors.warning, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.painWarning}</Text>
+            {/* Pain warning */}
+            {exercise.painWarning && (
+              <View style={[styles.inlineAlert, { backgroundColor: `${colors.warning}18` }]}>
+                <Icon ios="exclamationmark.triangle" android="alert-outline" size={13} color={colors.warning} />
+                <Text style={[TypeScale.b2, { color: colors.warning, flex: 1 }]}>{exercise.painWarning}</Text>
+              </View>
+            )}
+
+            {/* Pinned note */}
+            {exercise.note && (
+              <Pressable
+                onPress={() => setNoteExerciseId(exercise.id)}
+                style={[styles.inlineAlert, { backgroundColor: colors.surface2 }]}
+              >
+                <Icon ios="note.text" android="note-text-outline" size={13} color={colors.primary} />
+                <Text style={[TypeScale.b2, { color: colors.textSecondary, flex: 1 }]}>{exercise.note}</Text>
+              </Pressable>
+            )}
+
+            {/* History panel */}
+            {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
+
+            {/* Column headers */}
+            <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>
+              <View style={{ width: 40 }} />
+              <Text style={[styles.colLabel, { color: colors.textTertiary }]}>WEIGHT</Text>
+              <Text style={[styles.colLabel, { color: colors.textTertiary }]}>REPS</Text>
+              <Text style={[styles.colLabelRight, { color: colors.textTertiary }]}>LOG</Text>
             </View>
-          ) : null}
 
-          {/* Pinned note */}
-          {exercise.note ? (
+            {/* Set rows */}
+            {(() => {
+              const activeSetIndex = exercise.sets.findIndex((s) => !s.completed && !s.skipped);
+              return exercise.sets.map((set, setIndex) => (
+                <SetRow
+                  key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
+                  set={set}
+                  isActive={setIndex === activeSetIndex}
+                  onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
+                  onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
+                  onComplete={(autoReps) => {
+                    if (set.skipped) {
+                      onUpdateSet(exercise.id, setIndex, { skipped: false, completed: false });
+                      return;
+                    }
+                    if (autoReps !== undefined) {
+                      onUpdateSet(exercise.id, setIndex, { reps: autoReps, completed: true });
+                    } else {
+                      onUpdateSet(exercise.id, setIndex, { completed: !set.completed });
+                    }
+                  }}
+                  onRemove={() => onRemoveSet(exercise.id, setIndex)}
+                  onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
+                />
+              ));
+            })()}
+
+            {/* Add Set */}
             <Pressable
-              onPress={() => setNoteExerciseId(exercise.id)}
-              style={{ flexDirection: 'row', alignItems: 'flex-start', marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.surface2, borderRadius: 8, padding: 10, gap: 8 }}
+              onPress={() => {
+                const isBodyweight = exercise.equipment === 'Bodyweight';
+                const lastSet = exercise.sets[exercise.sets.length - 1];
+                const defaultWeight = isBodyweight ? (bodyWeight ?? lastSet?.weight) : lastSet?.weight;
+                onAddSet(exercise.id, defaultWeight, lastSet?.rir);
+              }}
+              style={styles.addSetRow}
             >
-              <MaterialCommunityIcons name="note-text-outline" size={14} color={colors.primary} style={{ marginTop: 1 }} />
-              <Text style={{ color: colors.muted, fontSize: 13, flex: 1, lineHeight: 18 }}>{exercise.note}</Text>
+              <Icon ios="plus" android="plus" size={14} color={colors.primary} />
+              <Text style={[TypeScale.l1, { color: colors.primary, fontFamily: FontFamily.bodySemi }]}>Add Set</Text>
             </Pressable>
-          ) : null}
-
-          {/* History panel */}
-          {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
-
-          {/* Column headers */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: colors.surface2, marginBottom: 6 }}>
-            <View style={{ width: 40 }} />
-            <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>WEIGHT</Text>
-            <Text style={{ flex: 1, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>REPS</Text>
-            <Text style={{ width: 60, textAlign: 'center', color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>LOG</Text>
           </View>
-
-          {/* Set rows */}
-          {(() => {
-            const activeSetIndex = exercise.sets.findIndex((s) => !s.completed && !s.skipped);
-            return exercise.sets.map((set, setIndex) => (
-              <SetRow
-                key={`${exercise.id}-${setIndex}-${set.completed}-${set.skipped}`}
-                set={set}
-                isActive={setIndex === activeSetIndex}
-                onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
-                onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
-                onComplete={(autoReps) => {
-                  if (set.skipped) {
-                    onUpdateSet(exercise.id, setIndex, { skipped: false, completed: false });
-                    return;
-                  }
-                  if (autoReps !== undefined) {
-                    onUpdateSet(exercise.id, setIndex, { reps: autoReps, completed: true });
-                  } else {
-                    onUpdateSet(exercise.id, setIndex, { completed: !set.completed });
-                  }
-                }}
-                onRemove={() => onRemoveSet(exercise.id, setIndex)}
-                onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
-              />
-            ));
-          })()}
-
-          {/* Add Set */}
-          <Pressable
-            onPress={() => {
-              const isBodyweight = exercise.equipment === 'Bodyweight';
-              const lastSet = exercise.sets[exercise.sets.length - 1];
-              const defaultWeight = isBodyweight
-                ? (bodyWeight ?? lastSet?.weight)
-                : lastSet?.weight;
-              onAddSet(exercise.id, defaultWeight, lastSet?.rir);
-            }}
-            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, marginTop: 10 }}
-          >
-            <MaterialCommunityIcons name="plus" size={16} color={colors.primary} style={{ marginRight: 4 }} />
-            <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>Add Set</Text>
-          </Pressable>
-
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 
-  const cardStyle = {
-    borderRadius: 20,
-    overflow: 'hidden' as const,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  };
+  const cardStyle = [
+    styles.card,
+    { borderColor: colors.cardBorder },
+    Platform.OS !== 'ios' && Shadow.md,
+  ];
 
   return (
-    <View style={{ marginTop: primaryMuscle ? BADGE_ABOVE : 0, marginBottom: 16 }}>
+    <View style={{ marginTop: primaryMuscle ? BADGE_ABOVE : 0, marginBottom: Space[2] }}>
 
-      {/* Raised muscle group badge — 1/3 above, 2/3 on card */}
+      {/* Muscle group badge */}
       {primaryMuscle && (
-        <View style={{
-          position: 'absolute',
-          top: -BADGE_ABOVE,
-          left: 14,
-          zIndex: 10,
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 5,
-          paddingHorizontal: 11,
-          height: BADGE_HEIGHT,
-          borderRadius: BADGE_HEIGHT / 2,
-          backgroundColor: badgeColor,
-          shadowColor: badgeColor,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.55,
-          shadowRadius: 8,
-          elevation: 6,
-        }}>
-          {musclePriority && (
-            <PriorityBars priority={musclePriority} color="#FFFFFF" />
-          )}
-          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-            {primaryMuscle}
-          </Text>
+        <View style={[styles.badge, { backgroundColor: badgeColor, shadowColor: badgeColor }]}>
+          {musclePriority && <PriorityBars priority={musclePriority} color="#FFFFFF" />}
+          <Text style={styles.badgeText}>{primaryMuscle}</Text>
         </View>
       )}
 
-      {/* Card body — glass on iOS, solid on Android/web */}
+      {/* Card — glass on iOS, elevated surface on Android */}
       {Platform.OS === 'ios' ? (
         <GlassView
           glassEffectStyle="regular"
@@ -309,12 +349,11 @@ export default function ExerciseCard({
           {cardInner}
         </GlassView>
       ) : (
-        <View style={[cardStyle, { backgroundColor: colors.cardSurface }]}>
+        <View style={[...cardStyle, { backgroundColor: colors.surface }]}>
           {cardInner}
         </View>
       )}
 
-      {/* Note modal — outside card so it renders at root level */}
       {noteExercise && (
         <NoteModal
           visible={!!noteExerciseId}
@@ -330,3 +369,115 @@ export default function ExerciseCard({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  badge: {
+    position: 'absolute',
+    top: -BADGE_ABOVE,
+    left: 14,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    height: BADGE_HEIGHT,
+    borderRadius: BADGE_HEIGHT / 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: Space[2],
+    marginBottom: Space['0.5'],
+  },
+  iconBtn: {
+    padding: Space['0.5'],
+  },
+  inlineAlert: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginHorizontal: Space[2],
+    marginBottom: Space[1],
+    borderRadius: Radius.md,
+    padding: Space[1.5],
+    gap: Space[1],
+  },
+  colHeaders: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: Space[1],
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: Space[1],
+  },
+  colLabel: {
+    flex: 1,
+    textAlign: 'center',
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+  colLabelRight: {
+    width: 64,
+    textAlign: 'center',
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+  addSetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Space[2],
+    marginTop: Space[1.5],
+    gap: Space['0.5'],
+  },
+  historyShell: {
+    borderRadius: Radius.md,
+    padding: Space[1.5],
+    marginHorizontal: Space[2],
+    marginBottom: Space[1],
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Space[1],
+  },
+  oneRMBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.pill,
+  },
+  liveOneRM: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: Radius.pill,
+  },
+  sessionRow: {
+    paddingVertical: Space[1],
+  },
+  historyMore: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Space['0.5'],
+    paddingTop: Space[1],
+    marginTop: Space[1],
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+});

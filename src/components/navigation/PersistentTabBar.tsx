@@ -1,23 +1,27 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GlassView } from 'expo-glass-effect';
+import { SymbolView } from 'expo-symbols';
 import { useRouter, useSegments } from 'expo-router';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/useProfileStore';
 import { useColors } from '../../utils/useColors';
+import { haptic } from '../../utils/haptics';
+import { Radius, Space } from '../../utils/tokens';
 
 type TabName = 'today' | 'programs' | 'progress' | 'profile';
 
-const TABS: { name: TabName; label: string; icon: string; route: string }[] = [
-  { name: 'today',    label: 'Workout',  icon: 'dumbbell',             route: '/workout' },
-  { name: 'programs', label: 'Programs', icon: 'calendar-multiselect', route: '/(tabs)/programs' },
-  { name: 'progress', label: 'History',  icon: 'history',              route: '/(tabs)/history' },
-  { name: 'profile',  label: 'Profile',  icon: 'account-circle',       route: '/(tabs)/more' },
+const TABS: { name: TabName; ios: string; android: string; route: string }[] = [
+  { name: 'today',    ios: 'dumbbell.fill',       android: 'dumbbell',           route: '/workout' },
+  { name: 'programs', ios: 'calendar.badge.clock', android: 'calendar-multiselect', route: '/(tabs)/programs' },
+  { name: 'progress', ios: 'chart.line.uptrend.xyaxis', android: 'chart-line', route: '/(tabs)/history' },
+  { name: 'profile',  ios: 'person.circle.fill',  android: 'account-circle',    route: '/(tabs)/more' },
 ];
 
-const PILL_HEIGHT = 64;
-const PILL_MARGIN = 16;
-const PILL_GAP = 12;
+const PILL_HEIGHT = 56;
+const PILL_MARGIN = Space[3];
+const PILL_GAP = Space[1.5];
 
 function getActiveTab(segments: string[]): TabName | null {
   const s0 = segments[0];
@@ -27,6 +31,46 @@ function getActiveTab(segments: string[]): TabName | null {
   if (s0 === '(tabs)' && (s1 === 'history' || s1 === 'log' || s1 === 'personal-records')) return 'progress';
   if (s0 === 'profile' || (s0 === '(tabs)' && s1 === 'more')) return 'profile';
   return null;
+}
+
+function TabButton({ tab, active, onPress }: { tab: typeof TABS[0]; active: boolean; onPress: () => void }) {
+  const colors = useColors();
+  const scale = useSharedValue(1);
+
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  function handlePress() {
+    scale.value = withSpring(0.82, { damping: 8, stiffness: 400 }, () => {
+      scale.value = withSpring(1, { damping: 10, stiffness: 300 });
+    });
+    haptic.tap();
+    onPress();
+  }
+
+  return (
+    <Pressable onPress={handlePress} style={styles.tabBtn} hitSlop={6}>
+      <Animated.View style={[styles.iconWrap, animStyle]}>
+        {Platform.OS === 'ios' ? (
+          <SymbolView
+            name={tab.ios as any}
+            size={22}
+            tintColor={active ? colors.tabActive : colors.tabInactive}
+            weight={active ? 'bold' : 'regular'}
+          />
+        ) : (
+          <MaterialCommunityIcons
+            name={tab.android as any}
+            size={22}
+            color={active ? colors.tabActive : colors.tabInactive}
+          />
+        )}
+        {/* Active dot */}
+        {active && (
+          <View style={[styles.activeDot, { backgroundColor: colors.tabActive }]} />
+        )}
+      </Animated.View>
+    </Pressable>
+  );
 }
 
 export default function PersistentTabBar() {
@@ -43,60 +87,27 @@ export default function PersistentTabBar() {
 
   const tabButtons = (
     <>
-      {TABS.map((tab) => {
-        const active = activeTab === tab.name;
-        return (
-          <Pressable
-            key={tab.name}
-            onPress={() => router.replace(tab.route as any)}
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3 }}
-          >
-            <View style={{
-              width: 48,
-              height: 32,
-              borderRadius: 16,
-              backgroundColor: active ? `${colors.primary}20` : 'transparent',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <MaterialCommunityIcons
-                name={tab.icon as any}
-                size={22}
-                color={active ? colors.primary : colors.muted}
-              />
-            </View>
-            <Text style={{
-              color: active ? colors.primary : colors.muted,
-              fontSize: 10,
-              fontWeight: active ? '700' : '500',
-            }}>
-              {tab.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {TABS.map((tab) => (
+        <TabButton
+          key={tab.name}
+          tab={tab}
+          active={activeTab === tab.name}
+          onPress={() => router.replace(tab.route as any)}
+        />
+      ))}
     </>
   );
 
-  const shadowStyle = {
-    position: 'absolute' as const,
-    bottom: pillBottom,
-    left: PILL_MARGIN,
-    right: PILL_MARGIN,
-    height: PILL_HEIGHT,
-    borderRadius: PILL_HEIGHT / 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 20,
-    elevation: 14,
-  };
+  const containerStyle = [
+    styles.pill,
+    { bottom: pillBottom, left: PILL_MARGIN, right: PILL_MARGIN },
+  ];
 
   if (Platform.OS === 'ios') {
     return (
-      <View style={shadowStyle}>
+      <View style={containerStyle}>
         <GlassView
-          style={{ flex: 1, borderRadius: PILL_HEIGHT / 2, flexDirection: 'row', overflow: 'hidden' }}
+          style={styles.pillInner}
           glassEffectStyle="regular"
           colorScheme={theme === 'dark' ? 'dark' : 'light'}
         >
@@ -106,16 +117,55 @@ export default function PersistentTabBar() {
     );
   }
 
-  // Android + web: solid semi-opaque pill
   return (
-    <View style={[shadowStyle, {
-      backgroundColor: theme === 'dark' ? 'rgba(20,20,26,0.96)' : 'rgba(242,242,247,0.97)',
-      borderWidth: 1,
-      borderColor: theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-      overflow: 'hidden',
-      flexDirection: 'row',
-    }]}>
+    <View
+      style={[
+        containerStyle,
+        styles.pillInner,
+        {
+          backgroundColor: theme === 'dark' ? 'rgba(20,20,26,0.96)' : 'rgba(242,242,247,0.97)',
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+        },
+      ]}
+    >
       {tabButtons}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  pill: {
+    position: 'absolute',
+    height: PILL_HEIGHT,
+    borderRadius: PILL_HEIGHT / 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  pillInner: {
+    flex: 1,
+    borderRadius: PILL_HEIGHT / 2,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Space[1],
+  },
+  iconWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  activeDot: {
+    width: 4,
+    height: 4,
+    borderRadius: Radius.pill,
+  },
+});

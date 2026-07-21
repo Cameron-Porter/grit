@@ -22,6 +22,11 @@ import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStor
 import { confirm } from '../../src/utils/confirm';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
+import {
+  hasWorkoutReminders,
+  scheduleWorkoutReminders,
+  cancelWorkoutReminders,
+} from '../../src/lib/notifications';
 
 function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
   const colors = useColors();
@@ -60,6 +65,11 @@ export default function ProfileAndSettings() {
   const avatarUrl: string | null = meta.avatar_url ?? meta.picture ?? null;
 
   const [bwInput, setBwInput] = useState(bodyWeight != null ? String(bodyWeight) : '');
+  const [remindersEnabled, setRemindersEnabled] = useState(false);
+
+  useEffect(() => {
+    hasWorkoutReminders().then(setRemindersEnabled).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (bodyWeight != null) setBwInput(String(bodyWeight));
@@ -315,6 +325,32 @@ export default function ProfileAndSettings() {
                 </Text>
               </View>
               <Toggle value={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
+            </View>
+          </View>
+
+          {/* Workout reminders */}
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Notifications</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 16 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 }}>Workout reminders</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17 }}>
+                  Get an 8am reminder on your scheduled training days.
+                </Text>
+              </View>
+              <Toggle
+                value={remindersEnabled}
+                onToggle={async () => {
+                  if (remindersEnabled) {
+                    await cancelWorkoutReminders();
+                    setRemindersEnabled(false);
+                  } else {
+                    // Default to Mon/Wed/Fri (1,3,5) if no program days known
+                    await scheduleWorkoutReminders([1, 3, 5], 8);
+                    setRemindersEnabled(true);
+                  }
+                }}
+              />
             </View>
           </View>
 

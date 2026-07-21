@@ -390,77 +390,19 @@ export const useWorkoutStore = create<WorkoutState>()(
         try {
           const userId = await getUserId();
 
-          const { error: workoutError } = await supabase.from('workouts').insert({
-            id: workoutId,
-            user_id: userId,
-            name,
-            program_name: state.activeProgramName,
-            program_day_id: state.activeProgramDayId,
-            completed_at: completedAt,
-          });
+          // Offline-first: always write to the local queue before touching the network.
+          // This guarantees the workout is safe even if the connection drops mid-save.
+          await enqueueWorkout(buildPayload(workoutId, userId, name, completedAt, state));
 
-          if (workoutError) {
-            if (isNetworkError(workoutError)) {
-              await enqueueWorkout(buildPayload(workoutId, userId, name, completedAt, state));
-              clearWorkoutState();
-              return { savedOffline: true };
-            }
-            throw workoutError;
-          }
-
-          // Only save sets the user actually completed — skipped sets are not logged
-          const workoutSets = state.exercises.flatMap((exercise) =>
-            exercise.sets
-              .filter((s) => s.completed)
-              .map((s, index) => ({
-                workout_id: workoutId,
-                exercise_name: exercise.name,
-                muscle_group: exercise.muscleGroup ?? null,
-                muscle_priority: exercise.musclePriority ?? null,
-                equipment: exercise.equipment ?? null,
-                note: exercise.note ?? null,
-                set_index: index,
-                reps: s.reps,
-                weight: s.weight,
-                completed: true,
-                rir: s.rir ?? null,
-              })),
-          );
-
-          if (workoutSets.length > 0) {
-            const { error: setsError } = await supabase.from('workout_sets').insert(workoutSets);
-            if (setsError) throw setsError;
-          }
-
-          // Flush feedback collected during the session — must happen after workout row exists
-          if (state.pendingFeedback.length > 0) {
-            const feedbackRows = state.pendingFeedback.map((f) => ({
-              workout_id: workoutId,
-              muscle_group: f.muscleGroup,
-              joint_pain: f.jointPain || null,
-              pump: f.pump || null,
-              volume: f.volume || null,
-              soreness: f.soreness ?? null,
-            }));
-            await supabase.from('workout_feedback').insert(feedbackRows).then(null, () => {});
-          }
-
-          // Mark program day complete or skipped depending on whether any sets were logged
-          if (state.activeProgramDayId) {
-            if (workoutSets.length > 0) {
-              await markDayComplete(state.activeProgramDayId).catch(() => {});
-              const { experienceLevel } = useProfileStore.getState();
-              computeAndSaveProgressionTargets(state.activeProgramDayId, experienceLevel).catch((e) => {
-                Sentry.captureException(e, { tags: { context: 'progressionEngine' } });
-              });
-            } else {
-              // All sets were skipped — mark the day as skipped, not complete
-              await skipProgramDay(state.activeProgramDayId).catch(() => {});
-            }
-          }
-
+          // Clear UI immediately — the data is safe locally.
           clearWorkoutState();
-          return { savedOffline: false };
+
+          // Attempt to flush the queue in the background. On success the data lands in
+          // Supabase and is removed from AsyncStorage. On failure it stays queued and
+          // drainPendingWorkouts() will retry the next time the app foregrounds.
+          const { drainPendingWorkouts } = await import('../api/pendingWorkouts');
+          const synced = await drainPendingWorkouts();
+          return { savedOffline: synced === 0 };
         } catch (error) {
           Sentry.captureException(error, { tags: { context: 'finishWorkout' } });
           console.error('Failed to save workout:', error);

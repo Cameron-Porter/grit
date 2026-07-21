@@ -97,6 +97,54 @@ export interface ExerciseSession {
   sets: { weight: number; reps: number; set_index: number }[];
 }
 
+/**
+ * Returns a map of exercise_name → chronological array of max weights per session.
+ * Used for PR sparklines. One query rather than N per-exercise queries.
+ */
+export async function getSparklineData(exerciseNames: string[]): Promise<Record<string, number[]>> {
+  if (!exerciseNames.length) return {};
+
+  const { data: rows } = await supabase
+    .from('workout_sets')
+    .select('exercise_name, weight, workout_id')
+    .in('exercise_name', exerciseNames)
+    .eq('completed', true)
+    .gt('weight', 0);
+
+  if (!rows?.length) return {};
+
+  const workoutIds = [...new Set(rows.map((r) => r.workout_id))];
+  const { data: workouts } = await supabase
+    .from('workouts')
+    .select('id, completed_at')
+    .in('id', workoutIds)
+    .order('completed_at', { ascending: true });
+
+  if (!workouts?.length) return {};
+
+  const dateByWorkout = new Map(workouts.map((w) => [w.id, w.completed_at]));
+
+  // Group by exercise → workout → max weight
+  const map: Record<string, Map<string, { date: string; max: number }>> = {};
+
+  for (const row of rows) {
+    if (!map[row.exercise_name]) map[row.exercise_name] = new Map();
+    const existing = map[row.exercise_name].get(row.workout_id);
+    const date = dateByWorkout.get(row.workout_id) ?? '';
+    if (!existing || row.weight > existing.max) {
+      map[row.exercise_name].set(row.workout_id, { date, max: row.weight });
+    }
+  }
+
+  const result: Record<string, number[]> = {};
+  for (const [name, workoutMap] of Object.entries(map)) {
+    const sorted = [...workoutMap.values()].sort((a, b) => a.date.localeCompare(b.date));
+    result[name] = sorted.map((s) => s.max);
+  }
+
+  return result;
+}
+
 export async function getExerciseAllSessions(exerciseName: string): Promise<ExerciseSession[]> {
   const { data: setRows } = await supabase
     .from("workout_sets")

@@ -20,6 +20,8 @@ import {
 } from '../../src/api/personalRecords';
 import ExercisePicker from '../../src/components/workout/ExercisePicker';
 import { useColors } from '../../src/utils/useColors';
+import Sparkline from '../../src/components/Sparkline';
+import { getSparklineData } from '../../src/api/history';
 
 export default function PRsAndProgress() {
   const colors = useColors();
@@ -28,6 +30,7 @@ export default function PRsAndProgress() {
   const [equipmentMap, setEquipmentMap] = useState<Record<string, string>>({});
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
+  const [sparklines, setSparklines] = useState<Record<string, number[]>>({});
   const [addPRVisible, setAddPRVisible] = useState(false);
   const [exercisePickerVisible, setExercisePickerVisible] = useState(false);
   const [prExerciseName, setPRExerciseName] = useState('');
@@ -46,7 +49,13 @@ export default function PRsAndProgress() {
   }, []);
 
   const loadPRs = async () => {
-    try { setPRs(await getAllPRs()); } catch { setPRs([]); }
+    try {
+      const data = await getAllPRs();
+      setPRs(data);
+      if (data.length > 0) {
+        getSparklineData(data.map((p) => p.exercise_name)).then(setSparklines).catch(() => {});
+      }
+    } catch { setPRs([]); }
   };
 
   const handleSavePR = async () => {
@@ -109,7 +118,10 @@ export default function PRsAndProgress() {
                       {new Date(pr.achieved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    {sparklines[pr.exercise_name]?.length >= 2 && (
+                      <Sparkline values={sparklines[pr.exercise_name]} color={colors.primary} width={64} height={24} />
+                    )}
                     {isBodyweightPR ? (
                       <>
                         <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{pr.reps ?? '-'}</Text>

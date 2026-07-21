@@ -1,7 +1,11 @@
 ﻿import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRestTimer } from '../src/hooks/useRestTimer';
+import RestTimerBar from '../src/components/workout/RestTimerBar';
+import { countSetsByMuscle } from '../src/utils/volumeLandmarks';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ExerciseCardSkeleton } from '../src/components/Skeleton';
 import { confirm } from '../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
@@ -74,6 +78,8 @@ export default function ActiveWorkout() {
   const bodyWeight = useProfileStore((s) => s.bodyWeight);
   const setBodyWeight = useProfileStore((s) => s.setBodyWeight);
   const autoMatchWeight = useProfileStore((s) => s.autoMatchWeight);
+
+  const [restTimer, restTimerControls] = useRestTimer();
 
   const [pickerOpen, setPickerOpen] = useState(false);
   // Program menu
@@ -190,7 +196,13 @@ export default function ActiveWorkout() {
           <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Today's Workout</Text>
         </View>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
-          {loadingNext && <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />}
+          {loadingNext && (
+            <>
+              <ExerciseCardSkeleton />
+              <ExerciseCardSkeleton />
+              <ExerciseCardSkeleton />
+            </>
+          )}
           {!loadingNext && !nextWorkout && (
             <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 18, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
               <MaterialCommunityIcons name="trophy-outline" size={32} color={colors.primary} style={{ marginBottom: 8 }} />
@@ -411,11 +423,18 @@ export default function ActiveWorkout() {
     exercises.every(exerciseDone) &&
     (exercises.some((ex) => ex.sets.some((s) => s.completed)) || allSkipped);
 
+  const weeklySetsByMuscle = useMemo(() => countSetsByMuscle(exercises), [exercises]);
+
   const handleUpdateSet = (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => {
     updateSet(exerciseId, setIndex, data, data.weight !== undefined ? autoMatchWeight : false);
 
     const exercise = exercises.find((ex) => ex.id === exerciseId);
     if (!exercise) return;
+
+    // Start rest timer when a set is marked complete
+    if (data.completed === true) {
+      restTimerControls.start(90);
+    }
 
     if (data.completed === true) {
       const muscle = exercise.muscleGroup;
@@ -608,6 +627,7 @@ export default function ActiveWorkout() {
             }
             onSaveNote={(id, note) => setExerciseNote(id, note)}
             bodyWeight={bodyWeight ?? undefined}
+            weeklySetsByMuscle={weeklySetsByMuscle}
           />
         ))}
 
@@ -656,6 +676,9 @@ export default function ActiveWorkout() {
           </Pressable>
         </View>
       )}
+
+      {/* Rest timer — floats above tab bar */}
+      <RestTimerBar timer={restTimer} controls={restTimerControls} />
 
       {/* Modals */}
       <ExercisePicker

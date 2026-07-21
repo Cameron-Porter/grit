@@ -1,7 +1,7 @@
 import { useProfileStore } from '../store/useProfileStore';
-import { ThemeColors } from './constants';
+import { Themes, ColorTokens } from './tokens';
 
-export function useColors() {
+export function useColors(): ColorTokens {
   const theme = useProfileStore((s) => s.theme);
-  return ThemeColors[theme];
+  return Themes[theme];
 }
