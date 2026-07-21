@@ -1,9 +1,10 @@
-import { SLOT_ROLE_CONFIGS } from '../data/slotRoleConfig';
+import { getSlotRoleConfigs } from '../data/slotRoleConfig';
 import type {
   AdjustedVolumeTarget,
   ExerciseSlot,
   MuscleGroup,
   MusclePriority,
+  ProgramFocus,
   SessionTemplate,
   SlotRole,
   WeekParams,
@@ -203,7 +204,9 @@ export function buildDaySlots(
   template: SessionTemplate,
   maxSlots = MAX_SLOTS_PER_SESSION,
   weekParams?: WeekParams,
+  focus?: ProgramFocus,
 ): ExerciseSlot[] {
+  const slotRoleConfigs = getSlotRoleConfigs(focus);
   const includedPairs = template.sessionType === 'FullBody'
     ? selectIncludedPairsFullBody(dayMuscles, template, maxSlots)
     : selectIncludedPairs(dayMuscles, template, maxSlots);
@@ -216,7 +219,7 @@ export function buildDaySlots(
     if (!includedPairs.has(pairKey) || usedPairs.has(pairKey)) continue;
 
     const priority = dayMuscles.get(spec.muscle) as MusclePriority | 'mev';
-    const config = SLOT_ROLE_CONFIGS[spec.role as SlotRole][priority];
+    const config = slotRoleConfigs[spec.role as SlotRole][priority];
 
     const { sets, rir } = weekParams
       ? applyWeekParams(config.sets, config.rir, priority, weekParams)

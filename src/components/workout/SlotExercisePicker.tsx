@@ -27,7 +27,7 @@ interface SlotExercisePickerProps {
   experienceLevel?: ExperienceLevel;
   currentSelection?: string;
   alreadySelected?: string[];
-  onSelect: (name: string) => void;
+  onSelect: (name: string, equipment: string) => void;
   onMuscleChange?: (muscle: MuscleGroup) => void;
   onClose: () => void;
   // HV-007: When set, only exercises with this movement_pattern are shown (with fallback).
@@ -144,7 +144,7 @@ export default function SlotExercisePicker({
       const updated = await getExercises();
       setAllExercises(updated);
     } catch {}
-    onSelect(createName.trim());
+    onSelect(createName.trim(), createEquipment);
     setCreating(false);
     setShowCreate(false);
     onClose();
@@ -319,7 +319,7 @@ export default function SlotExercisePicker({
                   const equipColor = preferred ? colors.primary : colors.muted;
                   return (
                     <Pressable
-                      onPress={() => { onSelect(item.name); onClose(); }}
+                      onPress={() => { onSelect(item.name, item.equipment ?? ''); onClose(); }}
                       style={({ pressed }) => ({
                         flexDirection: 'row', alignItems: 'center',
                         paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.surface2,

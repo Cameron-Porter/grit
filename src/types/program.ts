@@ -154,6 +154,7 @@ export interface ExerciseSlot {
   rir: number;
   sortOrder: number;
   selectedExercise?: string;
+  equipment?: string;
 }
 
 // ─── Volume targets ───────────────────────────────────────────────────────────

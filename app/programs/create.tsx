@@ -19,7 +19,6 @@ import { BOTTOM_TAB_HEIGHT, MuscleGroupColors } from '../../src/utils/constants'
 import { useColors } from '../../src/utils/useColors';
 import SlotExercisePicker from '../../src/components/workout/SlotExercisePicker';
 import ExercisePicker from '../../src/components/workout/ExercisePicker';
-import { getExerciseByName } from '../../src/data/exerciseDatabase';
 
 const WEEKDAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const WEEKDAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -145,7 +144,7 @@ export default function CreateProgram() {
     setStep(2);
   };
 
-  const handleSelectExercise = (exerciseName: string) => {
+  const handleSelectExercise = (exerciseName: string, equipment: string) => {
     if (!pickerTarget) return;
     const { dayIdx, slotIdx } = pickerTarget;
     setProgramDays((prev) =>
@@ -153,7 +152,7 @@ export default function CreateProgram() {
         if (di !== dayIdx) return d;
         const slots = d.slots.map((slot, si) => {
           if (si !== slotIdx) return slot;
-          return { ...slot, selectedExercise: exerciseName };
+          return { ...slot, selectedExercise: exerciseName, equipment };
         });
         return { ...d, slots };
       }),
@@ -186,7 +185,7 @@ export default function CreateProgram() {
     );
   };
 
-  const handleAddExerciseSelect = (name: string, muscleGroup: string) => {
+  const handleAddExerciseSelect = (name: string, muscleGroup: string, equipment: string) => {
     if (addPickerDayIdx === null) return;
     const dayIdx = addPickerDayIdx;
     setAddPickerDayIdx(null);
@@ -204,6 +203,7 @@ export default function CreateProgram() {
           rir: 2,
           sortOrder: d.slots.length,
           selectedExercise: name,
+          equipment,
         };
         const slots = [...d.slots, newSlot];
         return { ...d, slots, totalSets: slots.reduce((s, sl) => s + sl.sets, 0) };
@@ -244,7 +244,7 @@ export default function CreateProgram() {
             dbDay.id,
             slot.selectedExercise,
             slot.muscle,
-            getExerciseByName(slot.selectedExercise)?.equipment ?? '',
+            slot.equipment ?? '',
             slot.sortOrder,
             slot.sets,
             slot.repsMin,
@@ -603,7 +603,7 @@ export default function CreateProgram() {
       <ExercisePicker
         visible={addPickerDayIdx !== null}
         onClose={() => setAddPickerDayIdx(null)}
-        onSelect={(name, muscleGroup) => handleAddExerciseSelect(name, muscleGroup)}
+        onSelect={(name, muscleGroup, equipment) => handleAddExerciseSelect(name, muscleGroup, equipment)}
       />
 
       {/* ── Slot exercise picker ── */}

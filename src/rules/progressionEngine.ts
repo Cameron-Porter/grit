@@ -96,8 +96,11 @@ export function getLoadIncrement(
   experienceLevel: ExperienceLevel = 'intermediate',
   programFocus?: ProgramFocus,
 ): number {
-  // Strength focus: compounds always get full 5 lb jumps regardless of role.
-  // Doctrine: heavier loading drives neuromuscular adaptation; micro-loading only for isolation accessories.
+  // ST-005: Strength load increment — compounds always +5 lbs regardless of role.
+  // Neuromuscular adaptation (the primary goal of strength training) requires
+  // consistent overload on the main competition movements. Micro-loading is
+  // reserved for isolation accessories where a 5 lb jump would overshoot the
+  // weekly adaptation rate. Source: Prilepin doctrine; NSCA load progression.
   if (programFocus === 'strength') {
     if (isIsolationClass(exerciseType) && role === 'Accessory') return 2.5;
     return 5;
@@ -270,8 +273,12 @@ export function recommendProgression(
   if (ctx.isDeload) {
     const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
     if (isStrength) {
-      // Strength deload doctrine: maintain reps, reduce load 10%, keep neuromuscular coordination.
-      // Full volume cuts degrade motor patterns; active deloads are mandatory.
+      // ST-004: Strength deload — reduce load 10%, hold reps and sets.
+      // Unlike hypertrophy deloads (halve volume, hold load), strength deloads
+      // must preserve neuromuscular coordination. Cutting sets on heavy compound
+      // movements degrades motor patterns built over the meso. A 10% load drop
+      // with full rep/set maintenance keeps the pattern intact while reducing
+      // systemic fatigue. Source: Prilepin doctrine; Juggernaut periodization.
       const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.9, increment), increment);
       return {
         ...base,
@@ -282,7 +289,11 @@ export function recommendProgression(
         reason: `Strength deload — load reduced 10% (${lastWeight} → ${deloadWeight} lbs), reps and sets maintained to preserve neuromuscular coordination.`,
       };
     }
-    // Hypertrophy / powerbuilding / general: halve volume, hold load, cap effort.
+    // PB-004: Powerbuilding deload uses the hypertrophy protocol (halve volume,
+    // hold load, cap effort at RIR 4). PHAT and Kizen both distribute CNS fatigue
+    // across power and hypertrophy days throughout the meso, so accumulated load
+    // is lower than pure strength. A volume-reduction deload (not load-reduction)
+    // is the correct recovery tool. Source: Kizen Week 9 deload structure.
     return {
       ...base,
       nextWeight: lastWeight,

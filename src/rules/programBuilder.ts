@@ -81,7 +81,7 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
         }
       }
 
-      const slots = buildDaySlots(dayMuscles, template, undefined, weekParams);
+      const slots = buildDaySlots(dayMuscles, template, undefined, weekParams, config.focus);
       const totalSets = slots.reduce((n, s) => n + s.sets, 0);
 
       return {

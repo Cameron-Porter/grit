@@ -11,10 +11,21 @@ import type {
 } from '../types/program';
 
 // ─── Target effective sets per focus × priority ───────────────────────────────
+//
+// ST-006: Strength weekly volume — lower than hypertrophy because each set
+// carries far higher CNS cost at 85-95% 1RM. Prilepin's optimal ~10 total reps
+// per session × 2 sessions/week ÷ 2-5 reps/set ≈ 10-12 direct sets/week for
+// emphasized muscles. Source: Prilepin's Chart.
+//
+// PB-005: Powerbuilding weekly volume — between strength (12/8) and hypertrophy
+// (18/12), reflecting the concurrent adaptation goal. Kizen's 16-week program
+// runs 3-6 compound sets + 6-12 accessory sets per session across 6 days;
+// direct weekly sets per muscle land in the 10-15 range for emphasized muscles.
+// Source: Kizen 16-Week Powerbuilding; PHAT program volume audit.
 const TARGET_EFFECTIVE_SETS: Record<ProgramFocus, Record<MusclePriority | 'mev', number>> = {
   hypertrophy:   { emphasize: 18, grow: 12, maintain: 6,  mev: 4 },
-  strength:      { emphasize: 12, grow: 8,  maintain: 5,  mev: 3 },
-  powerbuilding: { emphasize: 15, grow: 10, maintain: 6,  mev: 4 },
+  strength:      { emphasize: 12, grow: 8,  maintain: 5,  mev: 3 },  // ST-006
+  powerbuilding: { emphasize: 15, grow: 10, maintain: 6,  mev: 4 },  // PB-005
   general:       { emphasize: 12, grow: 9,  maintain: 6,  mev: 4 },
   maintenance:   { emphasize: 8,  grow: 7,  maintain: 6,  mev: 4 },
   // RC-005: cut phase uses lower volume to match the 90-min session cap.
