@@ -71,7 +71,7 @@ export function classifyVolume(muscleGroup: string, weeklySets: number): VolumeR
  * Counts total completed sets per muscle group from the active workout exercises.
  */
 export function countSetsByMuscle(
-  exercises: { muscleGroup: string; sets: { completed: boolean }[] }[]
+  exercises: { muscleGroup?: string; sets: { completed: boolean }[] }[]
 ): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const ex of exercises) {

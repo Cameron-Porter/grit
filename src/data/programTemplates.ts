@@ -453,6 +453,135 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
       },
     ],
   },
+
+  // ─── Kizen Powerbuilding 6x ────────────────────────────────────────────────
+  // Rep/set schemes follow PB-001/PB-002/PB-003 (see slotRoleConfig.ts "emphasize"
+  // tier) — Kizen 16-Week + PHAT (Layne Norton). Each movement pattern gets one
+  // heavy/low-rep pass and one pump/high-rep pass per week.
+  {
+    id: 'kizen-6',
+    name: 'Kizen Powerbuilding',
+    tagline: '6 days/week',
+    description: 'Push, Pull, and Legs each run twice weekly — a heavy, low-rep Power pass early in the week and a higher-rep Hypertrophy pass later. Combines Kizen 16-Week and PHAT-style powerbuilding: strength on the big lifts, size from the accessory work.',
+    daysPerWeek: 6,
+    recommendedWeeks: 16,
+    focus: 'powerbuilding',
+    bestFor: 'Advanced · Wants both strength and size',
+    days: [
+      {
+        label: 'Push A — Power',
+        exercises: [
+          ex('Barbell Bench Press',        'Chest',     4, 3,  6,  2),
+          ex('Barbell Overhead Press',     'Shoulders', 3, 6,  10, 2),
+          ex('Incline Barbell Bench Press','Chest',     3, 6,  10, 2),
+          ex('Cable Tricep Pushdown',      'Triceps',   3, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Pull A — Power',
+        exercises: [
+          ex('Deadlift',                   'Back',      4, 3,  6,  2),
+          ex('Pull-Up',                    'Back',      3, 6,  10, 2),
+          ex('Seated Cable Row',           'Back',      3, 6,  10, 2),
+          ex('EZ-Bar Curl',                'Biceps',    3, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Legs A — Power',
+        exercises: [
+          ex('Barbell Back Squat',         'Quads',      4, 3,  6,  2),
+          ex('Romanian Deadlift',          'Hamstrings', 3, 6,  10, 2),
+          ex('Leg Press',                  'Quads',      3, 6,  10, 2),
+          ex('Standing Calf Raise',        'Calves',     3, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Push B — Hypertrophy',
+        exercises: [
+          ex('Incline Dumbbell Press',           'Chest',     3, 10, 15, 2),
+          ex('Pec Deck',                          'Chest',     3, 10, 15, 2),
+          ex('Dumbbell Lateral Raise',            'Shoulders', 3, 10, 15, 2),
+          ex('Rear Delt Fly',                     'Shoulders', 3, 10, 15, 2),
+          ex('Cable Overhead Tricep Extension',   'Triceps',   3, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Pull B — Hypertrophy',
+        exercises: [
+          ex('Lat Pulldown',              'Back',    3, 10, 15, 2),
+          ex('Chest-Supported Row',       'Back',    3, 10, 15, 2),
+          ex('Face Pull',                 'Back',    3, 10, 15, 2),
+          ex('Hammer Curl',               'Biceps',  3, 10, 15, 2),
+          ex('Incline Dumbbell Curl',     'Biceps',  3, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Legs B — Hypertrophy',
+        exercises: [
+          ex('Leg Press',                 'Quads',      3, 10, 15, 2),
+          ex('Leg Extension',             'Quads',      3, 10, 15, 2),
+          ex('Lying Leg Curl',            'Hamstrings', 3, 10, 15, 2),
+          ex('Barbell Hip Thrust',        'Glutes',     3, 10, 15, 2),
+          ex('Seated Calf Raise',         'Calves',     3, 10, 15, 2),
+        ],
+      },
+    ],
+  },
+
+  // ─── Strength 4x ───────────────────────────────────────────────────────────
+  // Rep/set schemes follow ST-001/ST-002/ST-003 (see slotRoleConfig.ts "emphasize"
+  // tier) — Prilepin's Chart + NSCA guidelines. One heavy Primary lift per day
+  // in the 85-95% / 1-3 rep zone, with Secondary and Accessory work in the
+  // Prilepin bridge zones to add volume without blunting recovery for the next
+  // heavy day.
+  {
+    id: 'strength-4',
+    name: 'Strength',
+    tagline: '4 days/week',
+    description: 'Built around one heavy compound lift per session — Squat, Bench, Deadlift, and Overhead Press — trained in the low-rep Prilepin zone. Secondary and accessory work stay in moderate rep ranges to add volume without eating into recovery for the next heavy day.',
+    daysPerWeek: 4,
+    recommendedWeeks: 10,
+    focus: 'strength',
+    bestFor: 'Intermediate–Advanced · Chasing squat/bench/press numbers',
+    days: [
+      {
+        label: 'Squat',
+        exercises: [
+          ex('Barbell Back Squat',   'Quads',      5, 1, 3,  1),
+          ex('Romanian Deadlift',    'Hamstrings', 4, 4, 6,  1),
+          ex('Leg Extension',        'Quads',      3, 6, 10, 2),
+          ex('Standing Calf Raise',  'Calves',     3, 8, 12, 2),
+        ],
+      },
+      {
+        label: 'Bench',
+        exercises: [
+          ex('Barbell Bench Press',     'Chest',     5, 1, 3,  1),
+          ex('Barbell Overhead Press',  'Shoulders', 4, 4, 6,  1),
+          ex('Incline Dumbbell Press',  'Chest',     3, 6, 10, 2),
+          ex('Cable Tricep Pushdown',   'Triceps',   3, 6, 10, 2),
+        ],
+      },
+      {
+        label: 'Deadlift',
+        exercises: [
+          ex('Deadlift',           'Back',    5, 3, 6,  1),
+          ex('Pull-Up',            'Back',    4, 4, 6,  1),
+          ex('Seated Cable Row',   'Back',    3, 6, 10, 2),
+          ex('EZ-Bar Curl',        'Biceps',  3, 6, 10, 2),
+        ],
+      },
+      {
+        label: 'Overhead Press',
+        exercises: [
+          ex('Barbell Overhead Press', 'Shoulders', 5, 1, 3,  1),
+          ex('Front Squat',            'Quads',     4, 4, 6,  1),
+          ex('Barbell Hip Thrust',     'Glutes',    3, 6, 10, 2),
+          ex('Skull Crusher',          'Triceps',   3, 6, 10, 2),
+        ],
+      },
+    ],
+  },
 ];
 
 export function getEquipmentForTemplateExercise(name: string): string {
