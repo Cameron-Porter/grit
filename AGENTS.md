@@ -144,6 +144,64 @@ Always run the rules suite before committing any change to `src/rules/` or `src/
 
 ---
 
+## Definition of Done
+
+A task is not complete until all of the following are true. Do not report a task as finished until every item is checked.
+
+### 1. Tests pass
+
+Run the full suite and confirm zero failures:
+
+```bash
+npx jest --no-coverage
+```
+
+If touching `src/rules/` or `src/data/slotRoleConfig.ts`, also run:
+
+```bash
+npx jest --testPathPattern="rules" --verbose
+```
+
+If a test fails because of a legitimate intentional change, update the test and document why in a comment. Never skip or delete a test to make the suite green.
+
+### 2. New behavior has test coverage
+
+Every change that alters observable behavior needs at least one test that would fail if the change were reverted. This includes:
+
+- New API functions or modified query logic → test in `src/api/__tests__/`
+- New rules engine parameters or doctrine → test in `__tests__/rules/`
+- New auth guards or error paths → test the unauthenticated/error case explicitly
+- New store actions → test in `src/store/__tests__/`
+
+If a change cannot be unit tested (UI-only, animation, native behaviour), document why in the PR description. Do not silently skip coverage.
+
+### 3. React Native / iOS modal and animation safety
+
+Before shipping any UI change that involves modals, bottom sheets, or transitions, verify:
+
+- **No two Modals open simultaneously.** iOS cannot present a new `<Modal>` while another is still animating out. If a button press closes one modal and opens another, delay the second by at least 250ms (the `BottomSheet` close animation is ~220ms). Use `setTimeout(() => setNextModal(value), 250)` at the call site.
+- **Reanimated `useAnimatedStyle` always returns explicit values.** Returning `{}` does not clear a previously set property. Always return `{ backgroundColor: 'transparent' }` instead of `{}` when resetting color.
+- **Shared values are cleared only after animations complete.** If a shared value controls color or position, clear it in the `withTiming`/`withSpring` callback (`(finished) => { 'worklet'; if (finished) sharedValue.value = 0; }`), not before.
+
+### 4. Supabase query safety
+
+Before shipping any Supabase query change, verify:
+
+- **`.single()` is never used for "0 or 1 row" queries.** Use `.maybeSingle()`. `.single()` returns 406 when zero rows exist.
+- **Auth guard is present on every read function.** Call `getUserId()` at the top of any function that queries user data; return early if null. Do not rely on RLS alone — unauthenticated requests cause 406 logs and empty results that look like real data.
+- **No `?? 'Barbell'` or similar equipment fallbacks.** Equipment must come from `ExerciseRow.equipment` (Supabase) at selection time, stored on `ExerciseSlot.equipment`, and read from there at save time.
+
+### 5. Error handling is visible
+
+Silent failures are bugs. Every async operation that writes user data must either:
+
+- Show a user-visible error (Alert, inline message) on failure, **and**
+- Roll back any partial state (e.g., delete a partially-created program if exercise inserts fail)
+
+Never leave a `catch` block that only resets a loading spinner without informing the user.
+
+---
+
 ## Agent Behavior
 
 ### Before touching `src/rules/`
@@ -152,9 +210,13 @@ Always run the rules suite before committing any change to `src/rules/` or `src/
 2. Confirm no existing tag contradicts the intended change.
 3. If adding a numeric parameter, identify the source citation before writing code.
 
-### Before committing rules changes
+### Before reporting any task complete
 
-Run `npx jest --testPathPattern="rules"` and confirm zero failures. If a test fails due to a legitimate doctrine change (e.g., rep ranges shifted), update the test to match the new doctrine and document why in the test comment.
+1. Run `npx jest --no-coverage` and confirm zero failures.
+2. Confirm new behavior has test coverage (see Definition of Done §2).
+3. If the change touches UI with modals or animations, confirm modal sequencing is safe (§3).
+4. If the change touches Supabase, confirm `.maybeSingle()` and auth guards are in place (§4).
+5. Confirm all error paths are visible to the user (§5).
 
 ### Sub-agent usage
 
