@@ -101,7 +101,7 @@ export default function ActiveWorkout() {
   const [prPopup, setPrPopup] = useState<PRState | null>(null);
   const [activeSetData, setActiveSetData] = useState<{ exerciseId: string; setIndex: number } | null>(null);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
-  const [replacePending, setReplacePending] = useState<{ targetId: string; name: string; muscle: string; equipment: string } | null>(null);
+  const [replacePending, setReplacePending] = useState<{ targetId: string; name: string; muscle: string; equipment: string; logMode?: 'time' } | null>(null);
   const [replacePersist, setReplacePersist] = useState(false);
 
   // Idle state
@@ -395,7 +395,7 @@ export default function ActiveWorkout() {
     setReplacePending(null);
     setReplacePersist(false);
 
-    replaceExercise(targetId, pending.name, pending.muscle, pending.equipment);
+    replaceExercise(targetId, pending.name, pending.muscle, pending.equipment, pending.logMode);
 
     if (persist && activeProgramDayId && oldExercise) {
       try {
@@ -688,7 +688,7 @@ export default function ActiveWorkout() {
       <ExercisePicker
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        onSelect={(name, muscleGroup, equipment) => addExercise(name, muscleGroup, equipment)}
+        onSelect={(name, muscleGroup, equipment, logMode) => addExercise(name, muscleGroup, equipment, logMode)}
       />
 
       <ExerciseMenuModal
@@ -756,9 +756,9 @@ export default function ActiveWorkout() {
       <ExercisePicker
         visible={!!replaceTargetId && !replacePending}
         onClose={() => setReplaceTargetId(null)}
-        onSelect={(name, muscle, equipment) => {
+        onSelect={(name, muscle, equipment, logMode) => {
           if (!replaceTargetId) return;
-          setReplacePending({ targetId: replaceTargetId, name, muscle, equipment });
+          setReplacePending({ targetId: replaceTargetId, name, muscle, equipment, logMode });
           setReplacePersist(false);
         }}
       />

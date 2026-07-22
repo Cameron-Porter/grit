@@ -142,7 +142,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           ],
         })),
 
-      addExercise: (name, muscleGroup, equipment = 'Bodyweight') => {
+      addExercise: (name, muscleGroup, equipment = 'Bodyweight', logMode) => {
         set((state) => {
           // Prefer stored map; fall back to inferring from an existing exercise of the same muscle group
           const musclePriority: 'emphasize' | 'grow' | 'maintain' | undefined =
@@ -153,7 +153,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           return {
             exercises: [
               ...state.exercises,
-              { id: uuidv4(), name, muscleGroup, equipment, musclePriority, sets: [] } as Exercise,
+              { id: uuidv4(), name, muscleGroup, equipment, musclePriority, logMode, sets: [] } as Exercise,
             ],
           };
         });
@@ -169,11 +169,11 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
 
-      replaceExercise: (exerciseId, newName, newMuscleGroup, newEquipment) => {
+      replaceExercise: (exerciseId, newName, newMuscleGroup, newEquipment, newLogMode) => {
         set((state) => ({
           exercises: state.exercises.map((ex) =>
             ex.id === exerciseId
-              ? { ...ex, name: newName, muscleGroup: newMuscleGroup, equipment: newEquipment }
+              ? { ...ex, name: newName, muscleGroup: newMuscleGroup, equipment: newEquipment, logMode: newLogMode }
               : ex,
           ),
         }));

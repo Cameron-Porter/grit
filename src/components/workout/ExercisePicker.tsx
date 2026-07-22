@@ -21,7 +21,7 @@ import { useColors } from '../../utils/useColors';
 interface ExercisePickerProps {
   visible: boolean;
   onClose: () => void;
-  onSelect: (name: string, muscleGroup: string, equipment: string) => void;
+  onSelect: (name: string, muscleGroup: string, equipment: string, logMode?: 'time') => void;
 }
 
 const MUSCLE_FILTERS = [
@@ -41,7 +41,7 @@ const CATEGORY_ORDER = [
 
 interface CustomFormProps {
   prefillName: string;
-  onSubmit: (ex: { name: string; muscle: string; equipment: string }) => void;
+  onSubmit: (ex: { name: string; muscle: string; equipment: string; logMode?: 'time' }) => void;
   onCancel: () => void;
 }
 
@@ -60,6 +60,7 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
   const [name, setName] = useState(prefillName);
   const [muscle, setMuscle] = useState('');
   const [equipment, setEquipment] = useState('Barbell');
+  const [logMode, setLogMode] = useState<'reps' | 'time'>('reps');
   const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = name.trim().length > 1 && muscle.length > 0;
@@ -67,12 +68,13 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setSubmitting(true);
+    const mode = logMode === 'time' ? 'time' : undefined;
     try {
-      await createCustomExercise(name.trim(), muscle, equipment);
+      await createCustomExercise(name.trim(), muscle, equipment, mode);
     } catch {
       // Non-fatal — the exercise is still passed to the workout below
     }
-    onSubmit({ name: name.trim(), muscle, equipment });
+    onSubmit({ name: name.trim(), muscle, equipment, logMode: mode });
     setSubmitting(false);
   };
 
@@ -150,6 +152,55 @@ function CustomExerciseForm({ prefillName, onSubmit, onCancel }: CustomFormProps
                   onPress={() => setEquipment(e)}
                 />
               ))}
+            </View>
+          </View>
+
+          {/* Tracking */}
+          <View>
+            <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 8, textTransform: 'uppercase' }}>
+              Tracking
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable
+                onPress={() => setLogMode('reps')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 6,
+                  backgroundColor: logMode === 'reps' ? `${colors.primary}20` : colors.surface,
+                  borderWidth: 1,
+                  borderColor: logMode === 'reps' ? colors.primary : 'transparent',
+                }}
+              >
+                <MaterialCommunityIcons name="counter" size={16} color={logMode === 'reps' ? colors.primary : colors.muted} />
+                <Text style={{ color: logMode === 'reps' ? colors.primary : colors.muted, fontWeight: '600', fontSize: 14 }}>
+                  Reps
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setLogMode('time')}
+                style={{
+                  flex: 1,
+                  paddingVertical: 12,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 6,
+                  backgroundColor: logMode === 'time' ? `${colors.primary}20` : colors.surface,
+                  borderWidth: 1,
+                  borderColor: logMode === 'time' ? colors.primary : 'transparent',
+                }}
+              >
+                <MaterialCommunityIcons name="timer-outline" size={16} color={logMode === 'time' ? colors.primary : colors.muted} />
+                <Text style={{ color: logMode === 'time' ? colors.primary : colors.muted, fontWeight: '600', fontSize: 14 }}>
+                  Time (seconds)
+                </Text>
+              </Pressable>
             </View>
           </View>
 
@@ -276,8 +327,8 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
       <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setShowCustomForm(false)}>
         <CustomExerciseForm
           prefillName={searchQuery}
-          onSubmit={({ name, muscle, equipment }) => {
-            onSelect(name, muscle, equipment);
+          onSubmit={({ name, muscle, equipment, logMode }) => {
+            onSelect(name, muscle, equipment, logMode);
             setShowCustomForm(false);
             setSearchQuery('');
             onClose();
@@ -401,7 +452,7 @@ export default function ExercisePicker({ visible, onClose, onSelect }: ExerciseP
                   backgroundColor: isRec ? `${colors.primary}08` : undefined,
                 })}
                 onPress={() => {
-                  onSelect(item.name, item.muscle_group ?? '', item.equipment ?? 'Bodyweight');
+                  onSelect(item.name, item.muscle_group ?? '', item.equipment ?? 'Bodyweight', item.log_mode ?? undefined);
                   setSearchQuery('');
                   onClose();
                 }}

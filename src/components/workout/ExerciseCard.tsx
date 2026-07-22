@@ -213,7 +213,7 @@ export default function ExerciseCard({
         const weeklySets = muscle && weeklySetsByMuscle ? (weeklySetsByMuscle[muscle] ?? 0) : 0;
         const volumeInfo = muscle ? classifyVolume(muscle, weeklySets) : null;
 
-        const isTimeBased = getExerciseByName(exercise.name)?.logMode === 'time';
+        const isTimeBased = exercise.logMode === 'time' || getExerciseByName(exercise.name)?.logMode === 'time';
 
         return (
           <View key={exercise.id}>

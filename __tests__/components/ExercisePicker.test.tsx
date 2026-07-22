@@ -153,6 +153,6 @@ describe('ExercisePicker — render', () => {
     });
     await waitFor(() => screen.getByText('Barbell Bench Press'));
     fireEvent.press(screen.getByText('Barbell Bench Press'));
-    expect(onSelect).toHaveBeenCalledWith('Barbell Bench Press', 'Chest', 'Barbell');
+    expect(onSelect).toHaveBeenCalledWith('Barbell Bench Press', 'Chest', 'Barbell', undefined);
   });
 });

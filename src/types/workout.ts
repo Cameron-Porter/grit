@@ -27,6 +27,7 @@ export type Exercise = {
   equipment: string;
   note?: string;
   painWarning?: string;
+  logMode?: 'time';
 };
 
 export type Props = {
@@ -70,7 +71,7 @@ export type WorkoutState = {
   queueFeedback: (muscleGroup: string, jointPain: string, pump: string, volume: string) => void;
   queueSoreness: (muscleGroup: string, soreness: string) => void;
 
-  addExercise: (name: string, muscleGroup?: string, equipment?: string) => void;
+  addExercise: (name: string, muscleGroup?: string, equipment?: string, logMode?: 'time') => void;
   addSet: (exerciseId: string, defaultWeight?: number, defaultRir?: number) => void;
 
   updateSet: (
@@ -112,6 +113,6 @@ export type WorkoutState = {
     programId?: string | null,
     musclePriorities?: Record<string, 'emphasize' | 'grow' | 'maintain'> | null,
   ) => void;
-  replaceExercise: (exerciseId: string, newName: string, newMuscleGroup: string, newEquipment: string) => void;
+  replaceExercise: (exerciseId: string, newName: string, newMuscleGroup: string, newEquipment: string, newLogMode?: 'time') => void;
   updateExercisePriorities: (priorities: Record<string, 'emphasize' | 'grow' | 'maintain'>) => void;
 };

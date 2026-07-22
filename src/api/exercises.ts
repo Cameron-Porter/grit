@@ -13,6 +13,7 @@ export interface ExerciseRow {
   is_custom: boolean;
   description: string | null;
   movement_category?: string | null;
+  log_mode?: 'time' | null;
 }
 
 export async function getExercises(): Promise<ExerciseRow[]> {
@@ -29,11 +30,12 @@ export async function createCustomExercise(
   name: string,
   muscle_group: string,
   equipment: string,
+  log_mode?: 'time',
 ): Promise<ExerciseRow> {
   const userId = await getUserId();
   const { data, error } = await supabase
     .from("exercises")
-    .insert({ name, muscle_group, equipment, is_custom: true, user_id: userId })
+    .insert({ name, muscle_group, equipment, is_custom: true, user_id: userId, log_mode: log_mode ?? null })
     .select()
     .single();
   if (error) throw error;
