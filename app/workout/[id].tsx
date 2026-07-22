@@ -26,15 +26,16 @@ export default function WorkoutDetail() {
     const [{ data: sets }, { data: workoutRows }] = await Promise.all([
       supabase
         .from('workout_sets')
-        .select('exercise_name, muscle_group, muscle_priority, equipment, note, weight, reps, set_index, completed')
+        .select('exercise_name, muscle_group, muscle_priority, equipment, note, weight, reps, exercise_index, set_index, completed')
         .eq('workout_id', id)
+        .order('exercise_index', { ascending: true, nullsFirst: false })
         .order('exercise_name')
         .order('set_index'),
       supabase
         .from('workouts')
         .select('completed_at')
         .eq('id', id)
-        .single(),
+        .maybeSingle(),
     ]);
 
     setCompletedAt(workoutRows?.completed_at ?? null);
