@@ -12,8 +12,9 @@ import {
   PlusJakartaSans_600SemiBold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AppState, Text, useWindowDimensions, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
 
 (Text as any).defaultProps = (Text as any).defaultProps ?? {};
 (Text as any).defaultProps.style = { fontFamily: 'Inter_400Regular' };
@@ -21,7 +22,7 @@ import { drainPendingWorkouts } from '../src/api/pendingWorkouts';
 import { getBodyWeight, getSettings } from '../src/api/userProfile';
 import { supabase } from '../src/api/supabase';
 import { useProfileStore } from '../src/store/useProfileStore';
-import { hasWorkoutReminders, scheduleWorkoutReminders } from '../src/lib/notifications';
+import { hasWorkoutReminders, rescheduleWithStreak, scheduleRemindersFromHistory } from '../src/lib/notifications';
 import { useWorkoutStore } from '../src/store/useWorkoutStore';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -75,6 +76,7 @@ function LayoutInner() {
   const { hasPremiumAccess, loading: entitlementsLoading } = useEntitlements();
   const hydrateBodyWeight = useProfileStore((s) => s.hydrateBodyWeight);
   const hydrateSettings = useProfileStore((s) => s.hydrateSettings);
+  const [pendingNotifRoute, setPendingNotifRoute] = useState<string | null>(null);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -105,6 +107,32 @@ function LayoutInner() {
     return () => sub.remove();
   }, []);
 
+  // Handle taps on workout reminder notifications.
+  // On cold start, getLastNotificationResponseAsync() catches the tap that launched the app.
+  // While running, addNotificationResponseReceivedListener catches new taps.
+  useEffect(() => {
+    function handleNotifResponse(response: Notifications.NotificationResponse) {
+      const data = response.notification.request.content.data as any;
+      if (data?.type !== 'workout_reminder') return;
+      const { activeWorkoutId } = useWorkoutStore.getState();
+      setPendingNotifRoute(activeWorkoutId ? '/workout' : '/(tabs)');
+    }
+
+    const sub = Notifications.addNotificationResponseReceivedListener(handleNotifResponse);
+    Notifications.getLastNotificationResponseAsync()
+      .then((r) => { if (r) handleNotifResponse(r); })
+      .catch(() => {});
+
+    return () => sub.remove();
+  }, []);
+
+  // Navigate once auth + entitlements are resolved so the router is ready.
+  useEffect(() => {
+    if (!pendingNotifRoute || !initialized || !user) return;
+    router.push(pendingNotifRoute as any);
+    setPendingNotifRoute(null);
+  }, [pendingNotifRoute, initialized, user]);
+
   // Fetch body weight and settings from Supabase whenever the user logs in so they sync across devices
   useEffect(() => {
     if (!user) return;
@@ -117,7 +145,12 @@ function LayoutInner() {
       // If the server says reminders should be on but this device has none, reschedule
       if (settings.workoutRemindersEnabled) {
         const already = await hasWorkoutReminders().catch(() => false);
-        if (!already) scheduleWorkoutReminders([1, 3, 5], 8).catch(() => {});
+        if (!already) {
+          scheduleRemindersFromHistory(8).catch(() => {});
+        } else {
+          // Refresh notification body with the current streak/missed status each time the app opens.
+          rescheduleWithStreak().catch(() => {});
+        }
       }
     }).catch(() => {});
   }, [user?.id]);

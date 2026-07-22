@@ -287,6 +287,62 @@ export async function getTemplateDayExercises(programId: string, dayNumber: numb
   return getProgramExercises(templateDay.id);
 }
 
+/**
+ * Returns the day labels for the active program in day_number order (Week 1 template).
+ * e.g. ["Push", "Pull", "Legs"] for a 3-day PPL program.
+ * Returns [] if no active program exists.
+ */
+export async function getActiveProgramDayLabels(): Promise<string[]> {
+  const programs = await getPrograms();
+  const current = programs.find((p) => p.is_current);
+  if (!current) return [];
+
+  const days = await getProgramDays(current.id);
+  return days
+    .filter((d) => d.week_number === 1)
+    .sort((a, b) => a.day_number - b.day_number)
+    .map((d) => d.label ?? '')
+    .filter(Boolean);
+}
+
+/**
+ * Infers which weekday each program day falls on from the active program's
+ * completion history. Returns one entry per day_number that has been completed
+ * at least once, using the most recent completion to determine the weekday.
+ *
+ * Used to schedule workout reminder notifications on the user's actual training
+ * days instead of a hardcoded schedule.
+ */
+export async function getActiveProgramTrainingDays(): Promise<{ weekday: number; label?: string }[]> {
+  const programs = await getPrograms();
+  const current = programs.find((p) => p.is_current);
+  if (!current) return [];
+
+  const allDays = await getProgramDays(current.id);
+  const week1 = allDays
+    .filter((d) => d.week_number === 1)
+    .sort((a, b) => a.day_number - b.day_number);
+
+  // For each day_number, find the most recently completed weekday
+  const latestByDayNum = new Map<number, { date: string; weekday: number }>();
+  for (const day of allDays) {
+    if (!day.completed || !day.completed_at) continue;
+    const weekday = new Date(day.completed_at).getDay();
+    const existing = latestByDayNum.get(day.day_number);
+    if (!existing || day.completed_at > existing.date) {
+      latestByDayNum.set(day.day_number, { date: day.completed_at, weekday });
+    }
+  }
+
+  return week1
+    .map((d) => {
+      const info = latestByDayNum.get(d.day_number);
+      if (!info) return null;
+      return { weekday: info.weekday, label: d.label ?? undefined };
+    })
+    .filter(Boolean) as { weekday: number; label?: string }[];
+}
+
 export async function getNextProgramWorkout(): Promise<{
   program: Program;
   day: ProgramDay;

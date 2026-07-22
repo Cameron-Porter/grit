@@ -24,7 +24,7 @@ import { confirm } from '../../src/utils/confirm';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
 import {
-  scheduleWorkoutReminders,
+  scheduleRemindersFromHistory,
   cancelWorkoutReminders,
 } from '../../src/lib/notifications';
 
@@ -338,7 +338,7 @@ export default function ProfileAndSettings() {
                     await cancelWorkoutReminders();
                     setWorkoutRemindersEnabled(false);
                   } else {
-                    await scheduleWorkoutReminders([1, 3, 5], 8);
+                    await scheduleRemindersFromHistory(8);
                     setWorkoutRemindersEnabled(true);
                   }
                 }}

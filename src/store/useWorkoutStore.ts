@@ -402,6 +402,15 @@ export const useWorkoutStore = create<WorkoutState>()(
           // drainPendingWorkouts() will retry the next time the app foregrounds.
           const { drainPendingWorkouts } = await import('../api/pendingWorkouts');
           const synced = await drainPendingWorkouts();
+
+          // Refresh workout reminder content with the updated streak (fire-and-forget).
+          const { workoutRemindersEnabled } = useProfileStore.getState();
+          if (workoutRemindersEnabled) {
+            import('../lib/notifications').then(({ rescheduleWithStreak }) => {
+              rescheduleWithStreak().catch(() => {});
+            });
+          }
+
           return { savedOffline: synced === 0 };
         } catch (error) {
           Sentry.captureException(error, { tags: { context: 'finishWorkout' } });

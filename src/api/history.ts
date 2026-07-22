@@ -283,3 +283,65 @@ export async function getLastMuscleGroupFeedback(
   }
   return result;
 }
+
+/**
+ * Returns the number of consecutive days (ending today) on which the user
+ * completed at least one workout. Used to personalise reminder notifications.
+ */
+export async function getWorkoutStreak(): Promise<number> {
+  // RLS ensures this only returns the authenticated user's workouts.
+  const { data } = await supabase
+    .from('workouts')
+    .select('completed_at')
+    .order('completed_at', { ascending: false })
+    .limit(500);
+
+  if (!data?.length) return 0;
+
+  const dates = new Set(data.map((w) => w.completed_at.slice(0, 10)));
+
+  let streak = 0;
+  const today = new Date();
+
+  for (let i = 0; i < 500; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    if (dates.has(key)) {
+      streak++;
+    } else if (i === 0) {
+      // Today has no workout yet — start counting from yesterday
+      continue;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
+ * Returns true if the most recent past training day (within 14 days) had no
+ * completed workout logged. Used to show "missed session" copy in notifications.
+ */
+export async function hasMissedRecentWorkout(trainingWeekdays: number[]): Promise<boolean> {
+  if (!trainingWeekdays.length) return false;
+
+  const today = new Date();
+  for (let daysBack = 1; daysBack <= 14; daysBack++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - daysBack);
+    if (!trainingWeekdays.includes(d.getDay())) continue;
+
+    const dateKey = d.toISOString().slice(0, 10);
+    const { data } = await supabase
+      .from('workouts')
+      .select('id')
+      .gte('completed_at', `${dateKey}T00:00:00.000Z`)
+      .lte('completed_at', `${dateKey}T23:59:59.999Z`)
+      .limit(1);
+
+    return !(data?.length ?? 0);
+  }
+  return false;
+}
