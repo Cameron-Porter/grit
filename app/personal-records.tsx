@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getExercises } from '../src/api/exercises';
 import { createManualPR, getAllPRs, PersonalRecord } from '../src/api/personalRecords';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
+import { BOTTOM_TAB_HEIGHT } from '../src/utils/constants';
 import { useColors } from '../src/utils/useColors';
 
 export default function PersonalRecords() {
@@ -80,7 +81,7 @@ export default function PersonalRecords() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: BOTTOM_TAB_HEIGHT + insets.bottom + 24 }}>
         {prs.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: 60 }}>
             <Text style={{ fontSize: 40 }}>ðŸ†</Text>
