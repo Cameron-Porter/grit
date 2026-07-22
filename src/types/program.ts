@@ -122,6 +122,9 @@ export interface ExerciseDefinition {
   hardRirFloor?: number;
   // HV-013/HV-020: rule-engine tags for intra-session compatibility checks.
   exerciseTags?: string[];
+  // 'time' = the set is measured in seconds (isometric holds, timed carries).
+  // Omit for rep-counted exercises (the default).
+  logMode?: 'time';
 }
 
 // ─── Slot template — defines what type of exercise belongs in each slot ───────

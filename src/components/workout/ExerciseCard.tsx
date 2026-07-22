@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { getExerciseSessionHistory, HistorySessionEntry } from '../../api/history';
+import { getExerciseByName } from '../../data/exerciseDatabase';
 import { useProfileStore } from '../../store/useProfileStore';
 import { Exercise, WorkoutSet } from '../../types/workout';
 import { Badge } from '../Badge';
@@ -12,6 +13,7 @@ import { MuscleColors } from '../../utils/tokens';
 import { useColors } from '../../utils/useColors';
 import { FontFamily, Radius, Shadow, Space, TypeScale } from '../../utils/tokens';
 import { classifyVolume } from '../../utils/volumeLandmarks';
+import HoldTimerModal from './HoldTimerModal';
 import NoteModal from './NoteModal';
 import PriorityBars from './PriorityBars';
 import SetRow from './SetRow';
@@ -178,6 +180,7 @@ export default function ExerciseCard({
 
   const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
+  const [timerTarget, setTimerTarget] = useState<{ exerciseId: string; setIndex: number } | null>(null);
 
   useEffect(() => {
     if (forceHistoryId) {
@@ -209,6 +212,8 @@ export default function ExerciseCard({
         const muscle = exercise.muscleGroup;
         const weeklySets = muscle && weeklySetsByMuscle ? (weeklySetsByMuscle[muscle] ?? 0) : 0;
         const volumeInfo = muscle ? classifyVolume(muscle, weeklySets) : null;
+
+        const isTimeBased = getExerciseByName(exercise.name)?.logMode === 'time';
 
         return (
           <View key={exercise.id}>
@@ -279,7 +284,7 @@ export default function ExerciseCard({
             <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>
               <View style={{ width: 40 }} />
               <Text style={[styles.colLabel, { color: colors.textSecondary }]}>WEIGHT</Text>
-              <Text style={[styles.colLabel, { color: colors.textSecondary }]}>REPS</Text>
+              <Text style={[styles.colLabel, { color: colors.textSecondary }]}>{isTimeBased ? 'SECS' : 'REPS'}</Text>
               <Text style={[styles.colLabelRight, { color: colors.textSecondary }]}>LOG</Text>
             </View>
 
@@ -306,6 +311,7 @@ export default function ExerciseCard({
                   }}
                   onRemove={() => onRemoveSet(exercise.id, setIndex)}
                   onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
+                  onTimerPress={isTimeBased ? () => setTimerTarget({ exerciseId: exercise.id, setIndex }) : undefined}
                 />
               ));
             })()}
@@ -365,6 +371,17 @@ export default function ExerciseCard({
           }}
         />
       )}
+
+      <HoldTimerModal
+        visible={timerTarget !== null}
+        onLog={(seconds) => {
+          if (timerTarget) {
+            onUpdateSet(timerTarget.exerciseId, timerTarget.setIndex, { reps: seconds });
+          }
+          setTimerTarget(null);
+        }}
+        onClose={() => setTimerTarget(null)}
+      />
     </View>
   );
 }

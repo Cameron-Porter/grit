@@ -25,6 +25,7 @@ interface SetRowProps {
   onComplete: (autoReps?: number) => void;
   onRemove: () => void;
   onMenuPress: () => void;
+  onTimerPress?: () => void;
 }
 
 function MenuIcon({ color }: { color: string }) {
@@ -53,6 +54,7 @@ export default function SetRow({
   onComplete,
   onRemove,
   onMenuPress,
+  onTimerPress,
 }: SetRowProps) {
   const colors = useColors();
   const translateX = useSharedValue(0);
@@ -205,35 +207,46 @@ export default function SetRow({
 
             {/* Reps */}
             <View style={styles.inputCell}>
-              <TextInput
-                value={String(set.reps || '')}
-                keyboardType="number-pad"
-                placeholder={
-                  set.rir !== undefined
-                    ? `${set.rir} RIR`
-                    : set.targetReps ? String(set.targetReps) : '0'
-                }
-                placeholderTextColor={
-                  rirError
-                    ? colors.error
-                    : set.rir !== undefined || set.targetReps
-                    ? colors.primary
-                    : colors.placeholder
-                }
-                onChangeText={(t) => {
-                  const clean = t.replace(/[^0-9]/g, '');
-                  onRepsChange(parseInt(clean, 10) || 0);
-                }}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.inputBg,
-                    color: colors.text,
-                    borderWidth: rirError ? 1 : 0,
-                    borderColor: rirError ? colors.error : 'transparent',
-                  },
-                ]}
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {!!onTimerPress && (
+                  isActive && !set.completed && !set.skipped ? (
+                    <Pressable onPress={onTimerPress} hitSlop={12} style={{ marginRight: 4 }}>
+                      <MaterialCommunityIcons name="timer-outline" size={19} color={colors.primary} />
+                    </Pressable>
+                  ) : (
+                    <View style={{ width: 23 }} />
+                  )
+                )}
+                <TextInput
+                  value={String(set.reps || '')}
+                  keyboardType="number-pad"
+                  placeholder={
+                    set.rir !== undefined
+                      ? `${set.rir} RIR`
+                      : set.targetReps ? String(set.targetReps) : '0'
+                  }
+                  placeholderTextColor={
+                    rirError
+                      ? colors.error
+                      : set.rir !== undefined || set.targetReps
+                      ? colors.primary
+                      : colors.placeholder
+                  }
+                  onChangeText={(t) => {
+                    const clean = t.replace(/[^0-9]/g, '');
+                    onRepsChange(parseInt(clean, 10) || 0);
+                  }}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.inputBg,
+                      color: colors.text,
+                      borderWidth: rirError ? 1 : 0,
+                      borderColor: rirError ? colors.error : 'transparent',
+                    },
+                  ]}
+                />
+              </View>
             </View>
 
             {/* Check */}
