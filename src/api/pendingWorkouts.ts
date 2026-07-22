@@ -100,7 +100,7 @@ export async function drainPendingWorkouts(): Promise<number> {
         continue;
       }
 
-      const completedSets = payload.exercises.flatMap((ex) =>
+      const completedSets = payload.exercises.flatMap((ex, exerciseIndex) =>
         ex.sets
           .filter((s) => s.completed)
           .map((s, idx) => ({
@@ -110,6 +110,7 @@ export async function drainPendingWorkouts(): Promise<number> {
             muscle_priority: ex.musclePriority,
             equipment: ex.equipment,
             note: ex.note,
+            exercise_index: exerciseIndex,
             set_index: idx,
             reps: s.reps,
             weight: s.weight,

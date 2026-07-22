@@ -208,8 +208,9 @@ export async function getWorkoutForProgramDay(programDayId: string): Promise<Wor
   const [{ data: sets }, { data: feedback }] = await Promise.all([
     supabase
       .from("workout_sets")
-      .select("exercise_name, muscle_group, equipment, note, weight, reps, set_index, completed")
+      .select("exercise_name, muscle_group, equipment, note, weight, reps, exercise_index, set_index, completed")
       .eq("workout_id", workout.id)
+      .order("exercise_index", { ascending: true, nullsFirst: false })
       .order("exercise_name")
       .order("set_index"),
     supabase
