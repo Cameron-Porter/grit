@@ -217,7 +217,7 @@ export default function ExerciseCard({
             )}
 
             {/* Muscle group label */}
-            {exercise.muscleGroup && (
+            {!!exercise.muscleGroup && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: Space[2], marginBottom: 3 }}>
                 {exercise.musclePriority && <PriorityBars priority={exercise.musclePriority} color={MuscleColors[exercise.muscleGroup] ?? colors.primary} />}
                 <Text style={[TypeScale.cap, { color: MuscleColors[exercise.muscleGroup] ?? colors.primary, letterSpacing: 1.2, textTransform: 'uppercase' }]}>
@@ -254,7 +254,7 @@ export default function ExerciseCard({
             </View>
 
             {/* Pain warning */}
-            {exercise.painWarning && (
+            {!!exercise.painWarning && (
               <View style={[styles.inlineAlert, { backgroundColor: `${colors.warning}18` }]}>
                 <Icon ios="exclamationmark.triangle" android="alert-outline" size={13} color={colors.warning} />
                 <Text style={[TypeScale.b2, { color: colors.warning, flex: 1 }]}>{exercise.painWarning}</Text>
@@ -262,7 +262,7 @@ export default function ExerciseCard({
             )}
 
             {/* Pinned note */}
-            {exercise.note && (
+            {!!exercise.note && (
               <Pressable
                 onPress={() => setNoteExerciseId(exercise.id)}
                 style={[styles.inlineAlert, { backgroundColor: colors.surface2 }]}

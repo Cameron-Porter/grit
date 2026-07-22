@@ -31,6 +31,7 @@ interface ProfileState {
   experienceLevel: ExperienceLevel;
   theme: Theme;
   workoutRemindersEnabled: boolean;
+  timerSoundEnabled: boolean;
   setBodyWeight: (weight: number) => void;
   hydrateBodyWeight: (weight: number) => void;
   setAutoMatchWeight: (value: boolean) => void;
@@ -39,6 +40,7 @@ interface ProfileState {
   setExperienceLevel: (level: ExperienceLevel) => void;
   setTheme: (theme: Theme) => void;
   setWorkoutRemindersEnabled: (value: boolean) => void;
+  setTimerSoundEnabled: (value: boolean) => void;
   hydrateSettings: (settings: RemoteSettings) => void;
   reset: () => void;
 }
@@ -54,6 +56,7 @@ export const useProfileStore = create<ProfileState>()(
       experienceLevel: 'intermediate',
       theme: 'dark',
       workoutRemindersEnabled: false,
+      timerSoundEnabled: true,
       setBodyWeight: (weight) => {
         set((state) => {
           const today = new Date().toISOString().split('T')[0];
@@ -95,6 +98,7 @@ export const useProfileStore = create<ProfileState>()(
         set({ workoutRemindersEnabled: value });
         upsertSettings({ workoutRemindersEnabled: value }).catch(() => {});
       },
+      setTimerSoundEnabled: (value) => set({ timerSoundEnabled: value }),
       hydrateSettings: (settings) => set({
         autoMatchWeight: settings.autoMatchWeight,
         usePreferredEquipment: settings.usePreferredEquipment,
@@ -110,6 +114,7 @@ export const useProfileStore = create<ProfileState>()(
         preferredEquipment: ['Barbell', 'Dumbbell', 'Cable', 'Bodyweight'],
         experienceLevel: 'intermediate',
         workoutRemindersEnabled: false,
+        timerSoundEnabled: true,
       }),
     }),
     {

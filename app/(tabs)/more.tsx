@@ -52,6 +52,7 @@ export default function ProfileAndSettings() {
     preferredEquipment, setPreferredEquipment,
     theme, setTheme,
     workoutRemindersEnabled, setWorkoutRemindersEnabled,
+    timerSoundEnabled, setTimerSoundEnabled,
   } = useProfileStore();
 
   const { isProMember: rcIsProMember, isTrialing, customerInfo } = useRevenueCatContext();
@@ -342,6 +343,20 @@ export default function ProfileAndSettings() {
                   }
                 }}
               />
+            </View>
+          </View>
+
+          {/* Rest timer sound */}
+          <View style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12 }}>Rest Timer</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, paddingRight: 16 }}>
+                <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 }}>Timer sound</Text>
+                <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17 }}>
+                  Play a sound when your rest period ends.
+                </Text>
+              </View>
+              <Toggle value={timerSoundEnabled} onToggle={() => setTimerSoundEnabled(!timerSoundEnabled)} />
             </View>
           </View>
 

@@ -719,20 +719,32 @@ export default function ActiveWorkout() {
         onSkipSets={() => activeExerciseId && skipSets(activeExerciseId)}
         onNewNote={() => {
           if (activeExerciseId) {
-            setNoteExerciseId(activeExerciseId);
+            const id = activeExerciseId;
             setActiveExerciseId(null);
+            // Delay until BottomSheet close animation finishes (~220ms) so iOS
+            // doesn't receive two simultaneous modal presentations.
+            setTimeout(() => setNoteExerciseId(id), 250);
           }
         }}
         onJointPain={() => {
-          if (activeExercise?.muscleGroup) {
-            feedbackShownFor.current.add(activeExercise.muscleGroup);
-            setFeedbackMuscle(activeExercise.muscleGroup);
-            setActiveExerciseId(null);
+          if (!activeExercise?.muscleGroup) return;
+          const muscle = activeExercise.muscleGroup;
+          const muscleExercises = exercises.filter((ex) => ex.muscleGroup === muscle);
+          const allDone =
+            muscleExercises.length > 0 &&
+            muscleExercises.every((ex) => ex.sets.length > 0 && ex.sets.every((s) => s.completed || !!s.skipped));
+          if (!allDone) {
+            Alert.alert('Finish your sets first', 'Complete all sets for this muscle group before logging feedback.');
+            return;
           }
+          feedbackShownFor.current.add(muscle);
+          setActiveExerciseId(null);
+          setTimeout(() => setFeedbackMuscle(muscle), 250);
         }}
         onReplace={() => {
-          setReplaceTargetId(activeExerciseId);
+          const id = activeExerciseId;
           setActiveExerciseId(null);
+          setTimeout(() => setReplaceTargetId(id), 250);
         }}
         onViewHistory={() => {
           setHistoryExerciseId(activeExerciseId);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { haptic } from '../utils/haptics';
+import { playTimerSound, preloadTimerSound } from '../utils/timerSound';
 
 export interface RestTimerState {
   active: boolean;
@@ -40,6 +41,7 @@ export function useRestTimer(): [RestTimerState, RestTimerControls] {
     if (remaining <= 0) {
       clear();
       haptic.restTimerDone();
+      playTimerSound();
       setState({ active: false, remaining: 0, total, progress: 1 });
       return;
     }
@@ -53,6 +55,7 @@ export function useRestTimer(): [RestTimerState, RestTimerControls] {
     totalRef.current = seconds;
     setState({ active: true, remaining: seconds, total: seconds, progress: 0 });
     haptic.restTimerStart();
+    preloadTimerSound();
     intervalRef.current = setInterval(tick, 1000);
   }, [tick]);
 
