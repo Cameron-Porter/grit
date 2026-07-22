@@ -18,9 +18,26 @@ jest.mock('../../api/progression', () => ({
   computeAndSaveProgressionTargets: jest.fn().mockResolvedValue(undefined),
 }));
 
+// Covers both the static import (enqueueWorkout, isNetworkError) and the
+// dynamic import (drainPendingWorkouts) used inside finishWorkout.
+jest.mock('../../api/pendingWorkouts', () => ({
+  enqueueWorkout: jest.fn().mockResolvedValue(undefined),
+  drainPendingWorkouts: jest.fn().mockResolvedValue(1),
+  isNetworkError: jest.fn().mockReturnValue(false),
+}));
+
+jest.mock('../../lib/notifications', () => ({
+  rescheduleWithStreak: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock('@sentry/react-native', () => ({
+  captureException: jest.fn(),
+  init: jest.fn(),
+}));
+
 jest.mock('../useProfileStore', () => ({
   useProfileStore: {
-    getState: jest.fn().mockReturnValue({ bodyWeight: 180, experienceLevel: 'intermediate' }),
+    getState: jest.fn().mockReturnValue({ bodyWeight: 180, experienceLevel: 'intermediate', workoutRemindersEnabled: false }),
   },
 }));
 
@@ -29,6 +46,7 @@ jest.mock('../useProfileStore', () => ({
 import { supabase } from '../../api/supabase';
 import { markDayComplete, skipProgramDay } from '../../api/programs';
 import { computeAndSaveProgressionTargets } from '../../api/progression';
+import { enqueueWorkout } from '../../api/pendingWorkouts';
 import { useWorkoutStore } from '../useWorkoutStore';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -533,29 +551,19 @@ describe('finishWorkout — happy path', () => {
     });
   };
 
-  it('inserts a workout row and workout_sets', async () => {
+  it('enqueues a workout payload with exercise and set data', async () => {
     buildCompletedWorkout();
-    const insertMock = jest.fn().mockReturnThis();
-    const chain = {
-      insert: insertMock,
-      select: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      single: jest.fn().mockResolvedValue({ data: {}, error: null }),
-      then: jest.fn().mockResolvedValue({ data: {}, error: null }),
-    };
-    // First from('workouts') returns error: null
-    (supabase.from as jest.Mock)
-      .mockReturnValueOnce({ ...chain, insert: jest.fn().mockResolvedValue({ error: null }) })
-      .mockReturnValueOnce({ ...chain, insert: jest.fn().mockResolvedValue({ error: null }) })
-      .mockReturnValue({ ...chain, insert: jest.fn().mockResolvedValue({ error: null }) });
 
     await act(async () => {
       await useWorkoutStore.getState().finishWorkout();
     });
 
-    expect(supabase.from).toHaveBeenCalledWith('workouts');
-    expect(supabase.from).toHaveBeenCalledWith('workout_sets');
-    expect(markDayComplete).toHaveBeenCalledWith('day-1');
+    expect(enqueueWorkout).toHaveBeenCalledTimes(1);
+    const payload = (enqueueWorkout as jest.Mock).mock.calls[0][0];
+    expect(payload.workoutId).toBeTruthy();
+    expect(payload.programDayId).toBe('day-1');
+    expect(payload.exercises).toHaveLength(1);
+    expect(payload.exercises[0].sets).toHaveLength(2);
   });
 
   it('resets store state after successful save', async () => {
@@ -574,7 +582,7 @@ describe('finishWorkout — happy path', () => {
     expect(isSaving).toBe(false);
   });
 
-  it('calls skipProgramDay when all sets are skipped', async () => {
+  it('enqueues a payload with skipped sets so the drain can handle day-skipping', async () => {
     useWorkoutStore.setState({
       activeWorkoutId: 'wid-2',
       activeProgramDayId: 'day-2',
@@ -597,16 +605,18 @@ describe('finishWorkout — happy path', () => {
       isSaving: false,
     });
 
-    (supabase.from as jest.Mock).mockReturnValue({
-      insert: jest.fn().mockResolvedValue({ error: null }),
-    });
-
     await act(async () => {
       await useWorkoutStore.getState().finishWorkout();
     });
 
-    expect(skipProgramDay).toHaveBeenCalledWith('day-2');
-    expect(markDayComplete).not.toHaveBeenCalled();
+    expect(enqueueWorkout).toHaveBeenCalledTimes(1);
+    const payload = (enqueueWorkout as jest.Mock).mock.calls[0][0];
+    expect(payload.programDayId).toBe('day-2');
+    // All sets skipped — drainPendingWorkouts will call skipProgramDay rather than markDayComplete
+    const allSkipped = payload.exercises.every((ex: any) =>
+      ex.sets.every((s: any) => !s.completed)
+    );
+    expect(allSkipped).toBe(true);
   });
 
   it('does not call markDayComplete when no program day is active', async () => {
@@ -647,7 +657,7 @@ describe('finishWorkout — happy path', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('finishWorkout — error paths', () => {
-  it('throws when workout insert fails and resets isSaving', async () => {
+  it('throws when enqueuing fails and resets isSaving', async () => {
     useWorkoutStore.setState({
       activeWorkoutId: 'wid-err',
       activeProgramDayId: null,
@@ -668,9 +678,7 @@ describe('finishWorkout — error paths', () => {
       isSaving: false,
     });
 
-    (supabase.from as jest.Mock).mockReturnValueOnce({
-      insert: jest.fn().mockResolvedValue({ error: new Error('DB error') }),
-    });
+    (enqueueWorkout as jest.Mock).mockRejectedValueOnce(new Error('storage error'));
 
     let didThrow = false;
     try {

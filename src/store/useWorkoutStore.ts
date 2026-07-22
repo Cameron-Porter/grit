@@ -6,10 +6,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import { markDayComplete, skipProgramDay } from '../api/programs';
-import { enqueueWorkout, isNetworkError } from '../api/pendingWorkouts';
+import { drainPendingWorkouts, enqueueWorkout, isNetworkError } from '../api/pendingWorkouts';
 import { getExerciseByName } from '../data/exerciseDatabase';
 import { computeAndSaveProgressionTargets } from '../api/progression';
 import { supabase } from '../api/supabase';
+import { rescheduleWithStreak } from '../lib/notifications';
 import { useProfileStore } from './useProfileStore';
 
 const getUserId = async (): Promise<string | null> => {
@@ -400,15 +401,12 @@ export const useWorkoutStore = create<WorkoutState>()(
           // Attempt to flush the queue in the background. On success the data lands in
           // Supabase and is removed from AsyncStorage. On failure it stays queued and
           // drainPendingWorkouts() will retry the next time the app foregrounds.
-          const { drainPendingWorkouts } = await import('../api/pendingWorkouts');
           const synced = await drainPendingWorkouts();
 
           // Refresh workout reminder content with the updated streak (fire-and-forget).
           const { workoutRemindersEnabled } = useProfileStore.getState();
           if (workoutRemindersEnabled) {
-            import('../lib/notifications').then(({ rescheduleWithStreak }) => {
-              rescheduleWithStreak().catch(() => {});
-            });
+            rescheduleWithStreak().catch(() => {});
           }
 
           return { savedOffline: synced === 0 };
