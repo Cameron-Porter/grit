@@ -1,31 +1,44 @@
 /**
  * Evidence-based weekly volume landmarks (sets per muscle group).
- * Source: RP Strength / Israetel et al. ranges adapted for intermediate lifters.
+ * Source: RP Strength / Israetel et al., "Training Volume Landmarks for Muscle
+ * Growth" — MEV/MAV/MRV ranges adapted for intermediate lifters. A "set" here
+ * assumes 30-85% 1RM, 5-30 reps, 0-4 RIR, and only counts sets where the
+ * muscle is the prime mover or the direct target of an isolation exercise
+ * (indirect stimulus from compounds is already factored into these numbers).
  *
- * MEV = Minimum Effective Volume  — below this, little stimulus
- * MAV = Maximum Adaptive Volume   — sweet spot; most progress here
- * MRV = Maximum Recoverable Volume — above this, accumulate fatigue faster than you adapt
+ * MV  = Maintenance Volume        — floor; holds current size, no growth
+ * MEV = Minimum Effective Volume  — below this, little stimulus; meso starting point
+ * MAV = Maximum Adaptive Volume   — not a fixed number in the source, but the
+ *        progression zone between MEV and MRV; here it names the top of that
+ *        zone for a "grow"-priority muscle (see slotBuilder.ts HV-021 ramp)
+ * MRV = Maximum Recoverable Volume — above this, recovery fails before growth
+ *
+ * The source states MV is "typically around 6 sets... whether beginner or
+ * advanced," without a per-muscle breakdown. We derive each muscle's MV as
+ * min(6, mev) — the cited ~6 figure, floored at that muscle's own MEV so MV
+ * never exceeds MEV (the source is explicit that MV sits below MEV).
  */
 
 export interface VolumeLandmark {
+  mv: number;
   mev: number;
   mav: number;
   mrv: number;
 }
 
 const LANDMARKS: Record<string, VolumeLandmark> = {
-  Chest:      { mev: 8,  mav: 16, mrv: 22 },
-  Back:       { mev: 10, mav: 18, mrv: 25 },
-  Shoulders:  { mev: 6,  mav: 14, mrv: 20 },
-  Biceps:     { mev: 6,  mav: 14, mrv: 20 },
-  Triceps:    { mev: 6,  mav: 14, mrv: 18 },
-  Quads:      { mev: 8,  mav: 16, mrv: 22 },
-  Hamstrings: { mev: 6,  mav: 12, mrv: 18 },
-  Glutes:     { mev: 4,  mav: 12, mrv: 20 },
-  Traps:      { mev: 4,  mav: 12, mrv: 18 },
-  Calves:     { mev: 8,  mav: 16, mrv: 20 },
-  Abs:        { mev: 4,  mav: 16, mrv: 25 },
-  Forearms:   { mev: 4,  mav: 10, mrv: 16 },
+  Chest:      { mv: 6, mev: 8,  mav: 16, mrv: 22 },
+  Back:       { mv: 6, mev: 10, mav: 18, mrv: 25 },
+  Shoulders:  { mv: 6, mev: 6,  mav: 14, mrv: 20 },
+  Biceps:     { mv: 6, mev: 6,  mav: 14, mrv: 20 },
+  Triceps:    { mv: 6, mev: 6,  mav: 14, mrv: 18 },
+  Quads:      { mv: 6, mev: 8,  mav: 16, mrv: 22 },
+  Hamstrings: { mv: 6, mev: 6,  mav: 12, mrv: 18 },
+  Glutes:     { mv: 4, mev: 4,  mav: 12, mrv: 20 },
+  Traps:      { mv: 4, mev: 4,  mav: 12, mrv: 18 },
+  Calves:     { mv: 6, mev: 8,  mav: 16, mrv: 20 },
+  Abs:        { mv: 4, mev: 4,  mav: 16, mrv: 25 },
+  Forearms:   { mv: 4, mev: 4,  mav: 10, mrv: 16 },
 };
 
 export type VolumeStatus = 'below_mev' | 'mev_to_mav' | 'mav_to_mrv' | 'above_mrv';

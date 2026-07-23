@@ -57,6 +57,12 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
     }
   }
 
+  // HV-021: keyed lookup so buildDaySlots can derive each muscle's own
+  // landmark-anchored set targets (hypertrophy focus only — see slotBuilder.ts).
+  const volumeTargetsByMuscle = new Map<MuscleGroup, AdjustedVolumeTarget>(
+    volumeTargets.map((t) => [t.muscle, t]),
+  );
+
   // Step 4: Generate all weeks
   // Last week = deload; all prior weeks = training.
   const totalTrainingWeeks = Math.max(1, config.totalWeeks - 1);
@@ -81,7 +87,7 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
         }
       }
 
-      const slots = buildDaySlots(dayMuscles, template, undefined, weekParams, config.focus);
+      const slots = buildDaySlots(dayMuscles, template, undefined, weekParams, config.focus, volumeTargetsByMuscle);
       const totalSets = slots.reduce((n, s) => n + s.sets, 0);
 
       return {

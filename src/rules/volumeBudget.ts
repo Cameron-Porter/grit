@@ -1,6 +1,6 @@
 import { SESSION_MUSCLES } from './assignment';
 import { PRIMARY_ROLE_OVERLAP } from '../data/roleOverlap';
-import { SLOT_ROLE_CONFIGS } from '../data/slotRoleConfig';
+import { getSlotRoleConfigs } from '../data/slotRoleConfig';
 import { getLandmark } from '../utils/volumeLandmarks';
 import type {
   AdjustedVolumeTarget,
@@ -64,11 +64,16 @@ function emphasisScaleFactor(
 }
 
 // ─── Indirect set estimator ───────────────────────────────────────────────────
+// Reads Primary-slot sets from the focus-appropriate table (getSlotRoleConfigs)
+// rather than always the hypertrophy table — previously this silently borrowed
+// hypertrophy's Primary numbers for strength/powerbuilding indirect estimates.
 function estimateWeeklyIndirectSets(
   muscle: MuscleGroup,
   weekSessions: SessionType[],
   musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>,
+  focus: ProgramFocus,
 ): number {
+  const slotRoleConfigs = getSlotRoleConfigs(focus);
   let total = 0;
   for (const sessionType of weekSessions) {
     const sessionMuscles = SESSION_MUSCLES[sessionType];
@@ -77,7 +82,7 @@ function estimateWeeklyIndirectSets(
       const coeff = PRIMARY_ROLE_OVERLAP[activeMuscle]?.[muscle] ?? 0;
       if (coeff === 0) continue;
       const priority: MusclePriority | 'mev' = musclePriorities[activeMuscle] ?? 'mev';
-      const estimatedSets = SLOT_ROLE_CONFIGS.Primary[priority].sets;
+      const estimatedSets = slotRoleConfigs.Primary[priority].sets;
       total += estimatedSets * coeff;
     }
   }
@@ -88,6 +93,27 @@ function estimateWeeklyIndirectSets(
 function sessionFrequency(directSetsNeeded: number, priority: MusclePriority | 'mev'): number {
   const base = directSetsNeeded <= 4 ? 1 : directSetsNeeded <= 11 ? 2 : 3;
   return priority === 'emphasize' ? Math.max(2, base) : base;
+}
+
+// VA-011: hypertrophy-focus targets read straight from each muscle's own
+// MV/MEV/MAV/MRV landmarks (RP Strength / Israetel et al., volumeLandmarks.ts)
+// instead of one flat number shared by every muscle. Mapping mirrors the
+// priority tier names directly onto the matching landmark:
+//   mev       → that muscle's own MEV (deprioritized — just enough for growth)
+//   maintain  → that muscle's own MV (literally "maintain" = hold current size)
+//   grow      → that muscle's own MAV (the textbook sweet spot)
+//   emphasize → that muscle's own MRV (the overreach ceiling for this cycle's focus)
+// Scoped to hypertrophy only — strength/powerbuilding volume is already cited
+// to Prilepin/NSCA (ST-XXX) and Kizen/PHAT (PB-XXX); swapping in RP/Israetel
+// landmarks there would contradict those tags rather than extend them. Falls
+// back to the flat TARGET_EFFECTIVE_SETS table if a muscle has no landmark.
+function hypertrophyPriorityTarget(muscle: MuscleGroup, priority: MusclePriority | 'mev'): number {
+  const landmark = getLandmark(muscle);
+  if (!landmark) return TARGET_EFFECTIVE_SETS.hypertrophy[priority];
+  if (priority === 'mev') return landmark.mev;
+  if (priority === 'maintain') return landmark.mv;
+  if (priority === 'grow') return landmark.mav;
+  return landmark.mrv; // emphasize
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -104,14 +130,16 @@ export function calculateVolumeBudget(
   return allMuscles.map((muscle) => {
     const priority: MusclePriority | 'mev' = musclePriorities[muscle] ?? 'mev';
 
-    const baseTarget = TARGET_EFFECTIVE_SETS[focus][priority];
+    const baseTarget = focus === 'hypertrophy'
+      ? hypertrophyPriorityTarget(muscle, priority)
+      : TARGET_EFFECTIVE_SETS[focus][priority];
     const emphasisScale = priority === 'emphasize'
       ? emphasisScaleFactor(muscle, musclePriorities)
       : 1.0;
     const targetEffectiveSets = Math.round(baseTarget * emphasisScale * beginnerScale);
 
     const estimatedIndirectSets = parseFloat(
-      estimateWeeklyIndirectSets(muscle, weekSessions, musclePriorities).toFixed(1),
+      estimateWeeklyIndirectSets(muscle, weekSessions, musclePriorities, focus).toFixed(1),
     );
     const uncappedDirectSetsNeeded = Math.max(
       MEV_DIRECT[focus],
@@ -120,9 +148,11 @@ export function calculateVolumeBudget(
 
     // VA-010: cap weekly direct sets at the muscle's MRV (Maximum Recoverable
     // Volume) — RP Strength / Israetel et al. landmarks in volumeLandmarks.ts.
-    // Without this, "emphasize" at hypertrophy focus (18 sets/week) can exceed
-    // a muscle's MRV (e.g. Forearms MRV=16), scheduling more volume than the
-    // program's own recovery model considers sustainable.
+    // Since VA-011, hypertrophy's own targets already top out at each muscle's
+    // MRV by construction (emphasize === landmark.mrv), so this is a no-op
+    // backstop there — kept for safety against future data changes, and still
+    // fully load-bearing for strength/powerbuilding/general/maintenance/cut,
+    // which stay on the flat TARGET_EFFECTIVE_SETS table.
     const mrv = getLandmark(muscle)?.mrv;
     const directSetsNeeded = mrv != null ? Math.min(uncappedDirectSetsNeeded, mrv) : uncappedDirectSetsNeeded;
 

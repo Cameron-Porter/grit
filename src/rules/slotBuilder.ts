@@ -1,4 +1,5 @@
 import { getSlotRoleConfigs } from '../data/slotRoleConfig';
+import { getLandmark } from '../utils/volumeLandmarks';
 import type {
   AdjustedVolumeTarget,
   ExerciseSlot,
@@ -161,7 +162,16 @@ function selectIncludedPairs(
 
 // ─── Progressive week scaling ─────────────────────────────────────────────────
 //
-// Sets:  70 % of peak at Week 1 → 100 % at last training week → 50 % on deload.
+// HV-021: sets ramp linearly from a Week 1 anchor to a peak anchor across the
+// meso, then drop to a separate deload anchor. For hypertrophy, with a
+// per-muscle AdjustedVolumeTarget + landmark available (see buildDaySlots),
+// those anchors are the muscle's own MEV/MV/MAV/MRV landmarks (RP Strength /
+// Israetel et al.) rather than a flat percentage of a role-generic number —
+// see resolveSetAnchors below. Every other case (non-hypertrophy focus, or no
+// landmark data) falls back to the original doctrine: 70 % of peak at Week 1
+// → 100 % at the last training week → 50 % on deload, which is exactly what
+// week1=0.7×peak / deload=0.5×peak reproduces through this same interpolation.
+//
 // RIR:   config.rir + 1 at Week 1 → decrements 1/week → min 1 → 4 on deload.
 //        Only applied to emphasize/grow muscles; maintain/mev stays at config.rir.
 //
@@ -170,14 +180,16 @@ function selectIncludedPairs(
 //   Week 4: sets=50%, rir=4
 
 function applyWeekParams(
-  baseSets: number,
+  week1Sets: number,
+  peakSets: number,
+  deloadSets: number,
   baseRir: number,
   priority: MusclePriority | 'mev',
   params: WeekParams,
 ): { sets: number; rir: number } {
   if (params.isDeload) {
     return {
-      sets: Math.max(1, Math.ceil(baseSets * 0.5)),
+      sets: Math.max(1, Math.round(deloadSets)),
       rir: 4,
     };
   }
@@ -187,7 +199,7 @@ function applyWeekParams(
     ? 1.0
     : (weekNumber - 1) / (totalTrainingWeeks - 1);
 
-  const sets = Math.max(1, Math.round(baseSets * (0.7 + 0.3 * progressFraction)));
+  const sets = Math.max(1, Math.round(week1Sets + (peakSets - week1Sets) * progressFraction));
 
   // RIR progression only for muscles the user is actively building
   const rir =
@@ -198,6 +210,46 @@ function applyWeekParams(
   return { sets, rir };
 }
 
+// HV-021: derives the Week 1 / peak / deload set anchors for one slot.
+//
+// Hypertrophy, with a volume target + landmark for this muscle: the anchors
+// are the muscle's own landmarks (RP Strength / Israetel et al.), split
+// across this muscle's included role-slots today in proportion to
+// SLOT_ROLE_CONFIGS' existing sets numbers (now used as relative role
+// weights, not absolute counts — e.g. Primary:Secondary = 4:3 at emphasize).
+//   mev / maintain → flat at that tier's target all meso (already the floor /
+//     maintenance volume — nothing to ramp toward)
+//   grow           → Week 1 = MEV share → peak = MAV share (the sweet spot)
+//   emphasize      → Week 1 = MEV share → peak = MRV share (the overreach ceiling)
+//   deload (any)   → MV share, always
+//
+// Every other case (non-hypertrophy focus, or a muscle with no landmark or no
+// target) falls back to the pre-HV-021 behavior: peak = the flat role×priority
+// number, Week 1 = 70 % of it, deload = 50 % of it.
+function resolveSetAnchors(
+  muscle: MuscleGroup,
+  role: SlotRole,
+  priority: MusclePriority | 'mev',
+  roleSets: number,
+  roleWeightTotal: number,
+  focus: ProgramFocus | undefined,
+  target: AdjustedVolumeTarget | undefined,
+): { week1: number; peak: number; deload: number } {
+  const landmark = focus === 'hypertrophy' && target ? getLandmark(muscle) : null;
+
+  if (!landmark || !target) {
+    return { week1: roleSets * 0.7, peak: roleSets, deload: roleSets * 0.5 };
+  }
+
+  const share = roleWeightTotal > 0 ? roleSets / roleWeightTotal : 1;
+  const peak = target.setsPerSession * share;
+  const deload = (landmark.mv / target.sessionFrequency) * share;
+  const rampsUp = priority === 'grow' || priority === 'emphasize';
+  const week1 = rampsUp ? (landmark.mev / target.sessionFrequency) * share : peak;
+
+  return { week1, peak, deload };
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 export function buildDaySlots(
   dayMuscles: Map<MuscleGroup, MusclePriority | 'mev'>,
@@ -205,11 +257,24 @@ export function buildDaySlots(
   maxSlots = MAX_SLOTS_PER_SESSION,
   weekParams?: WeekParams,
   focus?: ProgramFocus,
+  volumeTargets?: Map<MuscleGroup, AdjustedVolumeTarget>,
 ): ExerciseSlot[] {
   const slotRoleConfigs = getSlotRoleConfigs(focus);
   const includedPairs = template.sessionType === 'FullBody'
     ? selectIncludedPairsFullBody(dayMuscles, template, maxSlots)
     : selectIncludedPairs(dayMuscles, template, maxSlots);
+
+  // HV-021: total role-weight per muscle among today's included slots, so a
+  // muscle's per-session target can be split proportionally across whichever
+  // role-slots (Primary/Secondary/Accessory) it actually has today.
+  const roleWeightTotals = new Map<MuscleGroup, number>();
+  for (const spec of template.slots) {
+    const pairKey = `${spec.muscle}-${spec.role}`;
+    if (!includedPairs.has(pairKey)) continue;
+    const priority = dayMuscles.get(spec.muscle) as MusclePriority | 'mev';
+    const weight = slotRoleConfigs[spec.role as SlotRole][priority].sets;
+    roleWeightTotals.set(spec.muscle, (roleWeightTotals.get(spec.muscle) ?? 0) + weight);
+  }
 
   const result: ExerciseSlot[] = [];
   const usedPairs = new Set<string>();
@@ -221,9 +286,19 @@ export function buildDaySlots(
     const priority = dayMuscles.get(spec.muscle) as MusclePriority | 'mev';
     const config = slotRoleConfigs[spec.role as SlotRole][priority];
 
+    const anchors = resolveSetAnchors(
+      spec.muscle,
+      spec.role,
+      priority,
+      config.sets,
+      roleWeightTotals.get(spec.muscle) ?? config.sets,
+      focus,
+      volumeTargets?.get(spec.muscle),
+    );
+
     const { sets, rir } = weekParams
-      ? applyWeekParams(config.sets, config.rir, priority, weekParams)
-      : { sets: config.sets, rir: config.rir };
+      ? applyWeekParams(anchors.week1, anchors.peak, anchors.deload, config.rir, priority, weekParams)
+      : { sets: Math.max(1, Math.round(anchors.peak)), rir: config.rir };
 
     result.push({
       id: `${spec.muscle}-${spec.role}-${result.length}`,
