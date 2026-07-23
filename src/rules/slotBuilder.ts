@@ -1,5 +1,6 @@
 import { getSlotRoleConfigs } from '../data/slotRoleConfig';
 import { getLandmark } from '../utils/volumeLandmarks';
+import { rampSets } from './volumeRamp';
 import type {
   AdjustedVolumeTarget,
   ExerciseSlot,
@@ -187,24 +188,16 @@ function applyWeekParams(
   priority: MusclePriority | 'mev',
   params: WeekParams,
 ): { sets: number; rir: number } {
+  const sets = rampSets({ week1: week1Sets, peak: peakSets, deload: deloadSets }, params);
+
   if (params.isDeload) {
-    return {
-      sets: Math.max(1, Math.round(deloadSets)),
-      rir: 4,
-    };
+    return { sets, rir: 4 };
   }
-
-  const { weekNumber, totalTrainingWeeks } = params;
-  const progressFraction = totalTrainingWeeks <= 1
-    ? 1.0
-    : (weekNumber - 1) / (totalTrainingWeeks - 1);
-
-  const sets = Math.max(1, Math.round(week1Sets + (peakSets - week1Sets) * progressFraction));
 
   // RIR progression only for muscles the user is actively building
   const rir =
     priority === 'emphasize' || priority === 'grow'
-      ? Math.max(1, (baseRir + 1) - (weekNumber - 1))
+      ? Math.max(1, (baseRir + 1) - (params.weekNumber - 1))
       : baseRir;
 
   return { sets, rir };

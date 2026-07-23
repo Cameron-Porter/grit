@@ -39,6 +39,16 @@ export interface ProgressionContext {
   programFocus?: ProgramFocus;
   // Per-muscle volume priority — drives RIR taper within the meso.
   musclePriority?: MusclePriority;
+  // HV-021: pre-resolved landmark-driven weekly set target for this exercise's
+  // muscle (RP Strength / Israetel et al. MV/MEV/MAV/MRV), computed by the
+  // caller — see rampSets() in volumeRamp.ts and computeAndSaveProgressionTargets
+  // in src/api/progression.ts, which aggregates across all of this muscle's
+  // exercises before resolving each one's share. Present only for hypertrophy
+  // focus where a landmark exists for the muscle; when set, it replaces the
+  // flat per-priority set math below for both training weeks and deload, so
+  // this file and the generation-time path (slotBuilder.ts) run the exact
+  // same volume philosophy instead of two independent ones.
+  hypertrophyVolumeOverride?: { trainingSets: number; deloadSets: number };
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────
@@ -213,15 +223,20 @@ export function recommendProgression(
   const isMaintenance = ctx.programFocus === 'maintenance';
   const isStrength = ctx.programFocus === 'strength';
 
-  // Set-count progression within meso:
+  // Set-count progression within meso. HV-021: for hypertrophy with a
+  // pre-resolved landmark target (see ProgressionContext.hypertrophyVolumeOverride),
+  // that target wins outright — it's already muscle-level MEV/MAV/MRV-aware and
+  // MRV-capped. Every other focus keeps the original per-exercise doctrine:
   //   emphasize → add 1 set per week above base (volume accumulation)
   //   grow      → hold at template value
   //   maintain  → never exceed template value
   const baseSetCount = prescription.sets;
   const weekBonus = ctx.musclePriority === 'emphasize' ? Math.max(0, ctx.mesoWeek - 1) : 0;
-  const effectiveSets = ctx.musclePriority === 'maintain'
-    ? baseSetCount
-    : baseSetCount + weekBonus;
+  const effectiveSets = ctx.programFocus === 'hypertrophy' && ctx.hypertrophyVolumeOverride
+    ? ctx.hypertrophyVolumeOverride.trainingSets
+    : ctx.musclePriority === 'maintain'
+      ? baseSetCount
+      : baseSetCount + weekBonus;
 
   // During a cut, raise the rep floor to 8 to reduce injury risk from heavy loading.
   const effectiveRepsMin = isCut
@@ -294,15 +309,25 @@ export function recommendProgression(
     // across power and hypertrophy days throughout the meso, so accumulated load
     // is lower than pure strength. A volume-reduction deload (not load-reduction)
     // is the correct recovery tool. Source: Kizen Week 9 deload structure.
+    //
+    // HV-021: hypertrophy focus with a resolved landmark target deloads to that
+    // muscle's own MV (Maintenance Volume) instead of a flat 50% — see
+    // ProgressionContext.hypertrophyVolumeOverride.
+    const hasVolumeOverride = ctx.programFocus === 'hypertrophy' && !!ctx.hypertrophyVolumeOverride;
+    const deloadSets = hasVolumeOverride
+      ? ctx.hypertrophyVolumeOverride!.deloadSets
+      : Math.max(1, Math.ceil(baseSetCount * 0.5));
     return {
       ...base,
       nextWeight: lastWeight,
-      nextSets: Math.max(1, Math.ceil(baseSetCount * 0.5)),
+      nextSets: deloadSets,
       nextRepsMin: Math.max(1, Math.ceil(effectiveRepsMin * 0.5)),
       nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD',
-      reason: 'Deload week — sets and reps halved, load held, effort capped at RIR 4.',
+      reason: hasVolumeOverride
+        ? 'Deload week — sets dropped to Maintenance Volume, reps halved, load held, effort capped at RIR 4.'
+        : 'Deload week — sets and reps halved, load held, effort capped at RIR 4.',
     };
   }
 
