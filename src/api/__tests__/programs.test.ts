@@ -15,6 +15,7 @@ import {
   skipProgramDay,
   unskipProgramDay,
   getNextProgramWorkout,
+  getFutureScheduledSetsByMuscle,
 } from '../programs';
 
 const mockFrom = supabase.from as jest.Mock;
@@ -27,6 +28,7 @@ const makeChain = (result: { data: any; error: any }) => {
     delete: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
     neq: jest.fn().mockReturnThis(),
+    gt: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue(result),
@@ -217,5 +219,63 @@ describe('getNextProgramWorkout', () => {
       .mockReturnValueOnce(makeChain({ data: days, error: null }));
 
     expect(await getNextProgramWorkout()).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getFutureScheduledSetsByMuscle
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('getFutureScheduledSetsByMuscle', () => {
+  it('sums template target_sets for later not-yet-started days, by muscle', async () => {
+    const futureDays = [{ id: 'day-2', day_number: 2 }];
+    const templateDay = { id: 'template-day-2' };
+    const templateExercises = [
+      { exercise_name: 'Overhead Press', muscle_group: 'Shoulders', target_sets: 4 },
+      { exercise_name: 'Lateral Raise', muscle_group: 'Shoulders', target_sets: 3 },
+    ];
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: futureDays, error: null }))       // program_days: future days this week
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))      // getTemplateDayExercises: week-1 day lookup
+      .mockReturnValueOnce(makeChain({ data: [], error: null }))               // getProgramDayTargets: no overrides yet
+      .mockReturnValueOnce(makeChain({ data: templateExercises, error: null })); // getProgramExercises
+
+    const result = await getFutureScheduledSetsByMuscle('program-1', 2, 1);
+    expect(result).toEqual({ Shoulders: 7 });
+  });
+
+  it('uses the program_day_targets override instead of the template when one exists', async () => {
+    const futureDays = [{ id: 'day-2', day_number: 2 }];
+    const templateDay = { id: 'template-day-2' };
+    const templateExercises = [
+      { exercise_name: 'Overhead Press', muscle_group: 'Shoulders', target_sets: 4 },
+    ];
+    const overrides = [
+      { exercise_name: 'Overhead Press', target_sets: 5, target_reps_min: 5, target_reps_max: 8, target_weight: 95, rir: 2, ai_rationale: null },
+    ];
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: futureDays, error: null }))
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))
+      .mockReturnValueOnce(makeChain({ data: overrides, error: null }))
+      .mockReturnValueOnce(makeChain({ data: templateExercises, error: null }));
+
+    const result = await getFutureScheduledSetsByMuscle('program-1', 2, 1);
+    expect(result).toEqual({ Shoulders: 5 });
+  });
+
+  it('returns {} when there are no remaining days this week', async () => {
+    mockFrom.mockReturnValueOnce(makeChain({ data: [], error: null }));
+    const result = await getFutureScheduledSetsByMuscle('program-1', 2, 5);
+    expect(result).toEqual({});
+    expect(mockFrom).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns {} without hitting Supabase when unauthenticated', async () => {
+    (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({ data: { user: null } });
+    const result = await getFutureScheduledSetsByMuscle('program-1', 2, 1);
+    expect(result).toEqual({});
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });

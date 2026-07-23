@@ -68,16 +68,19 @@ export function classifyVolume(muscleGroup: string, weeklySets: number): VolumeR
 }
 
 /**
- * Counts total completed sets per muscle group from the active workout exercises.
+ * Counts scheduled sets per muscle group from the active workout's exercises —
+ * completed or still-pending, but not skipped. This is the in-progress session's
+ * contribution to the weekly MEV/MAV/MRV badge: pending sets you haven't logged
+ * yet still count, since they're already planned for today, not missing volume.
  */
 export function countSetsByMuscle(
-  exercises: { muscleGroup?: string; sets: { completed: boolean }[] }[]
+  exercises: { muscleGroup?: string; sets: { completed: boolean; skipped?: boolean }[] }[]
 ): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const ex of exercises) {
     if (!ex.muscleGroup) continue;
-    const completed = ex.sets.filter((s) => s.completed).length;
-    counts[ex.muscleGroup] = (counts[ex.muscleGroup] ?? 0) + completed;
+    const scheduled = ex.sets.filter((s) => !s.skipped).length;
+    counts[ex.muscleGroup] = (counts[ex.muscleGroup] ?? 0) + scheduled;
   }
   return counts;
 }

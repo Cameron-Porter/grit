@@ -1,6 +1,7 @@
 import { SESSION_MUSCLES } from './assignment';
 import { PRIMARY_ROLE_OVERLAP } from '../data/roleOverlap';
 import { SLOT_ROLE_CONFIGS } from '../data/slotRoleConfig';
+import { getLandmark } from '../utils/volumeLandmarks';
 import type {
   AdjustedVolumeTarget,
   ExperienceLevel,
@@ -112,10 +113,18 @@ export function calculateVolumeBudget(
     const estimatedIndirectSets = parseFloat(
       estimateWeeklyIndirectSets(muscle, weekSessions, musclePriorities).toFixed(1),
     );
-    const directSetsNeeded = Math.max(
+    const uncappedDirectSetsNeeded = Math.max(
       MEV_DIRECT[focus],
       Math.round(targetEffectiveSets - estimatedIndirectSets),
     );
+
+    // VA-010: cap weekly direct sets at the muscle's MRV (Maximum Recoverable
+    // Volume) — RP Strength / Israetel et al. landmarks in volumeLandmarks.ts.
+    // Without this, "emphasize" at hypertrophy focus (18 sets/week) can exceed
+    // a muscle's MRV (e.g. Forearms MRV=16), scheduling more volume than the
+    // program's own recovery model considers sustainable.
+    const mrv = getLandmark(muscle)?.mrv;
+    const directSetsNeeded = mrv != null ? Math.min(uncappedDirectSetsNeeded, mrv) : uncappedDirectSetsNeeded;
 
     const freq = sessionFrequency(directSetsNeeded, priority);
     const setsPerSession = Math.round(directSetsNeeded / freq);

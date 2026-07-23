@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 
+const getUserId = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+};
+
 export async function getWorkouts() {
   const { data, error } = await supabase
     .from("workouts")
@@ -255,6 +260,45 @@ export async function getWorkoutForProgramDay(programDayId: string): Promise<Wor
       volume: f.volume ?? null,
     })),
   };
+}
+
+// Sums completed sets per muscle group across every finished workout in a given
+// program week. Used for the weekly MEV/MAV/MRV badge — that landmark is a
+// weekly target, so it must read across all sessions in the week, not just the
+// one currently in progress (which isn't in workout_sets yet until Finish).
+export async function getWeeklyCompletedSetsByMuscle(
+  programId: string,
+  weekNumber: number,
+): Promise<Record<string, number>> {
+  const userId = await getUserId();
+  if (!userId) return {};
+
+  const { data: days } = await supabase
+    .from("program_days")
+    .select("id")
+    .eq("program_id", programId)
+    .eq("week_number", weekNumber);
+  if (!days?.length) return {};
+
+  const { data: workouts } = await supabase
+    .from("workouts")
+    .select("id")
+    .in("program_day_id", days.map((d) => d.id));
+  if (!workouts?.length) return {};
+
+  const { data: sets } = await supabase
+    .from("workout_sets")
+    .select("muscle_group")
+    .in("workout_id", workouts.map((w) => w.id))
+    .eq("completed", true);
+  if (!sets?.length) return {};
+
+  const counts: Record<string, number> = {};
+  for (const s of sets) {
+    if (!s.muscle_group) continue;
+    counts[s.muscle_group] = (counts[s.muscle_group] ?? 0) + 1;
+  }
+  return counts;
 }
 
 // Returns the most recent joint_pain rating per muscle group.

@@ -13,6 +13,7 @@ import { MuscleColors } from '../../utils/tokens';
 import { useColors } from '../../utils/useColors';
 import { FontFamily, Radius, Shadow, Space, TypeScale } from '../../utils/tokens';
 import { classifyVolume } from '../../utils/volumeLandmarks';
+import { estimateOneRepMax } from '../../utils/oneRepMax';
 import HoldTimerModal from './HoldTimerModal';
 import NoteModal from './NoteModal';
 import PriorityBars from './PriorityBars';
@@ -34,13 +35,6 @@ interface ExerciseCardProps {
 
 const MAX_HISTORY_SESSIONS = 5;
 
-// Epley formula — estimates 1RM from a working set
-function epley1RM(weight: number, reps: number): number {
-  if (reps === 1) return weight;
-  if (reps <= 0 || weight <= 0) return 0;
-  return Math.round(weight * (1 + reps / 30));
-}
-
 function Icon({ ios, android, size, color }: { ios: string; android: string; size: number; color: string }) {
   if (Platform.OS === 'ios') {
     return <SymbolView name={ios as any} size={size} tintColor={color} />;
@@ -48,7 +42,7 @@ function Icon({ ios, android, size, color }: { ios: string; android: string; siz
   return <MaterialCommunityIcons name={android as any} size={size} color={color} />;
 }
 
-function HistoryPanel({ exerciseName }: { exerciseName: string }) {
+function HistoryPanel({ exerciseName, equipment }: { exerciseName: string; equipment?: string }) {
   const colors = useColors();
   const router = useRouter();
   const [sessions, setSessions] = useState<HistorySessionEntry[]>([]);
@@ -93,11 +87,11 @@ function HistoryPanel({ exerciseName }: { exerciseName: string }) {
     grouped.get(key)!.push(s);
   });
 
-  // Best estimated 1RM across all displayed sessions
+  // Best estimated 1RM across all displayed sessions.
   let best1RM = 0;
   displayed.forEach((s) => {
     s.sets.forEach((set) => {
-      const est = epley1RM(set.weight, set.reps);
+      const est = estimateOneRepMax(set.weight, set.reps, equipment);
       if (est > best1RM) best1RM = est;
     });
   });
@@ -195,7 +189,7 @@ export default function ExerciseCard({
     let best = 0;
     exercise.sets.forEach((s) => {
       if (s.completed && s.weight > 0 && s.reps > 0) {
-        const est = epley1RM(s.weight, s.reps);
+        const est = estimateOneRepMax(s.weight, s.reps, exercise.equipment);
         if (est > best) best = est;
       }
     });
@@ -278,7 +272,7 @@ export default function ExerciseCard({
             )}
 
             {/* History panel */}
-            {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} />}
+            {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} equipment={exercise.equipment} />}
 
             {/* Column headers */}
             <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>

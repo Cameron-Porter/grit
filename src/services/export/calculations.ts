@@ -2,7 +2,7 @@
 export function estimatedOneRepMax(weight: number, reps: number): number | null {
   if (weight <= 0 || reps <= 0) return null;
   if (reps === 1) return weight;
-  return Math.round(weight * (1 + reps / 30) * 10) / 10;
+  return Math.round(weight * (1 + reps / 30));
 }
 
 export function setVolume(weight: number | null, reps: number | null): number | null {

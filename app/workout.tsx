@@ -9,7 +9,8 @@ import { ExerciseCardSkeleton } from '../src/components/Skeleton';
 import { confirm } from '../src/utils/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getPRForExercise, upsertPR } from '../src/api/personalRecords';
-import { checkMuscleGroupPreviouslyTrained, endCurrentProgram, getNextProgramWorkout, renameProgram, replaceExerciseInTemplate, updateProgramMusclePriorities } from '../src/api/programs';
+import { checkMuscleGroupPreviouslyTrained, endCurrentProgram, getFutureScheduledSetsByMuscle, getNextProgramWorkout, renameProgram, replaceExerciseInTemplate, updateProgramMusclePriorities } from '../src/api/programs';
+import { getWeeklyCompletedSetsByMuscle } from '../src/api/history';
 import GradientBackground from '../src/components/GradientBackground';
 import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
@@ -118,8 +119,41 @@ export default function ActiveWorkout() {
   const hasWorkoutSession = !!activeWorkoutId;
   const hasActiveWorkout = !!(activeWorkoutId && exercises.length > 0);
 
+  // Sets completed in already-finished sessions this program week (not yet
+  // including the in-progress session below — those sets aren't written to
+  // workout_sets until Finish).
+  const [weeklyDbSets, setWeeklyDbSets] = useState<Record<string, number>>({});
+  // Sets still planned for later, not-yet-started days this program week —
+  // so the badge reflects the full week's schedule, not just what's done so far.
+  const [futureSets, setFutureSets] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!activeProgramId || activeProgramWeek == null) {
+      setWeeklyDbSets({});
+      setFutureSets({});
+      return;
+    }
+    let cancelled = false;
+    getWeeklyCompletedSetsByMuscle(activeProgramId, activeProgramWeek).then((counts) => {
+      if (!cancelled) setWeeklyDbSets(counts);
+    });
+    getFutureScheduledSetsByMuscle(activeProgramId, activeProgramWeek, activeProgramDayNumber ?? 0).then((counts) => {
+      if (!cancelled) setFutureSets(counts);
+    });
+    return () => { cancelled = true; };
+  }, [activeProgramId, activeProgramWeek, activeProgramDayId, activeProgramDayNumber]);
+
   // Must be above the early return — hooks can't be called conditionally
-  const weeklySetsByMuscle = useMemo(() => countSetsByMuscle(exercises), [exercises]);
+  const weeklySetsByMuscle = useMemo(() => {
+    const local = countSetsByMuscle(exercises);
+    const merged: Record<string, number> = { ...weeklyDbSets };
+    for (const [muscle, count] of Object.entries(futureSets)) {
+      merged[muscle] = (merged[muscle] ?? 0) + count;
+    }
+    for (const [muscle, count] of Object.entries(local)) {
+      merged[muscle] = (merged[muscle] ?? 0) + count;
+    }
+    return merged;
+  }, [exercises, weeklyDbSets, futureSets]);
 
   // Keep ref in sync so exercise-deletion handler can read current value without stale closure
   useEffect(() => { feedbackMuscleRef.current = feedbackMuscle; }, [feedbackMuscle]);
@@ -247,6 +281,7 @@ export default function ActiveWorkout() {
   const tooFewExercises = exercises.length < MIN_EXERCISES;
 
   const doFinish = async () => {
+    if (restTimer.active) restTimerControls.stop();
     try {
       const { savedOffline } = await finishWorkout();
       if (savedOffline) {
@@ -434,8 +469,10 @@ export default function ActiveWorkout() {
     const exercise = exercises.find((ex) => ex.id === exerciseId);
     if (!exercise) return;
 
-    // Start rest timer when a set is marked complete
+    // Start rest timer when a set is marked complete — stop any timer still
+    // running from the previous set first so it doesn't overlap with the new one.
     if (data.completed === true) {
+      if (restTimer.active) restTimerControls.stop();
       restTimerControls.start(90);
     }
 

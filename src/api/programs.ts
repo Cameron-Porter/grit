@@ -441,6 +441,45 @@ export async function getProgramDayTargets(programDayId: string): Promise<Progra
   return (data ?? []) as ProgramDayTarget[];
 }
 
+// Sums planned (not-yet-started) sets per muscle group for the remaining days
+// in a program week, so the weekly MEV/MAV/MRV badge can reflect what's still
+// scheduled, not just what's already logged. Mirrors the same
+// program_day_targets-overrides-program_exercises resolution used when a day
+// is actually started (see day/[dayId].tsx handleStartWorkout).
+export async function getFutureScheduledSetsByMuscle(
+  programId: string,
+  weekNumber: number,
+  afterDayNumber: number,
+): Promise<Record<string, number>> {
+  const userId = await getUserId();
+  if (!userId) return {};
+
+  const { data: days } = await supabase
+    .from("program_days")
+    .select("id, day_number")
+    .eq("program_id", programId)
+    .eq("week_number", weekNumber)
+    .gt("day_number", afterDayNumber)
+    .eq("completed", false)
+    .eq("skipped", false);
+  if (!days?.length) return {};
+
+  const counts: Record<string, number> = {};
+  for (const day of days) {
+    const [templateExercises, dayTargets] = await Promise.all([
+      getTemplateDayExercises(programId, day.day_number),
+      getProgramDayTargets(day.id),
+    ]);
+    for (const ex of templateExercises) {
+      if (!ex.muscle_group) continue;
+      const override = dayTargets.find((t) => t.exercise_name === ex.exercise_name);
+      const sets = override?.target_sets ?? ex.target_sets ?? 0;
+      counts[ex.muscle_group] = (counts[ex.muscle_group] ?? 0) + sets;
+    }
+  }
+  return counts;
+}
+
 export async function saveProgramDayTargets(
   programDayId: string,
   targets: { exerciseName: string; sets: number; repsMin: number; repsMax: number; weightLbs: number; rir: number; rationale?: string }[],
