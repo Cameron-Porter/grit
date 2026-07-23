@@ -58,7 +58,8 @@
           "project": "grit-hypertrophy-app",
           "organization": "grit-7z"
         }
-      ]
+      ],
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -14,7 +14,7 @@
     "@types/jest": "29.5.14",
     "expo": "~56.0.9",
     "expo-apple-authentication": "~56.0.4",
-    "expo-av": "^16.0.8",
+    "expo-audio": "~56.0.13",
     "expo-constants": "~56.0.16",
     "expo-dev-client": "~56.0.20",
     "expo-device": "~56.0.4",

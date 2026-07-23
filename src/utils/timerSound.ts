@@ -1,22 +1,18 @@
-import { Audio } from 'expo-av';
+import { AudioPlayer, createAudioPlayer } from 'expo-audio';
 import { useProfileStore } from '../store/useProfileStore';
 
-let sound: Audio.Sound | null = null;
-let loadPromise: Promise<void> | null = null;
+let player: AudioPlayer | null = null;
 
-async function ensureLoaded() {
-  if (sound) return;
-  if (loadPromise) return loadPromise;
-  loadPromise = Audio.Sound.createAsync(
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('../../assets/sounds/timer-done.wav'),
-    { shouldPlay: false },
-  ).then(({ sound: s }) => {
-    sound = s;
-  }).catch(() => {
-    loadPromise = null;
-  });
-  return loadPromise;
+function ensureLoaded() {
+  if (player) return;
+  try {
+    player = createAudioPlayer(
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('../../assets/sounds/timer-done.wav'),
+    );
+  } catch {
+    player = null;
+  }
 }
 
 // Preload so first play has no lag.
@@ -27,8 +23,9 @@ export function preloadTimerSound() {
 export async function playTimerSound() {
   if (!useProfileStore.getState().timerSoundEnabled) return;
   try {
-    await ensureLoaded();
-    await sound?.replayAsync();
+    ensureLoaded();
+    player?.seekTo(0);
+    player?.play();
   } catch {
     // Non-critical — sound failure must never break the timer
   }
