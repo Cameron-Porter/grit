@@ -61,7 +61,7 @@ export function classifyVolume(muscleGroup: string, weeklySets: number): VolumeR
     label = `${weeklySets} sets · near MRV (${landmark.mrv})`;
   } else {
     status = 'above_mrv';
-    label = `${weeklySets} sets · above MRV (${landmark.mrv})`;
+    label = `${weeklySets} sets · may need more recovery time`;
   }
 
   return { sets: weeklySets, landmark, status, label };

@@ -241,7 +241,8 @@ export default function ExerciseCard({
                     <Badge label={`~${live1RM} e1RM`} color={colors.prBadge} variant="tint" size="sm" uppercase={false} />
                   )}
                 </View>
-                {volumeInfo && weeklySets > 0 && (
+                {volumeInfo && weeklySets > 0 &&
+                  (volumeInfo.status === 'below_mev' || volumeInfo.status === 'above_mrv') && (
                   <View style={{ marginTop: 4 }}>
                     <VolumePill status={volumeInfo.status} label={volumeInfo.label} />
                   </View>

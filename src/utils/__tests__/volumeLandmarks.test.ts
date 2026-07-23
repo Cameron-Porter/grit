@@ -68,6 +68,11 @@ describe('classifyVolume', () => {
     expect(result.status).toBe('above_mrv');
   });
 
+  it('labels above_mrv as a recovery-time warning, not just the raw MRV number', () => {
+    const result = classifyVolume('Chest', 23);
+    expect(result.label).toBe('23 sets · may need more recovery time');
+  });
+
   it('returns a neutral result for an unknown muscle group', () => {
     const result = classifyVolume('NotAMuscle', 5);
     expect(result.landmark).toBeNull();
