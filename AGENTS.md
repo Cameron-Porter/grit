@@ -41,14 +41,22 @@ Rules for adding a tag:
 
 ## Data Sources
 
-### Supabase is the source of truth for exercise data
+### Supabase is always the source of truth for exercise data
+
+`src/data/exerciseDatabase.ts` is a **test/rules-engine fixture only** — a small,
+hand-curated dataset that lets the pure rules-engine functions (`src/rules/*`)
+be unit-tested with plain synchronous data, no Supabase round-trip. It is
+**not** a second real exercise catalog, and it must never drift ahead of
+Supabase:
 
 - `equipment` on `ProgramExercise` rows comes from Supabase. Never fall back to the local exercise database for equipment.
 - `ExerciseSlot.equipment` is populated at picker selection time (from `ExerciseRow.equipment`), not at save time.
+- **Whenever an exercise is added to `exerciseDatabase.ts` (or referenced by a program template), it must also exist in the Supabase `exercises` table under the exact same `name` string, added via a migration.** Supabase is what the live `ExercisePicker`, workout logging, and PR/history tracking actually use — a name that only exists locally is invisible to all of that and silently breaks any exact-string matching (history-by-name, exercise_tags lookups, etc).
+- Past drift already happened here: several taxonomy migrations (`20260612000001`, `20260707000003`) were written assuming curated names like `Pull-Up`, `Romanian Deadlift`, `Front Squat`, `Barbell Row` already existed in Supabase — they didn't (Supabase only had qualified variants like `Pull-Up (Wide Grip)`), so those `UPDATE ... WHERE name IN (...)` statements silently matched zero rows. `20260722000002_sync_local_exercise_database.sql` backfilled the gap. Don't reintroduce it: when in doubt, grep the migrations for the exact name before assuming it's there.
 
 ### Legitimate uses of `getExerciseByName()` (local exercise DB)
 
-The local `exerciseDatabase.ts` holds static exercise metadata not stored in Supabase:
+The local `exerciseDatabase.ts` is used only for the rules engine's own structural metadata:
 - `exerciseTags` — used by `validateDayExercises` (HV-013, deadlift + barbell-row check)
 - `movementPattern` — used by Back slot validation
 - `exerciseType` — used by Triceps slot validation
