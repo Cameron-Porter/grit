@@ -328,8 +328,13 @@ export const useWorkoutStore = create<WorkoutState>()(
                       : (t.targetWeight ?? 0);
                     const hasRir = t.rir !== undefined;
                     // Week 2+: pre-fill the prescribed rep count so users see their target.
+                    // Uses the top of the rep band (not the floor) — double progression's
+                    // whole point is chasing the ceiling before adding load, and since the
+                    // band itself doesn't move week to week, pre-filling the floor made the
+                    // default look like a regression from whatever the user actually hit
+                    // last week (which is usually already at or above the floor).
                     // Week 1: leave RIR sets blank so the user discovers their starting weight.
-                    const prescribedReps = t.targetRepsMin ?? 8;
+                    const prescribedReps = t.targetRepsMax ?? t.targetRepsMin ?? 8;
                     return {
                       reps: (isWeek2Plus || !hasRir) ? prescribedReps : 0,
                       weight: resolvedWeight,

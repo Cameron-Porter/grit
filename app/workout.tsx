@@ -343,6 +343,7 @@ export default function ActiveWorkout() {
       'Skip Workout',
       'All remaining sets will be marked as skipped and this day will be noted as skipped in your program.',
       () => {
+        if (restTimer.active) restTimerControls.stop();
         if (activeProgramDayId) {
           skipDay(activeProgramDayId);
         } else {
@@ -412,6 +413,7 @@ export default function ActiveWorkout() {
       'End Program',
       `This will deactivate "${activeProgramName}" and return you to the programs list. Your workout history is kept.`,
       async () => {
+        if (restTimer.active) restTimerControls.stop();
         try { await endCurrentProgram(); } catch { /* non-fatal */ }
         endWorkout();
         router.replace('/(tabs)/programs');
@@ -471,9 +473,18 @@ export default function ActiveWorkout() {
 
     // Start rest timer when a set is marked complete — stop any timer still
     // running from the previous set first so it doesn't overlap with the new one.
+    // Skip starting it if this was the last remaining set in the whole workout —
+    // there's nothing left to rest for, and a stale timer would otherwise keep
+    // counting past Finish if the user doesn't hit the button right away.
     if (data.completed === true) {
+      const isLastRemainingSet = exercises.every((ex) =>
+        ex.sets.every((s, i) => {
+          if (ex.id === exerciseId && i === setIndex) return true;
+          return s.completed || s.skipped;
+        }),
+      );
       if (restTimer.active) restTimerControls.stop();
-      restTimerControls.start(90);
+      if (!isLastRemainingSet) restTimerControls.start(90);
     }
 
     if (data.completed === true) {

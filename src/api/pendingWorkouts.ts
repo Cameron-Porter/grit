@@ -149,7 +149,11 @@ export async function drainPendingWorkouts(): Promise<number> {
         if (completedSets.length > 0) {
           await markDayComplete(payload.programDayId).catch(() => {});
           const { experienceLevel } = useProfileStore.getState();
-          computeAndSaveProgressionTargets(payload.programDayId, experienceLevel).catch((e) => {
+          // Awaited (not fire-and-forget): next week's weights/reps must be written
+          // before this function returns, otherwise a user who backgrounds the app
+          // right after finishing (or opens next week's day immediately) can find
+          // the target row missing and nothing pre-filled.
+          await computeAndSaveProgressionTargets(payload.programDayId, experienceLevel).catch((e) => {
             Sentry.captureException(e, { tags: { context: 'progressionEngine' } });
           });
         } else {

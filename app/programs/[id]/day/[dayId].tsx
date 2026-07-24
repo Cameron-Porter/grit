@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getLastMuscleGroupFeedback, getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/history';
+import { computeAndSaveProgressionTargets } from '../../../../src/api/progression';
 import {
   addProgramExercise,
   getProgram,
   getProgramDay,
   getProgramDayTargets,
   getProgramExercises,
+  getProgramWeekCompletedDays,
   getTemplateDayExercises,
   ProgramDay,
   ProgramDayTarget,
@@ -68,6 +70,7 @@ export default function ProgramDayScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [history, setHistory] = useState<WorkoutDayHistory | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recomputing, setRecomputing] = useState(false);
 
   const isTemplate = !day || day.week_number === 1;
 
@@ -138,6 +141,33 @@ export default function ProgramDayScreen() {
       }
     } catch {
       Alert.alert('Error', 'Could not remove the skip. Please try again.');
+    }
+  };
+
+  // Recovery path for the offline-sync race that used to let progression
+  // targets go uncomputed: finds the completed day one week back in the same
+  // slot and re-runs the same computation the sync path should have already
+  // done, then reloads targets for this screen.
+  const handleRecomputeTargets = async () => {
+    if (!day || recomputing) return;
+    setRecomputing(true);
+    try {
+      const prevWeekDays = await getProgramWeekCompletedDays(id, day.week_number - 1);
+      const prevDay = prevWeekDays.find((d) => d.day_number === day.day_number);
+      if (!prevDay) {
+        Alert.alert('Nothing to recompute', `Week ${day.week_number - 1}, ${dayLabel} isn't marked complete yet.`);
+        return;
+      }
+      await computeAndSaveProgressionTargets(prevDay.id, experienceLevel);
+      const refreshed = await getProgramDayTargets(dayId);
+      setDayTargets(refreshed);
+      if (refreshed.length === 0) {
+        Alert.alert('Still empty', 'No target rows were generated — this exercise may not have logged sets last week.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not recompute targets. Please try again.');
+    } finally {
+      setRecomputing(false);
     }
   };
 
@@ -317,6 +347,38 @@ export default function ProgramDayScreen() {
         /* ── TEMPLATE / UPCOMING VIEW — editable ── */
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           <View style={{ paddingTop: 16 }}>
+            {!isTemplate && dayTargets.length === 0 && exercises.length > 0 && (
+              <Pressable
+                onPress={handleRecomputeTargets}
+                disabled={recomputing}
+                style={{
+                  marginHorizontal: 16,
+                  marginBottom: 14,
+                  backgroundColor: `${colors.primary}18`,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: `${colors.primary}40`,
+                  padding: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  opacity: recomputing ? 0.6 : 1,
+                }}
+              >
+                {recomputing
+                  ? <ActivityIndicator color={colors.primary} size="small" />
+                  : <MaterialCommunityIcons name="refresh" size={18} color={colors.primary} />
+                }
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>
+                    No weights/reps pre-filled
+                  </Text>
+                  <Text style={{ color: colors.muted, fontSize: 12, marginTop: 1 }}>
+                    Tap to recompute from last week's numbers
+                  </Text>
+                </View>
+              </Pressable>
+            )}
             {exercises.length === 0 && (
               <View style={{ alignItems: 'center', marginTop: 40, paddingHorizontal: 16 }}>
                 <MaterialCommunityIcons name="dumbbell" size={40} color={colors.surface2} />

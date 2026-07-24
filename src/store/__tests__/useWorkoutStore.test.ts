@@ -500,6 +500,22 @@ describe('startFromProgramDay', () => {
     expect(set.reps).toBe(6);
   });
 
+  // The rep band doesn't move week to week under double progression (only load
+  // does), so pre-filling the floor made week 2 look like a regression from
+  // whatever the user actually hit last week — which is usually already above
+  // the floor. Pre-fill the ceiling instead: it's the number double progression
+  // is actually asking the user to chase.
+  it('pre-fills the top of the rep band, not the floor, on week 2+', () => {
+    useWorkoutStore.getState().startFromProgramDay(
+      'day-3',
+      'PPL',
+      [{ name: 'Squat', muscleGroup: 'Quads', equipment: 'Barbell', targetSets: 3, targetRepsMin: 6, targetRepsMax: 10, targetWeight: 225, rir: 1 }],
+      2, 1, null,
+    );
+    const set = useWorkoutStore.getState().exercises[0].sets[0];
+    expect(set.reps).toBe(10);
+  });
+
   it('leaves reps=0 on week 1 for RIR sets', () => {
     useWorkoutStore.getState().startFromProgramDay(
       'day-1',
