@@ -498,20 +498,19 @@ export async function saveProgramDayTargets(
   await supabase.from("program_day_targets").upsert(rows, { onConflict: "program_day_id,exercise_name" });
 }
 
-// Returns true if any of the given exercises were logged in a previous completed workout
-// of the same program. Uses exercise names (not muscle_group) so it works even if
-// workout_sets.muscle_group was NULL for older rows.
+// Returns true if the given muscle group was logged in a previous completed workout
+// of the same program, regardless of which exercise was used to train it.
 export async function checkMuscleGroupPreviouslyTrained(
   programDayId: string,
-  exerciseNames: string[],
+  muscleGroup: string,
 ): Promise<boolean> {
-  if (!exerciseNames.length) return false;
+  if (!muscleGroup) return false;
 
   const { data: day } = await supabase
     .from("program_days")
     .select("program_id")
     .eq("id", programDayId)
-    .single();
+    .maybeSingle();
 
   if (!day) return false;
 
@@ -535,7 +534,7 @@ export async function checkMuscleGroupPreviouslyTrained(
     .from("workout_sets")
     .select("id")
     .in("workout_id", workouts.map((w) => w.id))
-    .in("exercise_name", exerciseNames)
+    .eq("muscle_group", muscleGroup)
     .limit(1);
 
   return (sets?.length ?? 0) > 0;

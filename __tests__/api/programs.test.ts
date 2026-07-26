@@ -10,6 +10,11 @@ const mockIn = jest.fn();
 const mockOrder = jest.fn();
 const mockLimit = jest.fn();
 
+// Consumed in call order so tests can script a sequence of chained calls
+// (e.g. checkMuscleGroupPreviouslyTrained makes 4 separate .from() calls).
+let singleQueue: any[] = [];
+let thenQueue: any[] = [];
+
 const chainable = () => {
   const obj: any = {};
   obj.select = (...a: any[]) => { mockSelect(...a); return obj; };
@@ -22,7 +27,11 @@ const chainable = () => {
   obj.order = (...a: any[]) => { mockOrder(...a); return obj; };
   obj.limit = (...a: any[]) => { mockLimit(...a); return obj; };
   obj.single = (...a: any[]) => mockSingle(...a);
-  obj.then = (res: any) => Promise.resolve({ data: [], error: null }).then(res);
+  obj.maybeSingle = (...a: any[]) => {
+    mockSingle(...a);
+    return Promise.resolve(singleQueue.length ? singleQueue.shift() : { data: null, error: null });
+  };
+  obj.then = (res: any) => Promise.resolve(thenQueue.length ? thenQueue.shift() : { data: [], error: null }).then(res);
   return obj;
 };
 
@@ -35,9 +44,13 @@ jest.mock('../../src/api/supabase', () => ({
 
 import { supabase } from '../../src/api/supabase';
 
-describe('programs API — structural tests', () => {
-  beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  singleQueue = [];
+  thenQueue = [];
+});
 
+describe('programs API — structural tests', () => {
   it('supabase.from is called with the programs table on getPrograms', async () => {
     const { getPrograms } = require('../../src/api/programs');
     await getPrograms().catch(() => {});
@@ -58,9 +71,38 @@ describe('programs API — structural tests', () => {
 });
 
 describe('checkMuscleGroupPreviouslyTrained', () => {
-  it('returns false when exerciseNames is empty', async () => {
+  it('returns false when muscleGroup is empty', async () => {
     const { checkMuscleGroupPreviouslyTrained } = require('../../src/api/programs');
-    const result = await checkMuscleGroupPreviouslyTrained('day-id', []);
+    const result = await checkMuscleGroupPreviouslyTrained('day-id', '');
+    expect(result).toBe(false);
+  });
+
+  it('matches on muscle_group even when a different exercise was used to train it', async () => {
+    // Regression test: a prior version matched on exact exercise_name, so training
+    // the same muscle with a different exercise (e.g. Incline Press vs Flat Bench)
+    // was invisible to this check. It must match by muscle_group instead.
+    singleQueue.push({ data: { program_id: 'prog-1' }, error: null }); // program lookup for the current day
+    thenQueue.push({ data: [{ id: 'other-day-1' }], error: null }); // other completed days in the program
+    thenQueue.push({ data: [{ id: 'workout-1' }], error: null }); // workouts logged on those days
+    thenQueue.push({ data: [{ id: 'set-1' }], error: null }); // a matching workout_sets row
+
+    const { checkMuscleGroupPreviouslyTrained } = require('../../src/api/programs');
+    const result = await checkMuscleGroupPreviouslyTrained('day-id', 'Chest');
+
+    expect(result).toBe(true);
+    expect(mockEq).toHaveBeenCalledWith('muscle_group', 'Chest');
+    expect(mockIn.mock.calls.some((call: any[]) => call[0] === 'exercise_name')).toBe(false);
+  });
+
+  it('returns false when no other completed day logged that muscle group', async () => {
+    singleQueue.push({ data: { program_id: 'prog-1' }, error: null });
+    thenQueue.push({ data: [{ id: 'other-day-1' }], error: null });
+    thenQueue.push({ data: [{ id: 'workout-1' }], error: null });
+    thenQueue.push({ data: [], error: null }); // no workout_sets rows for this muscle group
+
+    const { checkMuscleGroupPreviouslyTrained } = require('../../src/api/programs');
+    const result = await checkMuscleGroupPreviouslyTrained('day-id', 'Chest');
+
     expect(result).toBe(false);
   });
 });

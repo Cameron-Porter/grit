@@ -497,10 +497,7 @@ export default function ActiveWorkout() {
           );
         if (isFirstSetForMuscle) {
           sorenessShownFor.current.add(muscle);
-          const namesForMuscle = exercises
-            .filter((ex) => ex.muscleGroup === muscle)
-            .map((ex) => ex.name);
-          checkMuscleGroupPreviouslyTrained(activeProgramDayId, namesForMuscle)
+          checkMuscleGroupPreviouslyTrained(activeProgramDayId, muscle)
             .then((wasTrainedBefore) => {
               if (wasTrainedBefore) setSorenessMuscle(muscle);
             });
