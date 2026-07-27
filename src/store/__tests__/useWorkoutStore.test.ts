@@ -598,6 +598,36 @@ describe('finishWorkout — happy path', () => {
     expect(isSaving).toBe(false);
   });
 
+  it('calls markDayComplete for the finished day', async () => {
+    buildCompletedWorkout();
+
+    await act(async () => {
+      await useWorkoutStore.getState().finishWorkout();
+    });
+
+    expect(markDayComplete).toHaveBeenCalledWith('day-1');
+  });
+
+  // Regression test: getNextProgramWorkout() (called by the workout screen's
+  // auto-load-next-workout effect the instant activeWorkoutId goes null) picks
+  // the next day by querying program_days.completed. If clearWorkoutState() ran
+  // before the day was actually marked complete, that effect would re-fetch the
+  // day just finished instead of advancing, and the screen would "blank out"
+  // into a fresh copy of it. markDayComplete must be awaited first.
+  it('marks the day complete before clearing workout state', async () => {
+    buildCompletedWorkout();
+    let activeWorkoutIdWhenMarked: string | null | undefined;
+    (markDayComplete as jest.Mock).mockImplementationOnce(async () => {
+      activeWorkoutIdWhenMarked = useWorkoutStore.getState().activeWorkoutId;
+    });
+
+    await act(async () => {
+      await useWorkoutStore.getState().finishWorkout();
+    });
+
+    expect(activeWorkoutIdWhenMarked).toBe('wid-1');
+  });
+
   it('enqueues a payload with skipped sets so the drain can handle day-skipping', async () => {
     useWorkoutStore.setState({
       activeWorkoutId: 'wid-2',
@@ -628,11 +658,14 @@ describe('finishWorkout — happy path', () => {
     expect(enqueueWorkout).toHaveBeenCalledTimes(1);
     const payload = (enqueueWorkout as jest.Mock).mock.calls[0][0];
     expect(payload.programDayId).toBe('day-2');
-    // All sets skipped — drainPendingWorkouts will call skipProgramDay rather than markDayComplete
     const allSkipped = payload.exercises.every((ex: any) =>
       ex.sets.every((s: any) => !s.completed)
     );
     expect(allSkipped).toBe(true);
+
+    // All sets skipped — finishWorkout calls skipProgramDay rather than markDayComplete
+    expect(skipProgramDay).toHaveBeenCalledWith('day-2');
+    expect(markDayComplete).not.toHaveBeenCalled();
   });
 
   it('does not call markDayComplete when no program day is active', async () => {

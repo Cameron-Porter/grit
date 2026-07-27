@@ -400,6 +400,23 @@ export const useWorkoutStore = create<WorkoutState>()(
           // This guarantees the workout is safe even if the connection drops mid-save.
           await enqueueWorkout(buildPayload(workoutId, userId, name, completedAt, state));
 
+          // Mark the program day complete/skipped *before* clearing UI state. The
+          // workout screen's "auto-load next workout" effect fires the instant
+          // activeWorkoutId goes null, and it picks the next day by querying
+          // program_days.completed — normally only set later, inside
+          // drainPendingWorkouts, once the full sync lands. If that flag hasn't
+          // landed yet, the effect re-fetches the day we just finished instead of
+          // advancing, and the screen "blanks out" into a fresh copy of it.
+          // Best-effort: if this fails (e.g. offline), drainPendingWorkouts()
+          // below will set it once the queue actually syncs.
+          if (state.activeProgramDayId) {
+            const hasCompletedSets = state.exercises.some((ex) => ex.sets.some((s) => s.completed));
+            await (hasCompletedSets
+              ? markDayComplete(state.activeProgramDayId)
+              : skipProgramDay(state.activeProgramDayId)
+            ).catch(() => {});
+          }
+
           // Clear UI immediately — the data is safe locally.
           clearWorkoutState();
 
