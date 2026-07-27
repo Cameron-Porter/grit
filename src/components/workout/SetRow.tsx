@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -23,7 +21,6 @@ interface SetRowProps {
   onWeightChange: (val: number) => void;
   onRepsChange: (val: number) => void;
   onComplete: (autoReps?: number) => void;
-  onRemove: () => void;
   onMenuPress: () => void;
   onTimerPress?: () => void;
 }
@@ -52,71 +49,16 @@ export default function SetRow({
   onWeightChange,
   onRepsChange,
   onComplete,
-  onRemove,
   onMenuPress,
   onTimerPress,
 }: SetRowProps) {
   const colors = useColors();
-  const translateX = useSharedValue(0);
   const shakeX = useSharedValue(0);
-  const swipeDir = useSharedValue<0 | 1 | -1>(0); // 0=none, 1=right, -1=left
   const checkScale = useSharedValue(1);
   const [rirError, setRirError] = useState(false);
 
-  const panGesture = Gesture.Pan()
-    .activeOffsetX([-10, 10])
-    .onUpdate((e) => {
-      'worklet';
-      translateX.value = e.translationX;
-      swipeDir.value = e.translationX > 8 ? 1 : e.translationX < -8 ? -1 : 0;
-    })
-    .onEnd(() => {
-      'worklet';
-      if (translateX.value > 100) {
-        runOnJS(haptic.setLogged)();
-        runOnJS(handleComplete)();
-        swipeDir.value = 0;
-        translateX.value = withTiming(0, { duration: 180 });
-      } else if (translateX.value < -100) {
-        runOnJS(haptic.destructive)();
-        runOnJS(onRemove)();
-        swipeDir.value = 0;
-        translateX.value = withTiming(0, { duration: 180 });
-      } else {
-        // Partial swipe — fade color out as alpha drops with translateX, then clear
-        translateX.value = withTiming(0, { duration: 180 }, (finished) => {
-          'worklet';
-          if (finished) swipeDir.value = 0;
-        });
-      }
-    });
-
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
-  }));
-
-  // Color floods from swipeDir — never flips sign during spring-back
-  const rowColorStyle = useAnimatedStyle(() => {
-    'worklet';
-    if (swipeDir.value === 0) return { backgroundColor: 'transparent' };
-    const alpha = Math.min(Math.abs(translateX.value) / 90, 0.72).toFixed(2);
-    return {
-      backgroundColor: swipeDir.value === 1
-        ? `rgba(90,140,106,${alpha})`
-        : `rgba(196,88,74,${alpha})`,
-    };
-  });
-
-  const labelOpacity = useAnimatedStyle(() => ({
-    opacity: Math.min(Math.abs(translateX.value) / 60, 1),
-  }));
-
-  const isSwipingRight = useAnimatedStyle(() => ({
-    opacity: swipeDir.value === 1 ? 1 : 0,
-  }));
-
-  const isSwipingLeft = useAnimatedStyle(() => ({
-    opacity: swipeDir.value === -1 ? 1 : 0,
   }));
 
   const checkStyle = useAnimatedStyle(() => ({
@@ -181,114 +123,100 @@ export default function SetRow({
   const completedBg = set.completed ? `${colors.setComplete}18` : 'transparent';
 
   return (
-    <View style={styles.wrapper}>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[{ backgroundColor: completedBg }, rowColorStyle, rowStyle]}>
-          <View style={styles.row}>
-            {/* Menu */}
-            <Pressable onPress={onMenuPress} style={styles.menuCell} hitSlop={8}>
-              <MenuIcon color={colors.muted} />
-            </Pressable>
+    <Animated.View style={[{ backgroundColor: completedBg }, rowStyle]}>
+      <View style={styles.row}>
+        {/* Menu */}
+        <Pressable onPress={onMenuPress} style={styles.menuCell} hitSlop={8}>
+          <MenuIcon color={colors.muted} />
+        </Pressable>
 
-            {/* Weight */}
-            <View style={styles.inputCell}>
-              <TextInput
-                value={String(set.weight || '')}
-                keyboardType="decimal-pad"
-                placeholder="0"
-                placeholderTextColor={colors.placeholder}
-                onChangeText={(t) => {
-                  const clean = t.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                  onWeightChange(parseFloat(clean) || 0);
-                }}
-                style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
-              />
-            </View>
+        {/* Weight */}
+        <View style={styles.inputCell}>
+          <TextInput
+            value={String(set.weight || '')}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor={colors.placeholder}
+            onChangeText={(t) => {
+              const clean = t.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+              onWeightChange(parseFloat(clean) || 0);
+            }}
+            style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text }]}
+          />
+        </View>
 
-            {/* Reps */}
-            <View style={styles.inputCell}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                {!!onTimerPress && (
-                  isActive && !set.completed && !set.skipped ? (
-                    <Pressable onPress={onTimerPress} hitSlop={12} style={{ marginRight: 4 }}>
-                      <MaterialCommunityIcons name="timer-outline" size={19} color={colors.primary} />
-                    </Pressable>
-                  ) : (
-                    <View style={{ width: 23 }} />
-                  )
-                )}
-                <TextInput
-                  value={String(set.reps || '')}
-                  keyboardType="number-pad"
-                  placeholder={
-                    set.rir !== undefined
-                      ? `${set.rir} RIR`
-                      : set.targetReps ? String(set.targetReps) : '0'
-                  }
-                  placeholderTextColor={
-                    rirError
-                      ? colors.error
-                      : set.rir !== undefined || set.targetReps
-                      ? colors.primary
-                      : colors.placeholder
-                  }
-                  onChangeText={(t) => {
-                    const clean = t.replace(/[^0-9]/g, '');
-                    onRepsChange(parseInt(clean, 10) || 0);
-                  }}
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: colors.inputBg,
-                      color: colors.text,
-                      borderWidth: rirError ? 1 : 0,
-                      borderColor: rirError ? colors.error : 'transparent',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-
-            {/* Check */}
-            <View style={styles.checkCell}>
-              <Pressable onPress={handleComplete} hitSlop={8}>
-                <Animated.View
-                  style={[
-                    styles.checkBox,
-                    {
-                      backgroundColor: set.completed ? colors.setComplete : colors.inputBg,
-                      borderColor: isActive ? colors.primary : colors.border,
-                      borderWidth: set.completed ? 0 : isActive ? 2 : StyleSheet.hairlineWidth,
-                    },
-                    checkStyle,
-                  ]}
-                >
-                  {set.completed && <CheckIcon color="#fff" />}
-                </Animated.View>
-              </Pressable>
-            </View>
+        {/* Reps */}
+        <View style={styles.inputCell}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {!!onTimerPress && (
+              isActive && !set.completed && !set.skipped ? (
+                <Pressable onPress={onTimerPress} hitSlop={12} style={{ marginRight: 4 }}>
+                  <MaterialCommunityIcons name="timer-outline" size={19} color={colors.primary} />
+                </Pressable>
+              ) : (
+                <View style={{ width: 23 }} />
+              )
+            )}
+            <TextInput
+              value={String(set.reps || '')}
+              keyboardType="number-pad"
+              placeholder={
+                set.rir !== undefined
+                  ? `${set.rir} RIR`
+                  : set.targetReps ? String(set.targetReps) : '0'
+              }
+              placeholderTextColor={
+                rirError
+                  ? colors.error
+                  : set.rir !== undefined || set.targetReps
+                  ? colors.primary
+                  : colors.placeholder
+              }
+              onChangeText={(t) => {
+                const clean = t.replace(/[^0-9]/g, '');
+                onRepsChange(parseInt(clean, 10) || 0);
+              }}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBg,
+                  color: colors.text,
+                  borderWidth: rirError ? 1 : 0,
+                  borderColor: rirError ? colors.error : 'transparent',
+                },
+              ]}
+            />
           </View>
+        </View>
 
-          {!set.completed && (
-            <View style={[styles.separator, { backgroundColor: colors.separator }]} />
-          )}
+        {/* Check */}
+        <View style={styles.checkCell}>
+          <Pressable onPress={handleComplete} hitSlop={8}>
+            <Animated.View
+              style={[
+                styles.checkBox,
+                {
+                  backgroundColor: set.completed ? colors.setComplete : colors.inputBg,
+                  borderColor: isActive ? colors.primary : colors.border,
+                  borderWidth: set.completed ? 0 : isActive ? 2 : StyleSheet.hairlineWidth,
+                },
+                checkStyle,
+              ]}
+            >
+              {set.completed && <CheckIcon color="#fff" />}
+            </Animated.View>
+          </Pressable>
+        </View>
+      </View>
 
-          {/* Floating labels — Text is JS-rendered, stacks correctly over inputs */}
-          <Animated.View pointerEvents="none" style={[styles.labelContainer, labelOpacity]}>
-            <Animated.Text style={[styles.revealText, isSwipingRight]}>✓  Complete</Animated.Text>
-            <Animated.Text style={[styles.revealText, isSwipingLeft]}>✕  Delete</Animated.Text>
-          </Animated.View>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+      {!set.completed && (
+        <View style={[styles.separator, { backgroundColor: colors.separator }]} />
+      )}
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-    overflow: 'hidden',
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -341,16 +269,5 @@ const styles = StyleSheet.create({
   separator: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: Space[2],
-  },
-  labelContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  revealText: {
-    color: '#fff',
-    fontFamily: FontFamily.bodySemi,
-    fontSize: 14,
-    letterSpacing: 0.5,
   },
 });

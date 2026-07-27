@@ -670,7 +670,6 @@ export default function ActiveWorkout() {
             key={`chunk-${idx}-${group[0]?.id}`}
             exerciseGroup={group}
             onUpdateSet={handleUpdateSet}
-            onRemoveSet={removeSet}
             onAddSet={addSet}
             onExerciseMenuPress={(id) => setActiveExerciseId(id)}
             onSetMenuPress={(id, index) =>

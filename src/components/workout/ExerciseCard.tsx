@@ -23,7 +23,6 @@ import VolumePill from './VolumePill';
 interface ExerciseCardProps {
   exerciseGroup: Exercise[];
   onUpdateSet: (exerciseId: string, setIndex: number, data: Partial<WorkoutSet>) => void;
-  onRemoveSet: (exerciseId: string, setIndex: number) => void;
   onAddSet: (exerciseId: string, defaultWeight?: number, rir?: number) => void;
   onExerciseMenuPress: (exerciseId: string) => void;
   onSetMenuPress: (exerciseId: string, setIndex: number) => void;
@@ -157,7 +156,6 @@ function HistoryPanel({ exerciseName, equipment }: { exerciseName: string; equip
 export default function ExerciseCard({
   exerciseGroup,
   onUpdateSet,
-  onRemoveSet,
   onAddSet,
   onExerciseMenuPress,
   onSetMenuPress,
@@ -304,7 +302,6 @@ export default function ExerciseCard({
                       onUpdateSet(exercise.id, setIndex, { completed: !set.completed });
                     }
                   }}
-                  onRemove={() => onRemoveSet(exercise.id, setIndex)}
                   onMenuPress={() => onSetMenuPress(exercise.id, setIndex)}
                   onTimerPress={isTimeBased ? () => setTimerTarget({ exerciseId: exercise.id, setIndex }) : undefined}
                 />
