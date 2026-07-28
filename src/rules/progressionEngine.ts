@@ -132,6 +132,19 @@ export function roundToIncrement(weight: number, increment: number): number {
   return Math.round(weight / increment) * increment;
 }
 
+// ST-007: Double-progression rep target — advance the prescribed rep count by
+// 1 from last session's actual performance (capped at the exercise's rep
+// ceiling), rather than always prescribing the full band ceiling outright.
+// Climbing one rep at a time before adding load is the standard double
+// progression method (NSCA Essentials of Strength Training and Conditioning).
+// This matters most where the band is wide relative to what's achievable
+// session to session — e.g. a bodyweight Pull-Up spanning an 8–15 rep band —
+// where jumping straight to the ceiling reads as an unrealistic ask instead
+// of a coached, week-over-week nudge.
+function nextRepTarget(lastReps: number, ceiling: number): number {
+  return Math.max(1, Math.min(lastReps + 1, ceiling));
+}
+
 // ─── Session analysis helpers ─────────────────────────────────────────────────
 
 // Working weight = highest weight completed in the session.
@@ -455,16 +468,21 @@ function evaluateBeginnerLinear(
       return {
         ...base,
         nextWeight,
+        nextRepsMax: effectiveRepsMin,
         action: 'REDUCE_LOAD',
         reason: `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${increment} lb — rebuild from new base.`,
         isPlateauWarning: true,
       };
     }
+    // ST-007: nudge toward the floor 1 rep at a time rather than restating the
+    // full ceiling while still below the minimum.
+    const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
     return {
       ...base,
       nextWeight: lastPerf.weight,
+      nextRepsMax: nextTarget,
       action: 'HOLD',
-      reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Hold load; build to ${effectiveRepsMin}+ reps.`,
+      reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
     };
   }
 
@@ -475,21 +493,28 @@ function evaluateBeginnerLinear(
     return {
       ...base,
       nextWeight,
+      // ST-007: reset the rep target to the floor at the new load — double
+      // progression restarts the climb, it doesn't ask for the old ceiling
+      // again at a heavier weight.
+      nextRepsMax: effectiveRepsMin,
       action: 'ADVANCE_LOAD',
       reason: `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Linear progression: add ${increment} lb.`,
     };
   }
 
-  // Within rep band — rep progress is occurring.
+  // Within rep band — rep progress is occurring. ST-007: target last session's
+  // reps + 1 (capped at the ceiling) instead of restating the full ceiling.
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
   const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
+  const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
   const reason = repProgress
-    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Building toward ceiling (${prescription.repsMax}).`
-    : `${lastPerf.maxReps}/${prescription.repsMax} reps at ${lastPerf.weight} lb. Continue.`;
+    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${prescription.repsMax}).`
+    : `${lastPerf.maxReps}/${prescription.repsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
   return {
     ...base,
     nextWeight: lastPerf.weight,
+    nextRepsMax: nextTarget,
     action: 'HOLD',
     reason,
   };
@@ -546,16 +571,21 @@ function evaluateDoubleProgression(
       return {
         ...base,
         nextWeight,
+        nextRepsMax: effectiveRepsMin,
         action: 'REDUCE_LOAD',
         reason: `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${increment} lb — rebuild to ${effectiveRepsMin} reps before advancing.`,
         isPlateauWarning: true,
       };
     }
+    // ST-007: nudge toward the floor 1 rep at a time rather than restating the
+    // full ceiling while still below the minimum.
+    const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
     return {
       ...base,
       nextWeight: lastPerf.weight,
+      nextRepsMax: nextTarget,
       action: 'HOLD',
-      reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Hold load; accumulate reps.`,
+      reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
     };
   }
 
@@ -568,20 +598,28 @@ function evaluateDoubleProgression(
     return {
       ...base,
       nextWeight,
+      // ST-007: reset the rep target to the floor at the new load — double
+      // progression restarts the climb, it doesn't ask for the old ceiling
+      // again at a heavier weight.
+      nextRepsMax: effectiveRepsMin,
       action: 'ADVANCE_LOAD',
       reason: `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Double progression: add ${increment} lb → target ${effectiveRepsMin} reps at new load.`,
     };
   }
 
   // ── Within rep band — normal hold ────────────────────────────────────────
+  // ST-007: target last session's reps + 1 (capped at the ceiling) instead of
+  // restating the full ceiling every week.
   const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
+  const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
   const reason = repProgress
-    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Building toward ceiling (${prescription.repsMax}).`
-    : `${lastPerf.maxReps}/${prescription.repsMax} reps at ${lastPerf.weight} lb. Continue.`;
+    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${prescription.repsMax}).`
+    : `${lastPerf.maxReps}/${prescription.repsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
   return {
     ...base,
     nextWeight: lastPerf.weight,
+    nextRepsMax: nextTarget,
     action: 'HOLD',
     reason,
   };

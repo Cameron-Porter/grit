@@ -166,6 +166,60 @@ describe('HV-001 — intra-mesocycle RIR taper', () => {
   });
 });
 
+// ─── ST-007: Double-progression rep target climbs 1 rep at a time ────────────
+
+describe('ST-007 — rep target advances by 1, not straight to the ceiling', () => {
+  // Regression case: a wide-band bodyweight exercise (Pull-Up, 8–15 reps) that
+  // only got 8 reps last session must not prescribe 15 next session.
+  it('within-band hold targets last reps + 1, not the full ceiling', () => {
+    const prescription = makePrescription({ repsMin: 8, repsMax: 15 });
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(prescription, makeSessions(180, 8, 1), ctx);
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextRepsMax).toBe(9);
+    expect(rec.nextRepsMax).not.toBe(15);
+  });
+
+  it('below-floor hold targets last reps + 1, not the full ceiling', () => {
+    const prescription = makePrescription({ repsMin: 8, repsMax: 15 });
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(prescription, makeSessions(180, 6, 1), ctx);
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextRepsMax).toBe(7);
+  });
+
+  it('caps the target at the true ceiling instead of overshooting', () => {
+    const prescription = makePrescription({ repsMin: 8, repsMax: 12 });
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(prescription, makeSessions(100, 11, 1), ctx);
+    expect(rec.nextRepsMax).toBe(12);
+  });
+
+  it('resets the target to the floor after ADVANCE_LOAD, not the old ceiling', () => {
+    const prescription = makePrescription({ repsMin: 8, repsMax: 12 });
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(prescription, makeSessions(100, 12, 1), ctx);
+    expect(rec.action).toBe('ADVANCE_LOAD');
+    expect(rec.nextRepsMax).toBe(8);
+  });
+
+  it('resets the target to the floor after REDUCE_LOAD', () => {
+    const prescription = makePrescription({ repsMin: 8, repsMax: 12 });
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(prescription, makeSessions(100, 6, 2), ctx);
+    expect(rec.action).toBe('REDUCE_LOAD');
+    expect(rec.nextRepsMax).toBe(8);
+  });
+
+  it('applies the same +1 targeting for beginner linear progression', () => {
+    const prescription = makePrescription({ repsMin: 8, repsMax: 15 });
+    const ctx = makeCtx({ experienceLevel: 'beginner' });
+    const rec = recommendProgression(prescription, makeSessions(180, 8, 1), ctx);
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextRepsMax).toBe(9);
+  });
+});
+
 // ─── HV-013: Deadlift + barbell-row same-day validation ──────────────────────
 
 describe('HV-013 — validateDayExercises: deadlift + barbell-row conflict', () => {
