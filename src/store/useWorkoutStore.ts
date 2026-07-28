@@ -349,6 +349,54 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
       },
 
+      // Sibling to startFromProgramDay for an ad-hoc, generated session with
+      // no program/day linkage (activeProgramDayId stays null — this already
+      // makes the existing replace-exercise "apply to all program workouts"
+      // checkbox and the soreness-check gate no-op correctly, both of which
+      // are conditioned on activeProgramDayId being truthy).
+      //
+      // Deliberately NOT a thin wrapper around startFromProgramDay: that
+      // action's Week-1-vs-Week-2+ reps prefill is a single session-wide
+      // flag, but a Quick Workout mixes exercises with and without history in
+      // the same session — each needs its own independent blank-vs-prefilled
+      // decision, so `isFirstSession` is tracked per exercise instead.
+      startQuickWorkout: (label, exerciseTemplates) => {
+        set((state) => {
+          const hasCompletedSets = state.exercises.some((ex) => ex.sets.some((s) => s.completed));
+          if (state.activeWorkoutId && hasCompletedSets) return state;
+          const { bodyWeight } = useProfileStore.getState();
+          return {
+            activeWorkoutId: Date.now().toString(),
+            activeProgramId: null,
+            activeProgramDayId: null,
+            activeProgramMusclePriorities: null,
+            activeProgramName: 'Quick Workout',
+            activeProgramWeek: null,
+            activeProgramDayNumber: null,
+            activeProgramDayLabel: label,
+            exercises: exerciseTemplates.map((t) => {
+              const isBodyweight = t.equipment === 'Bodyweight';
+              const resolvedWeight = isBodyweight ? (bodyWeight ?? t.targetWeight) : t.targetWeight;
+              const prescribedReps = t.targetRepsMax;
+              return {
+                id: uuidv4(),
+                name: t.name,
+                muscleGroup: t.muscleGroup,
+                musclePriority: t.musclePriority,
+                equipment: t.equipment,
+                sets: Array.from({ length: t.targetSets }, () => ({
+                  reps: t.isFirstSession ? 0 : prescribedReps,
+                  weight: resolvedWeight,
+                  completed: false,
+                  rir: t.rir,
+                  targetReps: prescribedReps,
+                })),
+              };
+            }),
+          };
+        });
+      },
+
       skipDay: async (dayId: string) => {
         try {
           await skipProgramDay(dayId);

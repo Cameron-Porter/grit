@@ -538,6 +538,80 @@ describe('startFromProgramDay', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// startQuickWorkout
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('startQuickWorkout', () => {
+  it('starts a session with no program/day linkage', () => {
+    useWorkoutStore.getState().startQuickWorkout('Upper · Push', [
+      { name: 'Bench Press', muscleGroup: 'Chest', musclePriority: 'grow', equipment: 'Barbell', targetSets: 3, targetRepsMin: 6, targetRepsMax: 9, targetWeight: 135, rir: 2, isFirstSession: false },
+    ]);
+    const state = useWorkoutStore.getState();
+    expect(state.activeProgramDayId).toBeNull();
+    expect(state.activeProgramId).toBeNull();
+    expect(state.activeProgramWeek).toBeNull();
+    expect(state.activeProgramName).toBe('Quick Workout');
+    expect(state.activeProgramDayLabel).toBe('Upper · Push');
+    expect(state.exercises[0].name).toBe('Bench Press');
+    expect(state.exercises[0].sets).toHaveLength(3);
+  });
+
+  it('pre-fills reps and weight when isFirstSession is false', () => {
+    useWorkoutStore.getState().startQuickWorkout('Upper · Push', [
+      { name: 'Bench Press', muscleGroup: 'Chest', equipment: 'Barbell', targetSets: 2, targetRepsMin: 6, targetRepsMax: 9, targetWeight: 135, rir: 2, isFirstSession: false },
+    ]);
+    const set = useWorkoutStore.getState().exercises[0].sets[0];
+    expect(set.reps).toBe(9);
+    expect(set.weight).toBe(135);
+  });
+
+  it('leaves reps and weight blank when isFirstSession is true', () => {
+    useWorkoutStore.getState().startQuickWorkout('Upper · Push', [
+      { name: 'Cable Fly', muscleGroup: 'Chest', equipment: 'Cable', targetSets: 2, targetRepsMin: 10, targetRepsMax: 15, targetWeight: 0, rir: 2, isFirstSession: true },
+    ]);
+    const set = useWorkoutStore.getState().exercises[0].sets[0];
+    expect(set.reps).toBe(0);
+    expect(set.weight).toBe(0);
+  });
+
+  // The key divergence from startFromProgramDay: that action's blank-vs-
+  // prefilled choice is one flag for the whole session (Week 1 vs Week 2+).
+  // A Quick Workout mixes exercises with and without history in the same
+  // session, so each exercise must resolve isFirstSession independently.
+  it('mixes first-session and history-backed exercises independently in one session', () => {
+    useWorkoutStore.getState().startQuickWorkout('Upper · Push', [
+      { name: 'Bench Press', muscleGroup: 'Chest', equipment: 'Barbell', targetSets: 1, targetRepsMin: 6, targetRepsMax: 9, targetWeight: 135, rir: 2, isFirstSession: false },
+      { name: 'Cable Fly', muscleGroup: 'Chest', equipment: 'Cable', targetSets: 1, targetRepsMin: 10, targetRepsMax: 15, targetWeight: 0, rir: 2, isFirstSession: true },
+    ]);
+    const [bench, fly] = useWorkoutStore.getState().exercises;
+    expect(bench.sets[0].reps).toBe(9);
+    expect(bench.sets[0].weight).toBe(135);
+    expect(fly.sets[0].reps).toBe(0);
+    expect(fly.sets[0].weight).toBe(0);
+  });
+
+  it('resolves Bodyweight equipment from the profile bodyWeight even on a first session', () => {
+    useWorkoutStore.getState().startQuickWorkout('Upper · Pull', [
+      { name: 'Pull-Up', muscleGroup: 'Back', equipment: 'Bodyweight', targetSets: 2, targetRepsMin: 8, targetRepsMax: 15, targetWeight: 0, rir: 2, isFirstSession: true },
+    ]);
+    // useProfileStore is mocked at the top of this file with bodyWeight: 180.
+    const set = useWorkoutStore.getState().exercises[0].sets[0];
+    expect(set.weight).toBe(180);
+  });
+
+  it('does not override an active workout with completed sets', () => {
+    useWorkoutStore.setState({
+      activeWorkoutId: 'existing',
+      exercises: [{ id: 'ex1', name: 'Deadlift', muscleGroup: 'Back', equipment: 'Barbell', sets: [{ id: 's1', reps: 5, weight: 100, rir: 2, completed: true }] }],
+    });
+    useWorkoutStore.getState().startQuickWorkout('Upper · Push', [
+      { name: 'Bench Press', muscleGroup: 'Chest', equipment: 'Barbell', targetSets: 1, targetRepsMin: 6, targetRepsMax: 9, targetWeight: 135, rir: 2, isFirstSession: false },
+    ]);
+    expect(useWorkoutStore.getState().activeWorkoutId).toBe('existing');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // finishWorkout — happy path
 // ─────────────────────────────────────────────────────────────────────────────
 

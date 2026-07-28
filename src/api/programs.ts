@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { ProgramFocus } from "../types/program";
 
 const getUserId = async (): Promise<string | null> => {
   const { data } = await supabase.auth.getUser();
@@ -303,6 +304,18 @@ export async function getActiveProgramDayLabels(): Promise<string[]> {
     .sort((a, b) => a.day_number - b.day_number)
     .map((d) => d.label ?? '')
     .filter(Boolean);
+}
+
+/**
+ * Returns the active program's focus, or 'hypertrophy' if there is no active
+ * program. Used by Quick Workout generation so an ad-hoc session follows
+ * whatever doctrine (rep ranges, RIR, deload protocol) the user's current
+ * program already uses, rather than silently defaulting for everyone.
+ */
+export async function getCurrentProgramFocus(): Promise<ProgramFocus> {
+  const programs = await getPrograms();
+  const current = programs.find((p) => p.is_current);
+  return (current?.focus as ProgramFocus | null) ?? 'hypertrophy';
 }
 
 /**

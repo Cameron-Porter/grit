@@ -16,6 +16,7 @@ import ExerciseCard from '../src/components/workout/ExerciseCard';
 import ExerciseMenuModal from '../src/components/workout/ExerciseMenuModal';
 import ExercisePicker from '../src/components/workout/ExercisePicker';
 import FeedbackModal from '../src/components/workout/FeedbackModal';
+import QuickWorkoutPicker from '../src/components/workout/QuickWorkoutPicker';
 import SorenessModal from '../src/components/workout/SorenessModal';
 import NoteModal from '../src/components/workout/NoteModal';
 import PRPopup from '../src/components/workout/PRPopup';
@@ -62,6 +63,7 @@ export default function ActiveWorkout() {
     pendingFeedback,
     startWorkout,
     startFromProgramDay,
+    startQuickWorkout,
     skipDay,
     endWorkout,
     activeProgramId,
@@ -110,6 +112,7 @@ export default function ActiveWorkout() {
   // Idle state
   const [nextWorkout, setNextWorkout] = useState<Awaited<ReturnType<typeof getNextProgramWorkout>>>(null);
   const [loadingNext, setLoadingNext] = useState(false);
+  const [quickWorkoutOpen, setQuickWorkoutOpen] = useState(false);
 
   const feedbackShownFor = useRef<Set<string>>(new Set());
   const sorenessShownFor = useRef<Set<string>>(new Set());
@@ -142,8 +145,14 @@ export default function ActiveWorkout() {
     return () => { cancelled = true; };
   }, [activeProgramId, activeProgramWeek, activeProgramDayId, activeProgramDayNumber]);
 
-  // Must be above the early return — hooks can't be called conditionally
+  // Must be above the early return — hooks can't be called conditionally.
+  // Quick Workout sessions have no activeProgramId, so there's no weekly
+  // volume context to compare against — comparing just this one session's
+  // sets to a weekly MEV/MRV landmark would near-always read "under MEV" and
+  // show a misleading badge. Return {} in that case so ExerciseCard's
+  // volume pill (which only renders when weeklySets > 0) stays hidden.
   const weeklySetsByMuscle = useMemo(() => {
+    if (!activeProgramId) return {};
     const local = countSetsByMuscle(exercises);
     const merged: Record<string, number> = { ...weeklyDbSets };
     for (const [muscle, count] of Object.entries(futureSets)) {
@@ -153,7 +162,7 @@ export default function ActiveWorkout() {
       merged[muscle] = (merged[muscle] ?? 0) + count;
     }
     return merged;
-  }, [exercises, weeklyDbSets, futureSets]);
+  }, [exercises, weeklyDbSets, futureSets, activeProgramId]);
 
   // Keep ref in sync so exercise-deletion handler can read current value without stale closure
   useEffect(() => { feedbackMuscleRef.current = feedbackMuscle; }, [feedbackMuscle]);
@@ -257,7 +266,7 @@ export default function ActiveWorkout() {
                   <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>Programs</Text>
                 </Pressable>
                 <Pressable
-                  onPress={() => startWorkout()}
+                  onPress={() => setQuickWorkoutOpen(true)}
                   style={{ flex: 1, backgroundColor: colors.surface2, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.surface2 }}
                 >
                   <Text style={{ color: colors.muted, fontWeight: '700', fontSize: 14 }}>Quick Workout</Text>
@@ -266,6 +275,16 @@ export default function ActiveWorkout() {
             </View>
           )}
         </ScrollView>
+
+        <QuickWorkoutPicker
+          visible={quickWorkoutOpen}
+          onClose={() => setQuickWorkoutOpen(false)}
+          onGenerated={(label, generatedExercises) => {
+            setQuickWorkoutOpen(false);
+            startQuickWorkout(label, generatedExercises);
+          }}
+          onStartBlank={() => startWorkout()}
+        />
       </GradientBackground>
     );
   }
@@ -353,6 +372,23 @@ export default function ActiveWorkout() {
       'Skip Day',
       true,
     );
+  };
+
+  const handleOpenQuickWorkout = () => {
+    // startQuickWorkout silently no-ops once sets are already completed (same
+    // guard startFromProgramDay uses) — surface that up front instead of
+    // letting the picker generate a workout that then appears to do nothing.
+    const hasCompletedSetsNow = exercises.some((ex) => ex.sets.some((s) => s.completed));
+    if (hasCompletedSetsNow) {
+      Alert.alert(
+        'Finish or skip this workout first',
+        'You have completed sets in this session. Finish or skip it before starting a Quick Workout.',
+      );
+      return;
+    }
+    // Called directly from the header — no other <Modal> is open here, so no
+    // close/stagger needed before QuickWorkoutPicker presents its own.
+    setQuickWorkoutOpen(true);
   };
 
   const handleOpenRename = () => {
@@ -614,6 +650,24 @@ export default function ActiveWorkout() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {totalSets > 0 && (
               <Text style={{ color: colors.muted, fontSize: 13 }}>{doneSets}/{totalSets}</Text>
+            )}
+            {!!activeProgramId && (
+              <Pressable
+                onPress={handleOpenQuickWorkout}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                  paddingVertical: 6,
+                  paddingHorizontal: 10,
+                  borderRadius: 14,
+                  backgroundColor: colors.surface2,
+                }}
+                hitSlop={8}
+              >
+                <MaterialCommunityIcons name="flash-outline" size={16} color={colors.muted} />
+                <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700' }}>Quick Workout</Text>
+              </Pressable>
             )}
             <Pressable
               onPress={() => setProgramMenuOpen(true)}
@@ -930,6 +984,15 @@ export default function ActiveWorkout() {
           ))}
         </View>
       </Modal>
+
+      <QuickWorkoutPicker
+        visible={quickWorkoutOpen}
+        onClose={() => setQuickWorkoutOpen(false)}
+        onGenerated={(label, generatedExercises) => {
+          setQuickWorkoutOpen(false);
+          startQuickWorkout(label, generatedExercises);
+        }}
+      />
 
       {/* ── Day note modal ── */}
       <Modal visible={dayNoteOpen} transparent animationType="fade" onRequestClose={() => setDayNoteOpen(false)}>

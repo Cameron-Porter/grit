@@ -113,6 +113,21 @@ export type WorkoutState = {
     programId?: string | null,
     musclePriorities?: Record<string, 'emphasize' | 'grow' | 'maintain'> | null,
   ) => void;
+  startQuickWorkout: (
+    label: string,
+    exercises: {
+      name: string;
+      muscleGroup: string;
+      equipment: string;
+      musclePriority?: 'emphasize' | 'grow' | 'maintain';
+      targetSets: number;
+      targetRepsMin: number;
+      targetRepsMax: number;
+      targetWeight: number;
+      rir: number;
+      isFirstSession: boolean;
+    }[],
+  ) => void;
   replaceExercise: (exerciseId: string, newName: string, newMuscleGroup: string, newEquipment: string, newLogMode?: 'time') => void;
   updateExercisePriorities: (priorities: Record<string, 'emphasize' | 'grow' | 'maintain'>) => void;
 };

@@ -150,6 +150,36 @@ export async function getSparklineData(exerciseNames: string[]): Promise<Record<
   return result;
 }
 
+// Returns exercise names logged per workout, most-recent-workout-first, for
+// the last `limit` completed workouts (regardless of exercise/muscle). Used
+// by Quick Workout generation to build its anti-repeat exclusion sets — see
+// src/rules/exerciseSelector.ts.
+export async function getRecentWorkoutExerciseNames(limit = 2): Promise<string[][]> {
+  const userId = await getUserId();
+  if (!userId) return [];
+
+  const { data: workouts } = await supabase
+    .from("workouts")
+    .select("id")
+    .order("completed_at", { ascending: false })
+    .limit(limit);
+  if (!workouts?.length) return [];
+
+  const { data: sets } = await supabase
+    .from("workout_sets")
+    .select("workout_id, exercise_name")
+    .in("workout_id", workouts.map((w) => w.id))
+    .eq("completed", true);
+
+  const namesByWorkout = new Map<string, Set<string>>();
+  for (const s of sets ?? []) {
+    if (!namesByWorkout.has(s.workout_id)) namesByWorkout.set(s.workout_id, new Set());
+    namesByWorkout.get(s.workout_id)!.add(s.exercise_name);
+  }
+
+  return workouts.map((w) => [...(namesByWorkout.get(w.id) ?? new Set<string>())]);
+}
+
 export async function getExerciseAllSessions(exerciseName: string): Promise<ExerciseSession[]> {
   const { data: setRows } = await supabase
     .from("workout_sets")
