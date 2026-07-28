@@ -679,6 +679,7 @@ export default function ActiveWorkout() {
             bodyWeight={bodyWeight ?? undefined}
             weeklySetsByMuscle={weeklySetsByMuscle}
             forceHistoryId={historyExerciseId ?? undefined}
+            onCloseHistory={() => setHistoryExerciseId(null)}
           />
         ))}
 
@@ -792,7 +793,7 @@ export default function ActiveWorkout() {
           setTimeout(() => setReplaceTargetId(id), 250);
         }}
         onViewHistory={() => {
-          setHistoryExerciseId(activeExerciseId);
+          setHistoryExerciseId((prev) => (prev === activeExerciseId ? null : activeExerciseId));
           setActiveExerciseId(null);
         }}
       />

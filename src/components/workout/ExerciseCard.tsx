@@ -30,6 +30,7 @@ interface ExerciseCardProps {
   bodyWeight?: number;
   weeklySetsByMuscle?: Record<string, number>;
   forceHistoryId?: string;
+  onCloseHistory?: () => void;
 }
 
 const MAX_HISTORY_SESSIONS = 5;
@@ -41,7 +42,11 @@ function Icon({ ios, android, size, color }: { ios: string; android: string; siz
   return <MaterialCommunityIcons name={android as any} size={size} color={color} />;
 }
 
-function HistoryPanel({ exerciseName, equipment }: { exerciseName: string; equipment?: string }) {
+function HistoryCloseButton({ color }: { color: string }) {
+  return <Icon ios="xmark" android="close" size={14} color={color} />;
+}
+
+function HistoryPanel({ exerciseName, equipment, onClose }: { exerciseName: string; equipment?: string; onClose: () => void }) {
   const colors = useColors();
   const router = useRouter();
   const [sessions, setSessions] = useState<HistorySessionEntry[]>([]);
@@ -57,9 +62,14 @@ function HistoryPanel({ exerciseName, equipment }: { exerciseName: string; equip
   if (loading) {
     return (
       <View style={[styles.historyShell, { backgroundColor: colors.surface2 }]}>
-        <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }]}>
-          Exercise History
-        </Text>
+        <View style={styles.historyHeader}>
+          <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase' }]}>
+            Exercise History
+          </Text>
+          <Pressable onPress={onClose} hitSlop={8}>
+            <HistoryCloseButton color={colors.textSecondary} />
+          </Pressable>
+        </View>
         <Text style={[TypeScale.b2, { color: colors.textSecondary }]}>Loading…</Text>
       </View>
     );
@@ -68,9 +78,14 @@ function HistoryPanel({ exerciseName, equipment }: { exerciseName: string; equip
   if (sessions.length === 0) {
     return (
       <View style={[styles.historyShell, { backgroundColor: colors.surface2 }]}>
-        <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 4 }]}>
-          Exercise History
-        </Text>
+        <View style={styles.historyHeader}>
+          <Text style={[TypeScale.cap, { color: colors.primary, letterSpacing: 1.5, textTransform: 'uppercase' }]}>
+            Exercise History
+          </Text>
+          <Pressable onPress={onClose} hitSlop={8}>
+            <HistoryCloseButton color={colors.textSecondary} />
+          </Pressable>
+        </View>
         <Text style={[TypeScale.b2, { color: colors.textSecondary }]}>No previous data</Text>
       </View>
     );
@@ -163,6 +178,7 @@ export default function ExerciseCard({
   bodyWeight,
   weeklySetsByMuscle,
   forceHistoryId,
+  onCloseHistory,
 }: ExerciseCardProps) {
   const colors = useColors();
   const theme = useProfileStore((s) => s.theme);
@@ -170,15 +186,8 @@ export default function ExerciseCard({
   const musclePriority = exerciseGroup[0]?.musclePriority;
   const badgeColor = primaryMuscle ? (MuscleColors[primaryMuscle] ?? colors.primary) : colors.primary;
 
-  const [historyOpen, setHistoryOpen] = useState<Record<string, boolean>>({});
   const [noteExerciseId, setNoteExerciseId] = useState<string | null>(null);
   const [timerTarget, setTimerTarget] = useState<{ exerciseId: string; setIndex: number } | null>(null);
-
-  useEffect(() => {
-    if (forceHistoryId) {
-      setHistoryOpen((prev) => ({ ...prev, [forceHistoryId]: true }));
-    }
-  }, [forceHistoryId]);
 
   const noteExercise = noteExerciseId ? exerciseGroup.find((ex) => ex.id === noteExerciseId) : null;
 
@@ -271,7 +280,13 @@ export default function ExerciseCard({
             )}
 
             {/* History panel */}
-            {historyOpen[exercise.id] && <HistoryPanel exerciseName={exercise.name} equipment={exercise.equipment} />}
+            {forceHistoryId === exercise.id && (
+              <HistoryPanel
+                exerciseName={exercise.name}
+                equipment={exercise.equipment}
+                onClose={() => onCloseHistory?.()}
+              />
+            )}
 
             {/* Column headers */}
             <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>
