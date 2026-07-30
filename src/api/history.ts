@@ -359,6 +359,29 @@ export async function getLastMuscleGroupFeedback(
   return result;
 }
 
+// VA-013: soreness feedback logged for a specific workout, keyed by muscle
+// group. Used by computeAndSaveProgressionTargets to feed ProgressionContext
+// .soreness for that muscle's next-week set count — see progressionEngine.ts.
+export async function getMuscleSorenessForWorkout(
+  workoutId: string,
+): Promise<Record<string, string | null>> {
+  const userId = await getUserId();
+  if (!userId) return {};
+
+  const { data } = await supabase
+    .from('workout_feedback')
+    .select('muscle_group, soreness')
+    .eq('workout_id', workoutId);
+
+  if (!data) return {};
+
+  const result: Record<string, string | null> = {};
+  for (const row of data) {
+    result[row.muscle_group] = row.soreness ?? null;
+  }
+  return result;
+}
+
 /**
  * Returns the number of consecutive days (ending today) on which the user
  * completed at least one workout. Used to personalise reminder notifications.

@@ -582,6 +582,145 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
       },
     ],
   },
+
+  // ─── Thor 5x ───────────────────────────────────────────────────────────────
+  // Physique-goal preset. Rotates which of Back/Shoulders/Arms trains first
+  // across the week (Day 1 Back, Day 3 Shoulders, Day 5 Arms) so each gets
+  // freshest-neural-drive treatment at least once, per RP's priority-first-
+  // ordering doctrine. Chest/Legs/Abs are trained twice at lower priority to
+  // conserve recovery for the emphasized muscles. Source: RP Strength "Thor"
+  // hypertrophy blueprint (autoregulated ~3 RIR, add a set only if the target
+  // muscle isn't sore going into the next session).
+  {
+    id: 'thor-5',
+    name: 'Thor',
+    tagline: '5 days/week',
+    description: 'Rotates priority through back, shoulders, and arms so each trains first at least once a week, while chest, legs, and abs are trained twice at lower priority to conserve recovery. Start at 2 sets/exercise around 3 RIR — add a set only where soreness has cleared by the next session.',
+    daysPerWeek: 5,
+    recommendedWeeks: 12,
+    focus: 'hypertrophy',
+    bestFor: 'Physique-focused · Broad shoulders, back width, and arm size',
+    days: [
+      {
+        label: 'Back, Shoulders, Arms',
+        exercises: [
+          ex('Barbell Row',            'Back',      2, 10, 15, 3),
+          ex('Pull-Up',                'Back',      2, 10, 15, 3),
+          ex('Dumbbell Lateral Raise', 'Shoulders', 2, 10, 15, 3),
+          ex('Dumbbell Curl',          'Biceps',    2, 10, 15, 3),
+          ex('Skull Crusher',          'Triceps',   2, 10, 15, 3),
+        ],
+      },
+      {
+        label: 'Chest, Legs, Abs',
+        exercises: [
+          ex('Barbell Back Squat',     'Quads', 2, 10, 15, 3),
+          ex('Good Morning',           'Back',  2, 10, 15, 3),
+          ex('Incline Dumbbell Press', 'Chest', 2, 10, 15, 3),
+          ex('Decline Crunch',         'Abs',   2, 10, 15, 3),
+        ],
+      },
+      {
+        label: 'Shoulders, Back, Arms — Higher Rep',
+        exercises: [
+          ex('Cable Lateral Raise',   'Shoulders', 2, 10, 15, 3),
+          ex('Rear Delt Fly',         'Shoulders', 2, 10, 15, 3),
+          ex('Chest-Supported Row',   'Back',      2, 10, 15, 3),
+          ex('EZ-Bar Curl',           'Biceps',    2, 10, 15, 3),
+          ex('Cable Tricep Pushdown', 'Triceps',   2, 10, 15, 3),
+        ],
+      },
+      {
+        label: 'Chest, Legs, Abs',
+        exercises: [
+          ex('Machine Chest Press',        'Chest',      2, 10, 15, 3),
+          ex('Hanging Leg Raise',          'Abs',        2, 10, 15, 3),
+          ex('Bulgarian Split Squat',      'Quads',      2, 10, 15, 3),
+          ex('Dumbbell Romanian Deadlift', 'Hamstrings', 2, 10, 15, 3),
+        ],
+      },
+      {
+        label: 'Arms, Back, Shoulders',
+        exercises: [
+          ex('Pull-Up',                         'Back',      2, 10, 15, 3),
+          ex('Seated Cable Row',                'Back',      2, 10, 15, 3),
+          ex('Cable Curl',                      'Biceps',    2, 10, 15, 3),
+          ex('Incline Dumbbell Curl',           'Biceps',    2, 10, 15, 3),
+          ex('Skull Crusher',                   'Triceps',   2, 10, 15, 3),
+          ex('Cable Overhead Tricep Extension',  'Triceps',   2, 10, 15, 3),
+          ex('Cable Rear Delt Fly',             'Shoulders', 2, 10, 15, 3),
+        ],
+      },
+    ],
+  },
+
+  // ─── Superman 5x ───────────────────────────────────────────────────────────
+  // Physique-goal preset. Rotates which of Chest/Shoulders/Back trains first
+  // across the week (Day 1 Chest, Day 3 Back, Day 5 Shoulders/higher-rep) so
+  // each "hero muscle" gets freshest treatment at least once, per RP's
+  // priority-first-ordering doctrine. Arms/Legs days are lighter maintenance
+  // work. Source: RP Strength "Superman" hypertrophy blueprint (autoregulated
+  // — add sets only where recovery/soreness allows).
+  {
+    id: 'superman-5',
+    name: 'Superman',
+    tagline: '5 days/week',
+    description: 'Rotates priority through chest, shoulders, and back so each trains first at least once a week — chest, then back, then delts on a higher-rep day — while two lighter arm/leg days hold everything else at maintenance. Start at 2 sets/exercise and add sets only where recovery allows.',
+    daysPerWeek: 5,
+    recommendedWeeks: 12,
+    focus: 'hypertrophy',
+    bestFor: 'Physique-focused · Broad shoulders, upper chest, and V-taper',
+    days: [
+      {
+        label: 'Chest, Delts, Back',
+        exercises: [
+          ex('Incline Dumbbell Press', 'Chest',     2, 10, 15, 2),
+          ex('Machine Chest Press',    'Chest',     2, 10, 15, 2),
+          ex('Dumbbell Lateral Raise', 'Shoulders', 2, 10, 15, 2),
+          ex('Cable Rear Delt Fly',    'Shoulders', 1, 10, 15, 2),
+          ex('Lat Pulldown',          'Back',      1, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Legs & Arms — Maintenance',
+        exercises: [
+          ex('Barbell Back Squat',                 'Quads',   2, 10, 15, 2),
+          ex('Good Morning',                       'Back',    2, 10, 15, 2),
+          ex('Dumbbell Overhead Tricep Extension',  'Triceps', 2, 10, 15, 2),
+          ex('Dumbbell Curl',                      'Biceps',  2, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Back, Chest, Delts',
+        exercises: [
+          ex('Pull-Up',                'Back',      2, 10, 15, 2),
+          ex('Lat Pulldown',           'Back',      2, 10, 15, 2),
+          ex('Incline Dumbbell Press', 'Chest',     2, 10, 15, 2),
+          ex('Cable Crossover',        'Chest',     2, 10, 15, 2),
+          ex('Machine Lateral Raise',  'Shoulders', 1, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Arms & Legs — Maintenance',
+        exercises: [
+          ex('Cable Curl',            'Biceps',     2, 10, 15, 2),
+          ex('Cable Tricep Pushdown', 'Triceps',    2, 10, 15, 2),
+          ex('Lying Leg Curl',        'Hamstrings', 2, 10, 15, 2),
+          ex('Leg Press',             'Quads',      2, 10, 15, 2),
+        ],
+      },
+      {
+        label: 'Delts, Back, Chest — Higher Rep',
+        exercises: [
+          ex('Cable Lateral Raise',   'Shoulders', 2, 15, 20, 1),
+          ex('Rear Delt Fly',         'Shoulders', 2, 15, 20, 1),
+          ex('Seated Cable Row',      'Back',      2, 15, 20, 1),
+          ex('Straight-Arm Pulldown', 'Back',      2, 15, 20, 1),
+          ex('Pec Deck',              'Chest',     2, 15, 20, 0),
+        ],
+      },
+    ],
+  },
 ];
 
 export function getEquipmentForTemplateExercise(name: string): string {

@@ -161,6 +161,41 @@ function selectIncludedPairs(
   return included;
 }
 
+// ─── Priority-first ordering ──────────────────────────────────────────────────
+//
+// HV-022: move the session's emphasized muscle to the front of the slot order
+// so it's trained with freshest neural drive/highest force capacity, rather
+// than always following the template's fixed anatomical order (see
+// sessionTemplates.ts). Only fires when exactly one muscle in the session is
+// 'emphasize' — with zero or multiple emphasized muscles there's no single
+// unambiguous "priority" to promote, so the template order (already tuned for
+// fatigue management, e.g. compounds before isolation) is left untouched.
+// Not applied to FullBody sessions: FullBody's fixed order encodes a separate,
+// distinct rationale (heavy lower-body compounds before upper-body fatigue
+// affects balance/spinal stability under load) that would need to be explicitly
+// reconciled with priority-first ordering rather than silently overridden.
+// Source: Dr. Mike Israetel / RP Hypertrophy — train the priority muscle group
+// first in the session for peak neural drive and force output.
+function reorderForSessionPriority(
+  slots: ExerciseSlot[],
+  dayMuscles: Map<MuscleGroup, MusclePriority | 'mev'>,
+): ExerciseSlot[] {
+  const emphasizedMuscles = new Set(
+    slots.map((s) => s.muscle).filter((m) => dayMuscles.get(m) === 'emphasize'),
+  );
+  if (emphasizedMuscles.size !== 1) return slots;
+
+  const [emphasizedMuscle] = emphasizedMuscles;
+  if (slots[0]?.muscle === emphasizedMuscle) return slots;
+
+  // filter() preserves each slot's relative order, so the emphasized muscle's
+  // own Primary-before-Secondary-before-Accessory ordering survives the move.
+  const priorityBlock = slots.filter((s) => s.muscle === emphasizedMuscle);
+  const rest = slots.filter((s) => s.muscle !== emphasizedMuscle);
+
+  return [...priorityBlock, ...rest].map((slot, i) => ({ ...slot, sortOrder: i }));
+}
+
 // ─── Progressive week scaling ─────────────────────────────────────────────────
 //
 // HV-021: sets ramp linearly from a Week 1 anchor to a peak anchor across the
@@ -308,9 +343,16 @@ export function buildDaySlots(
     usedPairs.add(pairKey);
   }
 
+  // HV-022: promote the emphasized muscle to the front of the session, if
+  // there's exactly one and this isn't a FullBody session. Runs before HV-008
+  // below so Forearm placement always has final say over the result.
+  const priorityOrdered = template.sessionType === 'FullBody'
+    ? result
+    : reorderForSessionPriority(result, dayMuscles);
+
   // HV-008: Forearm placement — always after the last Back/Biceps/Traps slot.
   // This enforces the rule at generation time regardless of template ordering.
-  const forearmIndices = result.reduce<number[]>((acc, slot, i) => {
+  const forearmIndices = priorityOrdered.reduce<number[]>((acc, slot, i) => {
     if (slot.muscle === 'Forearms') acc.push(i);
     return acc;
   }, []);
@@ -318,8 +360,8 @@ export function buildDaySlots(
   if (forearmIndices.length > 0) {
     const pullMuscles: MuscleGroup[] = ['Back', 'Biceps', 'Traps'];
     let lastPullIdx = -1;
-    for (let i = result.length - 1; i >= 0; i--) {
-      if (pullMuscles.includes(result[i].muscle)) {
+    for (let i = priorityOrdered.length - 1; i >= 0; i--) {
+      if (pullMuscles.includes(priorityOrdered[i].muscle)) {
         lastPullIdx = i;
         break;
       }
@@ -327,8 +369,8 @@ export function buildDaySlots(
 
     if (lastPullIdx >= 0 && forearmIndices.some((fi) => fi <= lastPullIdx)) {
       // Remove Forearm slots from their current positions, then insert after lastPullIdx.
-      const forearmSlots = forearmIndices.map((fi) => result[fi]);
-      const nonForearm = result.filter((_, i) => !forearmIndices.includes(i));
+      const forearmSlots = forearmIndices.map((fi) => priorityOrdered[fi]);
+      const nonForearm = priorityOrdered.filter((_, i) => !forearmIndices.includes(i));
       // Find new insertion point (position after last pull slot in the non-forearm array)
       const insertAfter = nonForearm.reduce((acc, slot, i) => {
         if (pullMuscles.includes(slot.muscle)) return i;
@@ -343,5 +385,5 @@ export function buildDaySlots(
     }
   }
 
-  return result;
+  return priorityOrdered;
 }

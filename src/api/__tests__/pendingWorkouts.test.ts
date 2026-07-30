@@ -87,7 +87,9 @@ describe('drainPendingWorkouts — progression target computation', () => {
     await drainPendingWorkouts();
 
     expect(targetsComputed).toBe(true);
-    expect(mockComputeTargets).toHaveBeenCalledWith('day-1', 'intermediate');
+    // VA-013: workoutId is now threaded through so progression can look up
+    // this workout's soreness feedback (see src/api/progression.ts).
+    expect(mockComputeTargets).toHaveBeenCalledWith('day-1', 'intermediate', 'w1');
   });
 
   it('still resolves the queue entry even if progression computation throws', async () => {

@@ -1,4 +1,18 @@
-import { calculateVolumeBudget } from '../../src/rules/volumeBudget';
+import { calculateVolumeBudget, recommendedDaysPerWeekRange } from '../../src/rules/volumeBudget';
+
+describe('recommendedDaysPerWeekRange — VA-012', () => {
+  it('recommends 2-3 days/week for beginners', () => {
+    expect(recommendedDaysPerWeekRange('beginner')).toEqual({ min: 2, max: 3 });
+  });
+
+  it('recommends 3-5 days/week for intermediates', () => {
+    expect(recommendedDaysPerWeekRange('intermediate')).toEqual({ min: 3, max: 5 });
+  });
+
+  it('recommends 4-6 days/week for advanced lifters', () => {
+    expect(recommendedDaysPerWeekRange('advanced')).toEqual({ min: 4, max: 6 });
+  });
+});
 
 describe('calculateVolumeBudget — VA-011 per-muscle hypertrophy targets', () => {
   it('mev priority targets the muscle\'s own MEV landmark, not a flat number', () => {

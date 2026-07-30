@@ -1,4 +1,4 @@
-import type { DayPlan, ExerciseSlot, MuscleGroup, MusclePriority, ProgramFocus } from '../types/program';
+import type { DayPlan, ExerciseSlot, MuscleGroup, MusclePriority, ProgramFocus, SlotRole } from '../types/program';
 
 export const SESSION_MAX_EXERCISES = 5;
 export const SESSION_MAX_SETS = 24;
@@ -7,6 +7,49 @@ export const SESSION_TARGET_SETS_MIN = 8;
 // RC-005: cut phase hard cap — 20 sets × 3.5 min ≈ 70 min (well under 90-min limit)
 const SESSION_MAX_SETS_CUT = 20;
 const SESSION_MAX_EXERCISES_CUT = 4;
+
+// ST-009: strength-focus session set cap — much more than ~15 heavy work sets
+// in a single session drops most lifters below the minimum loading thresholds
+// (75%/82.5%/87.5% 1RM for their rep zone), producing junk volume even if it
+// still feels heavy. 2-5 sets per movement type is the productive range; this
+// caps the whole session, not any single movement.
+// Source: RP Strength "Strength Training Made Simple" (2023), "Productive
+// Sets Per Session" (2-5 sets/movement type, <15 sets/session).
+const SESSION_MAX_SETS_STRENGTH = 15;
+
+// RC-006: at 4+ training days/week, cap distinct muscle groups per session —
+// training 7-8 muscle groups in one session guarantees the last few get
+// inadequate stimulus regardless of how many exercise slots remain. Lower
+// frequencies (2-3 days/week) don't get this cap: a Full Body session at low
+// frequency is supposed to cover more ground per session.
+// Source: Dr. Mike Israetel / RP Hypertrophy — session muscle-group limits at
+// higher training frequencies.
+const MAX_MUSCLE_GROUPS_HIGH_FREQ = 5;
+const HIGH_FREQUENCY_THRESHOLD = 4;
+
+// RC-009: per-role/-focus minute cost per set, replacing the flat 3.5 min/set
+// constant that only worked for hypertrophy-style rep ranges by coincidence.
+// Strength-focus Primary work needs longer inter-set rest (heavy, low-rep
+// compounds); cut focus keeps the original flat estimate since RC-005's
+// set/exercise caps are already conservative enough to stay well under the
+// 90-minute ceiling regardless of per-set rest time.
+// Source: NSCA Essentials of Strength Training and Conditioning — rest
+// interval guidelines by training goal/intensity zone.
+const SESSION_MAX_MINUTES = 90;
+const MINUTES_PER_SET: Record<'strength' | 'default', Record<SlotRole, number>> = {
+  strength: { Primary: 5, Secondary: 3.5, Accessory: 2.5 },
+  default:  { Primary: 4, Secondary: 3,   Accessory: 2 },
+};
+
+export function estimateSlotMinutes(slot: ExerciseSlot, focus?: ProgramFocus): number {
+  if (focus === 'cut') return slot.sets * 3.5;
+  const table = focus === 'strength' ? MINUTES_PER_SET.strength : MINUTES_PER_SET.default;
+  return slot.sets * table[slot.role];
+}
+
+export function estimateSessionMinutes(slots: ExerciseSlot[], focus?: ProgramFocus): number {
+  return Math.round(slots.reduce((n, s) => n + estimateSlotMinutes(s, focus), 0));
+}
 
 // Full Body region membership — used to protect the last slot per region from trimming
 const FB_PUSH_REGION: MuscleGroup[] = ['Chest', 'Shoulders', 'Triceps'];
@@ -53,21 +96,76 @@ function byTrimPriority(
   });
 }
 
+// RC-006: whether `muscle` is the only muscle (among `muscles`) representing
+// its Full Body movement region — removing it would erase that region's
+// coverage for the session entirely.
+function isMuscleOnlyRepresentativeOfRegion(muscle: MuscleGroup, muscles: Set<MuscleGroup>): boolean {
+  for (const region of FB_REGIONS) {
+    if (!(region as string[]).includes(muscle)) continue;
+    const regionMuscles = [...muscles].filter((m) => (region as string[]).includes(m));
+    return regionMuscles.length <= 1;
+  }
+  return false;
+}
+
+// RC-006: remove whole muscles (all of their slots together, not slot-by-slot)
+// until distinct muscle-group count is at or below the high-frequency cap.
+function enforceMuscleGroupCap(
+  slots: ExerciseSlot[],
+  musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>,
+  isFullBody: boolean,
+): ExerciseSlot[] {
+  let current = slots;
+
+  while (true) {
+    const distinctMuscles = new Set(current.map((s) => s.muscle));
+    if (distinctMuscles.size <= MAX_MUSCLE_GROUPS_HIGH_FREQ) break;
+
+    const musclesByTrimPriority = [...distinctMuscles].sort(
+      (a, b) => trimPriority(musclePriorities[a] ?? 'mev') - trimPriority(musclePriorities[b] ?? 'mev'),
+    );
+    const victimMuscle = isFullBody
+      ? musclesByTrimPriority.find((m) => !isMuscleOnlyRepresentativeOfRegion(m, distinctMuscles))
+      : musclesByTrimPriority[0];
+
+    if (!victimMuscle) break; // every remaining muscle is a region anchor — stop
+    current = current.filter((s) => s.muscle !== victimMuscle);
+  }
+
+  return current;
+}
+
 // Enforce hard session limits:
+//   0. Cap distinct muscle groups per session at 4+ days/week (lowest
+//      priority muscle removed first)
 //   1. Remove slots until ≤ exercise cap (lowest priority first)
 //   2. Trim sets until ≤ set cap (reduce 1 set at a time from lowest
 //      priority). When a slot would drop below 2 sets, remove the whole slot.
+//   3. Trim further until ≤ 90 estimated minutes (same victim-selection order)
 export function enforceSessionCaps(
   day: DayPlan,
   musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>,
   focus?: ProgramFocus,
+  daysPerWeek?: number,
 ): DayPlan {
   const isCut = focus === 'cut';
   const maxExercises = isCut ? SESSION_MAX_EXERCISES_CUT : SESSION_MAX_EXERCISES;
-  const maxSets = isCut ? SESSION_MAX_SETS_CUT : SESSION_MAX_SETS;
+  // ST-009: strength gets its own (tighter) set cap; cut's still wins if both
+  // would apply, since programFocus is single-valued so this is never a
+  // simultaneous conflict — cut and strength are mutually exclusive focuses.
+  const maxSets = isCut
+    ? SESSION_MAX_SETS_CUT
+    : focus === 'strength'
+      ? SESSION_MAX_SETS_STRENGTH
+      : SESSION_MAX_SETS;
 
   const isFullBody = day.sessionType === 'FullBody';
   let slots = [...day.slots];
+
+  // ── Phase 0: muscle-group cap (RC-006), only at 4+ days/week ─────────────
+  if (daysPerWeek !== undefined && daysPerWeek >= HIGH_FREQUENCY_THRESHOLD) {
+    slots = enforceMuscleGroupCap(slots, musclePriorities, isFullBody);
+  }
 
   // ── Phase 1: slot count cap ──────────────────────────────────────────────
   while (slots.length > maxExercises) {
@@ -102,6 +200,26 @@ export function enforceSessionCaps(
     }
   }
 
+  // ── Phase 3: session-duration cap (RC-009) ───────────────────────────────
+  let totalMinutes = estimateSessionMinutes(slots, focus);
+
+  while (totalMinutes > SESSION_MAX_MINUTES) {
+    const sorted = byTrimPriority(slots, musclePriorities);
+    const target = isFullBody
+      ? sorted.find((s) => !isLastInRegion(s, slots))
+      : sorted[0];
+    if (!target) break;
+
+    const ref = slots.find((s) => s.id === target.id)!;
+
+    if (ref.sets <= 1) {
+      slots = slots.filter((s) => s.id !== ref.id);
+    } else {
+      ref.sets -= 1;
+    }
+    totalMinutes = estimateSessionMinutes(slots, focus);
+  }
+
   // Renumber sort orders after any removals
   const finalSlots = slots.map((slot, idx) => ({ ...slot, sortOrder: idx }));
   const finalSets = finalSlots.reduce((n, s) => n + s.sets, 0);
@@ -110,7 +228,7 @@ export function enforceSessionCaps(
     ...day,
     slots: finalSlots,
     totalSets: finalSets,
-    estimatedMinutes: Math.round(finalSets * 3.5),
+    estimatedMinutes: estimateSessionMinutes(finalSlots, focus),
     primaryMuscles: [...new Set(finalSlots.map((s) => s.muscle))],
   };
 }

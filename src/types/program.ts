@@ -194,7 +194,7 @@ export interface WeekParams {
 // ─── Program validation ───────────────────────────────────────────────────────
 
 export interface ProgramValidationIssue {
-  type: 'session_sets' | 'session_exercises' | 'weekly_volume' | 'ordering' | 'movement_balance' | 'proportionality' | 'back_plane' | 'muscle_coverage';
+  type: 'session_sets' | 'session_exercises' | 'weekly_volume' | 'ordering' | 'movement_balance' | 'proportionality' | 'back_plane' | 'muscle_coverage' | 'frequency';
   severity: 'error' | 'warning';
   message: string;
   dayIndex?: number;

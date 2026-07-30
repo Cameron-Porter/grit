@@ -153,7 +153,7 @@ export async function drainPendingWorkouts(): Promise<number> {
           // before this function returns, otherwise a user who backgrounds the app
           // right after finishing (or opens next week's day immediately) can find
           // the target row missing and nothing pre-filled.
-          await computeAndSaveProgressionTargets(payload.programDayId, experienceLevel).catch((e) => {
+          await computeAndSaveProgressionTargets(payload.programDayId, experienceLevel, payload.workoutId).catch((e) => {
             Sentry.captureException(e, { tags: { context: 'progressionEngine' } });
           });
         } else {

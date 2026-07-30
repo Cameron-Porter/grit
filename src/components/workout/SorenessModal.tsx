@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useColors } from '../../utils/useColors';
-
-type SorenessLevel = 'Not sore' | 'Healed early' | 'Just in time' | 'Still sore';
+import type { SorenessLevel } from '../../rules/progressionEngine';
 
 interface SorenessModalProps {
   visible: boolean;

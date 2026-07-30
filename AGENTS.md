@@ -17,8 +17,8 @@ Every parameter in the rules engine that encodes a training science decision **m
 | `HV`   | Hypertrophy / general rep ranges, slot rules | `slotRoleConfig.ts`, `slotBuilder.ts`, `validation.ts`, `../utils/volumeLandmarks.ts` |
 | `ST`   | Strength (Prilepin, NSCA) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts` |
 | `PB`   | Powerbuilding (PHAT / Kizen) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts` |
-| `RC`   | Session caps and structural constraints | `sessionTrimmer.ts`, `validation.ts` |
-| `VA`   | Volume adjustments (beginner scaling, deload, per-muscle MEV/MAV/MRV targeting) | `volumeBudget.ts`, `progressionEngine.ts`, `../utils/volumeLandmarks.ts` |
+| `RC`   | Session caps and structural constraints | `sessionTrimmer.ts`, `validation.ts`, `assignment.ts` |
+| `VA`   | Volume adjustments (beginner scaling, deload, per-muscle MEV/MAV/MRV targeting) | `volumeBudget.ts`, `progressionEngine.ts`, `../utils/volumeLandmarks.ts`, `../data/roleOverlap.ts` |
 
 Rules for adding a tag:
 1. **Every new numeric training parameter needs a tag.** If you write `sets: 5` or `{ emphasize: 18 }`, it needs a tag that explains why.

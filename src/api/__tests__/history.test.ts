@@ -6,7 +6,7 @@ jest.mock('../supabase', () => ({
 }));
 
 import { supabase } from '../supabase';
-import { getWeeklyCompletedSetsByMuscle } from '../history';
+import { getWeeklyCompletedSetsByMuscle, getMuscleSorenessForWorkout } from '../history';
 
 const mockFrom = supabase.from as jest.Mock;
 
@@ -78,5 +78,35 @@ describe('getWeeklyCompletedSetsByMuscle', () => {
     const result = await getWeeklyCompletedSetsByMuscle('program-1', 1);
     expect(result).toEqual({});
     expect(mockFrom).not.toHaveBeenCalled();
+  });
+});
+
+// VA-013: soreness lookup for a single already-finished workout, used to feed
+// ProgressionContext.soreness in src/api/progression.ts.
+describe('getMuscleSorenessForWorkout', () => {
+  it('keys soreness by muscle group for the given workout', async () => {
+    mockFrom.mockReturnValueOnce(makeChain({
+      data: [
+        { muscle_group: 'Chest', soreness: 'Still sore' },
+        { muscle_group: 'Back', soreness: 'Not sore' },
+      ],
+      error: null,
+    }));
+
+    const result = await getMuscleSorenessForWorkout('workout-1');
+    expect(result).toEqual({ Chest: 'Still sore', Back: 'Not sore' });
+  });
+
+  it('returns {} without hitting Supabase when unauthenticated', async () => {
+    (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({ data: { user: null } });
+    const result = await getMuscleSorenessForWorkout('workout-1');
+    expect(result).toEqual({});
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('returns {} when the query yields no rows', async () => {
+    mockFrom.mockReturnValueOnce(makeChain({ data: null, error: null }));
+    const result = await getMuscleSorenessForWorkout('workout-1');
+    expect(result).toEqual({});
   });
 });

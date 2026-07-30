@@ -364,3 +364,134 @@ describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () 
     expect(planeIssues).toHaveLength(0);
   });
 });
+
+describe('ST-004 — strength deload load reduction', () => {
+  it('drops load to 50% of last session, holding sets and reps', () => {
+    const ctx = makeCtx({ programFocus: 'strength', isDeload: true });
+    const rec = recommendProgression(
+      makePrescription({ sets: 5, repsMin: 3, repsMax: 6 }),
+      makeSessions(200, 5, 1),
+      ctx,
+    );
+    expect(rec.nextWeight).toBe(100);
+    expect(rec.nextSets).toBe(5);
+    expect(rec.action).toBe('DELOAD');
+  });
+});
+
+describe('ST-008 — cut-phase load increment', () => {
+  it('halves the standard compound increment (5 -> 2.5 lb) for cut focus', () => {
+    const ctx = makeCtx({ programFocus: 'cut' });
+    const rec = recommendProgression(
+      makePrescription(),
+      makeSessions(100, 12, 1), // ceiling hit -> would advance load if not cut
+      ctx,
+    );
+    // Cut disables auto-advance (CUT_HOLD), but loadIncrement is still
+    // reported for the UI — that's what this test is pinning.
+    expect(rec.loadIncrement).toBe(2.5);
+  });
+
+  it('halves the isolation-accessory increment (2.5 -> 1.25 lb) for cut focus', () => {
+    const ctx = makeCtx({ programFocus: 'cut' });
+    const rec = recommendProgression(
+      makePrescription({ role: 'Accessory', exerciseType: 'isolation' }),
+      makeSessions(50, 12, 1),
+      ctx,
+    );
+    expect(rec.loadIncrement).toBe(1.25);
+  });
+
+  it('bug fix regression: isCut is driven by programFocus, not the unused trainingPhase field', () => {
+    // Before the fix, isCut read ctx.trainingPhase, which no call site ever
+    // sets — so cut behavior (rep floor of 8, CUT_HOLD) was unreachable even
+    // for a real programFocus: 'cut' program. This pins the corrected wiring.
+    const ctx = makeCtx({ programFocus: 'cut', trainingPhase: undefined });
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 5 }),
+      makeSessions(100, 6, 1),
+      ctx,
+    );
+    expect(rec.action).toBe('CUT_HOLD');
+  });
+
+  it('does not affect non-cut focuses', () => {
+    const ctx = makeCtx({ programFocus: 'hypertrophy' });
+    const rec = recommendProgression(
+      makePrescription(),
+      makeSessions(100, 12, 1),
+      ctx,
+    );
+    expect(rec.loadIncrement).toBe(5);
+  });
+});
+
+describe('VA-012 — validateProgram frequency warning', () => {
+  it('warns (not errors) when daysPerWeek falls outside the experience-level range', () => {
+    const days = [makeDay([makeSlot()]), makeDay([makeSlot()])]; // daysPerWeek = 2
+    const program = makeProgram(days);
+    const result = validateProgram(program, [], 'advanced'); // advanced wants 4-6
+
+    const freqIssues = result.issues.filter((i) => i.type === 'frequency');
+    expect(freqIssues).toHaveLength(1);
+    expect(freqIssues[0].severity).toBe('warning');
+    expect(result.valid).toBe(true); // warnings never flip validity
+  });
+
+  it('does not warn when daysPerWeek is within range', () => {
+    const days = [makeDay([makeSlot()]), makeDay([makeSlot()]), makeDay([makeSlot()])]; // 3
+    const program = makeProgram(days);
+    const result = validateProgram(program, [], 'beginner'); // beginner wants 2-3
+
+    expect(result.issues.filter((i) => i.type === 'frequency')).toHaveLength(0);
+  });
+
+  it('skips the check entirely when experienceLevel is not provided', () => {
+    const days = [makeDay([makeSlot()])]; // daysPerWeek = 1, way outside any range
+    const program = makeProgram(days);
+    const result = validateProgram(program, []);
+
+    expect(result.issues.filter((i) => i.type === 'frequency')).toHaveLength(0);
+  });
+});
+
+describe('VA-013 — soreness-based volume autoregulation', () => {
+  it('holds sets at the base count when the muscle reported "Still sore"', () => {
+    // musclePriority 'emphasize' + mesoWeek 3 would normally add weekBonus=2
+    // sets above baseSetCount (3) => 5. 'Still sore' should cap it back to 3.
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Still sore' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(3);
+  });
+
+  it('does not cap sets when soreness is anything other than "Still sore"', () => {
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Healed early' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(5); // 3 + weekBonus(2), uncapped
+  });
+
+  it('does not cap sets when soreness is not provided at all', () => {
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3 });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(5);
+  });
+
+  it('never drops sets below the base count even when sore (holds, does not cut)', () => {
+    const ctx = makeCtx({ musclePriority: 'maintain', mesoWeek: 3, soreness: 'Still sore' });
+    const rec = recommendProgression(makePrescription({ sets: 4 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(4); // 'maintain' already holds at baseSetCount — unaffected
+  });
+
+  it('does not affect deload-week set counts (deload recomputes nextSets independently)', () => {
+    const ctx = makeCtx({
+      musclePriority: 'emphasize',
+      mesoWeek: 4,
+      totalMesoWeeks: 4,
+      isDeload: true,
+      soreness: 'Still sore',
+    });
+    const rec = recommendProgression(makePrescription({ sets: 4 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.action).toBe('DELOAD');
+    expect(rec.nextSets).toBe(Math.max(1, Math.ceil(4 * 0.5)));
+  });
+});

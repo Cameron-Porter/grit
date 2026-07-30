@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react-native';
-import { getExerciseAllSessions } from './history';
+import { getExerciseAllSessions, getMuscleSorenessForWorkout } from './history';
 import { getTemplateDayExercises, saveProgramDayTargets } from './programs';
 import { supabase } from './supabase';
 import { getExerciseByName } from '../data/exerciseDatabase';
@@ -11,6 +11,7 @@ import {
   type ProgressionContext,
   type ProgramFocus,
   type SessionPerformance,
+  type SorenessLevel,
 } from '../rules/progressionEngine';
 import type { ExperienceLevel, WeekParams } from '../types/program';
 
@@ -87,6 +88,11 @@ export function resolveMusclePerSessionAnchors(
 export async function computeAndSaveProgressionTargets(
   programDayId: string,
   experienceLevel: ExperienceLevel,
+  // VA-013: the workout that was just logged for this program day — its
+  // per-muscle soreness feedback (if any) informs whether next week's set
+  // count should hold flat. Optional so existing callers/tests that don't
+  // pass it keep working exactly as before (soreness simply has no effect).
+  workoutId?: string,
 ): Promise<void> {
   const { data: dayRow } = await supabase
     .from('program_days')
@@ -121,6 +127,7 @@ export async function computeAndSaveProgressionTargets(
 
     if (nextDayRow) {
       const isDeload = nextWeek === totalMesoWeeks;
+      const sorenessByMuscle = workoutId ? await getMuscleSorenessForWorkout(workoutId) : {};
 
       // Pass 1: gather each exercise's history/session data (independent of
       // any other exercise) so muscle-level totals can be computed before
@@ -193,12 +200,16 @@ export async function computeAndSaveProgressionTargets(
             const musclePriority = (
               ex.muscle_group ? musclePriorities[ex.muscle_group] : undefined
             ) as MusclePriority | undefined;
+            const soreness = (
+              ex.muscle_group ? sorenessByMuscle[ex.muscle_group] : undefined
+            ) as SorenessLevel | undefined;
 
             const ctx: ProgressionContext = {
               experienceLevel,
               isDeload,
               mesoWeek: nextWeek,
               totalMesoWeeks,
+              soreness,
               programFocus,
               musclePriority,
               hypertrophyVolumeOverride: overrideByExercise.get(ex.exercise_name),

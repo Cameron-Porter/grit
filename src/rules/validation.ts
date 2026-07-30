@@ -1,6 +1,7 @@
 import { PRIMARY_ROLE_OVERLAP, SECONDARY_ROLE_MULTIPLIER, ACCESSORY_ROLE_MULTIPLIER } from '../data/roleOverlap';
 import { getExerciseByName } from '../data/exerciseDatabase';
 import { LOWER_SESSION_TYPES } from './splitDeriver';
+import { recommendedDaysPerWeekRange } from './volumeBudget';
 import type {
   AdjustedVolumeTarget,
   DayPlan,
@@ -82,8 +83,23 @@ function computeWeeklyEffectiveSets(
 export function validateProgram(
   program: GeneratedProgram,
   adjustedTargets: AdjustedVolumeTarget[],
+  experienceLevel?: ExperienceLevel,
 ): ProgramValidationResult {
   const issues: ProgramValidationResult['issues'] = [];
+
+  // VA-012: advisory only (warning, never error) — daysPerWeek is still
+  // whatever the user picked. Source: Dr. Mike Israetel / RP Hypertrophy —
+  // training frequency by experience level.
+  if (experienceLevel) {
+    const { min, max } = recommendedDaysPerWeekRange(experienceLevel);
+    if (program.daysPerWeek < min || program.daysPerWeek > max) {
+      issues.push({
+        type: 'frequency',
+        severity: 'warning',
+        message: `${program.daysPerWeek} days/week is outside the typical ${min}–${max} range recommended for ${experienceLevel} lifters.`,
+      });
+    }
+  }
 
   // Validate Week 1 days (representative non-deload structure)
   for (const day of program.days) {

@@ -173,3 +173,19 @@ export function calculateVolumeBudget(
     };
   });
 }
+
+// VA-012: recommended weekly training-frequency range by training age.
+// Beginners overestimate recoverable frequency before habit/technique are
+// solid; advanced lifters need more frequent stimulus to keep driving
+// adaptation. This is advisory (see validation.ts's 'frequency' warning) —
+// daysPerWeek is still whatever the user picks, never hard-blocked.
+// Source: Dr. Mike Israetel / RP Hypertrophy — training frequency by
+// experience level.
+export function recommendedDaysPerWeekRange(level: ExperienceLevel): { min: number; max: number } {
+  switch (level) {
+    case 'beginner':     return { min: 2, max: 3 };
+    case 'advanced':     return { min: 4, max: 6 };
+    case 'intermediate':
+    default:             return { min: 3, max: 5 };
+  }
+}

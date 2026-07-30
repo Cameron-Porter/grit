@@ -25,12 +25,21 @@ export interface SessionPerformance {
 
 export type ProgramFocus = 'hypertrophy' | 'strength' | 'powerbuilding' | 'general' | 'maintenance' | 'cut';
 export type MusclePriority = 'emphasize' | 'grow' | 'maintain';
+// Single source of truth for this union — SorenessModal.tsx and src/api/
+// progression.ts both import it from here rather than each keeping their own
+// copy, to avoid string-literal drift.
+export type SorenessLevel = 'Not sore' | 'Healed early' | 'Just in time' | 'Still sore';
 
 export interface ProgressionContext {
   experienceLevel: ExperienceLevel;
   isDeload: boolean;
   mesoWeek: number;
   totalMesoWeeks: number;
+  // NOTE: currently unused by recommendProgression — cut-phase behavior is
+  // driven entirely by `programFocus === 'cut'` below (see isCut). No call
+  // site (src/api/progression.ts, src/api/quickWorkout.ts) ever sets this
+  // field today. Kept for a possible future "cut phase within a non-cut-focus
+  // program" feature; flag to the user before repurposing or removing it.
   trainingPhase?: 'bulk' | 'cut' | 'maintenance';
   // Weeks elapsed since the last completed deload.
   // Used to gate "fatigue masking" vs "true plateau" disambiguation.
@@ -39,6 +48,11 @@ export interface ProgressionContext {
   programFocus?: ProgramFocus;
   // Per-muscle volume priority — drives RIR taper within the meso.
   musclePriority?: MusclePriority;
+  // VA-013: soreness this muscle reported for the session just logged (the
+  // one whose performance is in `sessions[0]`) — used to hold volume flat
+  // rather than progress it into next week. See getMuscleSorenessForWorkout
+  // in src/api/history.ts for where this is fetched from.
+  soreness?: SorenessLevel;
   // HV-021: pre-resolved landmark-driven weekly set target for this exercise's
   // muscle (RP Strength / Israetel et al. MV/MEV/MAV/MRV), computed by the
   // caller — see rampSets() in volumeRamp.ts and computeAndSaveProgressionTargets
@@ -106,6 +120,20 @@ export function getLoadIncrement(
   experienceLevel: ExperienceLevel = 'intermediate',
   programFocus?: ProgramFocus,
 ): number {
+  // ST-008: Cut-phase load increment — halve the standard jump (compounds
+  // 2.5 lb instead of 5, isolation accessories 1.25 lb instead of 2.5).
+  // Reduced recovery capacity under a calorie deficit means the "consistent
+  // overload" assumption behind ST-005's flat +5 lbs doesn't hold; reusing
+  // only increments already in the system (1.25/2.5/5) rather than inventing
+  // a new granularity. Mutually exclusive with the strength branch below
+  // since programFocus is single-valued — a program can't be both 'cut' and
+  // 'strength' focus, so there's no ordering conflict between the two.
+  // Source: Dr. Mike Israetel / RP Hypertrophy — conservative load progression
+  // during fat loss (reduced-recovery training).
+  if (programFocus === 'cut') {
+    if (isIsolationClass(exerciseType) && role === 'Accessory') return 1.25;
+    return 2.5;
+  }
   // ST-005: Strength load increment — compounds always +5 lbs regardless of role.
   // Neuromuscular adaptation (the primary goal of strength training) requires
   // consistent overload on the main competition movements. Micro-loading is
@@ -232,7 +260,12 @@ export function recommendProgression(
   const exerciseType: ExerciseType = prescription.exerciseType ?? 'barbell-compound';
   const increment = getLoadIncrement(exerciseType, role, ctx.experienceLevel, ctx.programFocus);
 
-  const isCut = ctx.trainingPhase === 'cut';
+  // Bug fix: this used to read ctx.trainingPhase, a field no call site ever
+  // populates, so cut-phase behavior below was unreachable in production.
+  // programFocus is what's actually threaded through from the program's
+  // focus (src/api/progression.ts), matching how isMaintenance/isStrength
+  // are already derived just below.
+  const isCut = ctx.programFocus === 'cut';
   const isMaintenance = ctx.programFocus === 'maintenance';
   const isStrength = ctx.programFocus === 'strength';
 
@@ -245,11 +278,23 @@ export function recommendProgression(
   //   maintain  → never exceed template value
   const baseSetCount = prescription.sets;
   const weekBonus = ctx.musclePriority === 'emphasize' ? Math.max(0, ctx.mesoWeek - 1) : 0;
-  const effectiveSets = ctx.programFocus === 'hypertrophy' && ctx.hypertrophyVolumeOverride
+  const rawEffectiveSets = ctx.programFocus === 'hypertrophy' && ctx.hypertrophyVolumeOverride
     ? ctx.hypertrophyVolumeOverride.trainingSets
     : ctx.musclePriority === 'maintain'
       ? baseSetCount
       : baseSetCount + weekBonus;
+
+  // VA-013: hold volume flat rather than progress it if this muscle reported
+  // 'Still sore' walking into the session just logged — a set increase on
+  // top of incomplete recovery is exactly the autoregulation doctrine warns
+  // against. Caps rather than replaces rawEffectiveSets so this composes with
+  // both the flat weekBonus path and the HV-021 landmark-override path
+  // without needing to special-case which one produced the number. Never
+  // drops sets below baseSetCount — this holds volume, it doesn't cut it.
+  // Source: Dr. Mike Israetel / RP Hypertrophy — recovery autoregulation via
+  // soreness feedback.
+  const stillSore = ctx.soreness === 'Still sore';
+  const effectiveSets = stillSore ? Math.min(rawEffectiveSets, baseSetCount) : rawEffectiveSets;
 
   // During a cut, raise the rep floor to 8 to reduce injury risk from heavy loading.
   const effectiveRepsMin = isCut
@@ -301,20 +346,24 @@ export function recommendProgression(
   if (ctx.isDeload) {
     const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
     if (isStrength) {
-      // ST-004: Strength deload — reduce load 10%, hold reps and sets.
+      // ST-004: Strength deload — reduce load 50%, hold reps and sets.
       // Unlike hypertrophy deloads (halve volume, hold load), strength deloads
       // must preserve neuromuscular coordination. Cutting sets on heavy compound
-      // movements degrades motor patterns built over the meso. A 10% load drop
+      // movements degrades motor patterns built over the meso. A load drop
       // with full rep/set maintenance keeps the pattern intact while reducing
-      // systemic fatigue. Source: Prilepin doctrine; Juggernaut periodization.
-      const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.9, increment), increment);
+      // systemic fatigue. Source: RP Strength "Strength Training Made Simple"
+      // (2023) — deload week protocol (50% of last week's weight, same sets
+      // and reps). RP's own guide actually splits this across the week (70%
+      // first half, 50% second half); we use a flat 50% since this app's
+      // progression model operates at whole-week granularity, not half-weeks.
+      const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.5, increment), increment);
       return {
         ...base,
         nextWeight: deloadWeight,
         nextSets: baseSetCount,
         nextRir: Math.max(3, prescription.rir),
         action: 'DELOAD',
-        reason: `Strength deload — load reduced 10% (${lastWeight} → ${deloadWeight} lbs), reps and sets maintained to preserve neuromuscular coordination.`,
+        reason: `Strength deload — load reduced to 50% (${lastWeight} → ${deloadWeight} lbs), reps and sets maintained to preserve neuromuscular coordination.`,
       };
     }
     // PB-004: Powerbuilding deload uses the hypertrophy protocol (halve volume,

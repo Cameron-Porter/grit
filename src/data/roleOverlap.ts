@@ -1,7 +1,12 @@
 import type { MuscleGroup } from '../types/program';
 
-// Secondary muscle stimulus per PRIMARY slot, expressed as a fraction of one
-// direct working set.
+// VA-014: Secondary muscle stimulus per PRIMARY slot, expressed as a fraction
+// of one direct working set.
+//
+// Source: Dr. Mike Israetel / RP Hypertrophy — secondary muscle stimulus
+// coefficients (used here for both weekly volume accounting in
+// volumeBudget.ts/validation.ts, and for overlap-avoidance day-spacing in
+// assignment.ts — see RC-008).
 //
 // Basis (from literature on EMG and mechanical overlap):
 //   0.50 — substantial: close to a direct working set

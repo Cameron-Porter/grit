@@ -12,7 +12,7 @@ import type {
 import { assignMuscleSessions } from './assignment';
 import { deriveSplit, SESSION_LABELS } from './splitDeriver';
 import { buildDaySlots } from './slotBuilder';
-import { enforceSessionCaps } from './sessionTrimmer';
+import { enforceSessionCaps, estimateSessionMinutes } from './sessionTrimmer';
 import { validateProgram } from './validation';
 import { calculateVolumeBudget } from './volumeBudget';
 
@@ -41,10 +41,13 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
     config.experienceLevel,
   );
 
-  // Step 3: Assign muscles to days
+  // Step 3: Assign muscles to days.
+  // RC-008: muscleSessionMap is mutated in place as the loop progresses, so
+  // each call to assignMuscleSessions sees only the muscles already assigned
+  // (ALL_MUSCLES order below) — exactly what overlap-avoidance needs.
   const muscleSessionMap = new Map<MuscleGroup, number[]>();
   for (const target of volumeTargets) {
-    muscleSessionMap.set(target.muscle, assignMuscleSessions(weekSessions, target));
+    muscleSessionMap.set(target.muscle, assignMuscleSessions(weekSessions, target, muscleSessionMap));
   }
 
   // Recalculate setsPerSession from actual assigned day count
@@ -100,11 +103,13 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
         primaryMuscles: [...dayMuscles.keys()].filter((m) => dayMuscles.get(m) !== 'mev'),
         slots,
         totalSets,
-        estimatedMinutes: Math.round(totalSets * 3.5),
+        estimatedMinutes: estimateSessionMinutes(slots, config.focus),
       };
     });
 
-    const days = rawDays.map((day) => enforceSessionCaps(day, config.musclePriorities, config.focus));
+    const days = rawDays.map((day) =>
+      enforceSessionCaps(day, config.musclePriorities, config.focus, config.daysPerWeek),
+    );
     return { weekNumber, isDeload, days };
   });
 
@@ -123,6 +128,7 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
       validation: { valid: true, issues: [], weeklyEffectiveSets: {} },
     },
     volumeTargets,
+    config.experienceLevel,
   );
 
   return {

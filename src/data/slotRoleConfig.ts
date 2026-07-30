@@ -40,11 +40,18 @@ export const SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev', 
 
 // ─── ST-001: Strength Primary — Prilepin 85-95% zone ─────────────────────────
 //
-// Source: Prilepin's Chart (Soviet weightlifting research, 1000+ athletes).
+// Sources: Prilepin's Chart (Soviet weightlifting research, 1000+ athletes);
+// RP Strength "Strength Training Made Simple" (2023) — "Limit Strength" zone
+// (1-3 reps at 87.5%+ 1RM) for emphasize, bridging toward "Basic Strength"
+// (3-6 reps at 82.5%+ 1RM) for grow. The 1-3/2-4 rep bands implemented below
+// sit at the tight, CNS-conservative end of Prilepin's 85-95% zone (which
+// itself spans 1-6 reps/set depending on exact %) rather than its 3-6 rep
+// midpoint — the Made Simple guide's explicit Limit-Strength definition is
+// what actually justifies emphasize being 1-3, not a generic Prilepin cite.
 //
-// At 85-95% 1RM, Prilepin's optimal total reps per session = 10 (range 6-14),
-// with 3-6 reps per set. We target 5 sets × 1-3 reps for emphasize = 5-15 total,
-// hitting the optimal range while managing CNS cost per set.
+// At 85-95% 1RM, Prilepin's optimal total reps per session = 10 (range 6-14).
+// We target 5 sets × 1-3 reps for emphasize = 5-15 total, hitting the optimal
+// range while managing CNS cost per set.
 //
 // RIR 1: at near-max load you know you have one more rep but stop for technique.
 
