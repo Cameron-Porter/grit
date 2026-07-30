@@ -11,6 +11,7 @@ import {
   setCurrentProgram,
 } from '../../src/api/programs';
 import { PROGRAM_TEMPLATES, ProgramTemplate, getEquipmentForTemplateExercise } from '../../src/data/programTemplates';
+import type { SlotRole } from '../../src/types/program';
 import { Badge } from '../../src/components/Badge';
 import ExercisePicker from '../../src/components/workout/ExercisePicker';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
@@ -26,6 +27,7 @@ interface EditableExercise {
   repsMin: number;
   repsMax: number;
   rir: number;
+  role?: SlotRole;
 }
 
 interface EditableDay {
@@ -65,6 +67,7 @@ export default function ProgramTemplates() {
           repsMin: ex.repsMin,
           repsMax: ex.repsMax,
           rir: ex.rir,
+          role: ex.role,
         })),
       })),
     );
@@ -136,6 +139,7 @@ export default function ProgramTemplates() {
             ex.repsMin,
             ex.repsMax,
             ex.rir,
+            ex.role,
           );
         }
       }

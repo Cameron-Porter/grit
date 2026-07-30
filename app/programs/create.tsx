@@ -253,6 +253,7 @@ export default function CreateProgram() {
             slot.repsMin,
             slot.repsMax,
             slot.rir,
+            slot.role,
           );
         }
       }

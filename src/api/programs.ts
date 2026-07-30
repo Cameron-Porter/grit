@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
-import type { ProgramFocus } from "../types/program";
+import { getExerciseByName } from "../data/exerciseDatabase";
+import type { ProgramFocus, SlotRole } from "../types/program";
 
 const getUserId = async (): Promise<string | null> => {
   const { data } = await supabase.auth.getUser();
@@ -42,6 +43,9 @@ export interface ProgramExercise {
   target_reps_max: number | null;
   target_weight: number | null;
   rir: number | null;
+  // Null for programs created before this column existed — progression
+  // falls back to treating the exercise as Primary, same as always.
+  role: SlotRole | null;
 }
 
 export interface ProgramDayTarget {
@@ -196,6 +200,7 @@ export async function duplicateProgram(id: string, newName?: string): Promise<Pr
         ex.target_reps_min ?? undefined,
         ex.target_reps_max ?? undefined,
         ex.rir ?? undefined,
+        ex.role ?? undefined,
       );
     }
   }
@@ -226,6 +231,69 @@ export async function getProgramDays(programId: string): Promise<ProgramDay[]> {
   return data ?? [];
 }
 
+// TEMPORARY — one-time fix for programs created before program_exercises
+// retained a role (see migration 20260730000001 and progressionEngine.ts
+// getLoadIncrement). There is no way to recover the exact role a slot was
+// originally generated with, and exerciseDatabase.ts is a small rules-engine
+// fixture, not a mirror of every real exercise name variant users actually
+// log (confirmed in practice: "Incline Dumbbell Flyes", "Leaning Dumbbell
+// Lateral Raise", "Dumbbell Rear Delt Flyes", "Bench Dips", and even the
+// compound "Pull-Up (Normal Grip)" all fail to match it). So this only
+// infers a role when the name resolves to a real, classified exercise:
+// isolation/core -> Accessory; the first classified compound movement for a
+// given muscle in a day -> Primary; any later classified compound for that
+// same muscle -> Secondary. An unmatched name is left untouched (null) —
+// guessing "probably compound" for an unmatched name was the bug: it wrongly
+// claimed the muscle's Primary slot ahead of the real compound lift later in
+// the day, bumping that real compound down to Secondary. Safe to call
+// repeatedly (idempotent) and safe to delete once no program in use predates
+// the role column.
+function inferSlotRole(exerciseName: string, isFirstCompoundForMuscle: boolean): SlotRole | null {
+  const def = getExerciseByName(exerciseName);
+  if (!def) return null;
+  if (def.exerciseType === 'isolation' || def.exerciseType === 'core') return 'Accessory';
+  return isFirstCompoundForMuscle ? 'Primary' : 'Secondary';
+}
+
+// TEMPORARY — see inferSlotRole. Backfills `role` on every Week 1
+// program_exercises row for this program whose exercise name resolves to a
+// classified exercise, then returns how many rows were updated. Rows whose
+// name doesn't match anything are left alone rather than guessed at.
+export async function backfillWeek1ExerciseRoles(programId: string): Promise<number> {
+  const userId = await getUserId();
+  if (!userId) return 0;
+
+  const { data: week1Days } = await supabase
+    .from("program_days")
+    .select("id")
+    .eq("program_id", programId)
+    .eq("week_number", 1);
+  if (!week1Days?.length) return 0;
+
+  const { data: exercises } = await supabase
+    .from("program_exercises")
+    .select("id, program_day_id, muscle_group, exercise_name, sort_order")
+    .in("program_day_id", week1Days.map((d) => d.id))
+    .order("sort_order");
+  if (!exercises?.length) return 0;
+
+  const seenCompoundForMuscle = new Set<string>();
+  let updated = 0;
+
+  for (const ex of exercises) {
+    const key = `${ex.program_day_id}:${ex.muscle_group}`;
+    const isFirstCompound = !seenCompoundForMuscle.has(key);
+    const role = inferSlotRole(ex.exercise_name, isFirstCompound);
+    if (role === null) continue; // no signal — don't guess, don't consume the muscle's Primary slot
+    if (role !== 'Accessory') seenCompoundForMuscle.add(key);
+
+    const { error } = await supabase.from("program_exercises").update({ role }).eq("id", ex.id);
+    if (!error) updated++;
+  }
+
+  return updated;
+}
+
 export async function getProgramExercises(dayId: string): Promise<ProgramExercise[]> {
   const { data, error } = await supabase
     .from("program_exercises")
@@ -246,6 +314,7 @@ export async function addProgramExercise(
   targetRepsMin?: number,
   targetRepsMax?: number,
   rir?: number,
+  role?: SlotRole,
 ): Promise<void> {
   const { error } = await supabase.from("program_exercises").insert({
     program_day_id: dayId,
@@ -257,6 +326,7 @@ export async function addProgramExercise(
     target_reps_min: targetRepsMin ?? null,
     target_reps_max: targetRepsMax ?? null,
     rir: rir ?? null,
+    role: role ?? null,
   });
   if (error) throw error;
 }

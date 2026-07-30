@@ -11,6 +11,7 @@ import { supabase } from '../supabase';
 import {
   computeAndSaveProgressionTargets,
   getMuscleWeeklyFrequency,
+  refreshUpcomingProgressionTargets,
   resolveMusclePerSessionAnchors,
 } from '../progression';
 
@@ -164,5 +165,99 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
     // This is a landmark-anchored number, not a flat template+weekBonus value —
     // proving the override actually reached the saved row.
     expect(savedRows[0].target_sets).toBe(15);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// computeAndSaveProgressionTargets — role now reaches getLoadIncrement
+//
+// Regression test for the bug where program_exercises never retained its
+// Primary/Secondary/Accessory role, so every exercise's next-week load
+// increment silently defaulted to 'Primary' sizing regardless of the
+// exercise's actual role. Dumbbell Lateral Raise is 'isolation' in
+// exerciseDatabase.ts — at intermediate experience, Accessory role should
+// get the smaller 2.5 lb increment instead of Primary's 5 lb.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('computeAndSaveProgressionTargets — role-aware load increment', () => {
+  it('applies the Accessory-role increment (2.5 lb) when role is stored on the exercise row', async () => {
+    const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
+    const programRow = {
+      total_weeks: 6,
+      focus: 'general',
+      muscle_priorities: { Shoulders: 'grow' },
+    };
+    const templateDay = { id: 'template-day-1' };
+    const templateExercises = [
+      {
+        id: 'pe-1',
+        program_day_id: 'template-day-1',
+        exercise_name: 'Dumbbell Lateral Raise',
+        muscle_group: 'Shoulders',
+        equipment: 'Dumbbell',
+        sort_order: 0,
+        target_sets: 3,
+        target_reps_min: 10,
+        target_reps_max: 15,
+        target_weight: 20,
+        rir: 2,
+        role: 'Accessory',
+      },
+    ];
+    const nextDayRow = { id: 'next-day-1' };
+
+    // Hit the rep ceiling last time (15 reps at 20 lb) -> ADVANCE_LOAD fires.
+    const workoutSets = [{ workout_id: 'w1', weight: 20, reps: 15, set_index: 0 }];
+    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: dayRow, error: null }))            // program_days (dayRow)
+      .mockReturnValueOnce(makeChain({ data: programRow, error: null }))        // programs
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))       // program_days (template day lookup)
+      .mockReturnValueOnce(makeChain({ data: templateExercises, error: null })) // program_exercises (template)
+      .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))        // program_days (next week day)
+      .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))       // workout_sets (getExerciseAllSessions)
+      .mockReturnValueOnce(makeChain({ data: workouts, error: null }))          // workouts (getExerciseAllSessions)
+      .mockReturnValueOnce({ upsert: upsertMock })                             // program_day_targets upsert
+      .mockReturnValueOnce(makeChain({ data: [], error: null }));              // program_days (later-days lookup, section 2)
+
+    await computeAndSaveProgressionTargets('day-1', 'intermediate');
+
+    const savedRows = upsertMock.mock.calls[0][0];
+    expect(savedRows).toHaveLength(1);
+    // 20 + 2.5 (Accessory) = 22.5. Without the fix, role defaults to
+    // 'Primary' and this would be 20 + 5 = 25 instead.
+    expect(savedRows[0].target_weight).toBe(22.5);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// refreshUpcomingProgressionTargets — TEMPORARY, pairs with
+// backfillWeek1ExerciseRoles in src/api/programs.ts
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('refreshUpcomingProgressionTargets', () => {
+  it('returns early without running progression when there are no completed days', async () => {
+    mockFrom.mockReturnValueOnce(makeChain({ data: [], error: null }));
+    await refreshUpcomingProgressionTargets('program-1', 'intermediate');
+    expect(mockFrom).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs computeAndSaveProgressionTargets for each completed day', async () => {
+    const completedDays = [{ id: 'day-1' }];
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: completedDays, error: null })) // program_days (completed=true)
+      .mockReturnValueOnce(makeChain({ data: { program_id: 'program-1', week_number: 1, day_number: 1 }, error: null })) // program_days (dayRow)
+      .mockReturnValueOnce(makeChain({ data: { total_weeks: 1, focus: 'general', muscle_priorities: {} }, error: null })) // programs
+      .mockReturnValueOnce(makeChain({ data: { id: 'template-day-1' }, error: null })) // program_days (template day lookup)
+      .mockReturnValueOnce(makeChain({ data: [], error: null }));                       // program_exercises (template) -> empty, short-circuits
+
+    await refreshUpcomingProgressionTargets('program-1', 'intermediate');
+
+    // 1 (completed-days lookup) + 4 (computeAndSaveProgressionTargets's own
+    // calls up to its early-return on an empty template) = 5.
+    expect(mockFrom).toHaveBeenCalledTimes(5);
   });
 });

@@ -1,4 +1,5 @@
 import { getExerciseByName } from './exerciseDatabase';
+import type { SlotRole } from '../types/program';
 
 export interface TemplateExercise {
   name: string;
@@ -7,6 +8,12 @@ export interface TemplateExercise {
   repsMin: number;
   repsMax: number;
   rir: number;
+  // Optional — most existing templates predate this field and leave it
+  // unset (progression then defaults to treating the exercise as Primary,
+  // same as before). Populate for new/edited templates where known so
+  // load-increment sizing (see progressionEngine.ts getLoadIncrement) can
+  // tell isolation accessory work apart from heavy compounds.
+  role?: SlotRole;
 }
 
 export interface TemplateDay {
@@ -33,8 +40,9 @@ function ex(
   repsMin: number,
   repsMax: number,
   rir: number,
+  role?: SlotRole,
 ): TemplateExercise {
-  return { name, muscleGroup, sets, repsMin, repsMax, rir };
+  return { name, muscleGroup, sets, repsMin, repsMax, rir, role };
 }
 
 export const PROGRAM_TEMPLATES: ProgramTemplate[] = [

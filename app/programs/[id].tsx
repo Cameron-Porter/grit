@@ -1,11 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getProgramDays, getPrograms, Program, ProgramDay } from '../../src/api/programs';
+import { backfillWeek1ExerciseRoles, getProgramDays, getPrograms, Program, ProgramDay } from '../../src/api/programs';
+import { refreshUpcomingProgressionTargets } from '../../src/api/progression';
 import { Badge } from '../../src/components/Badge';
+import { useProfileStore } from '../../src/store/useProfileStore';
 import { useWorkoutStore } from '../../src/store/useWorkoutStore';
+import { confirm } from '../../src/utils/confirm';
 import { useColors } from '../../src/utils/useColors';
 
 const DAY_FALLBACKS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -18,9 +21,11 @@ export default function ProgramDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const activeProgramDayId = useWorkoutStore((s) => s.activeProgramDayId);
+  const experienceLevel = useProfileStore((s) => s.experienceLevel);
   const [program, setProgram] = useState<Program | null>(null);
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fixingRoles, setFixingRoles] = useState(false);
 
   useEffect(() => {
     load();
@@ -39,6 +44,37 @@ export default function ProgramDetail() {
 
   const getDayForCell = (week: number, dayNum: number) =>
     days.find((d) => d.week_number === week && d.day_number === dayNum);
+
+  // TEMPORARY — one-time fix for programs created before program_exercises
+  // retained each exercise's role. Infers a role from exercise movement type
+  // (see backfillWeek1ExerciseRoles), writes it onto the Week 1 template,
+  // then recomputes every already-completed day's saved next-week targets
+  // so upcoming/current weeks pick up the corrected load-increment sizing.
+  // Safe to remove once no program in use predates the role column.
+  const handleFixExerciseRoles = () => {
+    confirm(
+      'Fix Exercise Roles',
+      'This looks at each exercise\'s movement type to infer whether it\'s a Primary, Secondary, or Accessory slot, then recalculates upcoming weight/rep targets using that. Existing logged history is untouched. This may take a few seconds.',
+      async () => {
+        setFixingRoles(true);
+        try {
+          const updated = await backfillWeek1ExerciseRoles(program!.id);
+          await refreshUpcomingProgressionTargets(program!.id, experienceLevel);
+          Alert.alert(
+            'Done',
+            updated > 0
+              ? `Tagged ${updated} exercise${updated === 1 ? '' : 's'} and refreshed upcoming targets. If you have a workout open for this program, back out and reopen it to see the corrected numbers.`
+              : 'No Week 1 exercises found to tag.',
+          );
+        } catch {
+          Alert.alert('Something went wrong', 'Could not fix exercise roles — please try again.');
+        } finally {
+          setFixingRoles(false);
+        }
+      },
+      'Fix Now',
+    );
+  };
 
   if (loading || !program) {
     return (
@@ -172,6 +208,35 @@ export default function ProgramDetail() {
             </View>
           );
         })}
+
+        {/* TEMPORARY — remove once no program in use predates the
+            program_exercises.role column (see migration 20260730000001). */}
+        <Pressable
+          onPress={handleFixExerciseRoles}
+          disabled={fixingRoles}
+          style={{
+            marginTop: 8,
+            padding: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.surface2,
+            backgroundColor: colors.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            opacity: fixingRoles ? 0.6 : 1,
+          }}
+        >
+          {fixingRoles ? (
+            <ActivityIndicator color={colors.muted} size="small" />
+          ) : (
+            <MaterialCommunityIcons name="wrench-outline" size={16} color={colors.muted} />
+          )}
+          <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
+            Fix Exercise Roles (one-time)
+          </Text>
+        </Pressable>
       </ScrollView>
     </View>
   );

@@ -13,7 +13,7 @@ import {
   type SessionPerformance,
   type SorenessLevel,
 } from '../rules/progressionEngine';
-import type { ExperienceLevel, WeekParams } from '../types/program';
+import type { ExperienceLevel, SlotRole, WeekParams } from '../types/program';
 
 // HV-021: how many distinct days/week each muscle trains, read from the
 // week-1 template — stable across the whole meso regardless of which day
@@ -221,6 +221,10 @@ export async function computeAndSaveProgressionTargets(
                 repsMin: ex.target_reps_min ?? 8,
                 repsMax: ex.target_reps_max ?? 12,
                 rir: ex.rir ?? 3,
+                // Null for programs created before this column existed —
+                // recommendProgression falls back to 'Primary', matching
+                // this app's behavior prior to this fix.
+                role: (ex.role ?? undefined) as SlotRole | undefined,
                 exerciseType: exerciseDef?.exerciseType,
                 hardRirFloor: exerciseDef?.hardRirFloor,
               },
@@ -290,5 +294,27 @@ export async function computeAndSaveProgressionTargets(
         await saveProgramDayTargets(futureDay.id, targets);
       }
     }
+  }
+}
+
+// TEMPORARY — pairs with backfillWeek1ExerciseRoles in src/api/programs.ts.
+// Re-runs progression for every already-completed day in this program so
+// already-saved program_day_targets rows get recomputed with the
+// now-backfilled role (fixing load increments for upcoming/already-generated
+// weeks without waiting for the next natural completion to trigger it).
+// Safe to call repeatedly — computeAndSaveProgressionTargets upserts.
+export async function refreshUpcomingProgressionTargets(
+  programId: string,
+  experienceLevel: ExperienceLevel,
+): Promise<void> {
+  const { data: completedDays } = await supabase
+    .from('program_days')
+    .select('id')
+    .eq('program_id', programId)
+    .eq('completed', true);
+  if (!completedDays?.length) return;
+
+  for (const day of completedDays) {
+    await computeAndSaveProgressionTargets(day.id, experienceLevel);
   }
 }

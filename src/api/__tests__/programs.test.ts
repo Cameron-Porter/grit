@@ -7,6 +7,7 @@ jest.mock('../supabase', () => ({
 
 import { supabase } from '../supabase';
 import {
+  backfillWeek1ExerciseRoles,
   createProgram,
   deleteProgram,
   getPrograms,
@@ -64,6 +65,83 @@ describe('getPrograms', () => {
   it('throws on Supabase error', async () => {
     mockFrom.mockReturnValue(makeChain({ data: null, error: new Error('DB fail') }));
     await expect(getPrograms()).rejects.toThrow('DB fail');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// backfillWeek1ExerciseRoles — TEMPORARY one-time role-inference fix
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('backfillWeek1ExerciseRoles', () => {
+  it('infers Primary for the first compound per muscle, Secondary for the next, Accessory for isolation regardless of order', async () => {
+    const day1Chain = makeChain({ data: [{ id: 'day-1' }], error: null });
+    const exercisesChain = makeChain({
+      data: [
+        { id: 'pe-1', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Barbell Bench Press', sort_order: 0 },
+        { id: 'pe-2', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Dumbbell Fly', sort_order: 1 },
+        { id: 'pe-3', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Incline Dumbbell Press', sort_order: 2 },
+      ],
+      error: null,
+    });
+    const update1 = makeChain({ error: null });
+    const update2 = makeChain({ error: null });
+    const update3 = makeChain({ error: null });
+
+    mockFrom
+      .mockReturnValueOnce(day1Chain)
+      .mockReturnValueOnce(exercisesChain)
+      .mockReturnValueOnce(update1)
+      .mockReturnValueOnce(update2)
+      .mockReturnValueOnce(update3);
+
+    const updated = await backfillWeek1ExerciseRoles('program-1');
+
+    expect(updated).toBe(3);
+    expect(update1.update).toHaveBeenCalledWith({ role: 'Primary' });
+    expect(update2.update).toHaveBeenCalledWith({ role: 'Accessory' });
+    expect(update3.update).toHaveBeenCalledWith({ role: 'Secondary' });
+  });
+
+  it('does not guess a role for an unmatched exercise name, and does not let it steal the Primary slot from a later real compound', async () => {
+    // Regression test: "Incline Dumbbell Flyes" doesn't match anything in
+    // exerciseDatabase.ts (real name is "Dumbbell Fly"). Before the fix, an
+    // unmatched name defaulted to "assume compound", claiming Chest's
+    // Primary slot ahead of the real compound (Dumbbell Bench Press) later
+    // in the day and wrongly bumping it to Secondary.
+    const day1Chain = makeChain({ data: [{ id: 'day-1' }], error: null });
+    const exercisesChain = makeChain({
+      data: [
+        { id: 'pe-1', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Incline Dumbbell Flyes', sort_order: 0 },
+        { id: 'pe-2', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Dumbbell Bench Press', sort_order: 1 },
+      ],
+      error: null,
+    });
+    const update1 = makeChain({ error: null });
+
+    mockFrom
+      .mockReturnValueOnce(day1Chain)
+      .mockReturnValueOnce(exercisesChain)
+      .mockReturnValueOnce(update1); // only ONE update call — pe-1 is skipped entirely
+
+    const updated = await backfillWeek1ExerciseRoles('program-1');
+
+    expect(updated).toBe(1);
+    // Dumbbell Bench Press (matched, real compound) correctly gets Primary —
+    // not bumped to Secondary by the unmatched exercise ahead of it.
+    expect(update1.update).toHaveBeenCalledWith({ role: 'Primary' });
+  });
+
+  it('returns 0 when the program has no Week 1 days', async () => {
+    mockFrom.mockReturnValueOnce(makeChain({ data: [], error: null }));
+    const updated = await backfillWeek1ExerciseRoles('program-1');
+    expect(updated).toBe(0);
+  });
+
+  it('returns 0 without hitting Supabase when unauthenticated', async () => {
+    (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({ data: { user: null } });
+    const updated = await backfillWeek1ExerciseRoles('program-1');
+    expect(updated).toBe(0);
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });
 
