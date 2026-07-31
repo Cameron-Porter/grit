@@ -1,4 +1,4 @@
-import { rampSets } from '../../src/rules/volumeRamp';
+import { capSetsPerExercise, MAX_SETS_PER_EXERCISE, rampSets } from '../../src/rules/volumeRamp';
 
 describe('rampSets', () => {
   it('returns the week1 anchor at the start of the meso', () => {
@@ -48,5 +48,21 @@ describe('rampSets', () => {
       { weekNumber: 1, totalTrainingWeeks: 1, isDeload: false },
     );
     expect(sets).toBe(16);
+  });
+});
+
+// HV-023 — hard ceiling on sets prescribed to a single exercise, since a
+// muscle's uncapped per-session ramp (e.g. rampSets peaking at 16+ for a
+// high-MRV muscle) would otherwise concentrate entirely onto one movement
+// whenever that's the only exercise trained for the muscle that session.
+describe('capSetsPerExercise', () => {
+  it('passes through values at or below the cap unchanged', () => {
+    expect(capSetsPerExercise(1)).toBe(1);
+    expect(capSetsPerExercise(MAX_SETS_PER_EXERCISE)).toBe(MAX_SETS_PER_EXERCISE);
+  });
+
+  it('caps values above the ceiling', () => {
+    expect(capSetsPerExercise(MAX_SETS_PER_EXERCISE + 1)).toBe(MAX_SETS_PER_EXERCISE);
+    expect(capSetsPerExercise(16)).toBe(MAX_SETS_PER_EXERCISE);
   });
 });

@@ -103,15 +103,18 @@ describe('backfillWeek1ExerciseRoles', () => {
   });
 
   it('does not guess a role for an unmatched exercise name, and does not let it steal the Primary slot from a later real compound', async () => {
-    // Regression test: "Incline Dumbbell Flyes" doesn't match anything in
-    // exerciseDatabase.ts (real name is "Dumbbell Fly"). Before the fix, an
+    // Regression test: originally reproduced with "Incline Dumbbell Flyes",
+    // which at the time didn't match anything in exerciseDatabase.ts. That
+    // gap has since been closed (see the fixture's ch-11 entry), so this now
+    // uses a deliberately fictional name that will never resolve, to keep
+    // testing the unmatched-name path itself. Before the underlying fix, an
     // unmatched name defaulted to "assume compound", claiming Chest's
     // Primary slot ahead of the real compound (Dumbbell Bench Press) later
     // in the day and wrongly bumping it to Secondary.
     const day1Chain = makeChain({ data: [{ id: 'day-1' }], error: null });
     const exercisesChain = makeChain({
       data: [
-        { id: 'pe-1', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Incline Dumbbell Flyes', sort_order: 0 },
+        { id: 'pe-1', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Nonexistent Cable Squeeze Press', sort_order: 0 },
         { id: 'pe-2', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Dumbbell Bench Press', sort_order: 1 },
       ],
       error: null,

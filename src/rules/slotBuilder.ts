@@ -1,6 +1,6 @@
 import { getSlotRoleConfigs } from '../data/slotRoleConfig';
 import { getLandmark } from '../utils/volumeLandmarks';
-import { rampSets } from './volumeRamp';
+import { capSetsPerExercise, rampSets } from './volumeRamp';
 import type {
   AdjustedVolumeTarget,
   ExerciseSlot,
@@ -174,8 +174,13 @@ function selectIncludedPairs(
 // distinct rationale (heavy lower-body compounds before upper-body fatigue
 // affects balance/spinal stability under load) that would need to be explicitly
 // reconciled with priority-first ordering rather than silently overridden.
-// Source: Dr. Mike Israetel / RP Hypertrophy — train the priority muscle group
-// first in the session for peak neural drive and force output.
+// Source: RP Strength "Hypertrophy Made Simple" (2023) — Step 2 ("Choosing
+// and Ordering Exercises") instructs training the muscle group you care most
+// about earliest in the session, while fatigue is lowest and force output/
+// neural drive are highest, rather than defaulting to a fixed anatomical
+// order. (Previously cited only generically to "Dr. Mike Israetel / RP
+// Hypertrophy" — this is the specific step in the specific guide that
+// actually states the rule.)
 function reorderForSessionPriority(
   slots: ExerciseSlot[],
   dayMuscles: Map<MuscleGroup, MusclePriority | 'mev'>,
@@ -208,7 +213,8 @@ function reorderForSessionPriority(
 // → 100 % at the last training week → 50 % on deload, which is exactly what
 // week1=0.7×peak / deload=0.5×peak reproduces through this same interpolation.
 //
-// RIR:   config.rir + 1 at Week 1 → decrements 1/week → min 1 → 4 on deload.
+// RIR:   config.rir + 1 at Week 1 → decrements 1/week → min 0 (min 2 for
+//        beginners, HV-026/HV-027) → 4 on deload.
 //        Only applied to emphasize/grow muscles; maintain/mev stays at config.rir.
 //
 // Example for a 4-week meso (3 training + 1 deload), Primary emphasize (config.rir=2):
@@ -223,16 +229,28 @@ function applyWeekParams(
   priority: MusclePriority | 'mev',
   params: WeekParams,
 ): { sets: number; rir: number } {
-  const sets = rampSets({ week1: week1Sets, peak: peakSets, deload: deloadSets }, params);
+  // HV-023: cap applies regardless of week type — a deload'd-down number is
+  // already small, but this keeps both branches on the same ceiling rule.
+  const sets = capSetsPerExercise(rampSets({ week1: week1Sets, peak: peakSets, deload: deloadSets }, params));
 
   if (params.isDeload) {
     return { sets, rir: 4 };
   }
 
+  // HV-026: taper floor unified with progressionEngine.ts's HV-001 (0 for
+  // intermediate/advanced) — this branch previously floored at 1 regardless
+  // of experience level, a real divergence between the two "shared" ramp
+  // paths (generation-time here vs. week-to-week in progressionEngine.ts).
+  // HV-027: beginners get a gentler floor of 2 instead of 0 — Hypertrophy
+  // Made Simple's beginner RIR table tapers 4-5 RIR down to 2 RIR, not to
+  // failure, since beginners' technique under fatigue is less reliable.
+  // Source: RP Strength "Hypertrophy Made Simple" (2023).
+  const taperFloor = params.experienceLevel === 'beginner' ? 2 : 0;
+
   // RIR progression only for muscles the user is actively building
   const rir =
     priority === 'emphasize' || priority === 'grow'
-      ? Math.max(1, (baseRir + 1) - (params.weekNumber - 1))
+      ? Math.max(taperFloor, (baseRir + 1) - (params.weekNumber - 1))
       : baseRir;
 
   return { sets, rir };
@@ -326,7 +344,7 @@ export function buildDaySlots(
 
     const { sets, rir } = weekParams
       ? applyWeekParams(anchors.week1, anchors.peak, anchors.deload, config.rir, priority, weekParams)
-      : { sets: Math.max(1, Math.round(anchors.peak)), rir: config.rir };
+      : { sets: capSetsPerExercise(Math.max(1, Math.round(anchors.peak))), rir: config.rir };
 
     result.push({
       id: `${spec.muscle}-${spec.role}-${result.length}`,

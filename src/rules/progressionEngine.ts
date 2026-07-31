@@ -320,20 +320,32 @@ export function recommendProgression(
     isPlateauWarning: false,
   };
 
-  // HV-001: Intra-mesocycle RIR taper for intermediate/advanced non-deload weeks.
-  // Applied to emphasize/grow muscles: RIR drops by weeks remaining so effort
-  // peaks on the final training week (weeksRemaining = 0).
+  // HV-001: Intra-mesocycle RIR taper for non-deload weeks. Applied to
+  // emphasize/grow muscles: RIR drops by weeks remaining so effort peaks on
+  // the final training week (weeksRemaining = 0).
   // Deload overrides nextRir further below so this only affects working weeks.
+  //
+  // HV-027: previously this taper was gated off entirely for beginners
+  // (`ctx.experienceLevel !== 'beginner'`), but Hypertrophy Made Simple's
+  // beginner RIR table still calls for a taper — just a gentler one, from
+  // 4-5 RIR down to 2 RIR rather than all the way to failure, since beginner
+  // technique under fatigue is less reliable and doesn't yet warrant the
+  // intermediate/advanced 0-RIR peak week. So the floor is 2 for beginners
+  // instead of 0, and the beginner exclusion is removed — beginners now taper
+  // toward that higher floor instead of not tapering at all. Same floor value
+  // used by slotBuilder.ts's generation-time taper (HV-026) so the two paths
+  // can't diverge.
+  // Source: RP Strength "Hypertrophy Made Simple" (2023).
   if (
     !ctx.isDeload &&
-    ctx.experienceLevel !== 'beginner' &&
     (ctx.musclePriority === 'emphasize' || ctx.musclePriority === 'grow') &&
     ctx.mesoWeek !== undefined &&
     ctx.totalMesoWeeks !== undefined
   ) {
     const trainingWeeks = ctx.totalMesoWeeks - 1; // last week is deload
     const weeksRemaining = trainingWeeks - ctx.mesoWeek; // 0 on final training week
-    base.nextRir = Math.max(0, base.nextRir - weeksRemaining);
+    const taperFloor = ctx.experienceLevel === 'beginner' ? 2 : 0;
+    base.nextRir = Math.max(taperFloor, base.nextRir - weeksRemaining);
   }
 
   // HV-019: Hard RIR floor for deadlift-pattern exercises.
@@ -345,6 +357,18 @@ export function recommendProgression(
   // ── Priority 1: Deload week — protocol varies by focus ────────────────────
   if (ctx.isDeload) {
     const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
+    // HV-025: flat 50% load reduction for the whole deload week — applies to
+    // every focus, not just strength (ST-004 below). Previously the
+    // hypertrophy/powerbuilding branch held nextWeight unchanged and only cut
+    // volume, but Hypertrophy Made Simple's own deload protocol also calls
+    // for reduced load (80-100% first half / 50% second half of the week for
+    // full deloads; half weight for single-muscle "recovery sessions") — a
+    // deload that never reduces load under-recovers exactly the way ST-004
+    // already fixed for strength. Same whole-week-granularity simplification
+    // as ST-004: a flat 50% instead of RP's two-stage split, since this app's
+    // progression model operates at whole-week granularity, not half-weeks.
+    // Source: RP Strength "Hypertrophy Made Simple" (2023).
+    const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.5, increment), increment);
     if (isStrength) {
       // ST-004: Strength deload — reduce load 50%, hold reps and sets.
       // Unlike hypertrophy deloads (halve volume, hold load), strength deloads
@@ -356,7 +380,6 @@ export function recommendProgression(
       // and reps). RP's own guide actually splits this across the week (70%
       // first half, 50% second half); we use a flat 50% since this app's
       // progression model operates at whole-week granularity, not half-weeks.
-      const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.5, increment), increment);
       return {
         ...base,
         nextWeight: deloadWeight,
@@ -367,29 +390,31 @@ export function recommendProgression(
       };
     }
     // PB-004: Powerbuilding deload uses the hypertrophy protocol (halve volume,
-    // hold load, cap effort at RIR 4). PHAT and Kizen both distribute CNS fatigue
-    // across power and hypertrophy days throughout the meso, so accumulated load
-    // is lower than pure strength. A volume-reduction deload (not load-reduction)
-    // is the correct recovery tool. Source: Kizen Week 9 deload structure.
+    // now also halve load per HV-025, cap effort at RIR 4). PHAT and Kizen both
+    // distribute CNS fatigue across power and hypertrophy days throughout the
+    // meso, so accumulated load is lower than pure strength, but recovery still
+    // benefits from a reduced load, not volume cuts alone. Source: Kizen Week 9
+    // deload structure.
     //
-    // HV-021: hypertrophy focus with a resolved landmark target deloads to that
-    // muscle's own MV (Maintenance Volume) instead of a flat 50% — see
-    // ProgressionContext.hypertrophyVolumeOverride.
+    // HV-021: hypertrophy focus with a resolved landmark target deloads sets to
+    // that muscle's own MV (Maintenance Volume) instead of a flat 50% — see
+    // ProgressionContext.hypertrophyVolumeOverride. Load reduction (HV-025)
+    // still applies uniformly regardless of which set-count path is used.
     const hasVolumeOverride = ctx.programFocus === 'hypertrophy' && !!ctx.hypertrophyVolumeOverride;
     const deloadSets = hasVolumeOverride
       ? ctx.hypertrophyVolumeOverride!.deloadSets
       : Math.max(1, Math.ceil(baseSetCount * 0.5));
     return {
       ...base,
-      nextWeight: lastWeight,
+      nextWeight: deloadWeight,
       nextSets: deloadSets,
       nextRepsMin: Math.max(1, Math.ceil(effectiveRepsMin * 0.5)),
       nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD',
       reason: hasVolumeOverride
-        ? 'Deload week — sets dropped to Maintenance Volume, reps halved, load held, effort capped at RIR 4.'
-        : 'Deload week — sets and reps halved, load held, effort capped at RIR 4.',
+        ? `Deload week — sets dropped to Maintenance Volume, reps halved, load reduced to 50% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`
+        : `Deload week — sets and reps halved, load reduced to 50% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`,
     };
   }
 
@@ -426,13 +451,19 @@ export function recommendProgression(
   // Doctrine 2.3 Trigger 2 / 3.3 Trigger 2: ≥2 consecutive bad sessions
   // means accumulated fatigue or overreaching; deload before any load change.
   if (badSessions >= badSessionThreshold) {
+    // HV-025: same flat 50% load reduction as the scheduled-deload branch
+    // above — an immediate deload triggered by accumulated fatigue needs the
+    // same load relief a scheduled one gets; holding weight unchanged here
+    // while cutting sets only addresses volume, not the load driving the
+    // fatigue.
+    const deloadWeight = Math.max(roundToIncrement(lastPerf.weight * 0.5, increment), increment);
     return {
       ...base,
-      nextWeight: lastPerf.weight,
+      nextWeight: deloadWeight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD_NEEDED',
-      reason: `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — this is accumulated fatigue, not a plateau.`,
+      reason: `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — load reduced to 50% (${lastPerf.weight} → ${deloadWeight} lbs); this is accumulated fatigue, not a plateau.`,
       isPlateauWarning: true,
     };
   }
@@ -493,13 +524,15 @@ function evaluateBeginnerLinear(
 
   // Plateau detection — must deload before any load reduction (doctrine 1.2).
   if (stalls >= stallThreshold) {
+    // HV-025: same flat 50% load reduction as the scheduled-deload branch.
+    const deloadWeight = Math.max(roundToIncrement(lastPerf.weight * 0.5, increment), increment);
     return {
       ...base,
-      nextWeight: lastPerf.weight,
+      nextWeight: deloadWeight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'PLATEAU_DELOAD',
-      reason: `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — fatigue masking is the most likely cause. Retest at same load after deload.`,
+      reason: `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced to 50% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.`,
       isPlateauWarning: true,
     };
   }
@@ -595,14 +628,22 @@ function evaluateDoubleProgression(
   if (stalls >= stallThreshold) {
     const weeksSince = ctx.weeksSinceLastDeload;
     const fatigueLikely = weeksSince === undefined || weeksSince >= 3;
+    // HV-025: same flat 50% load reduction as the scheduled-deload branch —
+    // only for the fatigue-masking case, since that's the one whose reason
+    // text already claimed a "deload" (retest at load). The true-plateau
+    // branch below has its own distinct 10%-reduction recommendation, which
+    // is out of scope for this fix — it's advisory text pending a "true
+    // plateau" retest flow that isn't implemented yet, not the deload-week
+    // protocol HV-025 addresses.
+    const deloadWeight = Math.max(roundToIncrement(lastPerf.weight * 0.5, increment), increment);
     return {
       ...base,
-      nextWeight: lastPerf.weight,
+      nextWeight: fatigueLikely ? deloadWeight : lastPerf.weight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'PLATEAU_DELOAD',
       reason: fatigueLikely
-        ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest at same load after deload.`
+        ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced to 50% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest at the reduced load after deload.`
         : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps after a recent deload. This may be a true plateau — consider a 10% load reduction and rebuild.`,
       isPlateauWarning: true,
     };

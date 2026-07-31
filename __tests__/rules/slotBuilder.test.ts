@@ -103,3 +103,42 @@ describe('buildDaySlots — HV-022 priority-first ordering', () => {
     expect(slots[0].muscle).toBe('Biceps');
   });
 });
+
+// HV-026/HV-027: generation-time RIR taper floor
+describe('buildDaySlots — HV-026/HV-027 RIR taper floor', () => {
+  it('floors the taper at 0 for intermediate/advanced (no experienceLevel passed)', () => {
+    const dayMuscles = muscles([['Chest', 'emphasize']]);
+    // Primary emphasize baseRir = 2 (SLOT_ROLE_CONFIGS). Week 4 of a 4-training-week
+    // meso: rir = (2 + 1) - (4 - 1) = 0 -> floored at 0.
+    const slots = buildDaySlots(dayMuscles, SESSION_TEMPLATES.Push, undefined, {
+      weekNumber: 4,
+      totalTrainingWeeks: 4,
+      isDeload: false,
+    });
+    const chestPrimary = slots.find((s) => s.muscle === 'Chest' && s.role === 'Primary');
+    expect(chestPrimary?.rir).toBe(0);
+  });
+
+  it('floors the same taper at 2 for beginners instead of 0', () => {
+    const dayMuscles = muscles([['Chest', 'emphasize']]);
+    const slots = buildDaySlots(dayMuscles, SESSION_TEMPLATES.Push, undefined, {
+      weekNumber: 4,
+      totalTrainingWeeks: 4,
+      isDeload: false,
+      experienceLevel: 'beginner',
+    });
+    const chestPrimary = slots.find((s) => s.muscle === 'Chest' && s.role === 'Primary');
+    expect(chestPrimary?.rir).toBe(2);
+  });
+});
+
+// HV-024: Accessory rep ceiling widened toward isolation/dumbbell/machine range
+describe('buildDaySlots — HV-024 Accessory rep ceiling', () => {
+  it('gives an mev-priority Accessory slot the widened 15-30 rep range, not the old 15-20', () => {
+    const dayMuscles = muscles([['Shoulders', 'mev']]);
+    const slots = buildDaySlots(dayMuscles, SESSION_TEMPLATES.Push, 9);
+    const shouldersAccessory = slots.find((s) => s.muscle === 'Shoulders' && s.role === 'Accessory');
+    expect(shouldersAccessory?.repsMin).toBe(15);
+    expect(shouldersAccessory?.repsMax).toBe(30);
+  });
+});

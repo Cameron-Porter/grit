@@ -161,10 +161,13 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
     // dayRow.week_number=2 -> computing targets for nextWeek=3, of a 6-week
     // program (5 training weeks + 1 deload). Chest/emphasize, frequency 1
     // (only one day in the week-1 template): week1=MEV(8), peak=MRV(22).
-    // progressFraction = (3-1)/(5-1) = 0.5 -> round(8 + (22-8)*0.5) = 15.
-    // This is a landmark-anchored number, not a flat template+weekBonus value —
-    // proving the override actually reached the saved row.
-    expect(savedRows[0].target_sets).toBe(15);
+    // progressFraction = (3-1)/(5-1) = 0.5 -> round(8 + (22-8)*0.5) = 15,
+    // then HV-023 caps a single exercise's sets at 5 (see volumeRamp.ts) —
+    // this is the only exercise for Chest this session, so it absorbs the
+    // full (capped) target. Still proves the override reached the saved
+    // row and isn't the flat template+weekBonus fallback: that path would
+    // give target_sets(4) + weekBonus(mesoWeek-1=2) = 6, not 5.
+    expect(savedRows[0].target_sets).toBe(5);
   });
 });
 

@@ -16,7 +16,7 @@ export interface SlotRoleConfig {
 // Rep ranges follow the hypertrophy research sweet spots:
 //   5–10  at Primary emphasize = strength-hypertrophy overlap
 //   8–15  at Secondary = mechanical tension + metabolic stress
-//   10–20 at Accessory = pump / mind-muscle / isolation range
+//   10–25/30 at Accessory = pump / mind-muscle / isolation range (HV-024)
 export const SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev', SlotRoleConfig>> = {
   Primary: {
     emphasize: { sets: 4, repsMin: 5,  repsMax: 10, rir: 2 },
@@ -30,11 +30,24 @@ export const SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev', 
     maintain:  { sets: 2, repsMin: 10, repsMax: 15, rir: 3 },
     mev:       { sets: 2, repsMin: 10, repsMax: 20, rir: 3 },
   },
+  // ─── HV-024: Accessory rep ceiling — dumbbell/machine/isolation range ──────
+  //
+  // Source: RP Strength "Hypertrophy Made Simple" (2023) — rep range is split
+  // by exercise TYPE, not just slot role: "antigravity compounds" (rows,
+  // squats, deadlifts) are stability-limited and stay in 5-15 reps, but
+  // "dumbbell, machine, and isolation movements" are prescribed 15-30 reps,
+  // with a recommended set distribution of ~50% of sets in 10-20 reps, 25% in
+  // 5-10, and 25% in 20-30. Accessory-role slots are, by definition, the
+  // isolation/detail work this guidance targets (Primary/Secondary carry the
+  // antigravity-compound work), so their ceiling moves from the old flat 20
+  // up toward this range: 25 for the higher-fatigue tiers (emphasize/grow/
+  // maintain), 30 at `mev` where load is lightest and the highest-rep end is
+  // most appropriate.
   Accessory: {
-    emphasize: { sets: 3, repsMin: 10, repsMax: 20, rir: 2 },
-    grow:      { sets: 2, repsMin: 12, repsMax: 20, rir: 2 },
-    maintain:  { sets: 2, repsMin: 12, repsMax: 20, rir: 3 },
-    mev:       { sets: 2, repsMin: 15, repsMax: 20, rir: 3 },
+    emphasize: { sets: 3, repsMin: 10, repsMax: 25, rir: 2 },
+    grow:      { sets: 2, repsMin: 12, repsMax: 25, rir: 2 },
+    maintain:  { sets: 2, repsMin: 12, repsMax: 25, rir: 3 },
+    mev:       { sets: 2, repsMin: 15, repsMax: 30, rir: 3 },
   },
 };
 

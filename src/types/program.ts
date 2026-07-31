@@ -189,6 +189,11 @@ export interface WeekParams {
   weekNumber: number;         // 1-indexed position within the mesocycle
   totalTrainingWeeks: number; // total weeks excluding the deload week
   isDeload: boolean;
+  // HV-026: when set, gates the generation-time RIR taper floor — beginners
+  // get a gentler floor (2) than intermediate/advanced (0). Optional so
+  // existing callers/tests that don't pass it keep the intermediate/advanced
+  // (0) floor, matching the pre-HV-026 default.
+  experienceLevel?: ExperienceLevel;
 }
 
 // ─── Program validation ───────────────────────────────────────────────────────

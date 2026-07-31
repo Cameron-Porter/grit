@@ -117,8 +117,28 @@ describe('HV-019 — deadlift RIR hard floor', () => {
 // ─── HV-001: Intra-mesocycle RIR taper ───────────────────────────────────────
 
 describe('HV-001 — intra-mesocycle RIR taper', () => {
-  it('does not taper for beginner users', () => {
-    // Beginner with grow priority — no taper should apply
+  // HV-027: beginners now taper too (previously excluded entirely), but to a
+  // gentler floor of 2 instead of 0 — Hypertrophy Made Simple's beginner RIR
+  // table tapers 4-5 RIR down to 2 RIR, not to failure.
+  it('tapers for beginner users but stops at floor 2 where intermediate/advanced would continue to 1', () => {
+    // 6-week meso (5 training + 1 deload), week 1: trainingWeeks = 5,
+    // weeksRemaining = 5 - 1 = 4. Raw taper: 5 - 4 = 1.
+    // Beginner floor (HV-027) clamps this back up to 2; intermediate/advanced
+    // (floor 0) would let it through as 1 (see the intermediate test below).
+    const prescription = makePrescription({ rir: 5 });
+    const ctx = makeCtx({ experienceLevel: 'beginner', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 6 });
+    const rec = recommendProgression(prescription, [], ctx);
+    expect(rec.nextRir).toBe(2);
+  });
+
+  it('same schedule taper for an intermediate user is not clamped at 2', () => {
+    const prescription = makePrescription({ rir: 5 });
+    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 6 });
+    const rec = recommendProgression(prescription, [], ctx);
+    expect(rec.nextRir).toBe(1);
+  });
+
+  it('does not taper beginners below their RIR-2 floor early in the meso', () => {
     const prescription = makePrescription({ rir: 2 });
     const ctx = makeCtx({ experienceLevel: 'beginner', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
     // No sessions → FIRST_SESSION, which returns base nextRir unchanged

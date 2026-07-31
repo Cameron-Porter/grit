@@ -74,7 +74,9 @@ export function buildProgram(config: ProgramConfig): GeneratedProgram {
     const weekNumber = weekIdx + 1;
     const isDeload = weekNumber === config.totalWeeks;
 
-    const weekParams: WeekParams = { weekNumber, totalTrainingWeeks, isDeload };
+    // HV-026/HV-027: threaded through so applyWeekParams can use the gentler
+    // beginner RIR taper floor instead of the intermediate/advanced one.
+    const weekParams: WeekParams = { weekNumber, totalTrainingWeeks, isDeload, experienceLevel: config.experienceLevel };
 
     const rawDays = config.selectedDays.map((dayName, dayIdx) => {
       const sessionType = weekSessions[dayIdx];

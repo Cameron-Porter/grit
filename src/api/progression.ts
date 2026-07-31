@@ -3,7 +3,7 @@ import { getExerciseAllSessions, getMuscleSorenessForWorkout } from './history';
 import { getTemplateDayExercises, saveProgramDayTargets } from './programs';
 import { supabase } from './supabase';
 import { getExerciseByName } from '../data/exerciseDatabase';
-import { rampSets } from '../rules/volumeRamp';
+import { capSetsPerExercise, rampSets } from '../rules/volumeRamp';
 import { getLandmark } from '../utils/volumeLandmarks';
 import {
   recommendProgression,
@@ -186,9 +186,13 @@ export async function computeAndSaveProgressionTargets(
 
           for (const item of items) {
             const share = item.weight / weightSum;
+            // HV-023: cap per exercise — a muscle trained by only one
+            // exercise this session would otherwise take its entire
+            // per-session ramp target (which can climb well past what one
+            // movement can be trained hard for) onto that single exercise.
             overrideByExercise.set(item.ex.exercise_name, {
-              trainingSets: Math.max(1, Math.round(perSessionTarget * share)),
-              deloadSets: Math.max(1, Math.round(deloadPerSessionTarget * share)),
+              trainingSets: capSetsPerExercise(Math.max(1, Math.round(perSessionTarget * share))),
+              deloadSets: capSetsPerExercise(Math.max(1, Math.round(deloadPerSessionTarget * share))),
             });
           }
         }
