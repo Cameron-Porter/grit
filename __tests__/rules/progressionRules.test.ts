@@ -412,14 +412,18 @@ describe('ST-008 — cut-phase load increment', () => {
     expect(rec.loadIncrement).toBe(2.5);
   });
 
-  it('halves the isolation-accessory increment (2.5 -> 1.25 lb) for cut focus', () => {
+  // Previously halved further to 1.25 lb for isolation-accessory work under
+  // cut focus. That tier was removed (see getLoadIncrement's doctrine
+  // comment) — 1.25 lb increments aren't practically available on most
+  // equipment, so cut focus now floors at the same 2.5 lb as everything else.
+  it('does not go below 2.5 lb for isolation-accessory work under cut focus', () => {
     const ctx = makeCtx({ programFocus: 'cut' });
     const rec = recommendProgression(
       makePrescription({ role: 'Accessory', exerciseType: 'isolation' }),
       makeSessions(50, 12, 1),
       ctx,
     );
-    expect(rec.loadIncrement).toBe(1.25);
+    expect(rec.loadIncrement).toBe(2.5);
   });
 
   it('bug fix regression: isCut is driven by programFocus, not the unused trainingPhase field', () => {

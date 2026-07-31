@@ -105,10 +105,16 @@ export interface ProgressionRecommendation {
 //
 // Beginner  : +5 lbs everywhere (neural adaptation phase)
 // Intermediate: +5 lbs compound; +2.5 lbs accessory isolation
-// Advanced  : +5 lbs compound; +2.5 lbs secondary isolation; +1.25 lbs accessory
+// Advanced  : +5 lbs compound; +2.5 lbs secondary/accessory isolation
 //
-// Micro-loading (1.25 / 2.5 lbs) applies to isolation-class exercises where
-// standard 5 lb jumps would exceed the productive weekly adaptation rate.
+// Micro-loading (2.5 lbs) applies to isolation-class exercises where standard
+// 5 lb jumps would exceed the productive weekly adaptation rate.
+//
+// A finer 1.25 lb tier existed here previously for Advanced-tier Accessory
+// work (and its cut-phase-halved equivalent). Removed per user direction —
+// 1.25 lb plates/increments aren't practically available on most equipment,
+// so the extra granularity wasn't usable in practice. 2.5 lb is now the floor
+// for every isolation-class case; nothing below it.
 
 function isIsolationClass(exerciseType: ExerciseType): boolean {
   return exerciseType === 'isolation' || exerciseType === 'core';
@@ -120,18 +126,15 @@ export function getLoadIncrement(
   experienceLevel: ExperienceLevel = 'intermediate',
   programFocus?: ProgramFocus,
 ): number {
-  // ST-008: Cut-phase load increment — halve the standard jump (compounds
-  // 2.5 lb instead of 5, isolation accessories 1.25 lb instead of 2.5).
-  // Reduced recovery capacity under a calorie deficit means the "consistent
-  // overload" assumption behind ST-005's flat +5 lbs doesn't hold; reusing
-  // only increments already in the system (1.25/2.5/5) rather than inventing
-  // a new granularity. Mutually exclusive with the strength branch below
-  // since programFocus is single-valued — a program can't be both 'cut' and
+  // ST-008: Cut-phase load increment — halve the standard compound jump
+  // (2.5 lb instead of 5). Reduced recovery capacity under a calorie deficit
+  // means the "consistent overload" assumption behind ST-005's flat +5 lbs
+  // doesn't hold. Mutually exclusive with the strength branch below since
+  // programFocus is single-valued — a program can't be both 'cut' and
   // 'strength' focus, so there's no ordering conflict between the two.
   // Source: Dr. Mike Israetel / RP Hypertrophy — conservative load progression
   // during fat loss (reduced-recovery training).
   if (programFocus === 'cut') {
-    if (isIsolationClass(exerciseType) && role === 'Accessory') return 1.25;
     return 2.5;
   }
   // ST-005: Strength load increment — compounds always +5 lbs regardless of role.
@@ -148,7 +151,7 @@ export function getLoadIncrement(
     return role === 'Accessory' ? 2.5 : 5;
   }
   // Advanced: micro-loading for secondary + accessory isolation work
-  if (role === 'Accessory') return 1.25;
+  if (role === 'Accessory') return 2.5;
   if (role === 'Secondary' && isIsolationClass(exerciseType)) return 2.5;
   return 5;
 }

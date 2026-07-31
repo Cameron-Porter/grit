@@ -1,9 +1,12 @@
 import {
+  capSessionSets,
   enforceSessionCaps,
   estimateSessionMinutes,
   estimateSlotMinutes,
+  getSessionMaxSets,
   SESSION_MAX_EXERCISES,
   SESSION_MAX_SETS,
+  type TrimmableSets,
 } from '../../src/rules/sessionTrimmer';
 import type { DayPlan, ExerciseSlot, MuscleGroup, MusclePriority, SlotRole } from '../../src/types/program';
 
@@ -151,5 +154,64 @@ describe('sessionTrimmer — existing invariants still hold', () => {
     const result = enforceSessionCaps(day(slots), {}, 'hypertrophy');
     expect(result.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
     expect(result.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
+  });
+});
+
+// RC-010: post-generation session-set cap for already-computed progression targets
+describe('RC-010 — capSessionSets', () => {
+  function trimmable(role: TrimmableSets['role'], musclePriority: TrimmableSets['musclePriority'], sets: number): TrimmableSets {
+    return { role, musclePriority, sets };
+  }
+
+  it('leaves a day already under the cap untouched', () => {
+    const items = [
+      trimmable('Primary', 'emphasize', 5),
+      trimmable('Accessory', 'grow', 3),
+    ];
+    const result = capSessionSets(items, SESSION_MAX_SETS);
+    expect(result.map((r) => r.sets)).toEqual([5, 3]);
+  });
+
+  it('trims the lowest-priority, lowest-role slot first when over the cap', () => {
+    // 5 exercises at 5 sets each = 25, one over the 24-set hypertrophy cap —
+    // exactly the pattern that motivated this fix (MRV ramp x per-exercise cap).
+    const items = [
+      trimmable('Primary', 'emphasize', 5),
+      trimmable('Primary', 'emphasize', 4),
+      trimmable('Primary', 'emphasize', 5),
+      trimmable('Accessory', 'emphasize', 3),
+      trimmable('Primary', 'emphasize', 5),
+    ];
+    const total = items.reduce((n, i) => n + i.sets, 0);
+    expect(total).toBe(22);
+
+    const overCap = [...items, trimmable('Accessory', 'maintain', 3)]; // now 25 total
+    const result = capSessionSets(overCap, SESSION_MAX_SETS);
+    const resultTotal = result.reduce((n, i) => n + i.sets, 0);
+    expect(resultTotal).toBe(SESSION_MAX_SETS);
+    // The maintain-priority Accessory slot (lowest trim priority) absorbed the cut.
+    expect(result[5].sets).toBe(2);
+  });
+
+  it('never drops a slot below 1 set or removes it, unlike generation-time trimming', () => {
+    // 10 exercises at 1 set each — already at the floor, way under any
+    // realistic cap; capSessionSets must not remove any of them even if a
+    // very low cap were passed.
+    const items = Array.from({ length: 10 }, () => trimmable('Accessory', 'mev', 1));
+    const result = capSessionSets(items, 3);
+    expect(result.length).toBe(10);
+    expect(result.every((r) => r.sets === 1)).toBe(true);
+  });
+});
+
+describe('getSessionMaxSets', () => {
+  it('returns the hypertrophy default for undefined/hypertrophy focus', () => {
+    expect(getSessionMaxSets(undefined)).toBe(SESSION_MAX_SETS);
+    expect(getSessionMaxSets('hypertrophy')).toBe(SESSION_MAX_SETS);
+  });
+
+  it('returns tighter caps for cut and strength focus', () => {
+    expect(getSessionMaxSets('cut')).toBeLessThan(SESSION_MAX_SETS);
+    expect(getSessionMaxSets('strength')).toBeLessThan(SESSION_MAX_SETS);
   });
 });

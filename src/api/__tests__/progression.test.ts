@@ -237,6 +237,124 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// computeAndSaveProgressionTargets — RC-010 whole-session set cap
+//
+// Regression test for the gap where each exercise's sets were computed
+// independently (HV-021 ramps toward MRV per muscle, capped only per
+// exercise by HV-023) with nothing checking the day's new total against
+// the SESSION_MAX_SETS ceiling — a real session was observed at 22 sets
+// after several emphasize-priority exercises each ramped up simultaneously.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('computeAndSaveProgressionTargets — RC-010 whole-session set cap', () => {
+  it('trims the total back to the session cap, taking sets from the lower-priority exercise first', async () => {
+    const dayRow = { program_id: 'program-1', week_number: 10, day_number: 1 };
+    const programRow = {
+      total_weeks: 20,
+      focus: 'general',
+      muscle_priorities: { Chest: 'emphasize', Shoulders: 'maintain' },
+    };
+    const templateDay = { id: 'template-day-1' };
+    const templateExercises = [
+      {
+        id: 'pe-1',
+        program_day_id: 'template-day-1',
+        exercise_name: 'Bench Press',
+        muscle_group: 'Chest',
+        equipment: 'Barbell',
+        sort_order: 0,
+        target_sets: 15,
+        target_reps_min: 6,
+        target_reps_max: 12,
+        target_weight: 135,
+        rir: 2,
+        role: 'Primary',
+      },
+      {
+        id: 'pe-2',
+        program_day_id: 'template-day-1',
+        exercise_name: 'Machine Shoulder Press',
+        muscle_group: 'Shoulders',
+        equipment: 'Machine',
+        sort_order: 1,
+        target_sets: 20,
+        target_reps_min: 6,
+        target_reps_max: 12,
+        target_weight: 100,
+        rir: 2,
+        role: 'Primary',
+      },
+    ];
+    const nextDayRow = { id: 'next-day-1' };
+
+    // Mid-band single session for both -> HOLD, nextSets passes through
+    // effectiveSets unchanged (no plateau/bad-session halving). Set count
+    // must match each exercise's target_sets here: prescription.sets comes
+    // from lastActualSets (how many sets were actually logged last time),
+    // not target_sets directly — see the "Use actual sets logged last
+    // session" comment in computeAndSaveProgressionTargets.
+    const benchSets = Array.from({ length: 15 }, (_, i) => ({ workout_id: 'w-bench', weight: 135, reps: 8, set_index: i }));
+    const benchWorkouts = [{ id: 'w-bench', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+    const shoulderSets = Array.from({ length: 20 }, (_, i) => ({ workout_id: 'w-shoulder', weight: 100, reps: 8, set_index: i }));
+    const shoulderWorkouts = [{ id: 'w-shoulder', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    // Bench and Shoulder's getExerciseAllSessions calls run concurrently
+    // (Promise.all over templateExercises), so the exact interleaving of
+    // their workout_sets/workouts calls relative to EACH OTHER isn't
+    // guaranteed — only that each exercise's own calls happen in its own
+    // order, and that calls to the same table happen in array order across
+    // exercises. Dispatch per-table (not by strict global call order) so
+    // this test doesn't depend on the exact interleaving.
+    const responsesByTable: Record<string, any[]> = {
+      program_days: [
+        makeChain({ data: dayRow, error: null }),        // dayRow lookup
+        makeChain({ data: templateDay, error: null }),   // template day lookup
+        makeChain({ data: nextDayRow, error: null }),     // next week day lookup
+        makeChain({ data: [], error: null }),              // later-days lookup (section 2)
+      ],
+      programs: [makeChain({ data: programRow, error: null })],
+      program_exercises: [makeChain({ data: templateExercises, error: null })],
+      workout_sets: [
+        makeChain({ data: benchSets, error: null }),
+        makeChain({ data: shoulderSets, error: null }),
+      ],
+      workouts: [
+        makeChain({ data: benchWorkouts, error: null }),
+        makeChain({ data: shoulderWorkouts, error: null }),
+      ],
+      program_day_targets: [{ upsert: upsertMock }],
+    };
+    const callCounts: Record<string, number> = {};
+    mockFrom.mockImplementation((table: string) => {
+      const idx = callCounts[table] ?? 0;
+      callCounts[table] = idx + 1;
+      return responsesByTable[table][idx];
+    });
+
+    await computeAndSaveProgressionTargets('day-1', 'intermediate');
+
+    const savedRows = upsertMock.mock.calls[0][0];
+    expect(savedRows).toHaveLength(2);
+
+    // dayRow.week_number=10 -> nextWeek=11 -> weekBonus = mesoWeek-1 = 10.
+    // Bench (Chest/emphasize): 15 + 10 = 25, uncapped by HV-023 since this is
+    // the plain (non-hypertrophy-override) path, not the HV-021 landmark ramp.
+    // Shoulder (Shoulders/maintain): stays flat at its template 20, no bonus.
+    // Uncapped total = 45, 21 over the 24-set session cap. capSessionSets
+    // trims the lower-priority (maintain) exercise first, down to its 1-set
+    // floor (19 of the 21 needed), then takes the remaining 2 from Bench
+    // (25 -> 23).
+    const bench = savedRows.find((r: any) => r.exercise_name === 'Bench Press');
+    const shoulder = savedRows.find((r: any) => r.exercise_name === 'Machine Shoulder Press');
+    expect(bench.target_sets + shoulder.target_sets).toBe(24);
+    expect(shoulder.target_sets).toBe(1);
+    expect(bench.target_sets).toBe(23);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // refreshUpcomingProgressionTargets — TEMPORARY, pairs with
 // backfillWeek1ExerciseRoles in src/api/programs.ts
 // ─────────────────────────────────────────────────────────────────────────────

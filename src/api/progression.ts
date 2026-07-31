@@ -4,6 +4,7 @@ import { getTemplateDayExercises, saveProgramDayTargets } from './programs';
 import { supabase } from './supabase';
 import { getExerciseByName } from '../data/exerciseDatabase';
 import { capSetsPerExercise, rampSets } from '../rules/volumeRamp';
+import { capSessionSets, getSessionMaxSets } from '../rules/sessionTrimmer';
 import { getLandmark } from '../utils/volumeLandmarks';
 import {
   recommendProgression,
@@ -245,13 +246,28 @@ export async function computeAndSaveProgressionTargets(
               weightLbs: rec.nextWeight,
               rir: rec.nextRir,
               rationale: rec.reason,
+              // Carried through only to drive RC-010's session-set cap below —
+              // stripped before saving (saveProgramDayTargets doesn't take them).
+              role: (ex.role ?? 'Primary') as SlotRole,
+              musclePriority: (musclePriority ?? 'mev') as MusclePriority | 'mev',
             };
           }),
         )
-      ).filter(Boolean) as Parameters<typeof saveProgramDayTargets>[1];
+      ).filter((t): t is NonNullable<typeof t> => t !== null);
 
-      if (targets.length > 0) {
-        await saveProgramDayTargets(nextDayRow.id, targets);
+      // RC-010: each exercise's sets were computed independently (HV-021
+      // ramps toward MRV per muscle, HV-023 caps only the individual
+      // exercise) — nothing had checked the day's new total against the
+      // whole-session cap. Re-enforce it here, the same way
+      // enforceSessionCaps does at generation time, but without ever
+      // dropping an exercise below 1 set or removing it outright (see
+      // capSessionSets doctrine comment).
+      const cappedTargets = capSessionSets(targets, getSessionMaxSets(programFocus));
+
+      const targetsToSave = cappedTargets.map(({ role: _role, musclePriority: _musclePriority, ...rest }) => rest);
+
+      if (targetsToSave.length > 0) {
+        await saveProgramDayTargets(nextDayRow.id, targetsToSave);
       }
     }
   }

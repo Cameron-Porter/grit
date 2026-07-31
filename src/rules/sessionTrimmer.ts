@@ -51,6 +51,44 @@ export function estimateSessionMinutes(slots: ExerciseSlot[], focus?: ProgramFoc
   return Math.round(slots.reduce((n, s) => n + estimateSlotMinutes(s, focus), 0));
 }
 
+// RC-010: post-generation counterpart to enforceSessionCaps' Phase 2, for
+// trimming an already-computed set of progression targets back under the
+// session set cap. Deliberately narrower than generation-time trimming:
+// this never drops an exercise's sets below 1 or removes an exercise
+// entirely — a program already in flight shouldn't suddenly lose a movement
+// the user has been training for weeks just because volume ramped high this
+// week. Same trim-priority order as enforceSessionCaps (lowest muscle
+// priority first, then Accessory before Secondary before Primary, then most
+// sets first) so the two paths can't diverge on *which* sets get trimmed,
+// only on how far they're willing to go.
+export interface TrimmableSets {
+  role: SlotRole;
+  musclePriority: MusclePriority | 'mev';
+  sets: number;
+}
+
+export function capSessionSets<T extends TrimmableSets>(items: T[], maxSets: number): T[] {
+  const current = items.map((item) => ({ ...item }));
+  let total = current.reduce((n, i) => n + i.sets, 0);
+
+  while (total > maxSets) {
+    const sorted = [...current].sort((a, b) => {
+      const pa = trimPriority(a.musclePriority);
+      const pb = trimPriority(b.musclePriority);
+      if (pa !== pb) return pa - pb;
+      const roleOrder = (s: TrimmableSets) => (s.role === 'Accessory' ? 0 : s.role === 'Secondary' ? 1 : 2);
+      if (roleOrder(a) !== roleOrder(b)) return roleOrder(a) - roleOrder(b);
+      return b.sets - a.sets;
+    });
+    const target = sorted.find((s) => s.sets > 1);
+    if (!target) break; // everything's already at the 1-set floor — stop
+    target.sets -= 1;
+    total -= 1;
+  }
+
+  return current;
+}
+
 // Full Body region membership — used to protect the last slot per region from trimming
 const FB_PUSH_REGION: MuscleGroup[] = ['Chest', 'Shoulders', 'Triceps'];
 const FB_PULL_REGION: MuscleGroup[] = ['Back', 'Biceps', 'Traps', 'Forearms'];
@@ -66,6 +104,21 @@ function isLastInRegion(slot: ExerciseSlot, slots: ExerciseSlot[]): boolean {
     return regionCount <= 1;
   }
   return false;
+}
+
+// RC-010: the whole-session set cap (SESSION_MAX_SETS/_CUT/_STRENGTH) is
+// enforced by enforceSessionCaps at generation time, but progression
+// (computeAndSaveProgressionTargets in src/api/progression.ts) recomputes
+// each exercise's sets independently week-to-week via the landmark ramp
+// (HV-021) capped only per-exercise (HV-023) — nothing re-checked the
+// session's new total against this same ceiling, so a session could
+// gradually climb toward (or past) it as multiple muscles ramp toward MRV
+// simultaneously. Exposed here so progression.ts can reuse the exact same
+// cap value instead of hard-coding a second copy of it.
+export function getSessionMaxSets(focus?: ProgramFocus): number {
+  if (focus === 'cut') return SESSION_MAX_SETS_CUT;
+  if (focus === 'strength') return SESSION_MAX_SETS_STRENGTH;
+  return SESSION_MAX_SETS;
 }
 
 // Numeric priority for trimming order: lowest number = removed first
@@ -153,11 +206,7 @@ export function enforceSessionCaps(
   // ST-009: strength gets its own (tighter) set cap; cut's still wins if both
   // would apply, since programFocus is single-valued so this is never a
   // simultaneous conflict — cut and strength are mutually exclusive focuses.
-  const maxSets = isCut
-    ? SESSION_MAX_SETS_CUT
-    : focus === 'strength'
-      ? SESSION_MAX_SETS_STRENGTH
-      : SESSION_MAX_SETS;
+  const maxSets = getSessionMaxSets(focus);
 
   const isFullBody = day.sessionType === 'FullBody';
   let slots = [...day.slots];
