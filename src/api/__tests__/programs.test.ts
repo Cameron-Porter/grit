@@ -78,7 +78,7 @@ describe('backfillWeek1ExerciseRoles', () => {
     const exercisesChain = makeChain({
       data: [
         { id: 'pe-1', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Barbell Bench Press', sort_order: 0 },
-        { id: 'pe-2', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Dumbbell Fly', sort_order: 1 },
+        { id: 'pe-2', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Dumbbell Flyes', sort_order: 1 },
         { id: 'pe-3', program_day_id: 'day-1', muscle_group: 'Chest', exercise_name: 'Incline Dumbbell Press', sort_order: 2 },
       ],
       error: null,

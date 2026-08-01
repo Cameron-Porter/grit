@@ -64,7 +64,13 @@ export default function GrowthOverTime() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const chartWidth = width - 32;
+  // Side insets matter here (unlike most screens that only need insets.top
+  // for the header) because chartWidth feeds directly into an SVG's fixed
+  // pixel width — padding alone won't clip an SVG the way it clips regular
+  // views, so an unaccounted-for side inset (landscape on a notched device,
+  // some tablets) pushes the chart past the safe content area instead of
+  // just looking cramped.
+  const chartWidth = width - insets.left - insets.right - 32;
 
   const [selectedMuscle, setSelectedMuscle] = useState('Chest');
   const [selectedExercise, setSelectedExercise] = useState('');
@@ -134,7 +140,7 @@ export default function GrowthOverTime() {
         <Text style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>Growth Over Time</Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingTop: 16, paddingBottom: 40, paddingLeft: 16 + insets.left, paddingRight: 16 + insets.right }}>
 
         {/* ── Selectors ── */}
         <DropdownButton
@@ -231,7 +237,7 @@ export default function GrowthOverTime() {
                     onPress={() => { setSelectedExercise(ex); setOpenDropdown(null); }}
                     style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 20, borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderBottomColor: colors.surface2, opacity: pressed ? 0.7 : 1 })}
                   >
-                    <Text style={{ color: active ? colors.primary : colors.text, fontSize: 15, fontWeight: active ? '700' : '400' }}>{ex}</Text>
+                    <Text style={{ color: active ? colors.primary : colors.text, fontSize: 15, fontWeight: active ? '700' : '400', flex: 1, paddingRight: 12 }}>{ex}</Text>
                     {active && <MaterialCommunityIcons name="check" size={18} color={colors.primary} />}
                   </Pressable>
                 );
