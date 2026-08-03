@@ -399,8 +399,14 @@ describe('ST-004 — strength deload load reduction', () => {
   });
 });
 
-describe('ST-008 — cut-phase load increment', () => {
-  it('halves the standard compound increment (5 -> 2.5 lb) for cut focus', () => {
+describe('ST-010 — flat 5 lb load increment, no exceptions', () => {
+  // Cut-phase halving (5 -> 2.5 lb) and isolation/accessory micro-loading
+  // (2.5 lb, formerly 1.25 lb) were both removed per explicit user direction
+  // — fractional-plate increments aren't reliably available on gym
+  // equipment. getLoadIncrement now returns a flat 5 lb for every role,
+  // experience level, and focus, cut included. This is a hard constraint,
+  // not a gap to fill back in with a new fractional tier.
+  it('does not halve the increment for cut focus', () => {
     const ctx = makeCtx({ programFocus: 'cut' });
     const rec = recommendProgression(
       makePrescription(),
@@ -409,21 +415,17 @@ describe('ST-008 — cut-phase load increment', () => {
     );
     // Cut disables auto-advance (CUT_HOLD), but loadIncrement is still
     // reported for the UI — that's what this test is pinning.
-    expect(rec.loadIncrement).toBe(2.5);
+    expect(rec.loadIncrement).toBe(5);
   });
 
-  // Previously halved further to 1.25 lb for isolation-accessory work under
-  // cut focus. That tier was removed (see getLoadIncrement's doctrine
-  // comment) — 1.25 lb increments aren't practically available on most
-  // equipment, so cut focus now floors at the same 2.5 lb as everything else.
-  it('does not go below 2.5 lb for isolation-accessory work under cut focus', () => {
+  it('does not go below 5 lb for isolation-accessory work under cut focus', () => {
     const ctx = makeCtx({ programFocus: 'cut' });
     const rec = recommendProgression(
       makePrescription({ role: 'Accessory', exerciseType: 'isolation' }),
       makeSessions(50, 12, 1),
       ctx,
     );
-    expect(rec.loadIncrement).toBe(2.5);
+    expect(rec.loadIncrement).toBe(5);
   });
 
   it('bug fix regression: isCut is driven by programFocus, not the unused trainingPhase field', () => {
@@ -517,5 +519,48 @@ describe('VA-013 — soreness-based volume autoregulation', () => {
     const rec = recommendProgression(makePrescription({ sets: 4 }), makeSessions(100, 10, 1), ctx);
     expect(rec.action).toBe('DELOAD');
     expect(rec.nextSets).toBe(Math.max(1, Math.ceil(4 * 0.5)));
+  });
+});
+
+describe('VA-014 — graduated soreness-based ramp step', () => {
+  // musclePriority 'emphasize' + mesoWeek 3 normally adds weekBonus=2 above
+  // baseSetCount (3) => 5 (the 'Healed early' / no-signal case, pinned above
+  // in VA-013's "does not cap" tests). VA-014 shifts that ramp step itself
+  // based on soreness instead of always taking the mesoWeek-driven step.
+
+  it('takes an extra ramp step when the muscle reported "Not sore" (under-dosed signal)', () => {
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Not sore' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(6); // 3 + weekBonus(3) instead of the normal 2
+  });
+
+  it('repeats last week\'s ramp step when the muscle reported "Just in time" (at the MRV ceiling)', () => {
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Just in time' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(4); // 3 + weekBonus(1) — week 2's step, not week 3's
+  });
+
+  it('"Just in time" never drops the ramp step below week 1\'s baseline', () => {
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 1, soreness: 'Just in time' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(3); // would be week 0 -> clamped to no bonus, not negative
+  });
+
+  it('does not apply the extra "Not sore" step outside the emphasize ramp', () => {
+    const ctx = makeCtx({ musclePriority: 'grow', mesoWeek: 3, soreness: 'Not sore' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(3); // 'grow' holds at baseSetCount regardless of soreness
+  });
+
+  it('does not let "Not sore" override the HV-021 landmark target', () => {
+    const ctx = makeCtx({
+      musclePriority: 'emphasize',
+      programFocus: 'hypertrophy',
+      mesoWeek: 3,
+      soreness: 'Not sore',
+      hypertrophyVolumeOverride: { trainingSets: 10, deloadSets: 5 },
+    });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(10); // override wins outright, untouched by the ramp shift
   });
 });

@@ -95,7 +95,8 @@ export interface ProgressionRecommendation {
   nextRir: number;
   action: ProgressionAction;
   reason: string;
-  // Increment used to compute the load change (for display: "Add 1.25 lb").
+  // Increment used to compute the load change (for display: "Add 5 lb").
+  // ST-010: always 5 — see getLoadIncrement.
   loadIncrement: number;
   // True for PLATEAU_DELOAD, DELOAD_NEEDED, REDUCE_LOAD — prompts UI warning.
   isPlateauWarning: boolean;
@@ -103,62 +104,30 @@ export interface ProgressionRecommendation {
 
 // ─── Load increment table (doctrine Section 1–3) ──────────────────────────────
 //
-// Beginner  : +5 lbs everywhere (neural adaptation phase)
-// Intermediate: +5 lbs compound; +2.5 lbs accessory isolation
-// Advanced  : +5 lbs compound; +2.5 lbs secondary/accessory isolation
-//
-// Micro-loading (2.5 lbs) applies to isolation-class exercises where standard
-// 5 lb jumps would exceed the productive weekly adaptation rate.
-//
-// A finer 1.25 lb tier existed here previously for Advanced-tier Accessory
-// work (and its cut-phase-halved equivalent). Removed per user direction —
-// 1.25 lb plates/increments aren't practically available on most equipment,
-// so the extra granularity wasn't usable in practice. 2.5 lb is now the floor
-// for every isolation-class case; nothing below it.
-
-function isIsolationClass(exerciseType: ExerciseType): boolean {
-  return exerciseType === 'isolation' || exerciseType === 'core';
-}
+// ST-010: Flat 5 lb increment, every role/experience/focus tier, no exceptions.
+// A 2.5 lb micro-loading tier (and a finer 1.25 lb tier before it) existed
+// here previously for isolation/accessory work and cut-phase halving. Both
+// were removed per explicit user direction: fractional-plate increments
+// (1.25 lb, 2.5 lb) aren't reliably available on gym equipment, so the extra
+// granularity produced targets that couldn't actually be loaded. 5 lb is now
+// a hard floor and ceiling for every case — this is a deliberate constraint,
+// not a gap to fill back in with a new fractional tier. Do not reintroduce
+// sub-5-lb increments here under any circumstance.
 
 export function getLoadIncrement(
-  exerciseType: ExerciseType = 'barbell-compound',
-  role: SlotRole = 'Primary',
-  experienceLevel: ExperienceLevel = 'intermediate',
-  programFocus?: ProgramFocus,
+  _exerciseType: ExerciseType = 'barbell-compound',
+  _role: SlotRole = 'Primary',
+  _experienceLevel: ExperienceLevel = 'intermediate',
+  _programFocus?: ProgramFocus,
 ): number {
-  // ST-008: Cut-phase load increment — halve the standard compound jump
-  // (2.5 lb instead of 5). Reduced recovery capacity under a calorie deficit
-  // means the "consistent overload" assumption behind ST-005's flat +5 lbs
-  // doesn't hold. Mutually exclusive with the strength branch below since
-  // programFocus is single-valued — a program can't be both 'cut' and
-  // 'strength' focus, so there's no ordering conflict between the two.
-  // Source: Dr. Mike Israetel / RP Hypertrophy — conservative load progression
-  // during fat loss (reduced-recovery training).
-  if (programFocus === 'cut') {
-    return 2.5;
-  }
-  // ST-005: Strength load increment — compounds always +5 lbs regardless of role.
-  // Neuromuscular adaptation (the primary goal of strength training) requires
-  // consistent overload on the main competition movements. Micro-loading is
-  // reserved for isolation accessories where a 5 lb jump would overshoot the
-  // weekly adaptation rate. Source: Prilepin doctrine; NSCA load progression.
-  if (programFocus === 'strength') {
-    if (isIsolationClass(exerciseType) && role === 'Accessory') return 2.5;
-    return 5;
-  }
-  if (experienceLevel === 'beginner') return 5;
-  if (experienceLevel === 'intermediate') {
-    return role === 'Accessory' ? 2.5 : 5;
-  }
-  // Advanced: micro-loading for secondary + accessory isolation work
-  if (role === 'Accessory') return 2.5;
-  if (role === 'Secondary' && isIsolationClass(exerciseType)) return 2.5;
   return 5;
 }
 
 // ─── Rounding helpers ─────────────────────────────────────────────────────────
 
-// Round to the nearest valid increment (supports 1.25, 2.5, 5, or any step).
+// Round to the nearest valid increment. ST-010: increment is always 5 in
+// practice, but this stays general so callers can round to other steps
+// (e.g. deload-week displayed weights) without a second helper.
 export function roundToIncrement(weight: number, increment: number): number {
   return Math.round(weight / increment) * increment;
 }
@@ -279,8 +248,27 @@ export function recommendProgression(
   //   emphasize → add 1 set per week above base (volume accumulation)
   //   grow      → hold at template value
   //   maintain  → never exceed template value
+  //
+  // VA-014: the emphasize ramp step itself is gated by this session's reported
+  // soreness rather than advancing unconditionally with mesoWeek. Source:
+  // Dr. Mike Israetel / RP Hypertrophy autoregulation (recovery.md; doctrine
+  // "Response Indicators" — muscle groups that recover within 24h and don't
+  // get pumped/sore from current volume grow better with more volume, while
+  // muscle groups still sore at the next session have exceeded recoverable
+  // volume). Implemented by shifting which week's ramp step applies:
+  //   Not sore     → take next week's step early (under-dosed, push further)
+  //   Healed early → normal ramp (unchanged)
+  //   Just in time → repeat last week's step (recovery and volume are
+  //                  matched — this is the MRV signal, don't advance further)
+  //   Still sore   → handled below by the existing hard VA-013 cap
+  // Only affects the flat per-exercise ramp — the HV-021 landmark override is
+  // already muscle-level MRV-aware and isn't second-guessed here except by
+  // the VA-013 safety cap, which still applies to both paths unchanged.
+  const rampWeek = ctx.soreness === 'Not sore' ? ctx.mesoWeek + 1
+    : ctx.soreness === 'Just in time' ? ctx.mesoWeek - 1
+    : ctx.mesoWeek;
   const baseSetCount = prescription.sets;
-  const weekBonus = ctx.musclePriority === 'emphasize' ? Math.max(0, ctx.mesoWeek - 1) : 0;
+  const weekBonus = ctx.musclePriority === 'emphasize' ? Math.max(0, rampWeek - 1) : 0;
   const rawEffectiveSets = ctx.programFocus === 'hypertrophy' && ctx.hypertrophyVolumeOverride
     ? ctx.hypertrophyVolumeOverride.trainingSets
     : ctx.musclePriority === 'maintain'

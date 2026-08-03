@@ -1,4 +1,5 @@
 import type { WeekParams } from '../types/program';
+import type { SorenessLevel } from './progressionEngine';
 
 export interface SetAnchors {
   week1: number;
@@ -16,15 +17,30 @@ export interface SetAnchors {
 // anchor across the meso. Deload: drops to a separate deload anchor
 // regardless of position — deload is a distinct target (MV), not a
 // percentage of wherever the ramp happened to be.
-export function rampSets(anchors: SetAnchors, params: WeekParams): number {
+//
+// VA-014: `soreness` is optional and only meaningful for the progression
+// path (src/api/progression.ts) — slotBuilder.ts calls this at generation
+// time, before any session has been logged, and omits it. Same graduated
+// response and source citation as progressionEngine.ts's per-exercise ramp
+// (see that file's VA-014 comment): the week actually used for the ramp
+// step is shifted by the muscle's most recently reported soreness instead
+// of always advancing with weekNumber. 'Still sore' resets fully to the
+// Week 1 anchor rather than merely repeating last week's step, mirroring
+// VA-013's baseSetCount floor on the non-landmark (per-exercise) ramp path.
+export function rampSets(anchors: SetAnchors, params: WeekParams, soreness?: SorenessLevel): number {
   if (params.isDeload) {
     return Math.max(1, Math.round(anchors.deload));
   }
 
   const { weekNumber, totalTrainingWeeks } = params;
+  const rampWeek = soreness === 'Not sore' ? weekNumber + 1
+    : soreness === 'Just in time' ? weekNumber - 1
+    : soreness === 'Still sore' ? 1
+    : weekNumber;
+
   const progressFraction = totalTrainingWeeks <= 1
     ? 1.0
-    : (weekNumber - 1) / (totalTrainingWeeks - 1);
+    : Math.max(0, Math.min(1, (rampWeek - 1) / (totalTrainingWeeks - 1)));
 
   return Math.max(1, Math.round(anchors.week1 + (anchors.peak - anchors.week1) * progressFraction));
 }

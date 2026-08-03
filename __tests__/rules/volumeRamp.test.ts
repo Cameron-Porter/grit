@@ -51,6 +51,53 @@ describe('rampSets', () => {
   });
 });
 
+// VA-014 — same graduated soreness response as progressionEngine.ts's
+// per-exercise ramp, applied to the HV-021 landmark path. Without this, a
+// hypertrophy-focus muscle's per-session target always advances with
+// weekNumber regardless of reported recovery — the landmark override wins
+// outright over the per-exercise ramp (see progressionEngine.ts), so this
+// was the only place a soreness-focus program's actual set counts could
+// ever be gated by recovery.
+describe('rampSets — VA-014 graduated soreness response', () => {
+  const anchors = { week1: 8, peak: 16, deload: 6 };
+  const params = { weekNumber: 3, totalTrainingWeeks: 5, isDeload: false };
+  // Baseline (no soreness signal / 'Healed early'): fraction = (3-1)/(5-1) = 0.5 -> 12
+
+  it('takes an extra ramp step for "Not sore" (under-dosed signal)', () => {
+    // rampWeek = 4 -> fraction = (4-1)/4 = 0.75 -> 8 + 8*0.75 = 14
+    expect(rampSets(anchors, params, 'Not sore')).toBe(14);
+  });
+
+  it('repeats last week\'s step for "Just in time" (at the MRV ceiling)', () => {
+    // rampWeek = 2 -> fraction = (2-1)/4 = 0.25 -> 8 + 8*0.25 = 10
+    expect(rampSets(anchors, params, 'Just in time')).toBe(10);
+  });
+
+  it('resets fully to the Week 1 anchor for "Still sore"', () => {
+    expect(rampSets(anchors, params, 'Still sore')).toBe(8);
+  });
+
+  it('does not shift the ramp for "Healed early" or an unset soreness signal', () => {
+    expect(rampSets(anchors, params, 'Healed early')).toBe(12);
+    expect(rampSets(anchors, params)).toBe(12);
+  });
+
+  it('does not overshoot the peak anchor when "Not sore" lands on the final training week', () => {
+    const finalWeekParams = { weekNumber: 5, totalTrainingWeeks: 5, isDeload: false };
+    expect(rampSets(anchors, finalWeekParams, 'Not sore')).toBe(16);
+  });
+
+  it('does not undershoot the week1 anchor when "Just in time" lands on week 1', () => {
+    const firstWeekParams = { weekNumber: 1, totalTrainingWeeks: 5, isDeload: false };
+    expect(rampSets(anchors, firstWeekParams, 'Just in time')).toBe(8);
+  });
+
+  it('deload still wins outright regardless of soreness', () => {
+    const deloadParams = { weekNumber: 6, totalTrainingWeeks: 5, isDeload: true };
+    expect(rampSets(anchors, deloadParams, 'Not sore')).toBe(6);
+  });
+});
+
 // HV-023 — hard ceiling on sets prescribed to a single exercise, since a
 // muscle's uncapped per-session ramp (e.g. rampSets peaking at 16+ for a
 // high-MRV muscle) would otherwise concentrate entirely onto one movement

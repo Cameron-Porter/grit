@@ -172,18 +172,104 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// computeAndSaveProgressionTargets — role now reaches getLoadIncrement
+// computeAndSaveProgressionTargets — VA-014 soreness reaches the HV-021
+// landmark-override set count
+//
+// Before this fix, the HV-021 override path always advanced with mesoWeek
+// regardless of reported recovery — soreness only ever gated the flat
+// per-exercise ramp (VA-013 in progressionEngine.ts), which the override
+// wins outright over for any hypertrophy-focus muscle. That meant a
+// hypertrophy program's actual saved set counts never responded to
+// soreness at all. rampSets (volumeRamp.ts) now accepts the muscle's
+// reported soreness and shifts which week's ramp step applies.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('computeAndSaveProgressionTargets — VA-014 soreness reaches the HV-021 override', () => {
+  it('resets to the Week 1 anchor when the muscle reported "Still sore"', async () => {
+    const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
+    const programRow = {
+      total_weeks: 6,
+      focus: 'hypertrophy',
+      muscle_priorities: { Chest: 'grow' },
+    };
+    const templateDay = { id: 'template-day-1' };
+    const templateExercises = [
+      {
+        id: 'pe-1',
+        program_day_id: 'template-day-1',
+        exercise_name: 'Bench Press',
+        muscle_group: 'Chest',
+        equipment: 'Barbell',
+        sort_order: 0,
+        target_sets: 4,
+        target_reps_min: 6,
+        target_reps_max: 10,
+        target_weight: 135,
+        rir: 2,
+      },
+    ];
+    const nextDayRow = { id: 'next-day-1' };
+
+    const workoutFeedback = [{ muscle_group: 'Chest', soreness: 'Still sore' }];
+    // Mid-band session, 4 sets logged (matches the template's target_sets so
+    // VA-013's own baseSetCount safety cap — which uses last actual sets
+    // logged, not the template value, see the "Use actual sets logged last
+    // session" comment above — doesn't confound this test with a second,
+    // lower ceiling of its own). Action HOLD, nonzero nextWeight either way.
+    const workoutSets = [0, 1, 2, 3].map((set_index) => ({ workout_id: 'w1', weight: 135, reps: 8, set_index }));
+    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+
+    // Chest trained on 2 days/week -> frequency 2 -> 'grow' anchors
+    // (MEV 8 -> MAV 16) / 2 = week1: 4, peak: 8.
+    const week1Days = [{ id: 'template-day-1' }, { id: 'template-day-2' }];
+    const week1MuscleExercises = [
+      { program_day_id: 'template-day-1', muscle_group: 'Chest' },
+      { program_day_id: 'template-day-2', muscle_group: 'Chest' },
+    ];
+
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: dayRow, error: null }))               // program_days (dayRow)
+      .mockReturnValueOnce(makeChain({ data: programRow, error: null }))           // programs
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))          // program_days (template day lookup)
+      .mockReturnValueOnce(makeChain({ data: templateExercises, error: null }))    // program_exercises (template)
+      .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))           // program_days (next week day)
+      .mockReturnValueOnce(makeChain({ data: workoutFeedback, error: null }))      // workout_feedback (getMuscleSorenessForWorkout)
+      .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))          // workout_sets (getExerciseAllSessions)
+      .mockReturnValueOnce(makeChain({ data: workouts, error: null }))             // workouts (getExerciseAllSessions)
+      .mockReturnValueOnce(makeChain({ data: week1Days, error: null }))            // program_days (getMuscleWeeklyFrequency)
+      .mockReturnValueOnce(makeChain({ data: week1MuscleExercises, error: null })) // program_exercises (getMuscleWeeklyFrequency)
+      .mockReturnValueOnce({ upsert: upsertMock })                                 // program_day_targets upsert
+      .mockReturnValueOnce(makeChain({ data: [], error: null }));                  // program_days (later-days lookup, section 2)
+
+    await computeAndSaveProgressionTargets('day-1', 'intermediate', 'workout-1');
+
+    const savedRows = upsertMock.mock.calls[0][0];
+    // Baseline (no soreness) at nextWeek=2 of 5 training weeks would be
+    // round(4 + (8-4) * (2-1)/(5-1)) = 5. 'Still sore' resets the ramp step
+    // to the Week 1 anchor instead: round(4) = 4.
+    expect(savedRows[0].target_sets).toBe(4);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// computeAndSaveProgressionTargets — role reaches getLoadIncrement
 //
 // Regression test for the bug where program_exercises never retained its
 // Primary/Secondary/Accessory role, so every exercise's next-week load
 // increment silently defaulted to 'Primary' sizing regardless of the
 // exercise's actual role. Dumbbell Lateral Raise is 'isolation' in
-// exerciseDatabase.ts — at intermediate experience, Accessory role should
-// get the smaller 2.5 lb increment instead of Primary's 5 lb.
+// exerciseDatabase.ts. Role-based increment tiering (Accessory previously
+// getting a smaller 2.5 lb increment than Primary's 5 lb) was removed —
+// ST-010 now floors and ceilings every role at a flat 5 lb — so this test
+// just pins that an Accessory-role row still saves correctly end-to-end;
+// see progressionRules.test.ts's ST-010 block for the flat-increment rule
+// itself.
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('computeAndSaveProgressionTargets — role-aware load increment', () => {
-  it('applies the Accessory-role increment (2.5 lb) when role is stored on the exercise row', async () => {
+  it('saves the flat 5 lb increment (ST-010) for an Accessory-role exercise', async () => {
     const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
     const programRow = {
       total_weeks: 6,
@@ -230,9 +316,8 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
 
     const savedRows = upsertMock.mock.calls[0][0];
     expect(savedRows).toHaveLength(1);
-    // 20 + 2.5 (Accessory) = 22.5. Without the fix, role defaults to
-    // 'Primary' and this would be 20 + 5 = 25 instead.
-    expect(savedRows[0].target_weight).toBe(22.5);
+    // 20 + 5 (ST-010 flat increment) = 25.
+    expect(savedRows[0].target_weight).toBe(25);
   });
 });
 
