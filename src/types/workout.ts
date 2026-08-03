@@ -64,6 +64,13 @@ export type WorkoutState = {
   exercises: Exercise[];
   pendingFeedback: PendingFeedback[];
   isSaving: boolean;
+  // True from just before drainPendingWorkouts() starts (inside finishWorkout,
+  // after the UI has already cleared) until it resolves. computeAndSaveProgressionTargets
+  // runs inside that drain — see progression.ts. The workout screen's
+  // auto-load-next-workout effect must not fetch while this is true, or it can
+  // read program_day_targets before this week's progression write has landed
+  // and pre-fill the next session with a zeroed-out weight.
+  isSyncingWorkout: boolean;
 
   startWorkout: () => void;
   endWorkout: () => void;

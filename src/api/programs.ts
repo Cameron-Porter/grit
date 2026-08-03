@@ -444,7 +444,34 @@ export async function getNextProgramWorkout(): Promise<{
   if (!nextDay) return null;
 
   // Exercises come from the week-1 template for this day_number
-  const exercises = await getTemplateDayExercises(current.id, nextDay.day_number);
+  const templateExercises = await getTemplateDayExercises(current.id, nextDay.day_number);
+
+  // Bug fix: this used to return the raw template exercises, whose
+  // target_weight is always null (addProgramExercise never sets it —
+  // program_exercises is the frozen week-1 template, not a live target).
+  // Every non-Bodyweight exercise's weight field then fell back to 0 the
+  // instant a workout auto-loaded here (the common "Finish -> next workout
+  // auto-loads" path), even though computeAndSaveProgressionTargets had
+  // already computed a real next-session weight into program_day_targets.
+  // Bodyweight exercises masked this — they're rescued by a separate
+  // bodyWeight-from-profile fallback in useWorkoutStore — but every other
+  // equipment type showed a blank/zeroed weight field. Merge in
+  // program_day_targets here the same way handleStartWorkout in
+  // day/[dayId].tsx already does, so this path can't diverge from the one
+  // that was already correct.
+  const dayTargets = await getProgramDayTargets(nextDay.id);
+  const exercises = templateExercises.map((e) => {
+    const aiTarget = dayTargets.find((t) => t.exercise_name === e.exercise_name);
+    if (!aiTarget) return e;
+    return {
+      ...e,
+      target_sets: aiTarget.target_sets ?? e.target_sets,
+      target_reps_min: aiTarget.target_reps_min ?? e.target_reps_min,
+      target_reps_max: aiTarget.target_reps_max ?? e.target_reps_max,
+      target_weight: aiTarget.target_weight ?? e.target_weight,
+      rir: aiTarget.rir ?? e.rir,
+    };
+  });
 
   return { program: current, day: nextDay, exercises };
 }

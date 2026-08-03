@@ -282,11 +282,67 @@ describe('getNextProgramWorkout', () => {
       .mockReturnValueOnce(makeChain({ data: programs, error: null }))    // getPrograms
       .mockReturnValueOnce(makeChain({ data: days, error: null }))        // getProgramDays
       .mockReturnValueOnce(makeChain({ data: templateDay, error: null })) // getTemplateDayExercises: find week-1 day
-      .mockReturnValueOnce(makeChain({ data: exercises, error: null }));  // getProgramExercises
+      .mockReturnValueOnce(makeChain({ data: exercises, error: null }))   // getProgramExercises
+      .mockReturnValueOnce(makeChain({ data: [], error: null }));         // getProgramDayTargets (none saved yet)
 
     const result = await getNextProgramWorkout();
     expect(result?.day.id).toBe('d3');
     expect(result?.exercises).toHaveLength(1);
+  });
+
+  // Bug fix regression: getNextProgramWorkout used to return the raw week-1
+  // template exercises, whose target_weight is always null (addProgramExercise
+  // never sets it). app/workout.tsx's auto-load-next-workout effect — the path
+  // that fires the instant a workout finishes — read that null straight through
+  // to `?? 0`, so every non-Bodyweight exercise's weight field zeroed out on
+  // the very next workout even though computeAndSaveProgressionTargets had
+  // already computed a real weight into program_day_targets. Now merged in,
+  // the same way day/[dayId].tsx's handleStartWorkout already did it.
+  it('merges program_day_targets over the null template target_weight', async () => {
+    const programs = [{ id: 'p1', name: 'PPL', total_weeks: 4, days_per_week: 3, is_current: true }];
+    const days = [
+      { id: 'd1', program_id: 'p1', week_number: 2, day_number: 1, completed: false, skipped: false },
+    ];
+    const templateDay = { id: 'td1' };
+    const exercises = [
+      { id: 'pe1', program_day_id: 'td1', exercise_name: 'Dumbbell Overhead Press', sort_order: 0, target_sets: 3, target_reps_min: 5, target_reps_max: 10, target_weight: null, rir: 3 },
+    ];
+    const dayTargets = [
+      { exercise_name: 'Dumbbell Overhead Press', target_sets: 5, target_reps_min: 5, target_reps_max: 5, target_weight: 60, rir: 2, ai_rationale: 'Hit ceiling.' },
+    ];
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: programs, error: null }))
+      .mockReturnValueOnce(makeChain({ data: days, error: null }))
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))
+      .mockReturnValueOnce(makeChain({ data: exercises, error: null }))
+      .mockReturnValueOnce(makeChain({ data: dayTargets, error: null })); // getProgramDayTargets
+
+    const result = await getNextProgramWorkout();
+    expect(result?.exercises[0].target_weight).toBe(60);
+    expect(result?.exercises[0].target_sets).toBe(5);
+  });
+
+  it('falls back to the template values when no program_day_targets row exists for an exercise', async () => {
+    const programs = [{ id: 'p1', name: 'PPL', total_weeks: 4, days_per_week: 3, is_current: true }];
+    const days = [
+      { id: 'd1', program_id: 'p1', week_number: 1, day_number: 1, completed: false, skipped: false },
+    ];
+    const templateDay = { id: 'td1' };
+    const exercises = [
+      { id: 'pe1', program_day_id: 'td1', exercise_name: 'Squat', sort_order: 0, target_sets: 3, target_weight: null },
+    ];
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: programs, error: null }))
+      .mockReturnValueOnce(makeChain({ data: days, error: null }))
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))
+      .mockReturnValueOnce(makeChain({ data: exercises, error: null }))
+      .mockReturnValueOnce(makeChain({ data: [], error: null })); // no program_day_targets yet (first-ever week)
+
+    const result = await getNextProgramWorkout();
+    expect(result?.exercises[0].target_weight).toBeNull();
+    expect(result?.exercises[0].target_sets).toBe(3);
   });
 
   it('returns null when all days are completed or skipped', async () => {

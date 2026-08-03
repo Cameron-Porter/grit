@@ -46,7 +46,7 @@ jest.mock('../useProfileStore', () => ({
 import { supabase } from '../../api/supabase';
 import { markDayComplete, skipProgramDay } from '../../api/programs';
 import { computeAndSaveProgressionTargets } from '../../api/progression';
-import { enqueueWorkout } from '../../api/pendingWorkouts';
+import { enqueueWorkout, drainPendingWorkouts } from '../../api/pendingWorkouts';
 import { useWorkoutStore } from '../useWorkoutStore';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -700,6 +700,45 @@ describe('finishWorkout — happy path', () => {
     });
 
     expect(activeWorkoutIdWhenMarked).toBe('wid-1');
+  });
+
+  // Bug fix regression: the workout screen's auto-load-next-workout effect
+  // (app/workout.tsx) fires the instant activeWorkoutId goes null, but
+  // computeAndSaveProgressionTargets (next week's program_day_targets) only
+  // runs inside drainPendingWorkouts, which resolves *after* that. Without a
+  // signal to wait on, the effect could fetch before the write landed and
+  // pre-fill the next session's weight as 0. isSyncingWorkout is that signal
+  // — it must be true for the duration of drainPendingWorkouts and false once
+  // finishWorkout resolves.
+  it('sets isSyncingWorkout while drainPendingWorkouts is in flight, clears it after', async () => {
+    buildCompletedWorkout();
+    let syncingDuringDrain: boolean | undefined;
+    (drainPendingWorkouts as jest.Mock).mockImplementationOnce(async () => {
+      syncingDuringDrain = useWorkoutStore.getState().isSyncingWorkout;
+      return 1;
+    });
+
+    expect(useWorkoutStore.getState().isSyncingWorkout).toBe(false);
+
+    await act(async () => {
+      await useWorkoutStore.getState().finishWorkout();
+    });
+
+    expect(syncingDuringDrain).toBe(true);
+    expect(useWorkoutStore.getState().isSyncingWorkout).toBe(false);
+  });
+
+  it('clears isSyncingWorkout even if drainPendingWorkouts throws', async () => {
+    buildCompletedWorkout();
+    (drainPendingWorkouts as jest.Mock).mockImplementationOnce(async () => {
+      throw new Error('unexpected sync failure');
+    });
+
+    await act(async () => {
+      await expect(useWorkoutStore.getState().finishWorkout()).rejects.toThrow();
+    });
+
+    expect(useWorkoutStore.getState().isSyncingWorkout).toBe(false);
   });
 
   it('enqueues a payload with skipped sets so the drain can handle day-skipping', async () => {

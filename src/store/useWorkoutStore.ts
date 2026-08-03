@@ -71,6 +71,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       exercises: [],
       pendingFeedback: [],
       isSaving: false,
+      isSyncingWorkout: false,
 
       setDayNote: (note) => set({ dayNote: note }),
 
@@ -468,18 +469,30 @@ export const useWorkoutStore = create<WorkoutState>()(
           // Clear UI immediately — the data is safe locally.
           clearWorkoutState();
 
-          // Attempt to flush the queue in the background. On success the data lands in
-          // Supabase and is removed from AsyncStorage. On failure it stays queued and
-          // drainPendingWorkouts() will retry the next time the app foregrounds.
-          const synced = await drainPendingWorkouts();
+          // isSyncingWorkout: computeAndSaveProgressionTargets (called from inside
+          // drainPendingWorkouts, below) writes next week's program_day_targets.
+          // The workout screen's auto-load-next-workout effect fires the instant
+          // activeWorkoutId went null just above — without this flag it can query
+          // program_day_targets before that write lands and pre-fill the next
+          // session with a zeroed-out weight. The effect waits for this to go
+          // false before it fetches (see app/workout.tsx).
+          set({ isSyncingWorkout: true });
+          try {
+            // Attempt to flush the queue in the background. On success the data
+            // lands in Supabase and is removed from AsyncStorage. On failure it
+            // stays queued and drainPendingWorkouts() will retry next foreground.
+            const synced = await drainPendingWorkouts();
 
-          // Refresh workout reminder content with the updated streak (fire-and-forget).
-          const { workoutRemindersEnabled } = useProfileStore.getState();
-          if (workoutRemindersEnabled) {
-            rescheduleWithStreak().catch(() => {});
+            // Refresh workout reminder content with the updated streak (fire-and-forget).
+            const { workoutRemindersEnabled } = useProfileStore.getState();
+            if (workoutRemindersEnabled) {
+              rescheduleWithStreak().catch(() => {});
+            }
+
+            return { savedOffline: synced === 0 };
+          } finally {
+            set({ isSyncingWorkout: false });
           }
-
-          return { savedOffline: synced === 0 };
         } catch (error) {
           Sentry.captureException(error, { tags: { context: 'finishWorkout' } });
           console.error('Failed to save workout:', error);

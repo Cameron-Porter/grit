@@ -54,6 +54,7 @@ export default function ActiveWorkout() {
     updateSet,
     finishWorkout,
     isSaving,
+    isSyncingWorkout,
     removeSet,
     skipSet,
     skipSets,
@@ -173,6 +174,17 @@ export default function ActiveWorkout() {
       setNextWorkout(null);
       return;
     }
+    // Bug fix: computeAndSaveProgressionTargets (this week's just-finished day
+    // -> next week's program_day_targets) runs inside the background sync
+    // that finishWorkout kicks off *after* clearing the active session — so
+    // this effect could otherwise fire and fetch before that write lands,
+    // reading a missing target and pre-filling the next session's weight as
+    // 0. isSyncingWorkout stays true for exactly that window; re-run once it
+    // flips back to false instead of racing it.
+    if (isSyncingWorkout) {
+      setLoadingNext(true);
+      return;
+    }
     let cancelled = false;
     setLoadingNext(true);
     getNextProgramWorkout()
@@ -208,7 +220,7 @@ export default function ActiveWorkout() {
       .catch(() => { if (!cancelled) setNextWorkout(null); })
       .finally(() => { if (!cancelled) setLoadingNext(false); });
     return () => { cancelled = true; };
-  }, [hasWorkoutSession]);
+  }, [hasWorkoutSession, isSyncingWorkout]);
 
   // Hydrate muscle priorities for persisted sessions that pre-date the activeProgramMusclePriorities field
   useEffect(() => {
