@@ -482,10 +482,20 @@ describe('VA-012 — validateProgram frequency warning', () => {
 });
 
 describe('VA-013 — soreness-based volume autoregulation', () => {
-  it('holds sets at the base count when the muscle reported "Still sore"', () => {
+  it('backs off one set (not a full reset) when the muscle reported "Still sore"', () => {
     // musclePriority 'emphasize' + mesoWeek 3 would normally add weekBonus=2
-    // sets above baseSetCount (3) => 5. 'Still sore' should cap it back to 3.
+    // sets above baseSetCount (3) => 5. 'Still sore' trims one set off that
+    // (4), rather than resetting all the way back to baseSetCount (3).
     const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Still sore' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(4);
+  });
+
+  it('never drops "Still sore" below baseSetCount even when the trim would go lower', () => {
+    // musclePriority 'emphasize' + mesoWeek 1 -> weekBonus 0 -> rawEffectiveSets
+    // equals baseSetCount (3) already. Trimming 1 more would go below it —
+    // the floor holds it at 3 instead.
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 1, soreness: 'Still sore' });
     const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
     expect(rec.nextSets).toBe(3);
   });

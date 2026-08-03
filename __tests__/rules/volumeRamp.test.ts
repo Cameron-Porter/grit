@@ -73,8 +73,16 @@ describe('rampSets — VA-014 graduated soreness response', () => {
     expect(rampSets(anchors, params, 'Just in time')).toBe(10);
   });
 
-  it('resets fully to the Week 1 anchor for "Still sore"', () => {
-    expect(rampSets(anchors, params, 'Still sore')).toBe(8);
+  it('backs off one set (not a full reset) for "Still sore"', () => {
+    // Baseline this week would be 12 (see above) -> trim 1 -> 11.
+    expect(rampSets(anchors, params, 'Still sore')).toBe(11);
+  });
+
+  it('never drops "Still sore" below the Week 1 anchor even when the trim would go lower', () => {
+    // Week 1 itself: baseline = week1 anchor (8). Trimming 1 more would go
+    // below it — the floor holds it at 8 instead.
+    const firstWeekParams = { weekNumber: 1, totalTrainingWeeks: 5, isDeload: false };
+    expect(rampSets(anchors, firstWeekParams, 'Still sore')).toBe(8);
   });
 
   it('does not shift the ramp for "Healed early" or an unset soreness signal', () => {

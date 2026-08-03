@@ -24,9 +24,13 @@ export interface SetAnchors {
 // response and source citation as progressionEngine.ts's per-exercise ramp
 // (see that file's VA-014 comment): the week actually used for the ramp
 // step is shifted by the muscle's most recently reported soreness instead
-// of always advancing with weekNumber. 'Still sore' resets fully to the
-// Week 1 anchor rather than merely repeating last week's step, mirroring
-// VA-013's baseSetCount floor on the non-landmark (per-exercise) ramp path.
+// of always advancing with weekNumber. 'Still sore' is a modest correction
+// (back off one set from this week's step), not a full reset — a hard drop
+// to the Week 1 anchor overcorrects for a single sore session and can read
+// as the app randomly cratering volume. Never drops below the Week 1
+// anchor itself, mirroring VA-013's baseSetCount floor on the non-landmark
+// (per-exercise) ramp path — this holds volume down, it doesn't cut below
+// where the meso started.
 export function rampSets(anchors: SetAnchors, params: WeekParams, soreness?: SorenessLevel): number {
   if (params.isDeload) {
     return Math.max(1, Math.round(anchors.deload));
@@ -35,14 +39,19 @@ export function rampSets(anchors: SetAnchors, params: WeekParams, soreness?: Sor
   const { weekNumber, totalTrainingWeeks } = params;
   const rampWeek = soreness === 'Not sore' ? weekNumber + 1
     : soreness === 'Just in time' ? weekNumber - 1
-    : soreness === 'Still sore' ? 1
     : weekNumber;
 
   const progressFraction = totalTrainingWeeks <= 1
     ? 1.0
     : Math.max(0, Math.min(1, (rampWeek - 1) / (totalTrainingWeeks - 1)));
 
-  return Math.max(1, Math.round(anchors.week1 + (anchors.peak - anchors.week1) * progressFraction));
+  const value = Math.max(1, Math.round(anchors.week1 + (anchors.peak - anchors.week1) * progressFraction));
+
+  if (soreness === 'Still sore') {
+    return Math.max(Math.round(anchors.week1), value - 1);
+  }
+
+  return value;
 }
 
 // HV-023: hard ceiling on sets prescribed to a single exercise in one

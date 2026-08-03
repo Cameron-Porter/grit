@@ -260,10 +260,10 @@ export function recommendProgression(
   //   Healed early → normal ramp (unchanged)
   //   Just in time → repeat last week's step (recovery and volume are
   //                  matched — this is the MRV signal, don't advance further)
-  //   Still sore   → handled below by the existing hard VA-013 cap
+  //   Still sore   → handled below by the existing VA-013 one-set trim
   // Only affects the flat per-exercise ramp — the HV-021 landmark override is
   // already muscle-level MRV-aware and isn't second-guessed here except by
-  // the VA-013 safety cap, which still applies to both paths unchanged.
+  // the VA-013 safety trim, which still applies to both paths unchanged.
   const rampWeek = ctx.soreness === 'Not sore' ? ctx.mesoWeek + 1
     : ctx.soreness === 'Just in time' ? ctx.mesoWeek - 1
     : ctx.mesoWeek;
@@ -275,17 +275,18 @@ export function recommendProgression(
       ? baseSetCount
       : baseSetCount + weekBonus;
 
-  // VA-013: hold volume flat rather than progress it if this muscle reported
-  // 'Still sore' walking into the session just logged — a set increase on
-  // top of incomplete recovery is exactly the autoregulation doctrine warns
-  // against. Caps rather than replaces rawEffectiveSets so this composes with
-  // both the flat weekBonus path and the HV-021 landmark-override path
-  // without needing to special-case which one produced the number. Never
-  // drops sets below baseSetCount — this holds volume, it doesn't cut it.
+  // VA-013: back off one set rather than progress it if this muscle reported
+  // 'Still sore' walking into the session just logged — a full reset to
+  // baseSetCount overcorrects for a single sore session; a one-set trim is
+  // the modest autoregulation response doctrine calls for. Applied to
+  // rawEffectiveSets so this composes with both the flat weekBonus path and
+  // the HV-021 landmark-override path without needing to special-case which
+  // one produced the number. Never drops sets below baseSetCount — this
+  // holds volume down, it doesn't cut below where the meso started.
   // Source: Dr. Mike Israetel / RP Hypertrophy — recovery autoregulation via
   // soreness feedback.
   const stillSore = ctx.soreness === 'Still sore';
-  const effectiveSets = stillSore ? Math.min(rawEffectiveSets, baseSetCount) : rawEffectiveSets;
+  const effectiveSets = stillSore ? Math.max(baseSetCount, rawEffectiveSets - 1) : rawEffectiveSets;
 
   // During a cut, raise the rep floor to 8 to reduce injury risk from heavy loading.
   const effectiveRepsMin = isCut
