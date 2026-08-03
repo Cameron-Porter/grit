@@ -18,11 +18,11 @@ export interface SetAnchors {
 // regardless of position — deload is a distinct target (MV), not a
 // percentage of wherever the ramp happened to be.
 //
-// VA-014: `soreness` is optional and only meaningful for the progression
+// VA-015: `soreness` is optional and only meaningful for the progression
 // path (src/api/progression.ts) — slotBuilder.ts calls this at generation
 // time, before any session has been logged, and omits it. Same graduated
 // response and source citation as progressionEngine.ts's per-exercise ramp
-// (see that file's VA-014 comment): the week actually used for the ramp
+// (see that file's VA-015 comment): the week actually used for the ramp
 // step is shifted by the muscle's most recently reported soreness instead
 // of always advancing with weekNumber. 'Still sore' is a modest correction
 // (back off one set from this week's step), not a full reset — a hard drop

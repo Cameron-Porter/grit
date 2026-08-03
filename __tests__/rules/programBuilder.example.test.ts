@@ -316,12 +316,13 @@ describe('buildProgram — 4-day strength focus', () => {
     }
   });
 
-  // ST-002: Secondary slots stay in the myofibrillar zone (4-7 reps)
-  it('ST-002: Secondary emphasize slots have repsMax ≤ 8 (Prilepin 75-85% zone)', () => {
+  // ST-002: Secondary slots stay in the myofibrillar zone (8-15 reps overall,
+  // emphasize tightest at 8-10 — see slotRoleConfig.ts)
+  it('ST-002: Secondary emphasize slots have repsMax ≤ 10 (Prilepin 75-85% zone)', () => {
     for (const day of program.days) {
       for (const slot of day.slots) {
         if (slot.role === 'Secondary' && slot.priority === 'emphasize') {
-          expect(slot.repsMax).toBeLessThanOrEqual(8);
+          expect(slot.repsMax).toBeLessThanOrEqual(10);
         }
       }
     }

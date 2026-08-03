@@ -69,3 +69,22 @@ describe('assignMuscleSessions — RC-008 overlap avoidance', () => {
     expect(result).toEqual([1]);
   });
 });
+
+// Regression test: SESSION_MUSCLES.Pull previously omitted 'Forearms' even
+// though sessionTemplates.ts's Pull template has a dedicated Forearms slot
+// (see slotBuilder.ts's HV-008 placement logic) and Supabase has real
+// Forearms exercises — so Forearms could never actually be assigned to any
+// session, in any generated program, ever.
+describe('assignMuscleSessions — Forearms is assignable via Pull', () => {
+  it('assigns Forearms to a Pull day', () => {
+    const weekSessions: SessionType[] = ['Pull', 'Push', 'Legs'];
+    const result = assignMuscleSessions(weekSessions, target('Forearms', 1));
+    expect(result).toEqual([0]);
+  });
+
+  it('returns no days when the week has no Pull/FullBody/Upper session', () => {
+    const weekSessions: SessionType[] = ['Push', 'Legs'];
+    const result = assignMuscleSessions(weekSessions, target('Forearms', 1));
+    expect(result).toEqual([]);
+  });
+});

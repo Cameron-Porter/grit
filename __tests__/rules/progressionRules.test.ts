@@ -385,6 +385,29 @@ describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () 
   });
 });
 
+// Bug fix regression: programFocus: 'maintenance' previously had zero test
+// coverage anywhere, and its branch ran *before* the FIRST_SESSION check, so
+// a maintenance-focus muscle with no logged history returned a nonsense
+// CUT_HOLD recommendation ("holding 0 reps × 0 lbs") instead of prompting for
+// a starting weight. FIRST_SESSION now wins regardless of focus.
+describe('maintenance focus — hold performance, no auto-increment', () => {
+  it('returns FIRST_SESSION (not a bogus CUT_HOLD) when there is no logged history yet', () => {
+    const ctx = makeCtx({ programFocus: 'maintenance' });
+    const rec = recommendProgression(makePrescription(), [], ctx);
+    expect(rec.action).toBe('FIRST_SESSION');
+    expect(rec.nextWeight).toBe(0);
+  });
+
+  it('holds at last session\'s actual weight/reps once history exists', () => {
+    const ctx = makeCtx({ programFocus: 'maintenance' });
+    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.action).toBe('CUT_HOLD');
+    expect(rec.nextWeight).toBe(100);
+    expect(rec.nextSets).toBe(3);
+    expect(rec.reason).toContain('10 reps × 100 lbs');
+  });
+});
+
 describe('ST-004 — strength deload load reduction', () => {
   it('drops load to 50% of last session, holding sets and reps', () => {
     const ctx = makeCtx({ programFocus: 'strength', isDeload: true });
@@ -532,10 +555,10 @@ describe('VA-013 — soreness-based volume autoregulation', () => {
   });
 });
 
-describe('VA-014 — graduated soreness-based ramp step', () => {
+describe('VA-015 — graduated soreness-based ramp step', () => {
   // musclePriority 'emphasize' + mesoWeek 3 normally adds weekBonus=2 above
   // baseSetCount (3) => 5 (the 'Healed early' / no-signal case, pinned above
-  // in VA-013's "does not cap" tests). VA-014 shifts that ramp step itself
+  // in VA-013's "does not cap" tests). VA-015 shifts that ramp step itself
   // based on soreness instead of always taking the mesoWeek-driven step.
 
   it('takes an extra ramp step when the muscle reported "Not sore" (under-dosed signal)', () => {

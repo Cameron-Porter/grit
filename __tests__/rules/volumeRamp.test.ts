@@ -51,14 +51,14 @@ describe('rampSets', () => {
   });
 });
 
-// VA-014 — same graduated soreness response as progressionEngine.ts's
+// VA-015 — same graduated soreness response as progressionEngine.ts's
 // per-exercise ramp, applied to the HV-021 landmark path. Without this, a
 // hypertrophy-focus muscle's per-session target always advances with
 // weekNumber regardless of reported recovery — the landmark override wins
 // outright over the per-exercise ramp (see progressionEngine.ts), so this
 // was the only place a soreness-focus program's actual set counts could
 // ever be gated by recovery.
-describe('rampSets — VA-014 graduated soreness response', () => {
+describe('rampSets — VA-015 graduated soreness response', () => {
   const anchors = { week1: 8, peak: 16, deload: 6 };
   const params = { weekNumber: 3, totalTrainingWeeks: 5, isDeload: false };
   // Baseline (no soreness signal / 'Healed early'): fraction = (3-1)/(5-1) = 0.5 -> 12

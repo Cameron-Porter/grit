@@ -180,7 +180,7 @@ export async function computeAndSaveProgressionTargets(
           const anchors = resolveMusclePerSessionAnchors(muscle, priority, frequency);
           if (!anchors) continue;
 
-          // VA-014: same graduated soreness response as the per-exercise
+          // VA-015: same graduated soreness response as the per-exercise
           // ramp — see volumeRamp.ts's rampSets doctrine comment.
           const muscleSoreness = (sorenessByMuscle[muscle] ?? undefined) as SorenessLevel | undefined;
           const perSessionTarget = rampSets(anchors, weekParams, muscleSoreness);

@@ -193,7 +193,10 @@ function enforceMuscleGroupCap(
 //      priority muscle removed first)
 //   1. Remove slots until ≤ exercise cap (lowest priority first)
 //   2. Trim sets until ≤ set cap (reduce 1 set at a time from lowest
-//      priority). When a slot would drop below 2 sets, remove the whole slot.
+//      priority). A generated program never creates a 1-set slot: once a
+//      slot is at 2 sets, the next trim removes it outright instead of
+//      decrementing to 1. (This is generation-time only — a user can still
+//      manually drop an exercise to 1 set themselves during a workout.)
 //   3. Trim further until ≤ 90 estimated minutes (same victim-selection order)
 export function enforceSessionCaps(
   day: DayPlan,
@@ -240,7 +243,9 @@ export function enforceSessionCaps(
 
     const ref = slots.find((s) => s.id === target.id)!;
 
-    if (ref.sets <= 1) {
+    // A generated slot never sits at 1 set — once it's down to 2, trimming
+    // further removes it outright rather than leaving a 1-set exercise.
+    if (ref.sets <= 2) {
       slots = slots.filter((s) => s.id !== ref.id);
       totalSets -= ref.sets;
     } else {
@@ -261,7 +266,8 @@ export function enforceSessionCaps(
 
     const ref = slots.find((s) => s.id === target.id)!;
 
-    if (ref.sets <= 1) {
+    // Same 1-set floor as Phase 2 — see comment there.
+    if (ref.sets <= 2) {
       slots = slots.filter((s) => s.id !== ref.id);
     } else {
       ref.sets -= 1;

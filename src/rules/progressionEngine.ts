@@ -217,10 +217,15 @@ function countConsecutiveBadSessions(sessions: SessionPerformance[]): number {
 //
 // Decision priority (doctrine Section 4.1):
 //   1. DELOAD_ACTIVE (isDeload week) — no progression decisions
-//   2. FIRST_SESSION (no history) — starter defaults
-//   3. BAD_SESSION threshold → DELOAD_NEEDED
-//   4. Experience-level dispatch (beginner linear / intermediate+advanced double)
-//   5. Plateau resolution
+//   2. FIRST_SESSION (no history) — starter defaults. Checked before every
+//      focus-specific branch below (maintenance, cut) so a brand-new exercise
+//      always gets the "enter your starting weight" flow instead of a
+//      focus-specific hold/deload message built from zeroed-out history.
+//   3. Maintenance focus — hold performance, no auto-increment
+//   4. BAD_SESSION threshold → DELOAD_NEEDED
+//   5. Cut/fat-loss focus — hold performance, no auto-increment
+//   6. Experience-level dispatch (beginner linear / intermediate+advanced double)
+//   7. Plateau resolution (inside the dispatch functions)
 
 export function recommendProgression(
   prescription: SlotPrescription,
@@ -249,7 +254,7 @@ export function recommendProgression(
   //   grow      → hold at template value
   //   maintain  → never exceed template value
   //
-  // VA-014: the emphasize ramp step itself is gated by this session's reported
+  // VA-015: the emphasize ramp step itself is gated by this session's reported
   // soreness rather than advancing unconditionally with mesoWeek. Source:
   // Dr. Mike Israetel / RP Hypertrophy autoregulation (recovery.md; doctrine
   // "Response Indicators" — muscle groups that recover within 24h and don't
@@ -410,21 +415,12 @@ export function recommendProgression(
     };
   }
 
-  // ── Priority 2a: Maintenance focus — hold performance, no auto-increment ──
-  // Equivalent to fat-loss hold: maintaining is the success criterion.
-  if (isMaintenance) {
-    const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
-    const lastReps = sessions.length > 0 ? sessionPerf(sessions[0]).maxReps : 0;
-    return {
-      ...base,
-      nextWeight: lastWeight,
-      nextSets: baseSetCount,
-      action: 'CUT_HOLD',
-      reason: `Maintenance focus — holding ${lastReps} reps × ${lastWeight} lbs. No auto-increment; maintaining muscle is the goal.`,
-    };
-  }
-
   // ── Priority 2: First session — no history ────────────────────────────────
+  // Bug fix: this used to run after the maintenance-focus branch below, so a
+  // maintenance-focus muscle with zero logged history returned a nonsense
+  // CUT_HOLD recommendation ("holding 0 reps × 0 lbs") instead of prompting
+  // for a starting weight. Every focus-specific branch needs real history to
+  // say anything meaningful, so FIRST_SESSION must win regardless of focus.
   if (sessions.length === 0) {
     return {
       ...base,
@@ -434,12 +430,26 @@ export function recommendProgression(
     };
   }
 
+  // ── Priority 3: Maintenance focus — hold performance, no auto-increment ──
+  // Equivalent to fat-loss hold: maintaining is the success criterion.
+  if (isMaintenance) {
+    const lastWeight = sessionPerf(sessions[0]).weight;
+    const lastReps = sessionPerf(sessions[0]).maxReps;
+    return {
+      ...base,
+      nextWeight: lastWeight,
+      nextSets: baseSetCount,
+      action: 'CUT_HOLD',
+      reason: `Maintenance focus — holding ${lastReps} reps × ${lastWeight} lbs. No auto-increment; maintaining muscle is the goal.`,
+    };
+  }
+
   const last = sessions[0];
   const lastPerf = sessionPerf(last);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);
 
-  // ── Priority 3: Consecutive bad sessions → immediate deload ───────────────
+  // ── Priority 4: Consecutive bad sessions → immediate deload ───────────────
   // Doctrine 2.3 Trigger 2 / 3.3 Trigger 2: ≥2 consecutive bad sessions
   // means accumulated fatigue or overreaching; deload before any load change.
   if (badSessions >= badSessionThreshold) {
@@ -460,7 +470,7 @@ export function recommendProgression(
     };
   }
 
-  // ── Priority 4: Fat-loss hold ─────────────────────────────────────────────
+  // ── Priority 5: Fat-loss hold ─────────────────────────────────────────────
   // During a cut, auto-increment is disabled (doctrine 4.4).
   // Maintaining current performance is the success criterion.
   // A load increase is still surfaced if the user organically hit the ceiling,
@@ -477,7 +487,7 @@ export function recommendProgression(
     };
   }
 
-  // ── Priority 5: Experience-level dispatch ─────────────────────────────────
+  // ── Priority 6: Experience-level dispatch ─────────────────────────────────
 
   if (ctx.experienceLevel === 'beginner') {
     return evaluateBeginnerLinear(prescription, sessions, ctx, {

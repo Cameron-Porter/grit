@@ -6,7 +6,7 @@ export const SESSION_MUSCLES: Record<SessionType, MuscleGroup[]> = {
   Upper:               ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps'],
   Lower:               ['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs'],
   Push:                ['Chest', 'Shoulders', 'Triceps'],
-  Pull:                ['Back', 'Biceps', 'Traps'],
+  Pull:                ['Back', 'Biceps', 'Traps', 'Forearms'],
   Legs:                ['Quads', 'Hamstrings', 'Glutes', 'Calves'],
   LowerQuadFocus:      ['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs'],
   LowerPosteriorChain: ['Hamstrings', 'Glutes', 'Quads', 'Calves', 'Abs'],

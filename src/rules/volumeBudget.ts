@@ -34,6 +34,15 @@ const TARGET_EFFECTIVE_SETS: Record<ProgramFocus, Record<MusclePriority | 'mev',
   cut:           { emphasize: 6,  grow: 5,  maintain: 4,  mev: 3 },
 };
 
+// VA-017: implementation floor, not a muscle-specific landmark citation —
+// each muscle's real MEV already comes from its own landmark
+// (volumeLandmarks.ts, used directly for hypertrophy focus in
+// hypertrophyPriorityTarget below). This flat per-focus number exists only
+// as a defensive minimum for uncappedDirectSetsNeeded's subtraction math
+// (targetEffectiveSets - estimatedIndirectSets), so a muscle with heavy
+// estimated indirect stimulus never gets rounded down to 0-1 direct sets —
+// every muscle still needs at least a token amount of direct, targeted work
+// regardless of how much indirect credit the overlap math gives it.
 const MEV_DIRECT: Record<ProgramFocus, number> = {
   hypertrophy:   3,
   strength:      2,
@@ -50,6 +59,18 @@ const SYNERGISTIC_GROUPS: readonly MuscleGroup[][] = [
   ['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs'],
 ] as const;
 
+// VA-016: co-emphasis fatigue discount. The underlying principle is sourced —
+// Dr. Mike Israetel / RP Hypertrophy: systemic recovery capacity is shared
+// across muscle groups, not purely local per muscle (see recovery.md,
+// "Mental and Physical Stress Draw from the Same Recovery Budget"), so
+// multiple muscles in the same kinetic chain (e.g. Chest/Shoulders/Triceps
+// all pushing) can't simultaneously sit at their own individual MRV without
+// exceeding what the shared push-fatigue budget can actually recover from.
+// The specific decay curve (10% / 18% / 25% off target volume for 2/3/4+
+// co-emphasized muscles) is this app's own calibration, not a number RP
+// publishes directly — no source gives an exact percentage for this, so
+// treat these three constants as an engineering approximation of a sourced
+// principle, not a directly-cited figure.
 function emphasisScaleFactor(
   muscle: MuscleGroup,
   musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>,

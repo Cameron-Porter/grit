@@ -155,6 +155,31 @@ describe('sessionTrimmer — existing invariants still hold', () => {
     expect(result.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
     expect(result.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
   });
+
+  // Regression test: Phase 2/3 used to decrement a slot down to exactly 1 set
+  // and only remove it on a later pass, so a generated program could end up
+  // with a 1-set exercise as its final, saved state. Trimming now removes a
+  // slot outright once it's down to 2, so 1-set slots can never be created.
+  it('never leaves a generated slot at exactly 1 set — removes it outright instead', () => {
+    // Strength focus: 15-set cap. 8 exercises at 2 sets each = 16, one over
+    // cap. The lone lowest-priority slot would need trimming from 2 -> 1;
+    // it must be removed entirely instead.
+    const priorities: Partial<Record<MuscleGroup, MusclePriority>> = {
+      Chest: 'emphasize', Back: 'emphasize', Shoulders: 'emphasize', Triceps: 'emphasize',
+      Biceps: 'emphasize', Quads: 'emphasize', Hamstrings: 'emphasize',
+      // Abs left unset (defaults to 'mev', lowest trim priority) — the only
+      // slot eligible for trimming below 2 sets.
+    };
+    const slots = [
+      slot('Chest', 'Primary', 2, 'a'), slot('Back', 'Primary', 2, 'b'),
+      slot('Shoulders', 'Primary', 2, 'c'), slot('Triceps', 'Primary', 2, 'd'),
+      slot('Biceps', 'Primary', 2, 'e'), slot('Quads', 'Primary', 2, 'f'),
+      slot('Hamstrings', 'Primary', 2, 'g'), slot('Abs', 'Primary', 2, 'h'),
+    ];
+    const result = enforceSessionCaps(day(slots), priorities, 'strength');
+    expect(result.slots.every((s) => s.sets >= 2)).toBe(true);
+    expect(result.slots.find((s) => s.id === 'h')).toBeUndefined();
+  });
 });
 
 // RC-010: post-generation session-set cap for already-computed progression targets

@@ -14,6 +14,15 @@ import type {
 } from '../types/program';
 import { SESSION_MAX_EXERCISES, SESSION_MAX_SETS, SESSION_TARGET_SETS_MIN } from './sessionTrimmer';
 
+// Not a doctrine tag — this is a validator-precision tolerance, not a
+// training-science claim. The target it compares against (targetEffectiveSets)
+// is the actual cited doctrine value (VA-011's landmark-derived MRV, or
+// TARGET_EFFECTIVE_SETS for non-hypertrophy focuses — both in
+// volumeBudget.ts). Day-by-day set allocation involves rounding and
+// session-cap trimming (sessionTrimmer.ts), so hitting the target exactly
+// every week isn't realistic; 80% is the slack given before flagging the
+// generator's own output as falling meaningfully short, not a claim that 80%
+// of MRV is itself a meaningful training threshold.
 const EMPHASIZE_TOLERANCE = 0.80;
 
 // ─── HV-013: Intra-session deadlift + barbell-row compatibility check ─────────
@@ -232,8 +241,16 @@ export function validateProgram(
     }
   }
 
-  // HV-002: Volume proportionality audit.
-  // Flags arm-dominant or quad-deficient programs.
+  // HV-002: Volume proportionality audit. Flags arm-dominant or
+  // quad-deficient programs — small muscles (biceps/triceps) accumulate
+  // effective sets quickly from indirect overlap credit (roleOverlap.ts)
+  // on top of their own direct work, while Quads is one of the largest
+  // muscle groups in the body and is systematically under-programmed when
+  // a split skews toward upper-body/arm accessory work. The specific 8%/18%
+  // thresholds are this app's own guardrail calibration (a heuristic sanity
+  // check on the generator's own output), not figures published by a named
+  // source — no RP/Israetel table gives an exact "max acceptable arm volume
+  // share" percentage.
   const totalSets = Object.values(weeklyEffectiveSets).reduce<number>((sum, v) => sum + (v ?? 0), 0);
   if (totalSets > 0) {
     const tricepsSets = weeklyEffectiveSets['Triceps'] ?? 0;

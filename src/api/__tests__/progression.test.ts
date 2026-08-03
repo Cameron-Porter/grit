@@ -172,7 +172,7 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// computeAndSaveProgressionTargets — VA-014 soreness reaches the HV-021
+// computeAndSaveProgressionTargets — VA-015 soreness reaches the HV-021
 // landmark-override set count
 //
 // Before this fix, the HV-021 override path always advanced with mesoWeek
@@ -184,7 +184,7 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
 // reported soreness and shifts which week's ramp step applies.
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('computeAndSaveProgressionTargets — VA-014 soreness reaches the HV-021 override', () => {
+describe('computeAndSaveProgressionTargets — VA-015 soreness reaches the HV-021 override', () => {
   it('resets to the Week 1 anchor when the muscle reported "Still sore"', async () => {
     const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
     const programRow = {

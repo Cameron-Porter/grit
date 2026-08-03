@@ -70,10 +70,14 @@ export const SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev', 
 
 // ─── ST-002: Strength Secondary — Prilepin 75-85% zone ───────────────────────
 //
-// At 75-85% 1RM, Prilepin's optimal total reps = 15 (range 10-20), 6-10 reps
-// per set. This is the "myofibrillar hypertrophy" zone (Prilepin/Norton
-// reverse-engineering: 4-7 reps = higher force-producing capacity vs. the
-// sarcoplasmic 8-12 rep pump range).
+// At 75-85% 1RM, Prilepin's optimal total reps = 15 (range 10-20). Reps span
+// 8-15 across the tier table below (emphasize tightest/lowest at 8-10,
+// widening toward mev at 12-15) — corrected 2026-08-03: the table previously
+// coded 4-8 reps here, which undershot even this section's own cited 75-85%
+// zone. 8-15 keeps Secondary work in the "myofibrillar hypertrophy" zone
+// (Prilepin/Norton reverse-engineering: higher-rep secondary volume work vs.
+// the low-rep max-strength Primary work above) while staying inside
+// Prilepin's cited 10-20 total-rep range per session at this intensity.
 
 // ─── ST-003: Strength Accessory — 65-75% zone, assistance work ───────────────
 //
@@ -91,10 +95,10 @@ const STRENGTH_SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev'
     mev:       { sets: 2, repsMin: 3,  repsMax: 5,  rir: 2 },
   },
   Secondary: {
-    emphasize: { sets: 4, repsMin: 4,  repsMax: 6,  rir: 1 },  // ST-002
-    grow:      { sets: 3, repsMin: 4,  repsMax: 7,  rir: 2 },  // ST-002
-    maintain:  { sets: 3, repsMin: 5,  repsMax: 8,  rir: 2 },
-    mev:       { sets: 2, repsMin: 5,  repsMax: 8,  rir: 3 },
+    emphasize: { sets: 4, repsMin: 8,  repsMax: 10, rir: 1 },  // ST-002
+    grow:      { sets: 3, repsMin: 9,  repsMax: 12, rir: 2 },  // ST-002
+    maintain:  { sets: 3, repsMin: 10, repsMax: 13, rir: 2 },  // ST-002
+    mev:       { sets: 2, repsMin: 12, repsMax: 15, rir: 3 },  // ST-002
   },
   Accessory: {
     emphasize: { sets: 3, repsMin: 6,  repsMax: 10, rir: 2 },  // ST-003
