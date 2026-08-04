@@ -26,6 +26,7 @@ export default function ProgramDetail() {
   const [days, setDays] = useState<ProgramDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [fixingRoles, setFixingRoles] = useState(false);
+  const [refreshingTargets, setRefreshingTargets] = useState(false);
 
   useEffect(() => {
     load();
@@ -73,6 +74,31 @@ export default function ProgramDetail() {
         }
       },
       'Fix Now',
+    );
+  };
+
+  // Recomputes every already-saved upcoming week's targets (e.g. Week 3)
+  // using the current progression engine and your real logged history +
+  // soreness feedback — without changing anything you've already logged.
+  // Useful any time the progression logic itself changes (rep/load rules,
+  // deload protocol, RIR taper, etc.) so already-generated future weeks
+  // don't stay stuck on stale math.
+  const handleRefreshProgressionTargets = () => {
+    confirm(
+      'Refresh Progression Targets',
+      'Recalculates weight/set/rep targets for every upcoming week already saved for this program, using your logged workouts and soreness feedback with the current progression rules. Nothing you\'ve already logged is changed.',
+      async () => {
+        setRefreshingTargets(true);
+        try {
+          await refreshUpcomingProgressionTargets(program!.id, experienceLevel);
+          Alert.alert('Done', 'Upcoming targets have been recalculated. If you have a workout open for this program, back out and reopen it to see the updated numbers.');
+        } catch {
+          Alert.alert('Something went wrong', 'Could not refresh progression targets — please try again.');
+        } finally {
+          setRefreshingTargets(false);
+        }
+      },
+      'Refresh',
     );
   };
 
@@ -235,6 +261,33 @@ export default function ProgramDetail() {
           )}
           <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
             Fix Exercise Roles (one-time)
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={handleRefreshProgressionTargets}
+          disabled={refreshingTargets}
+          style={{
+            marginTop: 8,
+            padding: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.surface2,
+            backgroundColor: colors.surface,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            opacity: refreshingTargets ? 0.6 : 1,
+          }}
+        >
+          {refreshingTargets ? (
+            <ActivityIndicator color={colors.muted} size="small" />
+          ) : (
+            <MaterialCommunityIcons name="refresh" size={16} color={colors.muted} />
+          )}
+          <Text style={{ color: colors.muted, fontSize: 13, fontWeight: '600' }}>
+            Refresh Progression Targets
           </Text>
         </Pressable>
       </ScrollView>

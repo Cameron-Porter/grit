@@ -14,10 +14,10 @@ Every parameter in the rules engine that encodes a training science decision **m
 
 | Prefix | Domain | Files |
 |--------|--------|-------|
-| `HV`   | Hypertrophy / general rep ranges, slot rules | `slotRoleConfig.ts`, `slotBuilder.ts`, `validation.ts`, `../utils/volumeLandmarks.ts`, `volumeRamp.ts`, `progressionEngine.ts` |
-| `ST`   | Strength (Prilepin, NSCA) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts` |
+| `HV`   | Hypertrophy / general rep ranges, slot rules | `slotRoleConfig.ts`, `slotBuilder.ts`, `validation.ts`, `../utils/volumeLandmarks.ts`, `volumeRamp.ts`, `progressionEngine.ts`, `../data/exerciseProgressionProfiles.ts` |
+| `ST`   | Strength (Prilepin, NSCA) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts`, `../data/exerciseProgressionProfiles.ts` |
 | `PB`   | Powerbuilding (PHAT / Kizen) | `slotRoleConfig.ts`, `progressionEngine.ts`, `volumeBudget.ts` |
-| `RC`   | Session caps and structural constraints | `sessionTrimmer.ts`, `validation.ts`, `assignment.ts`, `../api/progression.ts` |
+| `RC`   | Session caps and structural constraints | `sessionTrimmer.ts`, `validation.ts`, `assignment.ts`, `../api/progression.ts`, `progressionEngine.ts` |
 | `VA`   | Volume adjustments (beginner scaling, deload, per-muscle MEV/MAV/MRV targeting) | `volumeBudget.ts`, `progressionEngine.ts`, `../utils/volumeLandmarks.ts`, `../data/roleOverlap.ts` |
 
 Rules for adding a tag:

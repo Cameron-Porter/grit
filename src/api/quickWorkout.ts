@@ -2,6 +2,7 @@ import { getExercises } from './exercises';
 import { getExerciseAllSessions, getRecentWorkoutExerciseNames } from './history';
 import { getCurrentProgramFocus } from './programs';
 import { getExerciseByName } from '../data/exerciseDatabase';
+import { getProgressionProfile } from '../data/exerciseProgressionProfiles';
 import {
   buildQuickWorkoutSlots,
   QuickWorkoutRegion,
@@ -71,6 +72,15 @@ async function resolveExerciseTarget(
       role: slot.role,
       exerciseType: exerciseDef?.exerciseType,
       hardRirFloor: exerciseDef?.hardRirFloor,
+      // HV-028: Supabase-sourced equipment gates the bodyweight
+      // weight-adjustment guard in progressionEngine.ts.
+      equipment: exercise.equipment,
+      // HV-029/HV-030: category-level Exercise Progression Profile — no
+      // VA-018 soreness-trim wiring here (no cross-exercise muscle grouping
+      // exists for an ad-hoc Quick Workout; sorenessTrimOverride stays unset,
+      // falling back to progressionEngine.ts's flat VA-013 trim, which is
+      // moot here anyway since soreness is never threaded into this ctx).
+      profile: getProgressionProfile(exerciseDef),
     },
     sessions,
     {

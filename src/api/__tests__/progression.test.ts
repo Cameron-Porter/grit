@@ -254,22 +254,25 @@ describe('computeAndSaveProgressionTargets — VA-015 soreness reaches the HV-02
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// computeAndSaveProgressionTargets — role reaches getLoadIncrement
+// computeAndSaveProgressionTargets — role reaches getLoadIncrementAmount
 //
-// Regression test for the bug where program_exercises never retained its
-// Primary/Secondary/Accessory role, so every exercise's next-week load
-// increment silently defaulted to 'Primary' sizing regardless of the
-// exercise's actual role. Dumbbell Lateral Raise is 'isolation' in
-// exerciseDatabase.ts. Role-based increment tiering (Accessory previously
-// getting a smaller 2.5 lb increment than Primary's 5 lb) was removed —
-// ST-010 now floors and ceilings every role at a flat 5 lb — so this test
-// just pins that an Accessory-role row still saves correctly end-to-end;
-// see progressionRules.test.ts's ST-010 block for the flat-increment rule
-// itself.
+// Originally a regression test for the bug where program_exercises never
+// retained its Primary/Secondary/Accessory role, so every exercise's
+// next-week load increment silently defaulted to 'Primary' sizing regardless
+// of the exercise's actual role.
+//
+// ST-011 (2026-08-04, supersedes ST-010): this test used to assert that a
+// 20 lb Dumbbell Lateral Raise advances to 25 lb (a flat 5 lb, i.e. a 25%
+// jump) as *correct* — that assertion was itself the literal bug the
+// percentage-based/equipment-gated load-increment rework (ST-011 in
+// progressionEngine.ts) exists to fix. Dumbbell Lateral Raise derives to the
+// 'isolation' progression category (equipment_limited strategy, 10% gate) —
+// 2.5 lb (the smallest realistic increment under 100 lb) is 12.5% of 20 lb,
+// above the gate, so load now holds and reps extend past the ceiling instead.
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('computeAndSaveProgressionTargets — role-aware load increment', () => {
-  it('saves the flat 5 lb increment (ST-010) for an Accessory-role exercise', async () => {
+  it('holds load and extends reps instead of forcing a 20 -> 25 lb jump for an isolation exercise', async () => {
     const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
     const programRow = {
       total_weeks: 6,
@@ -295,7 +298,7 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
     ];
     const nextDayRow = { id: 'next-day-1' };
 
-    // Hit the rep ceiling last time (15 reps at 20 lb) -> ADVANCE_LOAD fires.
+    // Hit the rep ceiling last time (15 reps at 20 lb) -> ceiling-hit branch fires.
     const workoutSets = [{ workout_id: 'w1', weight: 20, reps: 15, set_index: 0 }];
     const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
 
@@ -316,8 +319,10 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
 
     const savedRows = upsertMock.mock.calls[0][0];
     expect(savedRows).toHaveLength(1);
-    // 20 + 5 (ST-010 flat increment) = 25.
-    expect(savedRows[0].target_weight).toBe(25);
+    // Held at 20 lb, not forced to 25 (or even 22.5) — reps extend past the
+    // 15-rep ceiling instead.
+    expect(savedRows[0].target_weight).toBe(20);
+    expect(savedRows[0].target_reps_max).toBe(16);
   });
 });
 
@@ -454,16 +459,87 @@ describe('refreshUpcomingProgressionTargets', () => {
   it('runs computeAndSaveProgressionTargets for each completed day', async () => {
     const completedDays = [{ id: 'day-1' }];
     mockFrom
-      .mockReturnValueOnce(makeChain({ data: completedDays, error: null })) // program_days (completed=true)
+      .mockReturnValueOnce(makeChain({ data: completedDays, error: null }))             // program_days (completed=true)
+      .mockReturnValueOnce(makeChain({ data: [], error: null }))                        // workouts (day -> workout lookup for soreness)
       .mockReturnValueOnce(makeChain({ data: { program_id: 'program-1', week_number: 1, day_number: 1 }, error: null })) // program_days (dayRow)
       .mockReturnValueOnce(makeChain({ data: { total_weeks: 1, focus: 'general', muscle_priorities: {} }, error: null })) // programs
-      .mockReturnValueOnce(makeChain({ data: { id: 'template-day-1' }, error: null })) // program_days (template day lookup)
+      .mockReturnValueOnce(makeChain({ data: { id: 'template-day-1' }, error: null }))  // program_days (template day lookup)
       .mockReturnValueOnce(makeChain({ data: [], error: null }));                       // program_exercises (template) -> empty, short-circuits
 
     await refreshUpcomingProgressionTargets('program-1', 'intermediate');
 
-    // 1 (completed-days lookup) + 4 (computeAndSaveProgressionTargets's own
-    // calls up to its early-return on an empty template) = 5.
-    expect(mockFrom).toHaveBeenCalledTimes(5);
+    // 1 (completed-days lookup) + 1 (workouts lookup) + 4
+    // (computeAndSaveProgressionTargets's own calls up to its early-return on
+    // an empty template) = 6.
+    expect(mockFrom).toHaveBeenCalledTimes(6);
+  });
+
+  it('VA-013/VA-018: threads each completed day\'s workout id through so soreness feedback is not silently dropped on refresh', async () => {
+    // Regression test: refreshUpcomingProgressionTargets used to call
+    // computeAndSaveProgressionTargets with no workoutId at all, so a
+    // "still sore" report from workout_feedback never trimmed volume during
+    // a refresh — only logged weight/reps history was reconsidered. This
+    // pins that the day -> workout link is now resolved and passed through,
+    // by asserting the soreness-driven set trim actually lands on the saved
+    // row. Chest is 'emphasize' at nextWeek=2, so the un-trimmed target would
+    // ramp above the week-1 template (4 -> 5, baseSetCount + weekBonus); VA-013's
+    // trim floors back down to 4 rather than baseSetCount - 1 — proof the
+    // trim only has visible effect once there's a weekBonus to trim from
+    // (this is pre-existing VA-013 behavior: it never drops below the
+    // template's own baseSetCount).
+    const completedDays = [{ id: 'day-1' }];
+    const relatedWorkouts = [{ id: 'workout-1', program_day_id: 'day-1', completed_at: '2026-01-08T00:00:00Z' }];
+    const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
+    const programRow = { total_weeks: 6, focus: 'general', muscle_priorities: { Chest: 'emphasize' } };
+    const templateDay = { id: 'template-day-1' };
+    const templateExercises = [{
+      id: 'pe-1',
+      program_day_id: 'template-day-1',
+      exercise_name: 'Barbell Bench Press',
+      muscle_group: 'Chest',
+      equipment: 'Barbell',
+      sort_order: 0,
+      target_sets: 4,
+      target_reps_min: 6,
+      target_reps_max: 12,
+      target_weight: 200,
+      rir: 2,
+      role: 'Primary',
+    }];
+    const nextDayRow = { id: 'next-day-1' };
+    const workoutSets = [
+      { workout_id: 'workout-1', weight: 200, reps: 10, set_index: 0 },
+      { workout_id: 'workout-1', weight: 200, reps: 10, set_index: 1 },
+      { workout_id: 'workout-1', weight: 200, reps: 10, set_index: 2 },
+      { workout_id: 'workout-1', weight: 200, reps: 10, set_index: 3 },
+    ];
+    const workouts = [{ id: 'workout-1', completed_at: '2026-01-08T00:00:00Z', program_name: 'Test' }];
+    const feedback = [{ muscle_group: 'Chest', soreness: 'Still sore' }];
+
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: completedDays, error: null }))       // program_days (completed=true)
+      .mockReturnValueOnce(makeChain({ data: relatedWorkouts, error: null }))     // workouts (day -> workout lookup)
+      .mockReturnValueOnce(makeChain({ data: dayRow, error: null }))              // program_days (dayRow)
+      .mockReturnValueOnce(makeChain({ data: programRow, error: null }))          // programs
+      .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))         // program_days (template day lookup)
+      .mockReturnValueOnce(makeChain({ data: templateExercises, error: null }))   // program_exercises (template)
+      .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))          // program_days (next week day)
+      .mockReturnValueOnce(makeChain({ data: feedback, error: null }))            // workout_feedback (getMuscleSorenessForWorkout) -- awaited before session history
+      .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))         // workout_sets (getExerciseAllSessions)
+      .mockReturnValueOnce(makeChain({ data: workouts, error: null }))            // workouts (getExerciseAllSessions)
+      .mockReturnValueOnce({ upsert: upsertMock })                                // program_day_targets upsert
+      .mockReturnValueOnce(makeChain({ data: [], error: null }));                 // program_days (later-days lookup, section 2)
+
+    await refreshUpcomingProgressionTargets('program-1', 'intermediate');
+
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    const savedRows = upsertMock.mock.calls[0][0];
+    // Without the soreness trim, emphasize would ramp to baseSetCount(4) +
+    // weekBonus(1) = 5 sets. The still-sore report pulls it back to 4 — proof
+    // the workout's feedback was actually read and applied during the
+    // refresh, not silently dropped.
+    expect(savedRows[0].target_sets).toBe(4);
   });
 });

@@ -51,6 +51,20 @@ export type SfrTier = 'tier1' | 'tier2' | 'tier3' | 'tier4';
 // How easily progressive overload can be applied over time.
 export type ProgressionSuitability = 'high' | 'medium' | 'low';
 
+// HV-029: Exercise Progression Profile category — groups exercises by how
+// they should be loaded/deloaded/tapered, independent of exerciseType (which
+// only captures equipment + rough movement class, not fatigue/progression
+// behavior). See src/data/exerciseProgressionProfiles.ts for the profile
+// table and the derivation heuristic keyed off exerciseType/movementPattern/
+// equipment/difficulty.
+export type ProgressionCategory =
+  | 'heavy_compound'
+  | 'hypertrophy_compound'
+  | 'isolation'
+  | 'bodyweight'
+  | 'machine_compound'
+  | 'cable_accessory';
+
 export type MovementPattern =
   | 'horizontal-push'
   | 'incline-push'
@@ -125,6 +139,16 @@ export interface ExerciseDefinition {
   // 'time' = the set is measured in seconds (isometric holds, timed carries).
   // Omit for rep-counted exercises (the default).
   logMode?: 'time';
+  // HV-029: overrides deriveProgressionCategory()'s heuristic for exercises
+  // that don't fit the general exerciseType/movementPattern mapping. Leave
+  // unset for every exercise where the derived category is correct — this is
+  // an escape hatch, not a required field (mirrors hardRirFloor/exerciseTags).
+  progressionCategory?: ProgressionCategory;
+  // HV-037: overrides the 'bodyweight' category's default 30-rep progression
+  // ceiling (see PROGRESSION_CATEGORY_PROFILES) for exercises where 30 reps
+  // is unrealistic before a difficulty change is warranted (e.g. strict
+  // pull-ups). Only meaningful when the exercise's category is 'bodyweight'.
+  bodyweightRepCeiling?: number;
 }
 
 // ─── Slot template — defines what type of exercise belongs in each slot ───────

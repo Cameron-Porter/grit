@@ -3,8 +3,10 @@ import { getExerciseAllSessions, getMuscleSorenessForWorkout } from './history';
 import { getTemplateDayExercises, saveProgramDayTargets } from './programs';
 import { supabase } from './supabase';
 import { getExerciseByName } from '../data/exerciseDatabase';
+import { getProgressionProfile } from '../data/exerciseProgressionProfiles';
 import { capSetsPerExercise, rampSets } from '../rules/volumeRamp';
 import { capSessionSets, getSessionMaxSets } from '../rules/sessionTrimmer';
+import { redistributeSorenessTrim } from '../rules/volumeBudget';
 import { getLandmark } from '../utils/volumeLandmarks';
 import {
   recommendProgression,
@@ -151,6 +153,17 @@ export async function computeAndSaveProgressionTargets(
         }),
       );
 
+      // Built once regardless of focus — VA-018 (below) needs sibling-exercise
+      // visibility for every focus, not just hypertrophy (which HV-021's
+      // per-exercise split already needed it for).
+      const byMuscle = new Map<string, typeof enriched>();
+      for (const item of enriched) {
+        const muscle = item.ex.muscle_group;
+        if (!muscle) continue;
+        if (!byMuscle.has(muscle)) byMuscle.set(muscle, []);
+        byMuscle.get(muscle)!.push(item);
+      }
+
       // HV-021: for hypertrophy, resolve each muscle's landmark-driven weekly
       // target ONCE (not per exercise), then split it across that muscle's
       // exercises today in proportion to their existing set distribution —
@@ -165,14 +178,6 @@ export async function computeAndSaveProgressionTargets(
           totalTrainingWeeks: Math.max(1, totalMesoWeeks - 1),
           isDeload,
         };
-
-        const byMuscle = new Map<string, typeof enriched>();
-        for (const item of enriched) {
-          const muscle = item.ex.muscle_group;
-          if (!muscle) continue;
-          if (!byMuscle.has(muscle)) byMuscle.set(muscle, []);
-          byMuscle.get(muscle)!.push(item);
-        }
 
         for (const [muscle, items] of byMuscle) {
           const priority = musclePriorities[muscle] as MusclePriority | undefined;
@@ -202,6 +207,28 @@ export async function computeAndSaveProgressionTargets(
         }
       }
 
+      // VA-018: fatigue-weighted soreness-trim redistribution — extends
+      // VA-013 (the flat "-1 set" trim inside progressionEngine.ts) with
+      // sibling-exercise visibility, which only this muscle-level grouping
+      // has. Preserves VA-013's existing total reduction magnitude (one set
+      // per sore exercise) — this only changes WHICH exercises absorb it,
+      // preferring the highest-systemic-fatigue exercise in that muscle
+      // first (e.g. trim bench before cable fly for a sore chest).
+      const sorenessTrimByExercise = new Map<string, number>();
+      for (const [muscle, items] of byMuscle) {
+        const muscleSoreness = (sorenessByMuscle[muscle] ?? undefined) as SorenessLevel | undefined;
+        if (muscleSoreness !== 'Still sore') continue;
+        const trims = redistributeSorenessTrim(
+          items.map((item) => ({
+            exerciseName: item.ex.exercise_name,
+            systemicFatigue: getProgressionProfile(item.exerciseDef).fatigueRating.systemicFatigue,
+            currentSets: item.weight,
+          })),
+          items.length,
+        );
+        for (const [name, trim] of trims) sorenessTrimByExercise.set(name, trim);
+      }
+
       const targets = (
         await Promise.all(
           enriched.map(async ({ ex, sessions, exerciseDef, weight }) => {
@@ -221,6 +248,7 @@ export async function computeAndSaveProgressionTargets(
               programFocus,
               musclePriority,
               hypertrophyVolumeOverride: overrideByExercise.get(ex.exercise_name),
+              sorenessTrimOverride: sorenessTrimByExercise.get(ex.exercise_name),
             };
 
             const rec = recommendProgression(
@@ -235,6 +263,14 @@ export async function computeAndSaveProgressionTargets(
                 role: (ex.role ?? undefined) as SlotRole | undefined,
                 exerciseType: exerciseDef?.exerciseType,
                 hardRirFloor: exerciseDef?.hardRirFloor,
+                // HV-028: Supabase-sourced equipment (per AGENTS.md — never
+                // the local exerciseDatabase.ts fixture) gates the bodyweight
+                // weight-adjustment guard in progressionEngine.ts.
+                equipment: ex.equipment,
+                // HV-029/HV-030: category-level Exercise Progression Profile —
+                // drives load-increment sizing, volume-transition rep
+                // compensation, and RIR/failure floors.
+                profile: getProgressionProfile(exerciseDef),
               },
               sessions,
               ctx,
@@ -337,7 +373,31 @@ export async function refreshUpcomingProgressionTargets(
     .eq('completed', true);
   if (!completedDays?.length) return;
 
+  // VA-013/VA-018: look up each completed day's associated workout so its
+  // soreness feedback (workout_feedback, keyed by workout_id — see
+  // getMuscleSorenessForWorkout in history.ts) gets threaded through the
+  // refresh. Without this, computeAndSaveProgressionTargets was called with
+  // no workoutId, so a refresh silently reconsidered only logged weight/reps
+  // history and dropped any soreness-driven volume autoregulation entirely —
+  // a real gap, not by design.
+  const dayIds = completedDays.map((d) => d.id);
+  const { data: relatedWorkouts } = await supabase
+    .from('workouts')
+    .select('id, program_day_id, completed_at')
+    .in('program_day_id', dayIds)
+    .order('completed_at', { ascending: false });
+
+  const workoutIdByDay = new Map<string, string>();
+  for (const w of relatedWorkouts ?? []) {
+    // Ordered newest-first above — if a program_day somehow has more than
+    // one associated workout (retries/edits), the first one seen here is
+    // the most recent, matching what actually happened.
+    if (w.program_day_id && !workoutIdByDay.has(w.program_day_id)) {
+      workoutIdByDay.set(w.program_day_id, w.id);
+    }
+  }
+
   for (const day of completedDays) {
-    await computeAndSaveProgressionTargets(day.id, experienceLevel);
+    await computeAndSaveProgressionTargets(day.id, experienceLevel, workoutIdByDay.get(day.id));
   }
 }

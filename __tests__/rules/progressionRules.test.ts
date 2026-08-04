@@ -1,5 +1,10 @@
-import { recommendProgression } from '../../src/rules/progressionEngine';
+import {
+  recommendProgression,
+  calculateVolumeTransitionAdjustment,
+  calculatePerformanceScore,
+} from '../../src/rules/progressionEngine';
 import { validateDayExercises, validateProgram } from '../../src/rules/validation';
+import { PROGRESSION_CATEGORY_PROFILES } from '../../src/data/exerciseProgressionProfiles';
 import type {
   AdjustedVolumeTarget,
   DayPlan,
@@ -32,11 +37,17 @@ function makePrescription(overrides: Partial<SlotPrescription> = {}): SlotPrescr
   };
 }
 
-// Two sessions with identical performance → creates stalls if needed
-function makeSessions(weight = 100, reps = 10, count = 0): SessionPerformance[] {
+// Two sessions with identical performance → creates stalls if needed.
+// HV-032: setsPerSession defaults to 3 — matching makePrescription()'s
+// default `sets: 3` — so a plain makeSessions() call reads as "same set
+// count as the current prescription" (previousSets === effectiveSets) and
+// doesn't spuriously trigger the volume-transition-compensation adjustment.
+// Tests that specifically want to simulate a recent volume increase pass an
+// explicit lower setsPerSession.
+function makeSessions(weight = 100, reps = 10, count = 0, setsPerSession = 3): SessionPerformance[] {
   return Array.from({ length: count }, () => ({
     date: '2026-01-01',
-    sets: [{ weight, reps }],
+    sets: Array.from({ length: setsPerSession }, () => ({ weight, reps })),
   }));
 }
 
@@ -155,11 +166,18 @@ describe('HV-001 — intra-mesocycle RIR taper', () => {
 
   it('applies taper for intermediate grow muscle in a 4-week meso (3 training + 1 deload)', () => {
     // Week 1 of 4-week meso: trainingWeeks = 3, weeksRemaining = 3 - 1 = 2
-    // base.nextRir = 2 - 2 = 0 → Math.max(0, 0) = 0
+    // base.nextRir = 2 - 2 = 0 → Math.max(0, 0) = 0, then HV-036's category
+    // failure floor applies: makePrescription() carries no profile, so
+    // recommendProgression defaults to the heavy_compound profile
+    // (failurePolicy: 'avoid', floor 1) — true 0-RIR failure never applies
+    // to a heavy compound by default, even at peak week. See the
+    // 'isolation exercises can reach true 0-RIR' test below (HV-036) for the
+    // failurePolicy: 'allowed' counterpart that verifies the taper itself
+    // still reaches 0 pre-floor.
     const prescription = makePrescription({ rir: 2 });
     const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
     const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(0);
+    expect(rec.nextRir).toBe(1);
   });
 
   it('taper on week 3 of 4-week meso produces 0 weeksRemaining', () => {
@@ -408,53 +426,98 @@ describe('maintenance focus — hold performance, no auto-increment', () => {
   });
 });
 
-describe('ST-004 — strength deload load reduction', () => {
-  it('drops load to 50% of last session, holding sets and reps', () => {
+describe('ST-012 — strength deload load/volume reduction (supersedes ST-004)', () => {
+  // ST-004 (original): flat 50% load reduction, sets held at the template
+  // value. ST-012 (2026-08-04, user doctrine spec): load reduction 15-25%
+  // (20% midpoint), and sets ALSO now cut 30-50% (40% midpoint, floored at
+  // 2) — "maintain movement exposure" means never dropping the pattern to
+  // zero, not never touching set count.
+  it('reduces load ~20% and sets to ~60% (floored at 2), preserving the movement pattern', () => {
     const ctx = makeCtx({ programFocus: 'strength', isDeload: true });
     const rec = recommendProgression(
       makePrescription({ sets: 5, repsMin: 3, repsMax: 6 }),
-      makeSessions(200, 5, 1),
+      makeSessions(200, 5, 1, 5),
       ctx,
     );
-    expect(rec.nextWeight).toBe(100);
-    expect(rec.nextSets).toBe(5);
+    // 200 * (1 - 0.20) = 160, already a multiple of the >=100lb 5 lb granularity.
+    expect(rec.nextWeight).toBe(160);
+    // ceil(5 * 0.60) = 3 — sets drop, but the movement is never dropped to 0.
+    expect(rec.nextSets).toBe(3);
     expect(rec.action).toBe('DELOAD');
+  });
+
+  it('never drops sets below 2, even for a small template set count', () => {
+    const ctx = makeCtx({ programFocus: 'strength', isDeload: true });
+    const rec = recommendProgression(
+      makePrescription({ sets: 2, repsMin: 3, repsMax: 6 }),
+      makeSessions(200, 5, 1, 2),
+      ctx,
+    );
+    // ceil(2 * 0.60) = 2 — already at the floor, doesn't go lower.
+    expect(rec.nextSets).toBe(2);
   });
 });
 
-describe('ST-010 — flat 5 lb load increment, no exceptions', () => {
-  // Cut-phase halving (5 -> 2.5 lb) and isolation/accessory micro-loading
-  // (2.5 lb, formerly 1.25 lb) were both removed per explicit user direction
-  // — fractional-plate increments aren't reliably available on gym
-  // equipment. getLoadIncrement now returns a flat 5 lb for every role,
-  // experience level, and focus, cut included. This is a hard constraint,
-  // not a gap to fill back in with a new fractional tier.
-  it('does not halve the increment for cut focus', () => {
-    const ctx = makeCtx({ programFocus: 'cut' });
+describe('ST-011 — percentage-based, equipment-gated load increment (supersedes ST-010)', () => {
+  // ST-010 (original): flat 5 lb increment, every role/experience/focus
+  // tier, no exceptions — explicitly a hard constraint against reintroducing
+  // fractional increments, since gym equipment doesn't reliably support
+  // sub-5-lb barbell plates.
+  //
+  // ST-011 (2026-08-04, user doctrine spec): that constraint is explicitly
+  // reversed. Increment sizing now comes from the exercise's
+  // ExerciseProgressionProfile — percentage-based for compounds, and
+  // equipment-gated for isolation/cable work so a light exercise never takes
+  // a disproportionate jump (the literal bug this was written to fix — see
+  // src/api/__tests__/progression.test.ts's "role-aware load increment" test,
+  // which used to assert a 20 lb Dumbbell Lateral Raise advancing to 25 lb,
+  // a 25% jump, as *correct*).
+  const heavyCompound = PROGRESSION_CATEGORY_PROFILES.heavy_compound;
+  const isolation = PROGRESSION_CATEGORY_PROFILES.isolation;
+
+  it('required scenario: a 20 lb isolation exercise does not force a jump to 25 lb', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(
-      makePrescription(),
-      makeSessions(100, 12, 1), // ceiling hit -> would advance load if not cut
+      makePrescription({ repsMin: 10, repsMax: 12, profile: isolation }),
+      makeSessions(20, 12, 1), // ceiling hit -> would normally advance load
       ctx,
     );
-    // Cut disables auto-advance (CUT_HOLD), but loadIncrement is still
-    // reported for the UI — that's what this test is pinning.
-    expect(rec.loadIncrement).toBe(5);
+    expect(rec.nextWeight).toBe(20); // held, not jumped to 25 (or even 22.5)
+    expect(rec.nextWeight).not.toBe(25);
+    expect(rec.action).toBe('HOLD');
+    expect(rec.reason).toContain('holding load');
   });
 
-  it('does not go below 5 lb for isolation-accessory work under cut focus', () => {
-    const ctx = makeCtx({ programFocus: 'cut' });
+  it('percentage-based compound: a 200 lb heavy compound advances by a % of current weight, not a flat 5 lb', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(
-      makePrescription({ role: 'Accessory', exerciseType: 'isolation' }),
-      makeSessions(50, 12, 1),
+      makePrescription({ profile: heavyCompound }),
+      makeSessions(200, 12, 1),
       ctx,
     );
-    expect(rec.loadIncrement).toBe(5);
+    // 200 * 2.5% = 5, rounded to the nearest 5 (>=100lb granularity) = 5 —
+    // coincidentally the same magnitude as the old flat rule at this weight,
+    // but now derived from a percentage, not a hardcoded constant.
+    expect(rec.nextWeight).toBe(205);
+    expect(rec.action).toBe('ADVANCE_LOAD');
+  });
+
+  it('percentage-based compound: a heavier load produces a proportionally larger jump than 5 lb', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({ profile: heavyCompound }),
+      makeSessions(500, 12, 1),
+      ctx,
+    );
+    // 500 * 2.5% = 12.5, rounded to the nearest 5 = 15 — a flat-5lb rule
+    // could never produce this, confirming the increment truly scales.
+    expect(rec.nextWeight).toBe(515);
   });
 
   it('bug fix regression: isCut is driven by programFocus, not the unused trainingPhase field', () => {
     // Before the fix, isCut read ctx.trainingPhase, which no call site ever
-    // sets — so cut behavior (rep floor of 8, CUT_HOLD) was unreachable even
-    // for a real programFocus: 'cut' program. This pins the corrected wiring.
+    // sets — so cut behavior (rep floor of 8) was unreachable even for a
+    // real programFocus: 'cut' program. This pins the corrected wiring.
     const ctx = makeCtx({ programFocus: 'cut', trainingPhase: undefined });
     const rec = recommendProgression(
       makePrescription({ repsMin: 5 }),
@@ -462,16 +525,6 @@ describe('ST-010 — flat 5 lb load increment, no exceptions', () => {
       ctx,
     );
     expect(rec.action).toBe('CUT_HOLD');
-  });
-
-  it('does not affect non-cut focuses', () => {
-    const ctx = makeCtx({ programFocus: 'hypertrophy' });
-    const rec = recommendProgression(
-      makePrescription(),
-      makeSessions(100, 12, 1),
-      ctx,
-    );
-    expect(rec.loadIncrement).toBe(5);
   });
 });
 
@@ -595,5 +648,309 @@ describe('VA-015 — graduated soreness-based ramp step', () => {
     });
     const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
     expect(rec.nextSets).toBe(10); // override wins outright, untouched by the ramp shift
+  });
+});
+
+// HV-028 — bodyweight equipment has no external load to add/reduce/halve.
+// Bug report: "load is bodyweight and can't advance" — every branch that
+// otherwise computes a new weight from the last logged one (ADVANCE_LOAD,
+// REDUCE_LOAD, scheduled DELOAD, bad-session DELOAD_NEEDED, PLATEAU_DELOAD)
+// used to apply the same increment/halving math regardless of equipment,
+// producing nonsense like "add 5 lb" or "reduce to 50%" against someone's
+// actual body weight. All of them now hold weight at the last logged value
+// for equipment: 'Bodyweight', with the training decision expressed purely
+// on the reps axis instead.
+describe('HV-028 — bodyweight equipment holds weight, progresses reps only', () => {
+  it('ADVANCE_LOAD: keeps weight unchanged and climbs reps past the ceiling instead of resetting to the floor', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 8, repsMax: 12, equipment: 'Bodyweight' }),
+      makeSessions(206, 15, 1), // 15 reps clears the 12-rep ceiling
+      ctx,
+    );
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextWeight).toBe(206);
+    expect(rec.nextRepsMax).toBe(16); // 15 + 1, uncapped by the ceiling
+    expect(rec.reason).toContain('no load to add');
+  });
+
+  it('a loaded exercise in the same scenario still advances load and resets to the floor', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 8, repsMax: 12 }), // no equipment field -> not bodyweight
+      makeSessions(206, 15, 1),
+      ctx,
+    );
+    expect(rec.action).toBe('ADVANCE_LOAD');
+    expect(rec.nextWeight).toBe(210); // 206 + 5, rounded to nearest 5
+    expect(rec.nextRepsMax).toBe(8); // reset to the floor
+  });
+
+  it('REDUCE_LOAD: holds weight when 2 consecutive sessions land below the rep floor', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const sessions: SessionPerformance[] = [
+      { date: '2026-01-08', sets: [{ weight: 206, reps: 5 }] },
+      { date: '2026-01-01', sets: [{ weight: 206, reps: 5 }] },
+    ];
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 8, repsMax: 12, equipment: 'Bodyweight' }),
+      sessions,
+      ctx,
+    );
+    expect(rec.action).toBe('REDUCE_LOAD');
+    expect(rec.nextWeight).toBe(206); // held, not reduced
+    expect(rec.reason).toContain('No external load to reduce');
+  });
+
+  it('scheduled DELOAD: holds weight instead of halving it', () => {
+    const ctx = makeCtx({ isDeload: true });
+    const rec = recommendProgression(
+      makePrescription({ equipment: 'Bodyweight' }),
+      makeSessions(206, 10, 1),
+      ctx,
+    );
+    expect(rec.action).toBe('DELOAD');
+    expect(rec.nextWeight).toBe(206);
+    expect(rec.reason).toContain('no external load to reduce');
+  });
+
+  it('DELOAD_NEEDED (2 consecutive bad sessions): holds weight instead of halving it', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const sessions: SessionPerformance[] = [
+      { date: '2026-01-15', sets: [{ weight: 206, reps: 8 }] },
+      { date: '2026-01-08', sets: [{ weight: 206, reps: 9 }] },
+      { date: '2026-01-01', sets: [{ weight: 206, reps: 10 }] },
+    ];
+    const rec = recommendProgression(
+      makePrescription({ equipment: 'Bodyweight' }),
+      sessions,
+      ctx,
+    );
+    expect(rec.action).toBe('DELOAD_NEEDED');
+    expect(rec.nextWeight).toBe(206);
+  });
+
+  it('beginner linear ADVANCE_LOAD also holds weight and climbs reps toward the bodyweight ceiling', () => {
+    // HV-037: bodyweight reps are no longer literally uncapped — they climb
+    // toward a ceiling (default 30, see PROGRESSION_CATEGORY_PROFILES) before
+    // ADVANCE_DIFFICULTY takes over. 12 -> 13 is still well below that
+    // ceiling, so this scenario's outcome is unchanged from before HV-037.
+    const ctx = makeCtx({ experienceLevel: 'beginner' });
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 8, repsMax: 12, equipment: 'Bodyweight' }),
+      makeSessions(206, 12, 1),
+      ctx,
+    );
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextWeight).toBe(206);
+    expect(rec.nextRepsMax).toBe(13);
+  });
+});
+
+// ─── HV-032: Volume transition compensation — required scenario 1 ────────────
+
+describe('HV-032 — volume transition compensation', () => {
+  it('required scenario: an exercise that just gained a set gets a lowered rep ceiling instead of the old ceiling at higher fatigue', () => {
+    // 3 sets x 8 reps @ 200 lb last session; this week's target climbs to 4
+    // sets (musclePriority 'grow' holds template value normally — the extra
+    // set here comes from prescription.sets itself, simulating the volume
+    // engine having already decided on 4 for this week).
+    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow' });
+    const rec = recommendProgression(
+      makePrescription({ sets: 4, repsMin: 8, repsMax: 10, profile: PROGRESSION_CATEGORY_PROFILES.machine_compound }),
+      makeSessions(200, 8, 1, 3),
+      ctx,
+    );
+    expect(rec.nextSets).toBe(4);
+    expect(rec.nextWeight).toBe(200); // load holds — no forced ADVANCE_LOAD
+    expect(rec.action).toBe('HOLD');
+    // The engine does NOT ask for the old 10-rep ceiling again at the new,
+    // higher-fatigue set count (a naive "4x10@200") — it lowers the target.
+    expect(rec.nextRepsMax).toBeLessThan(10);
+    expect(rec.nextRepsMax).toBe(9);
+  });
+
+  it('does not lower the ceiling when sets did not change — same setup, unchanged sets hits the real ceiling and advances load', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow' });
+    const rec = recommendProgression(
+      makePrescription({ sets: 3, repsMin: 8, repsMax: 10, profile: PROGRESSION_CATEGORY_PROFILES.machine_compound }),
+      makeSessions(200, 10, 1, 3), // 3 sets both weeks -> no transition penalty; 10 reps hits the real (unadjusted) ceiling
+      ctx,
+    );
+    expect(rec.action).toBe('ADVANCE_LOAD'); // contrast with the HOLD above — the ceiling wasn't artificially lowered
+    expect(rec.nextRepsMax).toBe(8); // resets to the floor at the new load, per ST-007 — not the transition-lowered 9
+  });
+});
+
+describe('calculateVolumeTransitionAdjustment — standalone unit tests', () => {
+  it('returns no adjustment when sets did not increase', () => {
+    const result = calculateVolumeTransitionAdjustment(
+      3, 3, { repsMin: 8, repsMax: 12 }, PROGRESSION_CATEGORY_PROFILES.heavy_compound,
+    );
+    expect(result.adjustedRepsMax).toBe(12);
+    expect(result.holdLoad).toBe(false);
+  });
+
+  it('lowers the rep ceiling proportionally to the category penalty when sets increase', () => {
+    const result = calculateVolumeTransitionAdjustment(
+      3, 4, { repsMin: 6, repsMax: 10 }, PROGRESSION_CATEGORY_PROFILES.hypertrophy_compound,
+    );
+    expect(result.adjustedRepsMax).toBeLessThan(10);
+    expect(result.adjustedRepsMax).toBeGreaterThanOrEqual(6);
+  });
+
+  it('never lowers the ceiling below repsMin', () => {
+    const result = calculateVolumeTransitionAdjustment(
+      1, 5, { repsMin: 8, repsMax: 9 }, PROGRESSION_CATEGORY_PROFILES.hypertrophy_compound,
+    );
+    expect(result.adjustedRepsMax).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe('calculatePerformanceScore — standalone unit tests', () => {
+  it('degrades to pure tonnage when no rir is present — 100% of real session data today', () => {
+    const score = calculatePerformanceScore([{ weight: 225, reps: 10 }]);
+    expect(score).toBe(2250);
+  });
+
+  it('225x10 @1 RIR scores higher than 225x10 @3 RIR — same tonnage, different effort', () => {
+    const lowRir = calculatePerformanceScore([{ weight: 225, reps: 10, rir: 1 }]);
+    const highRir = calculatePerformanceScore([{ weight: 225, reps: 10, rir: 3 }]);
+    expect(lowRir).toBeGreaterThan(highRir);
+  });
+});
+
+// ─── RC-011: Cut phase runs at reduced speed instead of a hard hold — required scenario 3
+
+describe('RC-011 — cut phase allows reduced-speed progression', () => {
+  it('required scenario: cut phase still allows progress when the ceiling is hit, at less than the full increment', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate', programFocus: 'cut' });
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 8, repsMax: 12, profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }),
+      makeSessions(200, 12, 1),
+      ctx,
+    );
+    expect(rec.action).toBe('CUT_PROGRESS');
+    expect(rec.nextWeight).toBeGreaterThan(200);
+    expect(rec.nextWeight).toBe(205);
+  });
+
+  it('cut phase still holds (not progresses) when the ceiling has not been hit', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate', programFocus: 'cut' });
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 8, repsMax: 12, profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }),
+      makeSessions(200, 9, 1),
+      ctx,
+    );
+    expect(rec.action).toBe('CUT_HOLD');
+    expect(rec.nextWeight).toBe(200);
+  });
+});
+
+// ─── HV-034: Plateau requires more exposures, including for advanced lifters — required scenario 4
+
+describe('HV-034 — plateau requires more exposures than before, including for advanced lifters', () => {
+  it('required scenario: 2 identical sessions (1 pair) is NOT yet a plateau for an advanced lifter under the new 3-exposure threshold', () => {
+    const ctx = makeCtx({ experienceLevel: 'advanced' });
+    const rec = recommendProgression(makePrescription(), makeSessions(100, 10, 2), ctx);
+    expect(rec.action).not.toBe('PLATEAU_DELOAD');
+  });
+
+  it('required scenario: 3 identical sessions (2 pairs) IS a plateau for an advanced lifter', () => {
+    const ctx = makeCtx({ experienceLevel: 'advanced' });
+    const rec = recommendProgression(makePrescription(), makeSessions(100, 10, 3), ctx);
+    expect(rec.action).toBe('PLATEAU_DELOAD');
+  });
+
+  it('does not call a plateau if volume recently increased, even with identical load/reps history', () => {
+    // 3 identical sessions would normally plateau an advanced lifter (see
+    // above) — but if this week's sets just increased, HV-034 gates the
+    // plateau check off, since flat reps at a higher set count isn't a
+    // stall, it's expected fatigue.
+    const ctx = makeCtx({ experienceLevel: 'advanced', musclePriority: 'grow' });
+    const rec = recommendProgression(
+      makePrescription({ sets: 5 }), // effectiveSets(5) > previousSets(3 from makeSessions default)
+      makeSessions(100, 10, 3),
+      ctx,
+    );
+    expect(rec.action).not.toBe('PLATEAU_DELOAD');
+  });
+});
+
+// ─── HV-037: Bodyweight progresses beyond reps — required scenario 6 ─────────
+
+describe('HV-037 — bodyweight multi-dimension progression', () => {
+  it('required scenario: a bodyweight exercise at its rep ceiling advances via difficulty, not more reps', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({
+        repsMin: 8, repsMax: 20, equipment: 'Bodyweight', profile: PROGRESSION_CATEGORY_PROFILES.bodyweight,
+      }),
+      makeSessions(180, 30, 1, 3), // 30 reps -> at the 30-rep bodyweight ceiling
+      ctx,
+    );
+    expect(rec.action).toBe('ADVANCE_DIFFICULTY');
+    expect(rec.reason).toContain('tempo');
+    expect(rec.nextWeight).toBe(180); // still no load to add
+    expect(rec.nextRepsMax).toBe(30);
+  });
+
+  it('below the bodyweight ceiling, reps keep climbing instead of jumping straight to ADVANCE_DIFFICULTY', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({
+        repsMin: 8, repsMax: 20, equipment: 'Bodyweight', profile: PROGRESSION_CATEGORY_PROFILES.bodyweight,
+      }),
+      makeSessions(180, 25, 1, 3), // past the old 20-rep ceiling, below the 30-rep bodyweight ceiling
+      ctx,
+    );
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextRepsMax).toBe(26);
+  });
+
+  it('respects a per-exercise bodyweightRepCeiling override lower than the category default', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const pullUpProfile = { ...PROGRESSION_CATEGORY_PROFILES.bodyweight, bodyweightRepCeiling: 15 };
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 5, repsMax: 12, equipment: 'Bodyweight', profile: pullUpProfile }),
+      makeSessions(180, 15, 1, 3), // weight column here represents bodyweight (see HV-028), not an external load
+      ctx,
+    );
+    expect(rec.action).toBe('ADVANCE_DIFFICULTY');
+    expect(rec.nextRepsMax).toBe(15);
+  });
+});
+
+// ─── HV-036: Failure-policy RIR floor by category — required scenario 7 ──────
+
+describe('HV-036 — exercise fatigue profile changes the prescription (failure-policy RIR floor)', () => {
+  it('required scenario: a heavy compound never reaches true 0-RIR failure, even at peak week', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
+    const rec = recommendProgression(
+      makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }),
+      [],
+      ctx,
+    );
+    expect(rec.nextRir).toBe(1);
+  });
+
+  it('required scenario: an isolation exercise can reach true 0-RIR failure at peak week — same taper, different category floor', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
+    const rec = recommendProgression(
+      makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      [],
+      ctx,
+    );
+    expect(rec.nextRir).toBe(0);
+  });
+
+  it('a cut-phase heavy compound floors one RIR higher than a non-cut heavy compound', () => {
+    const cutCtx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4, programFocus: 'cut' });
+    const rec = recommendProgression(
+      makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }),
+      [],
+      cutCtx,
+    );
+    expect(rec.nextRir).toBeGreaterThanOrEqual(2);
   });
 });

@@ -195,6 +195,42 @@ export function calculateVolumeBudget(
   });
 }
 
+// ─── VA-018: Fatigue-weighted soreness-trim redistribution ────────────────────
+//
+// Extends VA-013 (progressionEngine.ts's "Still sore -> trim a set" rule)
+// rather than replacing it. VA-013 trims one set from a single exercise in
+// isolation, with no visibility into that muscle's sibling exercises within
+// the same session. This is the Exercise Intelligence Layer piece of the
+// 2026-08-04 doctrine spec: "if chest recovery is poor, reduce bench volume
+// before cable fly volume" — a soreness-driven trim should come off the
+// highest-systemic-fatigue exercise first (heavy compounds), not be split
+// evenly or land on whichever exercise happens to be listed first.
+//
+// Only src/api/progression.ts's byMuscle grouping has visibility into all of
+// a muscle's exercises at once (see computeAndSaveProgressionTargets) — this
+// function is the pure redistribution math it calls into; it has no
+// Supabase/API awareness itself, staying consistent with the rest of
+// src/rules/.
+export function redistributeSorenessTrim(
+  items: { exerciseName: string; systemicFatigue: 1 | 2 | 3 | 4 | 5; currentSets: number }[],
+  totalSetsToTrim: number,
+): Map<string, number> {
+  const sorted = [...items].sort((a, b) => b.systemicFatigue - a.systemicFatigue);
+  const trims = new Map<string, number>();
+  let remaining = totalSetsToTrim;
+  for (const item of sorted) {
+    if (remaining <= 0) break;
+    // Never trim an exercise below 1 set — matches VA-013's "never drops
+    // sets below baseSetCount" spirit of not eliminating the movement.
+    const cut = Math.min(remaining, Math.max(0, item.currentSets - 1));
+    if (cut > 0) {
+      trims.set(item.exerciseName, cut);
+      remaining -= cut;
+    }
+  }
+  return trims;
+}
+
 // VA-012: recommended weekly training-frequency range by training age.
 // Beginners overestimate recoverable frequency before habit/technique are
 // solid; advanced lifters need more frequent stimulus to keep driving

@@ -1,4 +1,6 @@
 import type { ExerciseType, ExperienceLevel, SlotRole } from '../types/program';
+import type { ExerciseProgressionProfile } from '../data/exerciseProgressionProfiles';
+import { PROGRESSION_CATEGORY_PROFILES } from '../data/exerciseProgressionProfiles';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -13,6 +15,20 @@ export interface SlotPrescription {
   exerciseType?: ExerciseType;
   // HV-019: when set, nextRir will never go below this value regardless of taper.
   hardRirFloor?: number;
+  // HV-028: from the Supabase-sourced ProgramExercise.equipment column (per
+  // AGENTS.md — never the local exerciseDatabase.ts fixture). When
+  // 'Bodyweight', every weight-adjustment branch below holds at the last
+  // logged weight instead of adding/reducing/halving it — see HV-028's
+  // doctrine comment further down for why.
+  equipment?: string;
+  // HV-029/HV-030: category-level Exercise Progression Profile, resolved by
+  // the caller via getProgressionProfile(exerciseDef) in
+  // src/data/exerciseProgressionProfiles.ts. Drives load-increment sizing
+  // (ST-011), volume-transition rep compensation (HV-032), and RIR/failure
+  // floors (HV-036). Defaults to the heavy_compound profile when omitted —
+  // the closest analog to the old implicit 'barbell-compound' default —
+  // so callers/tests that don't pass one keep prior behavior.
+  profile?: ExerciseProgressionProfile;
 }
 
 // One completed session for a single exercise.
@@ -20,7 +36,15 @@ export interface SlotPrescription {
 // Sorted newest-first at call site.
 export interface SessionPerformance {
   date: string;
-  sets: { weight: number; reps: number }[];
+  // HV-033: rir is optional and, as of 2026-08-04, never populated by any
+  // production caller — workout_sets.rir stores only the prescribed RIR
+  // pre-filled at workout start, never a user-reported "how many reps in
+  // reserve did this actually feel like" value, and no per-set reported-RIR
+  // capture UI exists. This field is forward-compatible only:
+  // calculatePerformanceScore degrades to pure tonnage (weight x reps) when
+  // it's absent, which is 100% of real sessions today. Do not treat its
+  // presence in the type as evidence the data exists.
+  sets: { weight: number; reps: number; rir?: number }[];
 }
 
 export type ProgramFocus = 'hypertrophy' | 'strength' | 'powerbuilding' | 'general' | 'maintenance' | 'cut';
@@ -53,6 +77,14 @@ export interface ProgressionContext {
   // rather than progress it into next week. See getMuscleSorenessForWorkout
   // in src/api/history.ts for where this is fetched from.
   soreness?: SorenessLevel;
+  // VA-018: when the caller (src/api/progression.ts's byMuscle loop) has
+  // computed a fatigue-weighted redistribution of the VA-013 soreness trim
+  // across this muscle's sibling exercises (redistributeSorenessTrim in
+  // volumeBudget.ts), this is that exercise's specific trim amount — used
+  // instead of the flat 1-set trim below. Only progression.ts's muscle-level
+  // grouping can compute this; quickWorkout.ts has no sibling-exercise
+  // visibility and always leaves it unset, falling back to the flat trim.
+  sorenessTrimOverride?: number;
   // HV-021: pre-resolved landmark-driven weekly set target for this exercise's
   // muscle (RP Strength / Israetel et al. MV/MEV/MAV/MRV), computed by the
   // caller — see rampSets() in volumeRamp.ts and computeAndSaveProgressionTargets
@@ -76,7 +108,10 @@ export interface ProgressionContext {
 // REDUCE_LOAD       — two consecutive sessions below rep floor → drop weight
 // PLATEAU_DELOAD    — stall count exceeded threshold → deload before any load change
 // DELOAD_NEEDED     — two consecutive bad sessions (reps regressed) → immediate deload
-// CUT_HOLD          — fat-loss phase: maintain current performance, no auto-increment
+// CUT_HOLD          — maintenance focus: maintain current performance, no auto-increment
+// CUT_PROGRESS      — RC-011: fat-loss phase, ceiling hit → reduced-speed load advance
+// ADVANCE_DIFFICULTY — HV-037: bodyweight exercise hit its rep ceiling → advance via
+//                       tempo/ROM/leverage/external load instead of more reps
 export type ProgressionAction =
   | 'FIRST_SESSION'
   | 'DELOAD'
@@ -85,7 +120,9 @@ export type ProgressionAction =
   | 'REDUCE_LOAD'
   | 'PLATEAU_DELOAD'
   | 'DELOAD_NEEDED'
-  | 'CUT_HOLD';
+  | 'CUT_HOLD'
+  | 'CUT_PROGRESS'
+  | 'ADVANCE_DIFFICULTY';
 
 export interface ProgressionRecommendation {
   nextWeight: number;
@@ -96,40 +133,169 @@ export interface ProgressionRecommendation {
   action: ProgressionAction;
   reason: string;
   // Increment used to compute the load change (for display: "Add 5 lb").
-  // ST-010: always 5 — see getLoadIncrement.
+  // ST-011: category- and weight-dependent — see getLoadIncrementAmount.
   loadIncrement: number;
   // True for PLATEAU_DELOAD, DELOAD_NEEDED, REDUCE_LOAD — prompts UI warning.
   isPlateauWarning: boolean;
 }
 
-// ─── Load increment table (doctrine Section 1–3) ──────────────────────────────
+// ─── ST-011: Load increment — percentage-based, equipment-gated ───────────────
+// SUPERSEDED 2026-08-04 — see ST-011 below. Kept per this file's existing
+// citation-history culture (comments get retracted, not silently deleted).
 //
-// ST-010: Flat 5 lb increment, every role/experience/focus tier, no exceptions.
-// A 2.5 lb micro-loading tier (and a finer 1.25 lb tier before it) existed
-// here previously for isolation/accessory work and cut-phase halving. Both
-// were removed per explicit user direction: fractional-plate increments
-// (1.25 lb, 2.5 lb) aren't reliably available on gym equipment, so the extra
-// granularity produced targets that couldn't actually be loaded. 5 lb is now
-// a hard floor and ceiling for every case — this is a deliberate constraint,
-// not a gap to fill back in with a new fractional tier. Do not reintroduce
-// sub-5-lb increments here under any circumstance.
+// ST-010 (original): Flat 5 lb increment, every role/experience/focus tier,
+// no exceptions. A 2.5 lb micro-loading tier (and a finer 1.25 lb tier
+// before it) existed here previously for isolation/accessory work and
+// cut-phase halving. Both were removed per explicit user direction:
+// fractional-plate increments (1.25 lb, 2.5 lb) aren't reliably available on
+// gym equipment, so the extra granularity produced targets that couldn't
+// actually be loaded. 5 lb was made a hard floor and ceiling for every case
+// — this was a deliberate constraint, not a gap to fill back in with a new
+// fractional tier.
+//
+// ST-011: that constraint is explicitly reversed per direct user instruction
+// (2026-08-04). A flat 5 lb on a 20 lb Dumbbell Lateral Raise is a 25% jump
+// — confirmed as a live, already-tested bug (the old
+// src/api/__tests__/progression.test.ts "role-aware load increment" test
+// asserted 20 -> 25 lb as *correct* behavior). Increment sizing now comes
+// from the exercise's ExerciseProgressionProfile (HV-029/HV-030):
+//   - percentage_based (heavy_compound, hypertrophy_compound): target % of
+//     current weight, rounded to the nearest realistic increment for that
+//     weight class.
+//   - fixed_increment (machine_compound): flat 5 lb, unchanged — plate
+//     stacks/pins genuinely are fixed-increment hardware.
+//   - equipment_limited (isolation, cable_accessory): the smallest realistic
+//     increment (2.5 lb under 100 lb), but GATED — only taken when it's
+//     <= maxAcceptableEquipmentLimitedPct of current weight; otherwise load
+//     holds and reps extend past the ceiling instead. This is what actually
+//     prevents the 20 lb lateral raise from jumping to 25 lb (2.5/20 = 12.5%
+//     > the 10% gate, so even the smaller 2.5 lb increment is held).
+//   - bodyweight has no load axis — handled entirely by HV-037's rep-ceiling
+//     ladder, never reaches this function.
+// Percentage ranges (2.5-5% heavy/hypertrophy compound, 1-3% isolation) and
+// the equipment-limited gate threshold are the user's own doctrine spec
+// (2026-08-04); targetIncrementPct is pinned to the low end of each cited
+// range to minimize disruptive jumps, consistent with Nuckols-style general
+// strength-progression guidance that a load jump should be the smallest
+// increment that still represents genuine progress.
 
-export function getLoadIncrement(
-  _exerciseType: ExerciseType = 'barbell-compound',
-  _role: SlotRole = 'Primary',
-  _experienceLevel: ExperienceLevel = 'intermediate',
-  _programFocus?: ProgramFocus,
-): number {
-  return 5;
+// Sub-100lb plates/dumbbells commonly step in 2.5 lb pairs; 100lb+ gym
+// plates step in 5 lb — the realistic hardware granularity used both to size
+// a percentage-based jump and to know what "the smallest available
+// increment" means for equipment-limited exercises.
+function roundToRealisticIncrement(weight: number): number {
+  return weight < 100 ? 2.5 : 5;
+}
+
+// ST-011: an equipment-limited exercise (isolation/cable_accessory) that's
+// proportionally too light for its own smallest increment climbs reps past
+// its prescribed ceiling for up to this many reps before the engine forces
+// the jump anyway — otherwise a sufficiently light exercise could stall on
+// the reps axis forever.
+const EQUIPMENT_LIMITED_REP_BUFFER = 5;
+
+interface LoadIncrementResult {
+  amount: number;
+  // True when loadIncrementStrategy is 'equipment_limited' and even the
+  // smallest realistic increment exceeds maxAcceptableEquipmentLimitedPct of
+  // current weight — caller must hold load and extend reps instead.
+  equipmentLimited: boolean;
+}
+
+export function getLoadIncrementAmount(
+  currentWeight: number,
+  profile: ExerciseProgressionProfile,
+): LoadIncrementResult {
+  if (currentWeight <= 0) return { amount: roundToRealisticIncrement(0), equipmentLimited: false };
+  const granularity = roundToRealisticIncrement(currentWeight);
+
+  if (profile.loadIncrementStrategy === 'fixed_increment') {
+    return { amount: 5, equipmentLimited: false };
+  }
+  if (profile.loadIncrementStrategy === 'percentage_based') {
+    // Rounded to 4 decimals before roundToIncrement to correct binary
+    // floating-point drift (e.g. 500 * 0.025 = 12.499999999999998, not
+    // 12.5) that would otherwise push an exact tie-breaking case like
+    // 12.5/5 = 2.5 to the wrong side of Math.round.
+    const raw = Math.round(currentWeight * (profile.targetIncrementPct ?? 0.025) * 10000) / 10000;
+    return { amount: Math.max(granularity, roundToIncrement(raw, granularity)), equipmentLimited: false };
+  }
+  // equipment_limited ('none' — bodyweight — never reaches this function).
+  const asPct = granularity / currentWeight;
+  if (asPct <= (profile.maxAcceptableEquipmentLimitedPct ?? 0.10)) {
+    return { amount: granularity, equipmentLimited: false };
+  }
+  return { amount: 0, equipmentLimited: true };
 }
 
 // ─── Rounding helpers ─────────────────────────────────────────────────────────
 
-// Round to the nearest valid increment. ST-010: increment is always 5 in
-// practice, but this stays general so callers can round to other steps
-// (e.g. deload-week displayed weights) without a second helper.
+// Round to the nearest valid increment. Stays general so callers can round
+// to other steps (e.g. deload-week displayed weights) without a second
+// helper.
 export function roundToIncrement(weight: number, increment: number): number {
   return Math.round(weight / increment) * increment;
+}
+
+// ─── HV-028: Bodyweight has no external load to adjust ────────────────────────
+//
+// Every branch below that changes `nextWeight` does so by adding, subtracting,
+// or halving a fixed increment of the *previous logged weight*. That's a sound
+// model when weight means "plates/pins on an implement" — it breaks down when
+// weight means body weight, since a training decision can't add 5 lb to (or
+// take 50% off) someone's actual mass. Deload halving, bad-session/plateau
+// deload halving, REDUCE_LOAD, and ADVANCE_LOAD all hit this. For bodyweight
+// equipment, weight holds at whatever was last logged in every one of those
+// cases — the training decision still happens, just entirely on the reps
+// axis (see advanceRepsForBodyweight below for the ADVANCE_LOAD case
+// specifically). Source: standard bodyweight/calisthenics progression model —
+// reps-first progression, with external load only entering via a genuinely
+// weighted variation (weighted vest/belt), which isn't something this app
+// can auto-detect from a rep-ceiling hit.
+function heldOrAdjustedWeight(
+  lastWeight: number,
+  isBodyweight: boolean,
+  adjust: (w: number) => number,
+): number {
+  return isBodyweight ? lastWeight : adjust(lastWeight);
+}
+
+// HV-035/ST-012: reductionPct is now caller-supplied — hypertrophy and
+// strength deloads use different percentages (see the deload branches
+// below) instead of a single baked-in flat 50%.
+function deloadWeightFor(lastWeight: number, isBodyweight: boolean, reductionPct: number): number {
+  return heldOrAdjustedWeight(lastWeight, isBodyweight, (w) => {
+    const g = roundToRealisticIncrement(w);
+    return Math.max(roundToIncrement(w * (1 - reductionPct), g), g);
+  });
+}
+
+// Returns the actual reduction amount alongside the new weight — reducing
+// load is never subject to the equipment-limited gate (only increasing load
+// is), so the effective reduction can differ from the top-level `increment`
+// in recommendProgression, which is 0 for a gated equipment-limited
+// exercise. Callers should use `amount` in reason text, not the outer
+// `increment`, to avoid displaying "Reducing by 0 lb."
+function reducedWeightFor(
+  lastWeight: number,
+  isBodyweight: boolean,
+  profile: ExerciseProgressionProfile,
+): { weight: number; amount: number } {
+  if (isBodyweight) return { weight: lastWeight, amount: 0 };
+  const g = roundToRealisticIncrement(lastWeight);
+  const { amount: gatedAmount } = getLoadIncrementAmount(lastWeight, profile);
+  const amount = Math.max(gatedAmount, g);
+  return { weight: Math.max(roundToIncrement(lastWeight - amount, g), g), amount };
+}
+
+// HV-028: the ADVANCE_LOAD counterpart — a bodyweight exercise past its rep
+// ceiling can't "add load," so the rep target keeps climbing past the
+// ceiling (uncapped, unlike nextRepTarget's floor-to-ceiling nudge) instead
+// of resetting to the floor at a heavier weight. The ceiling still means
+// something (it's when this branch fires at all), it just isn't a hard cap
+// once there's no load to trade the extra reps in for.
+function advanceRepsForBodyweight(lastReps: number): number {
+  return lastReps + 1;
 }
 
 // ST-007: Double-progression rep target — advance the prescribed rep count by
@@ -167,22 +333,56 @@ function sessionPerf(session: SessionPerformance): Perf {
   return { weight: workingWeight(session), maxReps: peakRepsAtWorkingWeight(session) };
 }
 
+// ─── HV-033: Performance Trend Score ───────────────────────────────────────
+//
+// A hidden metric combining load, reps, sets, and (when available) RIR, so
+// e.g. 225x10@3RIR and 225x10@1RIR — identical weight/reps, different
+// effort — don't read as the same performance. Core is tonnage
+// (weight x reps, summed across sets); RIR applies a small multiplier when
+// present. As of 2026-08-04 no production session ever carries a `rir`
+// value (see SessionPerformance's doctrine comment) — every real call
+// degrades to pure tonnage, which is exactly what the pre-existing
+// same-load/same-reps stall check already implied. This is intentionally a
+// forward-compatible no-op until reported-RIR logging exists, not dead code:
+// once it does, plateau detection and fatigue detection below start using it
+// with no further changes needed here.
+export function calculatePerformanceScore(sets: { weight: number; reps: number; rir?: number }[]): number {
+  const tonnage = sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+  const rated = sets.filter((s) => s.rir !== undefined);
+  if (rated.length === 0) return tonnage;
+  const avgRir = rated.reduce((sum, s) => sum + (s.rir as number), 0) / rated.length;
+  // 0 RIR (failure) -> 1.15x, 5 RIR (very conservative) -> 0.85x, 2.5 RIR
+  // (this app's typical prescribed midpoint) -> 1.0x, unchanged.
+  return tonnage * (1 + (2.5 - avgRir) * 0.06);
+}
+
 // Count identical consecutive *pairs* (sessions[i] == sessions[i+1]) from the
 // most-recent session inward.
 //
-// Stall thresholds (doctrine 5.3):
+// HV-034: thresholds updated 2026-08-04 (SUPERSEDES the doctrine-5.3
+// thresholds below — kept for history, not silently deleted):
 //   Beginner    : 3 consecutive sessions = 2 pairs
 //   Intermediate: 3 consecutive weeks    = 2 pairs
-//   Advanced    : 2 consecutive weeks    = 1 pair
-//
-// This function returns the number of pairs, so compare >= stallThreshold(level).
+//   Advanced    : 2 consecutive weeks    = 1 pair (accommodation arrives faster)
+// New thresholds (beginner 4 exposures / 3 pairs, intermediate+advanced 3
+// exposures / 2 pairs each) are applied where stallThreshold is computed in
+// recommendProgression — this function's pair-counting logic is unchanged,
+// only what counts as a "stalled pair" is stricter: HV-034 additionally
+// requires the performance score not to have improved (see
+// calculatePerformanceScore above), not just identical load+reps. The old
+// "advanced accommodates faster, so flag sooner" rationale is explicitly
+// retracted, not just renumbered — advanced now requires the same 2-pair
+// confirmation as intermediate before calling a plateau.
 function countConsecutiveStalls(sessions: SessionPerformance[]): number {
   if (sessions.length < 2) return 0;
   let count = 0;
   for (let i = 0; i < sessions.length - 1; i++) {
     const a = sessionPerf(sessions[i]);
     const b = sessionPerf(sessions[i + 1]);
-    if (a.weight === b.weight && a.maxReps === b.maxReps) {
+    const sameLoadReps = a.weight === b.weight && a.maxReps === b.maxReps;
+    const scoreA = calculatePerformanceScore(sessions[i].sets);
+    const scoreB = calculatePerformanceScore(sessions[i + 1].sets);
+    if (sameLoadReps && scoreA <= scoreB) {
       count++;
     } else {
       break;
@@ -210,12 +410,57 @@ function countConsecutiveBadSessions(sessions: SessionPerformance[]): number {
   return count;
 }
 
+// ─── HV-032: Volume transition compensation ────────────────────────────────
+//
+// The core fix this file was reworked for: when the weekly volume ramp adds
+// a set to an exercise, the rep/load engine used to keep expecting the exact
+// same reps on the new, higher-fatigue set (3x10@200 -> a naive 4x10@200).
+// This lowers the rep ceiling for the one session where sets went up, sized
+// by the exercise's category (setAdditionRepPenaltyPct — user doctrine spec
+// 2026-08-04) and how much fatigue was already in play (sets added, prior
+// RIR). Example from the spec: 3x10@200 -> volume engine adds a set -> a
+// high-fatigue compound should see something like 4x8-10@200, not 4x10@200
+// — this function is what produces that lowered ceiling; the exact number in
+// that example (~20%) sits above even heavy_compound's cited 5-10% range, so
+// treat it as illustrative rather than a literal arithmetic target.
+export interface VolumeTransitionAdjustment {
+  adjustedRepsMax: number;
+  // True when the penalty is severe enough that load should hold even if
+  // the (already-lowered) ceiling is hit this session.
+  holdLoad: boolean;
+  reason: string;
+}
+
+export function calculateVolumeTransitionAdjustment(
+  previousSets: number,
+  newSets: number,
+  prescription: { repsMin: number; repsMax: number },
+  profile: ExerciseProgressionProfile,
+  previousRir?: number,
+): VolumeTransitionAdjustment {
+  const setsAdded = Math.max(0, newSets - previousSets);
+  if (setsAdded === 0) {
+    return { adjustedRepsMax: prescription.repsMax, holdLoad: false, reason: 'No set increase this transition.' };
+  }
+  const { min, max } = profile.setAdditionRepPenaltyPct;
+  const setsSeverity = Math.min(1, (setsAdded - 1) / 2); // 1 set added -> 0, 3+ sets -> 1
+  const rirSeverity = previousRir === undefined ? 0.5 : previousRir <= 1 ? 1 : previousRir >= 3 ? 0 : 0.5;
+  const penaltyPct = min + (max - min) * ((setsSeverity + rirSeverity) / 2);
+  const adjustedRepsMax = Math.max(prescription.repsMin, Math.round(prescription.repsMax * (1 - penaltyPct)));
+  return {
+    adjustedRepsMax,
+    holdLoad: penaltyPct >= max,
+    reason: `Sets increased ${previousSets} → ${newSets}; rep ceiling lowered ${Math.round(penaltyPct * 100)}% (${prescription.repsMax} → ${adjustedRepsMax}) to offset added-set fatigue.`,
+  };
+}
+
 // ─── Main engine ──────────────────────────────────────────────────────────────
 //
 // sessions must be sorted newest-first (index 0 = most recent session).
 // sessions must contain only completed working sets — no warm-ups, no skipped sets.
 //
-// Decision priority (doctrine Section 4.1):
+// Decision priority (doctrine Section 4.1, extended 2026-08-04 per HV-032/
+// HV-034 — see those tags above):
 //   1. DELOAD_ACTIVE (isDeload week) — no progression decisions
 //   2. FIRST_SESSION (no history) — starter defaults. Checked before every
 //      focus-specific branch below (maintenance, cut) so a brand-new exercise
@@ -223,9 +468,11 @@ function countConsecutiveBadSessions(sessions: SessionPerformance[]): number {
 //      focus-specific hold/deload message built from zeroed-out history.
 //   3. Maintenance focus — hold performance, no auto-increment
 //   4. BAD_SESSION threshold → DELOAD_NEEDED
-//   5. Cut/fat-loss focus — hold performance, no auto-increment
+//   5. Cut/fat-loss focus — RC-011: reduced-speed progression, not a hold
 //   6. Experience-level dispatch (beginner linear / intermediate+advanced double)
-//   7. Plateau resolution (inside the dispatch functions)
+//   7. Plateau resolution (inside the dispatch functions) — gated off when
+//      volume recently increased (HV-034); that session's rep expectation is
+//      already handled by HV-032's transition adjustment instead.
 
 export function recommendProgression(
   prescription: SlotPrescription,
@@ -233,9 +480,20 @@ export function recommendProgression(
   ctx: ProgressionContext,
 ): ProgressionRecommendation {
 
-  const role: SlotRole = prescription.role ?? 'Primary';
-  const exerciseType: ExerciseType = prescription.exerciseType ?? 'barbell-compound';
-  const increment = getLoadIncrement(exerciseType, role, ctx.experienceLevel, ctx.programFocus);
+  // HV-029/HV-030: defaults to heavy_compound when the caller doesn't
+  // resolve one — the closest analog to the old implicit 'barbell-compound'
+  // default, so callers/tests that don't pass a profile keep prior behavior.
+  const profile: ExerciseProgressionProfile = prescription.profile ?? PROGRESSION_CATEGORY_PROFILES.heavy_compound;
+  // HV-028: see the doctrine comment on heldOrAdjustedWeight above.
+  const isBodyweight = prescription.equipment === 'Bodyweight' || profile.category === 'bodyweight';
+  // ST-011: increment sizing is now weight-dependent (percentage-based /
+  // equipment-gated), computed once here off the most recent logged weight
+  // — every branch below that changes load operates on that same session,
+  // so the weight doesn't move mid-evaluation.
+  const baselineWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
+  const { amount: increment, equipmentLimited } = isBodyweight
+    ? { amount: 0, equipmentLimited: false }
+    : getLoadIncrementAmount(baselineWeight, profile);
 
   // Bug fix: this used to read ctx.trainingPhase, a field no call site ever
   // populates, so cut-phase behavior below was unreachable in production.
@@ -249,7 +507,16 @@ export function recommendProgression(
   // Set-count progression within meso. HV-021: for hypertrophy with a
   // pre-resolved landmark target (see ProgressionContext.hypertrophyVolumeOverride),
   // that target wins outright — it's already muscle-level MEV/MAV/MRV-aware and
-  // MRV-capped. Every other focus keeps the original per-exercise doctrine:
+  // MRV-capped. This includes 'maintain' priority: the override resolves to
+  // that muscle's own Maintenance Volume landmark (flat, no ramp — see
+  // resolveMusclePerSessionAnchors in src/api/progression.ts), which can be
+  // higher OR lower than whatever the template/last-actual set count was —
+  // "maintain" tracks true MV, not "whatever you were already doing."
+  // Confirmed as intentional 2026-08-04 (a muscle at 2 sets/week jumping to
+  // 5 after a refresh, because 2 sets was below that muscle's real MV, is
+  // expected — not a bug to special-case around).
+  // Every other focus (no landmark override available) keeps the original
+  // flat per-exercise doctrine:
   //   emphasize → add 1 set per week above base (volume accumulation)
   //   grow      → hold at template value
   //   maintain  → never exceed template value
@@ -291,22 +558,50 @@ export function recommendProgression(
   // Source: Dr. Mike Israetel / RP Hypertrophy — recovery autoregulation via
   // soreness feedback.
   const stillSore = ctx.soreness === 'Still sore';
-  const effectiveSets = stillSore ? Math.max(baseSetCount, rawEffectiveSets - 1) : rawEffectiveSets;
+  // VA-018: when the caller has computed a fatigue-weighted per-exercise
+  // trim (redistributeSorenessTrim in volumeBudget.ts), use that instead of
+  // the flat 1-set trim — extends VA-013, doesn't replace its "never below
+  // baseSetCount" invariant.
+  const sorenessTrim = ctx.sorenessTrimOverride ?? 1;
+  const effectiveSets = stillSore ? Math.max(baseSetCount, rawEffectiveSets - sorenessTrim) : rawEffectiveSets;
+
+  // HV-032: previous sets = last actual logged set count (no separate stored
+  // field needed — sessions[0] IS last week's real performance). Falls back
+  // to the prescription's own sets when there's no history yet (FIRST_SESSION
+  // will win before this matters).
+  const previousSets = sessions.length > 0 ? sessions[0].sets.length : prescription.sets;
+  const previousRir = sessions.length > 0 ? sessions[0].sets.find((s) => s.rir !== undefined)?.rir : undefined;
+  const volumeAdjustment = calculateVolumeTransitionAdjustment(
+    previousSets,
+    effectiveSets,
+    { repsMin: prescription.repsMin, repsMax: prescription.repsMax },
+    profile,
+    previousRir,
+  );
+  // HV-034: plateau branches gate off when volume just increased — that
+  // session's rep expectation is already handled by volumeAdjustment above.
+  const volumeRecentlyIncreased = previousSets < effectiveSets;
 
   // During a cut, raise the rep floor to 8 to reduce injury risk from heavy loading.
   const effectiveRepsMin = isCut
     ? Math.max(prescription.repsMin, 8)
     : prescription.repsMin;
+  // HV-032: this session's rep ceiling — lowered from the template's
+  // repsMax when sets just increased; unchanged otherwise.
+  const effectiveRepsMax = volumeAdjustment.adjustedRepsMax;
 
-  // Stall threshold: how many identical consecutive pairs trigger a plateau.
-  //   Beginner    : 3 sessions = 2 pairs
-  //   Intermediate: 3 sessions = 2 pairs
-  //   Advanced    : 2 sessions = 1 pair  (accommodation arrives faster)
-  const stallThreshold = ctx.experienceLevel === 'advanced' ? 1 : 2;
+  // HV-034: stall threshold — exposures required before a plateau is called
+  // (SUPERSEDES the doctrine-5.3 thresholds referenced above — see
+  // countConsecutiveStalls's doctrine comment for the full explanation,
+  // including the retracted "advanced accommodates faster" rationale).
+  //   Beginner            : 4 exposures = 3 pairs
+  //   Intermediate/Advanced: 3 exposures = 2 pairs each
+  const stallThreshold = ctx.experienceLevel === 'beginner' ? 3 : 2;
 
-  // Bad session threshold: how many consecutive regressions trigger an early deload.
-  //   Cut phase raises this to 3 — deficits cause 1–2 natural bad sessions.
-  const badSessionThreshold = isCut ? 3 : 2;
+  // Bad session threshold: how many consecutive regressions trigger an early
+  // deload. RC-011: cut phase now matches the base threshold (2) instead of
+  // the previous relaxed 3 — see the cut-phase branch below for why.
+  const badSessionThreshold = 2;
 
   const base = {
     nextSets: effectiveSets,
@@ -351,67 +646,106 @@ export function recommendProgression(
     base.nextRir = Math.max(base.nextRir, prescription.hardRirFloor);
   }
 
+  // HV-036: category failure-policy floor — composes with hardRirFloor via
+  // Math.max rather than a separate precedence rule, so hardRirFloor (more
+  // specific, per-exercise) naturally wins whenever it's higher, and the
+  // category floor (e.g. heavy compounds never truly hit 0-RIR failure even
+  // at peak week) still applies to every exercise in that category, not just
+  // the handful with an explicit hardRirFloor override. RC-011 bumps this
+  // further during a cut (below, before the taper's peak-week floor would
+  // otherwise let effort run all the way to the category's normal floor).
+  // Source: RP Strength "Hypertrophy Made Simple" RIR-taper guidance + NSCA
+  // technical-breakdown-risk-near-failure for loaded compounds — same
+  // citation lineage as HV-001/HV-027's taper.
+  const categoryFailureFloor: Record<typeof profile.failurePolicy, number> = { avoid: 1, limited: 1, allowed: 0 };
+  base.nextRir = Math.max(
+    base.nextRir,
+    categoryFailureFloor[profile.failurePolicy] + (ctx.programFocus === 'cut' ? 1 : 0),
+  );
+
   // ── Priority 1: Deload week — protocol varies by focus ────────────────────
+  // HV-035/ST-012: deload load-reduction percentages — SUPERSEDES HV-025 and
+  // ST-004 below (kept for history, not silently deleted).
+  //
+  // HV-025 (original): flat 50% load reduction for the whole deload week —
+  // applies to every focus, not just strength (ST-004 below). Previously the
+  // hypertrophy/powerbuilding branch held nextWeight unchanged and only cut
+  // volume, but Hypertrophy Made Simple's own deload protocol also calls
+  // for reduced load (80-100% first half / 50% second half of the week for
+  // full deloads; half weight for single-muscle "recovery sessions") — a
+  // deload that never reduces load under-recovers exactly the way ST-004
+  // already fixed for strength. Same whole-week-granularity simplification
+  // as ST-004: a flat 50% instead of RP's two-stage split, since this app's
+  // progression model operates at whole-week granularity, not half-weeks.
+  // Source: RP Strength "Hypertrophy Made Simple" (2023).
+  //
+  // ST-004 (original): Strength deload — reduce load 50%, hold reps and sets
+  // flat (100%). Unlike hypertrophy deloads (halve volume, hold load),
+  // strength deloads must preserve neuromuscular coordination — cutting sets
+  // on heavy compound movements degrades motor patterns built over the meso.
+  //
+  // HV-035/ST-012 (2026-08-04, user doctrine spec): the flat-50%-load
+  // philosophy is replaced with cited ranges — hypertrophy/powerbuilding
+  // load reduction 15-30% (using the 22.5% midpoint), strength load
+  // reduction 15-25% (20% midpoint). Strength ALSO now cuts volume 30-50%
+  // (40% midpoint) instead of holding sets flat at 100% — "maintain
+  // movement exposure" per the new spec means never dropping the pattern to
+  // zero, not never touching set count at all, so sets are floored at 2
+  // rather than held unchanged.
   if (ctx.isDeload) {
     const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
-    // HV-025: flat 50% load reduction for the whole deload week — applies to
-    // every focus, not just strength (ST-004 below). Previously the
-    // hypertrophy/powerbuilding branch held nextWeight unchanged and only cut
-    // volume, but Hypertrophy Made Simple's own deload protocol also calls
-    // for reduced load (80-100% first half / 50% second half of the week for
-    // full deloads; half weight for single-muscle "recovery sessions") — a
-    // deload that never reduces load under-recovers exactly the way ST-004
-    // already fixed for strength. Same whole-week-granularity simplification
-    // as ST-004: a flat 50% instead of RP's two-stage split, since this app's
-    // progression model operates at whole-week granularity, not half-weeks.
-    // Source: RP Strength "Hypertrophy Made Simple" (2023).
-    const deloadWeight = Math.max(roundToIncrement(lastWeight * 0.5, increment), increment);
+    const deloadLoadReductionPct = isStrength ? 0.20 : 0.225;
+    // HV-028: bodyweight has no load to reduce — see heldOrAdjustedWeight.
+    const deloadWeight = deloadWeightFor(lastWeight, isBodyweight, deloadLoadReductionPct);
     if (isStrength) {
-      // ST-004: Strength deload — reduce load 50%, hold reps and sets.
-      // Unlike hypertrophy deloads (halve volume, hold load), strength deloads
-      // must preserve neuromuscular coordination. Cutting sets on heavy compound
-      // movements degrades motor patterns built over the meso. A load drop
-      // with full rep/set maintenance keeps the pattern intact while reducing
-      // systemic fatigue. Source: RP Strength "Strength Training Made Simple"
-      // (2023) — deload week protocol (50% of last week's weight, same sets
-      // and reps). RP's own guide actually splits this across the week (70%
-      // first half, 50% second half); we use a flat 50% since this app's
-      // progression model operates at whole-week granularity, not half-weeks.
+      const deloadSets = Math.max(2, Math.ceil(baseSetCount * 0.60));
       return {
         ...base,
         nextWeight: deloadWeight,
-        nextSets: baseSetCount,
+        nextSets: deloadSets,
         nextRir: Math.max(3, prescription.rir),
         action: 'DELOAD',
-        reason: `Strength deload — load reduced to 50% (${lastWeight} → ${deloadWeight} lbs), reps and sets maintained to preserve neuromuscular coordination.`,
+        reason: isBodyweight
+          ? `Strength deload — sets reduced to ${deloadSets} (pattern maintained, never dropped), bodyweight held at ${lastWeight} lb (no external load to reduce).`
+          : `Strength deload — load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), sets reduced to ${deloadSets} (pattern maintained, never dropped).`,
       };
     }
-    // PB-004: Powerbuilding deload uses the hypertrophy protocol (halve volume,
-    // now also halve load per HV-025, cap effort at RIR 4). PHAT and Kizen both
-    // distribute CNS fatigue across power and hypertrophy days throughout the
-    // meso, so accumulated load is lower than pure strength, but recovery still
-    // benefits from a reduced load, not volume cuts alone. Source: Kizen Week 9
-    // deload structure.
+    // PB-006: Powerbuilding deload still borrows the hypertrophy protocol
+    // wholesale — pointer-only supersession of PB-004, no numbers of its own.
+    // PHAT and Kizen both distribute CNS fatigue across power and
+    // hypertrophy days throughout the meso, so accumulated load is lower
+    // than pure strength. Source: Kizen Week 9 deload structure.
     //
-    // HV-021: hypertrophy focus with a resolved landmark target deloads sets to
-    // that muscle's own MV (Maintenance Volume) instead of a flat 50% — see
-    // ProgressionContext.hypertrophyVolumeOverride. Load reduction (HV-025)
-    // still applies uniformly regardless of which set-count path is used.
+    // HV-021: hypertrophy focus with a resolved landmark target deloads sets
+    // to that muscle's own MV (Maintenance Volume) instead of a flat
+    // percentage — see ProgressionContext.hypertrophyVolumeOverride. Load
+    // reduction (HV-035) still applies uniformly regardless of which
+    // set-count path is used.
     const hasVolumeOverride = ctx.programFocus === 'hypertrophy' && !!ctx.hypertrophyVolumeOverride;
     const deloadSets = hasVolumeOverride
       ? ctx.hypertrophyVolumeOverride!.deloadSets
       : Math.max(1, Math.ceil(baseSetCount * 0.5));
+    // HV-035: bodyweight deload reps soften 25% rather than the loaded-lift
+    // 50% halving — reps are bodyweight's only progression axis, so halving
+    // them every deload is disproportionate versus a loaded lift softening
+    // on two axes (load + reps) simultaneously at once. Not explicit in the
+    // user's spec; an interpolation from "bodyweight: reduce sets/reps only."
+    const repReductionPct = isBodyweight ? 0.25 : 0.5;
     return {
       ...base,
       nextWeight: deloadWeight,
       nextSets: deloadSets,
-      nextRepsMin: Math.max(1, Math.ceil(effectiveRepsMin * 0.5)),
-      nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * 0.5)),
+      nextRepsMin: Math.max(1, Math.ceil(effectiveRepsMin * (1 - repReductionPct))),
+      nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * (1 - repReductionPct))),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD',
-      reason: hasVolumeOverride
-        ? `Deload week — sets dropped to Maintenance Volume, reps halved, load reduced to 50% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`
-        : `Deload week — sets and reps halved, load reduced to 50% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`,
+      reason: isBodyweight
+        ? (hasVolumeOverride
+          ? `Deload week — sets dropped to Maintenance Volume, reps reduced ${Math.round(repReductionPct * 100)}%, bodyweight held at ${lastWeight} lb (no external load to reduce), effort capped at RIR 4.`
+          : `Deload week — sets and reps reduced ${Math.round(repReductionPct * 100)}%, bodyweight held at ${lastWeight} lb (no external load to reduce), effort capped at RIR 4.`)
+        : (hasVolumeOverride
+          ? `Deload week — sets dropped to Maintenance Volume, reps halved, load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`
+          : `Deload week — sets and reps halved, load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`),
     };
   }
 
@@ -452,38 +786,77 @@ export function recommendProgression(
   // ── Priority 4: Consecutive bad sessions → immediate deload ───────────────
   // Doctrine 2.3 Trigger 2 / 3.3 Trigger 2: ≥2 consecutive bad sessions
   // means accumulated fatigue or overreaching; deload before any load change.
+  // RC-011: badSessionThreshold is now 2 even during a cut (see its
+  // computation above) — this branch itself is otherwise unchanged.
   if (badSessions >= badSessionThreshold) {
-    // HV-025: same flat 50% load reduction as the scheduled-deload branch
-    // above — an immediate deload triggered by accumulated fatigue needs the
-    // same load relief a scheduled one gets; holding weight unchanged here
-    // while cutting sets only addresses volume, not the load driving the
-    // fatigue.
-    const deloadWeight = Math.max(roundToIncrement(lastPerf.weight * 0.5, increment), increment);
+    // HV-035: same category-aware load reduction as the scheduled-deload
+    // branch above — an immediate deload triggered by accumulated fatigue
+    // needs the same load relief a scheduled one gets. HV-028: bodyweight
+    // has no load to reduce.
+    const badSessionReductionPct = isStrength ? 0.20 : 0.225;
+    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, badSessionReductionPct);
     return {
       ...base,
       nextWeight: deloadWeight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD_NEEDED',
-      reason: `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — load reduced to 50% (${lastPerf.weight} → ${deloadWeight} lbs); this is accumulated fatigue, not a plateau.`,
+      reason: isBodyweight
+        ? `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — bodyweight held at ${lastPerf.weight} lb (no external load to reduce); this is accumulated fatigue, not a plateau.`
+        : `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — load reduced ${Math.round(badSessionReductionPct * 100)}% (${lastPerf.weight} → ${deloadWeight} lbs); this is accumulated fatigue, not a plateau.`,
       isPlateauWarning: true,
     };
   }
 
-  // ── Priority 5: Fat-loss hold ─────────────────────────────────────────────
-  // During a cut, auto-increment is disabled (doctrine 4.4).
-  // Maintaining current performance is the success criterion.
-  // A load increase is still surfaced if the user organically hit the ceiling,
-  // but as CUT_HOLD (informational) rather than the automatic ADVANCE_LOAD.
+  // ── Priority 5: Cut phase — reduced-speed progression, not a hold ────────
+  // RC-011 (2026-08-04, user doctrine spec) — SUPERSEDES the original
+  // "fat-loss hold" branch below (kept for history, not silently deleted).
+  //
+  // Original: During a cut, auto-increment was disabled entirely (doctrine
+  // 4.4). Maintaining current performance was the success criterion. A load
+  // increase was still surfaced if the user organically hit the ceiling, but
+  // as CUT_HOLD (informational) rather than the automatic ADVANCE_LOAD.
+  // badSessionThreshold was also relaxed to 3 for cut specifically, reasoned
+  // as "deficits cause 1-2 natural bad sessions."
+  //
+  // RC-011: cut no longer disables progression outright — it runs at 50-70%
+  // speed (CUT_SPEED_FACTOR = 0.65 midpoint) instead. This directly reverses
+  // the old badSessionThreshold leniency too: "increase fatigue sensitivity"
+  // means cut should catch real regression at least as fast as a normal
+  // week, not slower — badSessionThreshold is computed as a flat 2 above,
+  // not relaxed to 3 for cut anymore. Bodyweight exercises have no load axis
+  // to throttle, so their reps keep climbing unscaled during a cut — a
+  // reasonable interpretation, not explicit in the spec.
   if (isCut) {
-    const ceilingHit = lastPerf.maxReps >= prescription.repsMax && lastPerf.weight > 0;
+    const ceilingHit = lastPerf.maxReps >= effectiveRepsMax && lastPerf.weight > 0;
+    if (ceilingHit && !isBodyweight && !volumeAdjustment.holdLoad) {
+      const CUT_SPEED_FACTOR = 0.65;
+      const granularity = roundToRealisticIncrement(lastPerf.weight);
+      const cutIncrement = roundToIncrement(increment * CUT_SPEED_FACTOR, granularity);
+      if (cutIncrement > 0) {
+        const nextWeight = roundToIncrement(lastPerf.weight + cutIncrement, granularity);
+        return {
+          ...base,
+          nextWeight,
+          nextRepsMin: effectiveRepsMin,
+          nextRepsMax: effectiveRepsMin,
+          loadIncrement: cutIncrement,
+          action: 'CUT_PROGRESS',
+          reason: `Hit ceiling during fat-loss phase — partial progression: +${cutIncrement} lb (~65% of the full +${increment} lb this would otherwise get).`,
+        };
+      }
+      // Scaled increment rounds to 0 at this weight — falls through to
+      // CUT_HOLD below; naturally re-attempted next session as
+      // percentage-based increments grow with weight, no separate "banked
+      // progress" state needed.
+    }
     return {
       ...base,
       nextWeight: lastPerf.weight,
       action: 'CUT_HOLD',
       reason: ceilingHit
-        ? `Hit rep ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb) during fat-loss phase. Load increase available but not required — maintaining is success.`
-        : `Fat-loss phase — maintaining ${lastPerf.maxReps} reps × ${lastPerf.weight} lb is the target. Load auto-advance is paused.`,
+        ? `Hit rep ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb) during fat-loss phase. Maintaining is still success.`
+        : `Fat-loss phase — maintaining ${lastPerf.maxReps} reps × ${lastPerf.weight} lb is the target.`,
     };
   }
 
@@ -491,13 +864,120 @@ export function recommendProgression(
 
   if (ctx.experienceLevel === 'beginner') {
     return evaluateBeginnerLinear(prescription, sessions, ctx, {
-      lastPerf, stalls, stallThreshold, increment, effectiveRepsMin, base,
+      lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeAdjustment.holdLoad,
     });
   }
 
   return evaluateDoubleProgression(prescription, sessions, ctx, {
-    lastPerf, stalls, stallThreshold, increment, effectiveRepsMin, base,
+    lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeAdjustment.holdLoad,
   });
+}
+
+// ─── Shared ceiling-hit resolution ─────────────────────────────────────────
+//
+// ST-011/HV-037: extracted because equipment-limited fallback and the
+// bodyweight difficulty ladder are nontrivial branches that would otherwise
+// duplicate identically between evaluateBeginnerLinear and
+// evaluateDoubleProgression, which already handled a plain ceiling hit
+// identically (both reset to effectiveRepsMin at the new load — the only
+// difference was reason-text wording).
+function resolveCeilingHit(
+  prescription: SlotPrescription,
+  lastPerf: Perf,
+  effectiveRepsMin: number,
+  profile: ExerciseProgressionProfile,
+  isBodyweight: boolean,
+  increment: number,
+  equipmentLimited: boolean,
+  base: EvalInputs['base'],
+  progressionLabel: 'Linear progression' | 'Double progression',
+): ProgressionRecommendation {
+  // HV-037: bodyweight has its own multi-dimension ladder (reps -> tempo ->
+  // range of motion -> leverage -> external load), not more reps forever —
+  // SUPERSEDES HV-028's original "uncapped by design" framing below (kept
+  // for history). This branch only fires once the exercise's rep ceiling is
+  // hit, so it composes with (doesn't replace) the below-floor/stalled
+  // bodyweight paths in the calling functions, which never reach here.
+  //
+  // HV-028 (original): a bodyweight exercise past its rep ceiling can't "add
+  // load," so the rep target kept climbing past the ceiling uncapped instead
+  // of resetting to the floor at a heavier weight — the ceiling meant
+  // something (it's when this branch fired at all), it just wasn't a hard
+  // cap once there was no load to trade the extra reps in for.
+  //
+  // HV-037 (2026-08-04, user doctrine spec): "do not allow unlimited reps
+  // forever" — a per-exercise/category rep ceiling (default 30, see
+  // ExerciseDefinition.bodyweightRepCeiling / PROGRESSION_CATEGORY_PROFILES)
+  // now caps the reps-only climb; past it, the engine signals a difficulty
+  // change instead. No exercise-substitution dataset exists to auto-pick a
+  // harder variant, so this is advisory text only.
+  if (isBodyweight) {
+    const ceiling = profile.bodyweightRepCeiling ?? 30;
+    if (lastPerf.maxReps < ceiling) {
+      const nextTarget = advanceRepsForBodyweight(lastPerf.maxReps);
+      return {
+        ...base,
+        nextWeight: lastPerf.weight,
+        nextRepsMax: nextTarget,
+        action: 'HOLD',
+        reason: `Bodyweight exercise — no load to add. ${lastPerf.maxReps} reps at ${lastPerf.weight} lb cleared the ${prescription.repsMax}-rep ceiling; climbing toward the ${ceiling}-rep ceiling before advancing difficulty. Aim for ${nextTarget} next session.`,
+      };
+    }
+    return {
+      ...base,
+      nextWeight: lastPerf.weight,
+      nextRepsMax: ceiling,
+      action: 'ADVANCE_DIFFICULTY',
+      reason: `Reached the ${ceiling}-rep ceiling at bodyweight. Advance difficulty instead: tempo → range of motion → leverage (e.g. feet-elevated, single-limb) → external load (weighted vest/belt). Advisory only — pick the next variation yourself.`,
+    };
+  }
+
+  // ST-011: equipment-limited exercise (isolation/cable_accessory) whose own
+  // smallest realistic increment is still proportionally too large — hold
+  // load and extend reps past the ceiling instead, up to a rep buffer, then
+  // force the jump anyway so it can't stall forever.
+  if (equipmentLimited) {
+    const repsPastCeiling = lastPerf.maxReps - prescription.repsMax;
+    if (repsPastCeiling < EQUIPMENT_LIMITED_REP_BUFFER) {
+      const nextTarget = lastPerf.maxReps + 1;
+      return {
+        ...base,
+        nextWeight: lastPerf.weight,
+        nextRepsMax: nextTarget,
+        action: 'HOLD',
+        reason: `Smallest available increment would be a >${Math.round((profile.maxAcceptableEquipmentLimitedPct ?? 0.10) * 100)}% jump at ${lastPerf.weight} lb — holding load, extending reps instead. Aim for ${nextTarget} next session.`,
+      };
+    }
+    const forced = roundToRealisticIncrement(lastPerf.weight);
+    const nextWeight = roundToIncrement(lastPerf.weight + forced, forced);
+    return {
+      ...base,
+      nextWeight,
+      nextRepsMax: effectiveRepsMin,
+      loadIncrement: forced,
+      action: 'ADVANCE_LOAD',
+      reason: `Forced load increase — proportional gate exhausted after ${EQUIPMENT_LIMITED_REP_BUFFER}+ reps past ceiling. Add ${forced} lb → target ${effectiveRepsMin} reps at new load.`,
+    };
+  }
+
+  // Round to the realistic plate/dumbbell granularity, not to `increment`
+  // itself — increment can be a multiple of the granularity (e.g. 15 lb at
+  // heavier weights), and rounding "weight + increment" to the nearest
+  // *increment* step would drift the result to a value that isn't actually
+  // weight + increment when weight isn't itself aligned to that step.
+  const nextWeight = roundToIncrement(lastPerf.weight + increment, roundToRealisticIncrement(lastPerf.weight));
+  return {
+    ...base,
+    nextWeight,
+    // ST-007: reset the rep target to the floor at the new load — double
+    // progression restarts the climb, it doesn't ask for the old ceiling
+    // again at a heavier weight.
+    nextRepsMax: effectiveRepsMin,
+    action: 'ADVANCE_LOAD',
+    reason: progressionLabel === 'Linear progression'
+      ? `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Linear progression: add ${increment} lb.`
+      : `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Double progression: add ${increment} lb → target ${effectiveRepsMin} reps at new load.`,
+  };
 }
 
 // ─── Beginner: Linear Progression ────────────────────────────────────────────
@@ -506,35 +986,49 @@ export function recommendProgression(
 // with clean technique. Intensity proxy = bar speed (approximated here by
 // rep-ceiling hit — no barSpeedDropped field available yet).
 //
-// Stall threshold: 3 sessions (2 pairs).
+// HV-034: Stall threshold: 4 exposures (3 pairs) for beginners.
 
 interface EvalInputs {
   lastPerf: Perf;
   stalls: number;
   stallThreshold: number;
   increment: number;
+  equipmentLimited: boolean;
   effectiveRepsMin: number;
+  effectiveRepsMax: number;
   base: Omit<ProgressionRecommendation, 'nextWeight' | 'action' | 'reason'>;
+  isBodyweight: boolean;
+  profile: ExerciseProgressionProfile;
+  volumeRecentlyIncreased: boolean;
+  // HV-032: true when the transition-adjustment penalty was severe enough
+  // that load should hold even if the (already-lowered) ceiling is hit.
+  holdLoad: boolean;
 }
 
 function evaluateBeginnerLinear(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, effectiveRepsMin, base }: EvalInputs,
+  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad }: EvalInputs,
 ): ProgressionRecommendation {
 
   // Plateau detection — must deload before any load reduction (doctrine 1.2).
-  if (stalls >= stallThreshold) {
-    // HV-025: same flat 50% load reduction as the scheduled-deload branch.
-    const deloadWeight = Math.max(roundToIncrement(lastPerf.weight * 0.5, increment), increment);
+  // HV-034: gated off when volume recently increased — that session's rep
+  // expectation is already handled by the HV-032 transition adjustment, and
+  // an added set naturally producing lower reps isn't a plateau.
+  if (stalls >= stallThreshold && !volumeRecentlyIncreased) {
+    // HV-035: category-aware load reduction, same as the scheduled-deload
+    // branch. HV-028: bodyweight has no load to reduce.
+    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225);
     return {
       ...base,
       nextWeight: deloadWeight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'PLATEAU_DELOAD',
-      reason: `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced to 50% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.`,
+      reason: isBodyweight
+        ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is the most likely cause. Retest reps after deload.`
+        : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.`,
       isPlateauWarning: true,
     };
   }
@@ -548,19 +1042,22 @@ function evaluateBeginnerLinear(
       prev.weight === lastPerf.weight;
 
     if (twoConsecutiveBelow) {
-      const nextWeight = Math.max(roundToIncrement(lastPerf.weight - increment, increment), increment);
+      // HV-028: bodyweight has no load to reduce.
+      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile);
       return {
         ...base,
         nextWeight,
         nextRepsMax: effectiveRepsMin,
         action: 'REDUCE_LOAD',
-        reason: `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${increment} lb — rebuild from new base.`,
+        reason: isBodyweight
+          ? `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild reps from the floor at bodyweight.`
+          : `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild from new base.`,
         isPlateauWarning: true,
       };
     }
     // ST-007: nudge toward the floor 1 rep at a time rather than restating the
     // full ceiling while still below the minimum.
-    const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
+    const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
     return {
       ...base,
       nextWeight: lastPerf.weight,
@@ -571,29 +1068,22 @@ function evaluateBeginnerLinear(
   }
 
   // Rep ceiling hit with bar speed intact (approximated: reps ≥ ceiling).
-  // Beginner: advance load every session per linear progression.
-  if (lastPerf.maxReps >= prescription.repsMax && lastPerf.weight > 0) {
-    const nextWeight = roundToIncrement(lastPerf.weight + increment, increment);
-    return {
-      ...base,
-      nextWeight,
-      // ST-007: reset the rep target to the floor at the new load — double
-      // progression restarts the climb, it doesn't ask for the old ceiling
-      // again at a heavier weight.
-      nextRepsMax: effectiveRepsMin,
-      action: 'ADVANCE_LOAD',
-      reason: `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Linear progression: add ${increment} lb.`,
-    };
+  // Beginner: advance load every session per linear progression. HV-032: the
+  // ceiling checked here is effectiveRepsMax (lowered this session if
+  // volume just increased), not the template's raw repsMax, and load holds
+  // when the transition penalty was severe enough (holdLoad).
+  if (lastPerf.maxReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad) {
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression');
   }
 
   // Within rep band — rep progress is occurring. ST-007: target last session's
   // reps + 1 (capped at the ceiling) instead of restating the full ceiling.
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
   const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
-  const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
+  const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
   const reason = repProgress
-    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${prescription.repsMax}).`
-    : `${lastPerf.maxReps}/${prescription.repsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
+    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
+    : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
   return {
     ...base,
@@ -609,7 +1099,7 @@ function evaluateBeginnerLinear(
 // Doctrine Sections 2–3:
 //   - Accumulate reps within the target band at fixed load.
 //   - When the rep ceiling is reached at the prescribed RIR, advance load.
-//   - Stall threshold: intermediate = 3 sessions (2 pairs), advanced = 2 (1 pair).
+//   - HV-034: Stall threshold: intermediate/advanced = 3 exposures (2 pairs) each.
 //
 // NOTE: RIR validation (reportedRir vs prescribedRir) requires a reportedRir field
 // that is not yet logged per-set. The ceiling-hit check is used as the sole
@@ -619,25 +1109,24 @@ function evaluateDoubleProgression(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, effectiveRepsMin, base }: EvalInputs,
+  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad }: EvalInputs,
 ): ProgressionRecommendation {
 
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
 
   // ── Stall threshold exceeded → PLATEAU_DELOAD ─────────────────────────────
   // Must deload before any load reduction (doctrine 2.2 Step 1 / 3.2 Step 1).
-  // Post-deload retest determines whether it was fatigue masking or true plateau.
-  if (stalls >= stallThreshold) {
+  // Post-deload retest determines whether it was fatigue masking or true
+  // plateau. HV-034: gated off when volume recently increased.
+  if (stalls >= stallThreshold && !volumeRecentlyIncreased) {
     const weeksSince = ctx.weeksSinceLastDeload;
     const fatigueLikely = weeksSince === undefined || weeksSince >= 3;
-    // HV-025: same flat 50% load reduction as the scheduled-deload branch —
-    // only for the fatigue-masking case, since that's the one whose reason
-    // text already claimed a "deload" (retest at load). The true-plateau
-    // branch below has its own distinct 10%-reduction recommendation, which
-    // is out of scope for this fix — it's advisory text pending a "true
-    // plateau" retest flow that isn't implemented yet, not the deload-week
-    // protocol HV-025 addresses.
-    const deloadWeight = Math.max(roundToIncrement(lastPerf.weight * 0.5, increment), increment);
+    // HV-035: category-aware load reduction, same as the scheduled-deload
+    // branch — only for the fatigue-masking case, since that's the one whose
+    // reason text already claims a "deload" (retest at load). The
+    // true-plateau branch below has its own distinct 10%-reduction
+    // recommendation, unchanged. HV-028: bodyweight has no load to reduce.
+    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225);
     return {
       ...base,
       nextWeight: fatigueLikely ? deloadWeight : lastPerf.weight,
@@ -645,7 +1134,9 @@ function evaluateDoubleProgression(
       nextRir: Math.max(4, prescription.rir),
       action: 'PLATEAU_DELOAD',
       reason: fatigueLikely
-        ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced to 50% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest at the reduced load after deload.`
+        ? (isBodyweight
+          ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest reps after deload.`
+          : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest at the reduced load after deload.`)
         : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps after a recent deload. This may be a true plateau — consider a 10% load reduction and rebuild.`,
       isPlateauWarning: true,
     };
@@ -659,19 +1150,22 @@ function evaluateDoubleProgression(
       prev.weight === lastPerf.weight;
 
     if (twoConsecutiveBelow) {
-      const nextWeight = Math.max(roundToIncrement(lastPerf.weight - increment, increment), increment);
+      // HV-028: bodyweight has no load to reduce.
+      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile);
       return {
         ...base,
         nextWeight,
         nextRepsMax: effectiveRepsMin,
         action: 'REDUCE_LOAD',
-        reason: `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${increment} lb — rebuild to ${effectiveRepsMin} reps before advancing.`,
+        reason: isBodyweight
+          ? `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild to ${effectiveRepsMin} reps at bodyweight before advancing.`
+          : `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild to ${effectiveRepsMin} reps before advancing.`,
         isPlateauWarning: true,
       };
     }
     // ST-007: nudge toward the floor 1 rep at a time rather than restating the
     // full ceiling while still below the minimum.
-    const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
+    const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
     return {
       ...base,
       nextWeight: lastPerf.weight,
@@ -684,29 +1178,21 @@ function evaluateDoubleProgression(
   // ── Rep ceiling hit → ADVANCE_LOAD ───────────────────────────────────────
   // Double progression: advance load, reset to rep floor.
   // (Without reportedRir, ceiling hit alone is the gate — equivalent to doctrine's
-  // "ceiling hit + RIR ≤ prescribedRir + 1" assumption.)
-  if (lastPerf.maxReps >= prescription.repsMax && lastPerf.weight > 0) {
-    const nextWeight = roundToIncrement(lastPerf.weight + increment, increment);
-    return {
-      ...base,
-      nextWeight,
-      // ST-007: reset the rep target to the floor at the new load — double
-      // progression restarts the climb, it doesn't ask for the old ceiling
-      // again at a heavier weight.
-      nextRepsMax: effectiveRepsMin,
-      action: 'ADVANCE_LOAD',
-      reason: `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Double progression: add ${increment} lb → target ${effectiveRepsMin} reps at new load.`,
-    };
+  // "ceiling hit + RIR ≤ prescribedRir + 1" assumption.) HV-032: the ceiling
+  // checked here is effectiveRepsMax, not the template's raw repsMax, and
+  // load holds when the transition penalty was severe enough (holdLoad).
+  if (lastPerf.maxReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad) {
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression');
   }
 
   // ── Within rep band — normal hold ────────────────────────────────────────
   // ST-007: target last session's reps + 1 (capped at the ceiling) instead of
   // restating the full ceiling every week.
   const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
-  const nextTarget = nextRepTarget(lastPerf.maxReps, prescription.repsMax);
+  const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
   const reason = repProgress
-    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${prescription.repsMax}).`
-    : `${lastPerf.maxReps}/${prescription.repsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
+    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
+    : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
   return {
     ...base,

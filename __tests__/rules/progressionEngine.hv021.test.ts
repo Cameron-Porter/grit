@@ -91,7 +91,12 @@ describe('recommendProgression — HV-021 hypertrophyVolumeOverride', () => {
         hypertrophyVolumeOverride: { trainingSets: 99, deloadSets: 1 },
       }),
     );
-    // ST-004: strength deload holds sets at the template value, load drops instead.
-    expect(rec.nextSets).toBe(5);
+    // ST-012 (supersedes ST-004, 2026-08-04): strength deload now cuts sets
+    // to ~60% (floored at 2) instead of holding at the template value — the
+    // point of this test (the hypertrophy override's deloadSets: 1 is
+    // ignored for strength, which computes its own set count) still holds;
+    // only the specific number strength computes for itself changed.
+    // ceil(5 * 0.6) = 3.
+    expect(rec.nextSets).toBe(3);
   });
 });
