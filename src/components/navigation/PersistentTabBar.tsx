@@ -48,7 +48,14 @@ function TabButton({ tab, active, onPress }: { tab: typeof TABS[0]; active: bool
   }
 
   return (
-    <Pressable onPress={handlePress} style={styles.tabBtn} hitSlop={6}>
+    <Pressable
+      onPress={handlePress}
+      style={styles.tabBtn}
+      hitSlop={6}
+      accessibilityRole="tab"
+      accessibilityLabel={tab.name === 'progress' ? 'Progress' : tab.name === 'profile' ? 'Profile' : tab.name[0].toUpperCase() + tab.name.slice(1)}
+      accessibilityState={{ selected: active }}
+    >
       <Animated.View style={[styles.iconWrap, animStyle]}>
         {Platform.OS === 'ios' ? (
           <SymbolView
@@ -123,9 +130,9 @@ export default function PersistentTabBar() {
         containerStyle,
         styles.pillInner,
         {
-          backgroundColor: theme === 'dark' ? 'rgba(20,20,26,0.96)' : 'rgba(242,242,247,0.97)',
+          backgroundColor: colors.glass,
           borderWidth: StyleSheet.hairlineWidth,
-          borderColor: theme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+          borderColor: colors.glassBorder,
         },
       ]}
     >

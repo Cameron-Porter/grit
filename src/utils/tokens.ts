@@ -148,8 +148,10 @@ const DarkSumiE = {
   inputBg2:    Palette.sumi600,
 } as const;
 
-// Derive the shared type from the canonical variant
-export type ColorTokens = typeof DarkSumiE;
+// Theme values share semantic keys, but each theme must be free to provide
+// different colors. Inferring literal values from one palette made every
+// alternate theme a TypeScript error.
+export type ColorTokens = { [K in keyof typeof DarkSumiE]: string };
 
 // ---------------------------------------------------------------------------
 // 2b. Dark variant — Deep Forest (dark green + bamboo)
@@ -210,24 +212,24 @@ const DarkDeepForest: ColorTokens = {
 // ---------------------------------------------------------------------------
 
 const DarkCoolSlate: ColorTokens = {
-  background:  Palette.slate900,
-  surface:     Palette.slate800,
-  surface2:    Palette.slate700,
-  surface3:    Palette.slate600,
+  background:  '#101216',
+  surface:     '#191C21',
+  surface2:    '#23272E',
+  surface3:    '#303640',
   overlay:     'rgba(0,0,0,0.6)',
 
-  glass:       'rgba(18,20,28,0.88)',
-  glassBorder: 'rgba(130,150,220,0.10)',
+  glass:       'rgba(25,28,33,0.90)',
+  glassBorder: 'rgba(255,255,255,0.10)',
 
-  text:          '#E8EAF2',
-  textSecondary: '#8890AA',
-  textTertiary:  '#5A6078',
-  textInverse:   Palette.slate900,
-  muted:         '#8890AA',
+  text:          '#F4F6F8',
+  textSecondary: '#B3BAC5',
+  textTertiary:  '#8D96A3',
+  textInverse:   '#101216',
+  muted:         '#A1A9B5',
 
-  primary:    Palette.bamboo500,
-  primaryDim: Palette.bamboo700,
-  accent:     Palette.bamboo300,
+  primary:    '#78D58B',
+  primaryDim: '#3F9957',
+  accent:     '#A5E5B2',
 
   success: Palette.moss500,
   warning: Palette.amber500,
@@ -235,28 +237,28 @@ const DarkCoolSlate: ColorTokens = {
   danger:  Palette.clay500,
 
   setComplete: Palette.bamboo500,
-  setSkipped:  '#5A6078',
-  setPending:  Palette.slate800,
+  setSkipped:  '#8D96A3',
+  setPending:  '#191C21',
   prBadge:     Palette.gold500,
   restTimer:   Palette.bamboo300,
 
-  border:     'rgba(130,150,220,0.07)',
-  separator:  'rgba(130,150,220,0.05)',
-  cardBorder: 'rgba(130,150,220,0.09)',
+  border:     'rgba(255,255,255,0.12)',
+  separator:  'rgba(255,255,255,0.09)',
+  cardBorder: 'rgba(255,255,255,0.11)',
 
-  inputBg:     Palette.slate700,
-  inputBorder: 'rgba(130,150,220,0.12)',
-  inputText:   '#E8EAF2',
-  placeholder: '#5A6078',
+  inputBg:     '#23272E',
+  inputBorder: 'rgba(255,255,255,0.14)',
+  inputText:   '#F4F6F8',
+  placeholder: '#8D96A3',
 
-  tabActive:   Palette.bamboo300,
-  tabInactive: '#5A6078',
+  tabActive:   '#78D58B',
+  tabInactive: '#8D96A3',
   scrim:       'rgba(0,0,0,0.55)',
 
-  badgeText: '#E8EAF2',
+  badgeText: '#F4F6F8',
 
-  cardSurface: Palette.slate800,
-  inputBg2:    Palette.slate600,
+  cardSurface: '#191C21',
+  inputBg2:    '#303640',
 };
 
 // ---------------------------------------------------------------------------
@@ -276,24 +278,24 @@ export const DarkTokens: ColorTokens = darkVariants[ACTIVE_DARK_VARIANT];
 // ---------------------------------------------------------------------------
 
 export const LightTokens: ColorTokens = {
-  background:  Palette.parchment,
-  surface:     Palette.paper,
-  surface2:    Palette.ivory200,
-  surface3:    '#D8D0C0',
+  background:  '#F5F7F8',
+  surface:     '#FFFFFF',
+  surface2:    '#EEF1F3',
+  surface3:    '#E1E5E9',
   overlay:     'rgba(26,18,8,0.4)',
 
-  glass:       'rgba(250,246,238,0.85)',
-  glassBorder: 'rgba(26,18,8,0.08)',
+  glass:       'rgba(255,255,255,0.90)',
+  glassBorder: 'rgba(17,24,39,0.10)',
 
-  text:          '#1A1208',
-  textSecondary: Palette.cedar500,
-  textTertiary:  Palette.stone600,
-  textInverse:   Palette.paper,
-  muted:         Palette.cedar500,
+  text:          '#171A1F',
+  textSecondary: '#505965',
+  textTertiary:  '#68727F',
+  textInverse:   '#FFFFFF',
+  muted:         '#59636F',
 
-  primary:    Palette.moss700,
-  primaryDim: Palette.bamboo900,
-  accent:     Palette.bamboo500,
+  primary:    '#176B3A',
+  primaryDim: '#0F4F2A',
+  accent:     '#3F9957',
 
   success: Palette.moss700,
   warning: Palette.amber700,
@@ -302,27 +304,27 @@ export const LightTokens: ColorTokens = {
 
   setComplete: Palette.moss700,
   setSkipped:  Palette.stone600,
-  setPending:  Palette.ivory200,
+  setPending:  '#EEF1F3',
   prBadge:     Palette.amber700,
   restTimer:   Palette.moss700,
 
-  border:     'rgba(26,18,8,0.08)',
-  separator:  'rgba(26,18,8,0.06)',
-  cardBorder: 'rgba(26,18,8,0.07)',
+  border:     'rgba(17,24,39,0.12)',
+  separator:  'rgba(17,24,39,0.09)',
+  cardBorder: 'rgba(17,24,39,0.10)',
 
-  inputBg:     Palette.ivory200,
-  inputBorder: 'rgba(26,18,8,0.10)',
-  inputText:   '#1A1208',
-  placeholder: Palette.stone600,
+  inputBg:     '#EEF1F3',
+  inputBorder: 'rgba(17,24,39,0.14)',
+  inputText:   '#171A1F',
+  placeholder: '#68727F',
 
-  tabActive:   Palette.moss700,
-  tabInactive: Palette.stone600,
+  tabActive:   '#176B3A',
+  tabInactive: '#68727F',
   scrim:       'rgba(0,0,0,0.4)',
 
-  badgeText: Palette.paper,
+  badgeText: '#FFFFFF',
 
-  cardSurface: Palette.paper,
-  inputBg2:    '#D8D0C0',
+  cardSurface: '#FFFFFF',
+  inputBg2:    '#E1E5E9',
 };
 
 export const Themes = { dark: DarkTokens, light: LightTokens } as const;

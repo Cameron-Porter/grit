@@ -83,11 +83,16 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
   if (!mounted) return null;
 
   return (
-    <Modal visible transparent animationType="none" onRequestClose={() => onCloseRef.current()}>
+    <Modal visible transparent animationType="none" onRequestClose={() => onCloseRef.current()} accessibilityViewIsModal>
       {/* Dimmed backdrop */}
       <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdropAlpha }]} />
       {/* Tap-outside-to-close */}
-      <Pressable style={StyleSheet.absoluteFill} onPress={() => onCloseRef.current()} />
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={() => onCloseRef.current()}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+      />
 
       {/* Sheet — rendered after Pressable so its children win touch events */}
       <Animated.View

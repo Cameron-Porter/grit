@@ -255,7 +255,13 @@ export default function ExerciseCard({
                   </View>
                 )}
               </View>
-              <Pressable onPress={() => onExerciseMenuPress(exercise.id)} style={styles.iconBtn} hitSlop={8}>
+              <Pressable
+                onPress={() => onExerciseMenuPress(exercise.id)}
+                style={styles.iconBtn}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`More options for ${exercise.name}`}
+              >
                 <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
               </Pressable>
             </View>
@@ -290,7 +296,7 @@ export default function ExerciseCard({
 
             {/* Column headers */}
             <View style={[styles.colHeaders, { borderBottomColor: colors.separator }]}>
-              <View style={{ width: 40 }} />
+              <View style={{ width: 44 }} />
               <Text style={[styles.colLabel, { color: colors.textSecondary }]}>WEIGHT</Text>
               <Text style={[styles.colLabel, { color: colors.textSecondary }]}>{isTimeBased ? 'SECS' : 'REPS'}</Text>
               <Text style={[styles.colLabelEffort, { color: colors.textSecondary }]}>RIR</Text>
@@ -334,6 +340,8 @@ export default function ExerciseCard({
                 onAddSet(exercise.id, defaultWeight, lastSet?.rir);
               }}
               style={styles.addSetRow}
+              accessibilityRole="button"
+              accessibilityLabel={`Add set to ${exercise.name}`}
             >
               <Icon ios="plus" android="plus" size={14} color={colors.primary} />
               <Text style={[TypeScale.l1, { color: colors.primary, fontFamily: FontFamily.bodySemi }]}>Add Set</Text>
@@ -397,7 +405,7 @@ export default function ExerciseCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: Radius['2xl'],
+    borderRadius: Radius.xl,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
   },
@@ -410,6 +418,10 @@ const styles = StyleSheet.create({
   },
   iconBtn: {
     padding: Space['0.5'],
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inlineAlert: {
     flexDirection: 'row',
@@ -454,6 +466,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Space[2],
     marginTop: Space[1.5],
     gap: Space['0.5'],
+    minHeight: 44,
   },
   historyShell: {
     borderRadius: Radius.md,

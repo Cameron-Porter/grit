@@ -21,10 +21,10 @@ export default function GradientBackground({ children, style }: Props) {
     );
   }
 
-  // Dark: subtle cool gradient gives glass elements something to sample
+  // Dark: restrained depth without introducing a second, unrelated palette.
   return (
     <LinearGradient
-      colors={['#0E0E1A', '#000000']}
+      colors={[colors.background, colors.surface]}
       start={{ x: 0.3, y: 0 }}
       end={{ x: 0.7, y: 0.6 }}
       style={[{ flex: 1 }, style]}

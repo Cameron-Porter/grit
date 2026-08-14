@@ -8,6 +8,7 @@ import GradientBackground from '../../src/components/GradientBackground';
 import { Skeleton } from '../../src/components/Skeleton';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
+import { Radius, Shadow, Space, TypeScale } from '../../src/utils/tokens';
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -82,8 +83,8 @@ export default function Progress() {
 
   return (
     <GradientBackground>
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 8 }}>
-        <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Progress</Text>
+      <View style={{ paddingHorizontal: Space[2.5], paddingTop: insets.top + Space[2.5], paddingBottom: Space[1.5] }}>
+        <Text style={[TypeScale.d1, { color: colors.text }]}>Progress</Text>
       </View>
 
       {loading ? (
@@ -142,14 +143,15 @@ export default function Progress() {
               style={({ pressed }) => ({
                 backgroundColor: colors.surface,
                 padding: 16,
-                borderRadius: 24,
+                borderRadius: Radius.lg,
                 marginBottom: 10,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 opacity: pressed ? 0.7 : 1,
                 borderWidth: 1,
-                borderColor: colors.glassBorder,
+                borderColor: colors.cardBorder,
+                ...Shadow.sm,
               })}
             >
               <View>
@@ -172,7 +174,11 @@ export default function Progress() {
 function StatCard({ label, value, unit }: { label: string; value: string; unit: string }) {
   const colors = useColors();
   return (
-    <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 24, padding: 14, alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.glassBorder }}>
+    <View
+      style={{ flex: 1, backgroundColor: colors.surface, borderRadius: Radius.lg, padding: 14, alignItems: 'center', gap: 2, borderWidth: 1, borderColor: colors.cardBorder, ...Shadow.sm }}
+      accessible
+      accessibilityLabel={`${label}: ${value} ${unit}`}
+    >
       <Text style={{ color: colors.text, fontSize: 28, fontWeight: '800', lineHeight: 32 }}>{value}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, fontWeight: '600' }}>{unit}</Text>
       <Text style={{ color: colors.muted, fontSize: 11, marginTop: 2 }}>{label}</Text>

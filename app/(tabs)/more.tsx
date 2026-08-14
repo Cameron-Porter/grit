@@ -23,16 +23,20 @@ import { EQUIPMENT_TYPES, useProfileStore } from '../../src/store/useProfileStor
 import { confirm } from '../../src/utils/confirm';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
+import { Space, TypeScale } from '../../src/utils/tokens';
 import {
   scheduleRemindersFromHistory,
   cancelWorkoutReminders,
 } from '../../src/lib/notifications';
 
-function Toggle({ value, onToggle }: { value: boolean; onToggle: () => void }) {
+function Toggle({ value, onToggle, label }: { value: boolean; onToggle: () => void; label: string }) {
   const colors = useColors();
   return (
     <Pressable
       onPress={onToggle}
+      accessibilityRole="switch"
+      accessibilityLabel={label}
+      accessibilityState={{ checked: value }}
       style={{ width: 51, height: 31, borderRadius: 16, backgroundColor: value ? colors.primary : colors.surface2, justifyContent: 'center', paddingHorizontal: 2 }}
     >
       <View style={{ width: 27, height: 27, borderRadius: 20, backgroundColor: '#FFFFFF', alignSelf: value ? 'flex-end' : 'flex-start' }} />
@@ -122,14 +126,14 @@ export default function ProfileAndSettings() {
     <GradientBackground>
       <ExportProgressModal />
       {/* User header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+      <View style={{ paddingHorizontal: Space[2.5], paddingTop: insets.top + Space[2.5], paddingBottom: Space[2], flexDirection: 'row', alignItems: 'center', gap: Space[2] }}>
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.surface2 }} />
         ) : (
           <Image source={require('../../assets/images/icon.png')} style={{ width: 56, height: 56, borderRadius: 28 }} />
         )}
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{displayName}</Text>
+          <Text style={[TypeScale.h1, { color: colors.text }]}>{displayName}</Text>
           {resolvedEmail && (
             <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }} numberOfLines={1}>{resolvedEmail}</Text>
           )}
@@ -317,7 +321,7 @@ export default function ProfileAndSettings() {
                   Switch between dark and light themes.
                 </Text>
               </View>
-              <Toggle value={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
+              <Toggle label="Dark mode" value={theme === 'dark'} onToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
             </View>
           </View>
 
@@ -332,6 +336,7 @@ export default function ProfileAndSettings() {
                 </Text>
               </View>
               <Toggle
+                label="Workout reminders"
                 value={workoutRemindersEnabled}
                 onToggle={async () => {
                   try {
@@ -360,7 +365,7 @@ export default function ProfileAndSettings() {
                   Play a sound when your rest period ends.
                 </Text>
               </View>
-              <Toggle value={timerSoundEnabled} onToggle={() => setTimerSoundEnabled(!timerSoundEnabled)} />
+              <Toggle label="Timer sound" value={timerSoundEnabled} onToggle={() => setTimerSoundEnabled(!timerSoundEnabled)} />
             </View>
           </View>
 
@@ -374,7 +379,7 @@ export default function ProfileAndSettings() {
                   When you change a set's weight, all subsequent sets with the same weight update automatically.
                 </Text>
               </View>
-              <Toggle value={autoMatchWeight} onToggle={() => setAutoMatchWeight(!autoMatchWeight)} />
+              <Toggle label="Auto match weight updates" value={autoMatchWeight} onToggle={() => setAutoMatchWeight(!autoMatchWeight)} />
             </View>
           </View>
 
@@ -386,7 +391,7 @@ export default function ProfileAndSettings() {
                 <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 4 }}>Use preferred exercise types</Text>
                 <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17 }}>Filter the exercise picker to your saved equipment preferences.</Text>
               </View>
-              <Toggle value={usePreferredEquipment} onToggle={() => setUsePreferredEquipment(!usePreferredEquipment)} />
+              <Toggle label="Use preferred exercise types" value={usePreferredEquipment} onToggle={() => setUsePreferredEquipment(!usePreferredEquipment)} />
             </View>
             {usePreferredEquipment && (
               <View style={{ marginTop: 12, gap: 8 }}>

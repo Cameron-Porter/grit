@@ -15,7 +15,7 @@ import {
   priorityLevel,
 } from './calculations';
 import { buildCSV } from './csvBuilder';
-import { WorkoutRecord, SetRecord } from './types';
+import { PersonalRecordRecord, ProgramRecord, WorkoutRecord, SetRecord } from './types';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

@@ -26,6 +26,7 @@ import { useWorkoutStore } from '../src/store/useWorkoutStore';
 import { Exercise, WorkoutSet } from '../src/types/workout';
 import { BOTTOM_TAB_HEIGHT } from '../src/utils/constants';
 import { useColors } from '../src/utils/useColors';
+import { Radius, TypeScale } from '../src/utils/tokens';
 
 const MIN_EXERCISES = 4;
 
@@ -665,12 +666,12 @@ export default function ActiveWorkout() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}>
             {activeProgramWeek != null && activeProgramDayNumber != null ? (
-              <Text style={{ fontSize: 28, fontWeight: '800', letterSpacing: -0.5, lineHeight: 34 }}>
+              <Text style={TypeScale.d2}>
                 <Text style={{ color: colors.text }}>Week {activeProgramWeek} </Text>
                 <Text style={{ color: colors.muted }}>Day {activeProgramDayNumber}</Text>
               </Text>
             ) : (
-              <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Workout</Text>
+              <Text style={[TypeScale.d1, { color: colors.text }]}>Workout</Text>
             )}
             <Text style={{ color: colors.muted, fontSize: 13, marginTop: 2 }}>
               {activeProgramName
@@ -689,12 +690,15 @@ export default function ActiveWorkout() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   gap: 4,
-                  paddingVertical: 6,
+                  minHeight: 44,
+                  paddingVertical: 8,
                   paddingHorizontal: 10,
                   borderRadius: 14,
                   backgroundColor: colors.surface2,
                 }}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Start a quick workout instead"
               >
                 <MaterialCommunityIcons name="flash-outline" size={16} color={colors.muted} />
                 <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700' }}>Quick Workout</Text>
@@ -704,6 +708,8 @@ export default function ActiveWorkout() {
               onPress={() => setProgramMenuOpen(true)}
               style={{ padding: 6 }}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Workout options"
             >
               <MaterialCommunityIcons name="dots-vertical" size={22} color={colors.muted} />
             </Pressable>
@@ -775,7 +781,8 @@ export default function ActiveWorkout() {
             marginTop: 4,
             padding: 14,
             backgroundColor: colors.surface,
-            borderRadius: 16,
+            borderRadius: Radius.lg,
+            minHeight: 48,
             borderWidth: 1,
             borderColor: colors.glassBorder,
             flexDirection: 'row',
@@ -784,6 +791,8 @@ export default function ActiveWorkout() {
             gap: 6,
             opacity: pressed ? 0.7 : 1,
           })}
+          accessibilityRole="button"
+          accessibilityLabel="Add exercise"
         >
           <MaterialCommunityIcons name="plus" size={18} color={colors.primary} />
           <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15 }}>
@@ -800,14 +809,18 @@ export default function ActiveWorkout() {
             disabled={isSaving}
             style={{
               backgroundColor: colors.primary,
-              paddingVertical: 18,
-              borderRadius: 16,
+              minHeight: 56,
+              paddingVertical: 16,
+              borderRadius: Radius.lg,
               opacity: isSaving ? 0.7 : 1,
               borderWidth: 1,
               borderColor: 'rgba(255,255,255,0.15)',
             }}
+            accessibilityRole="button"
+            accessibilityLabel={allSkipped ? 'Skip day and continue' : 'Finish workout'}
+            accessibilityState={{ disabled: isSaving, busy: isSaving }}
           >
-            <Text style={{ color: colors.background, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
+            <Text style={{ color: colors.textInverse, textAlign: 'center', fontWeight: '700', fontSize: 16 }}>
               {isSaving ? 'Saving...' : allSkipped ? 'Skip Day & Continue' : 'Finish Workout'}
             </Text>
           </Pressable>

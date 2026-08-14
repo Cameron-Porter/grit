@@ -11,6 +11,7 @@ import GradientBackground from '../../src/components/GradientBackground';
 import { Skeleton } from '../../src/components/Skeleton';
 import { BOTTOM_TAB_HEIGHT } from '../../src/utils/constants';
 import { useColors } from '../../src/utils/useColors';
+import { Radius, Shadow, Space, TypeScale } from '../../src/utils/tokens';
 
 type ProgramStatus = 'active' | 'complete' | 'paused';
 
@@ -107,21 +108,25 @@ export default function Programs() {
   return (
     <GradientBackground>
       {/* Header */}
-      <View style={{ paddingHorizontal: 20, paddingTop: insets.top + 20, paddingBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-        <Text style={{ color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -0.5 }}>Programs</Text>
+      <View style={{ paddingHorizontal: Space[2.5], paddingTop: insets.top + Space[2.5], paddingBottom: Space[1.5], flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={[TypeScale.d1, { color: colors.text }]}>Programs</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
           <Pressable
             onPress={() => router.push('/programs/templates')}
-            style={{ height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder, paddingHorizontal: 12, flexDirection: 'row', gap: 5 }}
+            style={{ minHeight: 44, borderRadius: Radius.pill, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.cardBorder, paddingHorizontal: Space[1.5], flexDirection: 'row', gap: 5 }}
+            accessibilityRole="button"
+            accessibilityLabel="Browse program templates"
           >
             <MaterialCommunityIcons name="view-grid-outline" size={16} color={colors.primary} />
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>Templates</Text>
           </Pressable>
           <Pressable
             onPress={() => router.push('/programs/create')}
-            style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.glassBorder }}
+            style={{ width: 44, height: 44, borderRadius: Radius.pill, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel="Create program"
           >
-            <MaterialCommunityIcons name="plus" size={22} color={colors.primary} />
+            <MaterialCommunityIcons name="plus" size={22} color={colors.background} />
           </Pressable>
         </View>
       </View>
@@ -171,12 +176,13 @@ export default function Programs() {
             onPress={() => router.push({ pathname: '/programs/[id]', params: { id: item.id } })}
             style={({ pressed }) => ({
               backgroundColor: colors.surface,
-              borderRadius: 24,
+              borderRadius: Radius.lg,
               padding: 16,
               marginBottom: 10,
               opacity: pressed ? 0.8 : 1,
               borderWidth: 1,
-              borderColor: colors.glassBorder,
+              borderColor: colors.cardBorder,
+              ...Shadow.sm,
             })}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -198,6 +204,9 @@ export default function Programs() {
               <Pressable
                 onPress={(e) => { e.stopPropagation(); setMenuOpen(menuOpen === item.id ? null : item.id); }}
                 style={{ padding: 6 }}
+                accessibilityRole="button"
+                accessibilityLabel={`More options for ${item.name}`}
+                hitSlop={8}
               >
                 <MaterialCommunityIcons name="dots-vertical" size={20} color={colors.muted} />
               </Pressable>

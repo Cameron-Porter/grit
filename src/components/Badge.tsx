@@ -103,6 +103,9 @@ export function FilterChip({ label, active, color, onPress, icon }: FilterChipPr
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label}${active ? ', selected' : ''}`}
       style={({ pressed }) => [
         styles.chip,
         {
@@ -150,7 +153,8 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 7,
+    minHeight: 44,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: Radius.pill,
     borderWidth: 1,

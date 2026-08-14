@@ -106,7 +106,7 @@ export default function SetRow({
   if (set.skipped) {
     return (
       <View style={[styles.skippedRow]}>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 44 }} />
         <Text style={[styles.skippedValue, { color: colors.setSkipped }]}>
           {set.weight > 0 ? String(set.weight) : '—'}
         </Text>
@@ -138,6 +138,7 @@ export default function SetRow({
         {/* Weight */}
         <View style={styles.inputCell}>
           <TextInput
+            accessibilityLabel="Weight"
             value={String(set.weight || '')}
             keyboardType="decimal-pad"
             placeholder="0"
@@ -163,6 +164,7 @@ export default function SetRow({
               )
             )}
             <TextInput
+              accessibilityLabel={set.rir !== undefined ? `Repetitions, target ${set.targetReps ?? ''}, prescribed ${set.rir} reps in reserve` : 'Repetitions'}
               value={String(set.reps || '')}
               keyboardType="number-pad"
               placeholder={
@@ -217,7 +219,13 @@ export default function SetRow({
 
         {/* Check */}
         <View style={styles.checkCell}>
-          <Pressable onPress={handleComplete} hitSlop={8}>
+          <Pressable
+            onPress={handleComplete}
+            hitSlop={8}
+            accessibilityRole="checkbox"
+            accessibilityLabel={set.completed ? 'Set completed' : 'Mark set complete'}
+            accessibilityState={{ checked: set.completed }}
+          >
             <Animated.View
               style={[
                 styles.checkBox,
@@ -270,7 +278,8 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   menuCell: {
-    width: 40,
+    width: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
