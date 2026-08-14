@@ -2,6 +2,9 @@
 
 # dependencies
 node_modules/
+web/.next/
+web/node_modules/
+web/.env.local
 
 # Expo
 .expo/
