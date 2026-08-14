@@ -306,6 +306,7 @@ export default function ExerciseCard({
                   isActive={setIndex === activeSetIndex}
                   onWeightChange={(weight) => onUpdateSet(exercise.id, setIndex, { weight })}
                   onRepsChange={(reps) => onUpdateSet(exercise.id, setIndex, { reps })}
+                  onReportedRirChange={(reportedRir) => onUpdateSet(exercise.id, setIndex, { reportedRir })}
                   onComplete={(autoReps) => {
                     if (set.skipped) {
                       onUpdateSet(exercise.id, setIndex, { skipped: false, completed: false });

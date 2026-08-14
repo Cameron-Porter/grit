@@ -88,6 +88,28 @@ describe('generateQuickWorkout — resolves from history without corrupting RIR'
     // prescribed RIR (2 for Primary/grow) for a one-off session.
     expect(bench.rir).toBe(2);
   });
+
+  it('uses actual RIR and holds load when ceiling reps were harder than prescribed', async () => {
+    mockGetExerciseAllSessions.mockImplementation(async (name: string) =>
+      name === 'Barbell Bench Press'
+        ? [{
+            workoutId: 'w1',
+            date: '2026-01-01T00:00:00Z',
+            programName: null,
+            sets: [
+              { weight: 135, reps: 12, set_index: 0, reported_rir: 0 },
+              { weight: 135, reps: 12, set_index: 1, reported_rir: 0 },
+              { weight: 135, reps: 12, set_index: 2, reported_rir: 0 },
+            ],
+          }]
+        : [],
+    );
+
+    const result = await generateQuickWorkout('Upper', 'Push', defaultOpts);
+    const bench = result.exercises.find((e) => e.name === 'Barbell Bench Press')!;
+
+    expect(bench.targetWeight).toBe(135);
+  });
 });
 
 describe('generateQuickWorkout — never writes program_day_targets', () => {

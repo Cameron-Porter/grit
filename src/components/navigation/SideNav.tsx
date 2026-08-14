@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/useAuthStore';
 import { confirm } from '../../utils/confirm';
@@ -42,7 +42,11 @@ export default function SideNav() {
     confirm(
       'Log Out',
       'Are you sure you want to log out?',
-      () => { signOut().catch(() => {}); },
+      () => {
+        signOut().catch(() => {
+          Alert.alert('Could not log out', 'Please check your connection and try again.');
+        });
+      },
       'Log Out',
       true,
     );

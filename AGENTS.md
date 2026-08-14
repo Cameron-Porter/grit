@@ -30,7 +30,7 @@ Rules for adding a tag:
 
 | Focus | Primary source | Status |
 |-------|----------------|--------|
-| `hypertrophy` | Dr. Mike Israetel / RP Hypertrophy | Covered — per-muscle MV/MEV/MAV/MRV landmarks (`volumeLandmarks.ts`) drive actual weekly targets and set counts via VA-011 (`volumeBudget.ts`) and HV-021 (`slotBuilder.ts`); `mev`→MEV, `maintain`→MV, `grow`→MAV, `emphasize`→MRV, ramped Week 1 (MEV) → final training week (MAV/MRV) → deload (MV) |
+| `hypertrophy` | Dr. Mike Israetel / RP Hypertrophy | Covered — per-muscle landmarks drive set targets; `mev`→MEV, `maintain`→MV, and `grow`/`emphasize`→MAV by default. MRV is a recovery boundary, not an automatic destination. |
 | `strength` | Prilepin's Chart, NSCA | Covered (ST-001 – ST-006) |
 | `powerbuilding` | Kizen 16-Week, PHAT (Layne Norton) | Covered (PB-001 – PB-005) |
 | `general` | ACSM Guidelines / Greg Nuckols "General Gainz" | Partially — flag gaps before adding rules |

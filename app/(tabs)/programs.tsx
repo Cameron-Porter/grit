@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deleteProgram, duplicateProgram, getPrograms, setCurrentProgram, type Program } from '../../src/api/programs';
 import { Badge } from '../../src/components/Badge';
@@ -30,6 +30,7 @@ export default function Programs() {
   const [loading, setLoading] = useState(true);
   const [copyTarget, setCopyTarget] = useState<{ id: string; name: string } | null>(null);
   const [copyName, setCopyName] = useState('');
+  const [copying, setCopying] = useState(false);
 
   useEffect(() => {
     load();
@@ -42,16 +43,23 @@ export default function Programs() {
       setPrograms(data || []);
     } catch {
       setPrograms([]);
+      Alert.alert('Could not load programs', 'Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSetCurrent = async (id: string) => {
+    const previous = programs;
     setPrograms((prev) => prev.map((p) => ({ ...p, is_current: p.id === id })));
     setMenuOpen(null);
-    await setCurrentProgram(id);
-    load();
+    try {
+      await setCurrentProgram(id);
+      await load();
+    } catch {
+      setPrograms(previous);
+      Alert.alert('Could not update program', 'Your current program was not changed. Please try again.');
+    }
   };
 
   const handleDelete = (id: string, name: string, isCurrent: boolean) => {
@@ -60,9 +68,13 @@ export default function Programs() {
       `Delete "${name}"? This cannot be undone.`,
       async () => {
         setMenuOpen(null);
-        await deleteProgram(id);
-        if (isCurrent) clearProgramState();
-        load();
+        try {
+          await deleteProgram(id);
+          if (isCurrent) clearProgramState();
+          await load();
+        } catch {
+          Alert.alert('Could not delete program', 'The program was not deleted. Please try again.');
+        }
       },
       'Delete',
       true,
@@ -76,13 +88,20 @@ export default function Programs() {
   };
 
   const handleConfirmCopy = async () => {
-    if (!copyTarget) return;
+    if (!copyTarget || copying) return;
     const { id } = copyTarget;
-    setCopyTarget(null);
-    const copy = await duplicateProgram(id, copyName);
-    await setCurrentProgram(copy.id);
-    clearProgramState();
-    load();
+    setCopying(true);
+    try {
+      const copy = await duplicateProgram(id, copyName.trim());
+      await setCurrentProgram(copy.id);
+      clearProgramState();
+      setCopyTarget(null);
+      await load();
+    } catch {
+      Alert.alert('Could not copy program', 'No copy was activated. Please try again.');
+    } finally {
+      setCopying(false);
+    }
   };
 
   return (
@@ -191,17 +210,17 @@ export default function Programs() {
                   const status = getProgramStatus(item as Program);
                   const label = status === 'complete' ? 'Set as Current' : 'Resume Program';
                   return (
-                    <Pressable onPress={() => handleSetCurrent(item.id)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
+                    <Pressable onPress={(e) => { e.stopPropagation(); handleSetCurrent(item.id); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 }}>
                       <MaterialCommunityIcons name="play-circle-outline" size={18} color={colors.primary} />
                       <Text style={{ color: colors.text, fontSize: 15 }}>{label}</Text>
                     </Pressable>
                   );
                 })()}
-                <Pressable onPress={() => handleRestart(item.id, item.name)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
+                <Pressable onPress={(e) => { e.stopPropagation(); handleRestart(item.id, item.name); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
                   <MaterialCommunityIcons name="content-copy" size={18} color={colors.primary} />
                   <Text style={{ color: colors.primary, fontSize: 15 }}>Copy program</Text>
                 </Pressable>
-                <Pressable onPress={() => handleDelete(item.id, item.name, item.is_current)} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
+                <Pressable onPress={(e) => { e.stopPropagation(); handleDelete(item.id, item.name, item.is_current); }} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderTopWidth: 1, borderTopColor: colors.surface }}>
                   <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.error} />
                   <Text style={{ color: colors.error, fontSize: 15 }}>Delete program</Text>
                 </Pressable>
@@ -214,7 +233,7 @@ export default function Programs() {
 
       {/* Copy-program name modal */}
       <Modal visible={copyTarget !== null} transparent animationType="fade" onRequestClose={() => setCopyTarget(null)}>
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }} onPress={() => setCopyTarget(null)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }} onPress={() => { if (!copying) setCopyTarget(null); }}>
           <Pressable style={{ backgroundColor: colors.surface, borderRadius: 20, padding: 24, width: '100%', gap: 16 }} onPress={() => {}}>
             <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>Copy Program</Text>
             <Text style={{ color: colors.muted, fontSize: 14, lineHeight: 20 }}>
@@ -232,16 +251,17 @@ export default function Programs() {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Pressable
                 onPress={() => setCopyTarget(null)}
+                disabled={copying}
                 style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.surface2, alignItems: 'center' }}
               >
                 <Text style={{ color: colors.muted, fontWeight: '600', fontSize: 15 }}>Cancel</Text>
               </Pressable>
               <Pressable
                 onPress={handleConfirmCopy}
-                disabled={!copyName.trim()}
-                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: copyName.trim() ? colors.primary : colors.surface2, alignItems: 'center' }}
+                disabled={!copyName.trim() || copying}
+                style={{ flex: 1, padding: 14, borderRadius: 12, backgroundColor: copyName.trim() && !copying ? colors.primary : colors.surface2, alignItems: 'center' }}
               >
-                <Text style={{ color: copyName.trim() ? colors.background : colors.muted, fontWeight: '700', fontSize: 15 }}>Create Copy</Text>
+                <Text style={{ color: copyName.trim() && !copying ? colors.background : colors.muted, fontWeight: '700', fontSize: 15 }}>{copying ? 'Creating…' : 'Create Copy'}</Text>
               </Pressable>
             </View>
           </Pressable>

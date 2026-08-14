@@ -3,7 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getLastMuscleGroupFeedback, getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/history';
+import { getLastMuscleGroupFeedback, getLatestWorkoutIdForProgramDay, getWorkoutForProgramDay, WorkoutDayHistory } from '../../../../src/api/history';
 import { computeAndSaveProgressionTargets } from '../../../../src/api/progression';
 import {
   addProgramExercise,
@@ -158,7 +158,8 @@ export default function ProgramDayScreen() {
         Alert.alert('Nothing to recompute', `Week ${day.week_number - 1}, ${dayLabel} isn't marked complete yet.`);
         return;
       }
-      await computeAndSaveProgressionTargets(prevDay.id, experienceLevel);
+      const previousWorkoutId = await getLatestWorkoutIdForProgramDay(prevDay.id);
+      await computeAndSaveProgressionTargets(prevDay.id, experienceLevel, previousWorkoutId);
       const refreshed = await getProgramDayTargets(dayId);
       setDayTargets(refreshed);
       if (refreshed.length === 0) {

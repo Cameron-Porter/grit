@@ -24,6 +24,7 @@ const makeChain = (result: { data: any; error: any }) => {
     gt: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
+    is: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue(result),
     maybeSingle: jest.fn().mockResolvedValue(result),
   };
@@ -42,10 +43,10 @@ beforeEach(() => jest.clearAllMocks());
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('resolveMusclePerSessionAnchors', () => {
-  it('emphasize ramps MEV -> MRV, divided by frequency', () => {
+  it('emphasize ramps MEV -> MAV, divided by frequency', () => {
     // Chest: mev=8, mrv=22 — frequency 2 -> per-session week1=4, peak=11
     const anchors = resolveMusclePerSessionAnchors('Chest', 'emphasize', 2);
-    expect(anchors).toEqual({ week1: 4, peak: 11, deload: 3 });
+    expect(anchors).toEqual({ week1: 4, peak: 8, deload: 3 });
   });
 
   it('grow ramps MEV -> MAV, divided by frequency', () => {
@@ -132,7 +133,8 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
 
     // A single mid-band session (not at floor or ceiling) -> action HOLD, keeps nextWeight nonzero.
     const workoutSets = [{ workout_id: 'w1', weight: 135, reps: 8, set_index: 0 }];
-    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+    const programDays = [{ id: 'history-day-1' }];
+    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
 
     const week1Days = [{ id: 'template-day-1' }];
     const week1MuscleExercises = [{ program_day_id: 'template-day-1', muscle_group: 'Chest' }];
@@ -145,6 +147,7 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
       .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))         // program_days (template day lookup)
       .mockReturnValueOnce(makeChain({ data: templateExercises, error: null }))   // program_exercises (template)
       .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))          // program_days (next week day)
+      .mockReturnValueOnce(makeChain({ data: programDays, error: null }))         // program_days (history scope)
       .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))         // workout_sets (getExerciseAllSessions)
       .mockReturnValueOnce(makeChain({ data: workouts, error: null }))            // workouts (getExerciseAllSessions)
       .mockReturnValueOnce(makeChain({ data: week1Days, error: null }))           // program_days (getMuscleWeeklyFrequency)
@@ -160,8 +163,8 @@ describe('computeAndSaveProgressionTargets — hypertrophy muscle-level override
 
     // dayRow.week_number=2 -> computing targets for nextWeek=3, of a 6-week
     // program (5 training weeks + 1 deload). Chest/emphasize, frequency 1
-    // (only one day in the week-1 template): week1=MEV(8), peak=MRV(22).
-    // progressFraction = (3-1)/(5-1) = 0.5 -> round(8 + (22-8)*0.5) = 15,
+    // (only one day in the week-1 template): week1=MEV(8), peak=MAV(16).
+    // progressFraction = (3-1)/(5-1) = 0.5 -> round(8 + (16-8)*0.5) = 12,
     // then HV-023 caps a single exercise's sets at 5 (see volumeRamp.ts) —
     // this is the only exercise for Chest this session, so it absorbs the
     // full (capped) target. Still proves the override reached the saved
@@ -217,7 +220,8 @@ describe('computeAndSaveProgressionTargets — VA-015 soreness reaches the HV-02
     // session" comment above — doesn't confound this test with a second,
     // lower ceiling of its own). Action HOLD, nonzero nextWeight either way.
     const workoutSets = [0, 1, 2, 3].map((set_index) => ({ workout_id: 'w1', weight: 135, reps: 8, set_index }));
-    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+    const programDays = [{ id: 'history-day-1' }];
+    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
 
     // Chest trained on 2 days/week -> frequency 2 -> 'grow' anchors
     // (MEV 8 -> MAV 16) / 2 = week1: 4, peak: 8.
@@ -236,6 +240,10 @@ describe('computeAndSaveProgressionTargets — VA-015 soreness reaches the HV-02
       .mockReturnValueOnce(makeChain({ data: templateExercises, error: null }))    // program_exercises (template)
       .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))           // program_days (next week day)
       .mockReturnValueOnce(makeChain({ data: workoutFeedback, error: null }))      // workout_feedback (getMuscleSorenessForWorkout)
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'history-day-1' }], error: null })) // program_days (soreness streak scope)
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z' }], error: null })) // workouts (soreness streak)
+      .mockReturnValueOnce(makeChain({ data: [{ workout_id: 'w1', muscle_group: 'Chest', soreness: 'Still sore' }], error: null })) // workout_feedback (streak)
+      .mockReturnValueOnce(makeChain({ data: programDays, error: null }))          // program_days (history scope)
       .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))          // workout_sets (getExerciseAllSessions)
       .mockReturnValueOnce(makeChain({ data: workouts, error: null }))             // workouts (getExerciseAllSessions)
       .mockReturnValueOnce(makeChain({ data: week1Days, error: null }))            // program_days (getMuscleWeeklyFrequency)
@@ -300,7 +308,8 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
 
     // Hit the rep ceiling last time (15 reps at 20 lb) -> ceiling-hit branch fires.
     const workoutSets = [{ workout_id: 'w1', weight: 20, reps: 15, set_index: 0 }];
-    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+    const programDays = [{ id: 'history-day-1' }];
+    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
 
     const upsertMock = jest.fn().mockResolvedValue({ error: null });
 
@@ -310,6 +319,7 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
       .mockReturnValueOnce(makeChain({ data: templateDay, error: null }))       // program_days (template day lookup)
       .mockReturnValueOnce(makeChain({ data: templateExercises, error: null })) // program_exercises (template)
       .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))        // program_days (next week day)
+      .mockReturnValueOnce(makeChain({ data: programDays, error: null }))       // program_days (history scope)
       .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))       // workout_sets (getExerciseAllSessions)
       .mockReturnValueOnce(makeChain({ data: workouts, error: null }))          // workouts (getExerciseAllSessions)
       .mockReturnValueOnce({ upsert: upsertMock })                             // program_day_targets upsert
@@ -384,9 +394,9 @@ describe('computeAndSaveProgressionTargets — RC-010 whole-session set cap', ()
     // not target_sets directly — see the "Use actual sets logged last
     // session" comment in computeAndSaveProgressionTargets.
     const benchSets = Array.from({ length: 15 }, (_, i) => ({ workout_id: 'w-bench', weight: 135, reps: 8, set_index: i }));
-    const benchWorkouts = [{ id: 'w-bench', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+    const benchWorkouts = [{ id: 'w-bench', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
     const shoulderSets = Array.from({ length: 20 }, (_, i) => ({ workout_id: 'w-shoulder', weight: 100, reps: 8, set_index: i }));
-    const shoulderWorkouts = [{ id: 'w-shoulder', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test' }];
+    const shoulderWorkouts = [{ id: 'w-shoulder', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
 
     const upsertMock = jest.fn().mockResolvedValue({ error: null });
 
@@ -402,6 +412,8 @@ describe('computeAndSaveProgressionTargets — RC-010 whole-session set cap', ()
         makeChain({ data: dayRow, error: null }),        // dayRow lookup
         makeChain({ data: templateDay, error: null }),   // template day lookup
         makeChain({ data: nextDayRow, error: null }),     // next week day lookup
+        makeChain({ data: [{ id: 'history-day-1' }], error: null }), // Bench history scope
+        makeChain({ data: [{ id: 'history-day-1' }], error: null }), // Shoulder history scope
         makeChain({ data: [], error: null }),              // later-days lookup (section 2)
       ],
       programs: [makeChain({ data: programRow, error: null })],
@@ -513,7 +525,8 @@ describe('refreshUpcomingProgressionTargets', () => {
       { workout_id: 'workout-1', weight: 200, reps: 10, set_index: 2 },
       { workout_id: 'workout-1', weight: 200, reps: 10, set_index: 3 },
     ];
-    const workouts = [{ id: 'workout-1', completed_at: '2026-01-08T00:00:00Z', program_name: 'Test' }];
+    const programDays = [{ id: 'history-day-1' }];
+    const workouts = [{ id: 'workout-1', completed_at: '2026-01-08T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
     const feedback = [{ muscle_group: 'Chest', soreness: 'Still sore' }];
 
     const upsertMock = jest.fn().mockResolvedValue({ error: null });
@@ -527,6 +540,10 @@ describe('refreshUpcomingProgressionTargets', () => {
       .mockReturnValueOnce(makeChain({ data: templateExercises, error: null }))   // program_exercises (template)
       .mockReturnValueOnce(makeChain({ data: nextDayRow, error: null }))          // program_days (next week day)
       .mockReturnValueOnce(makeChain({ data: feedback, error: null }))            // workout_feedback (getMuscleSorenessForWorkout) -- awaited before session history
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'history-day-1' }], error: null })) // program_days (soreness streak scope)
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'workout-1', completed_at: '2026-01-08T00:00:00Z' }], error: null })) // workouts (soreness streak)
+      .mockReturnValueOnce(makeChain({ data: [{ workout_id: 'workout-1', muscle_group: 'Chest', soreness: 'Still sore' }], error: null })) // feedback (streak)
+      .mockReturnValueOnce(makeChain({ data: programDays, error: null }))          // program_days (history scope)
       .mockReturnValueOnce(makeChain({ data: workoutSets, error: null }))         // workout_sets (getExerciseAllSessions)
       .mockReturnValueOnce(makeChain({ data: workouts, error: null }))            // workouts (getExerciseAllSessions)
       .mockReturnValueOnce({ upsert: upsertMock })                                // program_day_targets upsert

@@ -21,13 +21,13 @@ export interface HistorySessionEntry {
   weekNumber: number | null;
   dayNumber: number | null;
   date: string;
-  sets: { weight: number; reps: number; set_index: number }[];
+  sets: { weight: number; reps: number; set_index: number; reported_rir?: number | null }[];
 }
 
 export async function getExerciseSessionHistory(exerciseName: string): Promise<HistorySessionEntry[]> {
   const { data: setRows } = await supabase
     .from("workout_sets")
-    .select("workout_id, weight, reps, set_index")
+    .select("workout_id, weight, reps, set_index, reported_rir")
     .eq("exercise_name", exerciseName)
     .eq("completed", true)
     .order("set_index");
@@ -99,7 +99,7 @@ export interface ExerciseSession {
   workoutId: string;
   date: string;
   programName: string | null;
-  sets: { weight: number; reps: number; set_index: number }[];
+  sets: { weight: number; reps: number; set_index: number; reported_rir?: number | null }[];
 }
 
 /**
@@ -180,34 +180,68 @@ export async function getRecentWorkoutExerciseNames(limit = 2): Promise<string[]
   return workouts.map((w) => [...(namesByWorkout.get(w.id) ?? new Set<string>())]);
 }
 
-export async function getExerciseAllSessions(exerciseName: string): Promise<ExerciseSession[]> {
-  const { data: setRows } = await supabase
+export async function getExerciseAllSessions(exerciseName: string, programId?: string): Promise<ExerciseSession[]> {
+  const userId = await getUserId();
+  if (!userId) return [];
+
+  let allowedProgramDayIds: Set<string> | null = null;
+  if (programId) {
+    const { data: programDays, error: programDaysError } = await supabase
+      .from('program_days')
+      .select('id')
+      .eq('program_id', programId);
+    if (programDaysError) throw programDaysError;
+    allowedProgramDayIds = new Set((programDays ?? []).map((day) => day.id));
+  }
+  const { data: setRows, error: setRowsError } = await supabase
     .from("workout_sets")
-    .select("workout_id, weight, reps, set_index")
+    .select("workout_id, weight, reps, set_index, reported_rir")
     .eq("exercise_name", exerciseName)
     .eq("completed", true)
     .order("set_index");
+  if (setRowsError) throw setRowsError;
 
   if (!setRows || setRows.length === 0) return [];
 
   const workoutIds = [...new Set(setRows.map((r) => r.workout_id))];
 
-  const { data: workouts } = await supabase
+  const { data: workouts, error: workoutsError } = await supabase
     .from("workouts")
-    .select("id, completed_at, program_name")
+    .select("id, completed_at, program_name, program_day_id")
     .in("id", workoutIds)
+    .eq('user_id', userId)
+    .is('deleted_at', null)
     .order("completed_at", { ascending: false });
+  if (workoutsError) throw workoutsError;
 
   if (!workouts) return [];
 
-  return workouts.map((w) => ({
+  return workouts
+    .filter((w) => !allowedProgramDayIds || (w.program_day_id && allowedProgramDayIds.has(w.program_day_id)))
+    .map((w) => ({
     workoutId: w.id,
     date: w.completed_at,
     programName: w.program_name ?? null,
     sets: setRows
       .filter((s) => s.workout_id === w.id)
       .sort((a, b) => a.set_index - b.set_index),
-  }));
+    }));
+}
+
+export async function getLatestWorkoutIdForProgramDay(programDayId: string): Promise<string | undefined> {
+  const userId = await getUserId();
+  if (!userId) return undefined;
+  const { data, error } = await supabase
+    .from('workouts')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('program_day_id', programDayId)
+    .is('deleted_at', null)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id;
 }
 
 // For viewing a completed program day's workout results
@@ -380,6 +414,71 @@ export async function getMuscleSorenessForWorkout(
     result[row.muscle_group] = row.soreness ?? null;
   }
   return result;
+}
+
+// Returns each muscle's current run of consecutive "Still sore" reports
+// inside one program, newest feedback first. A different or empty soreness
+// response ends the run; muscles without a current run are omitted.
+export interface MuscleRecoverySignals {
+  consecutiveStillSore: Record<string, number>;
+  restartAtAnchor: Record<string, boolean>;
+}
+
+export async function getConsecutiveStillSoreByMuscle(
+  programId: string,
+): Promise<MuscleRecoverySignals> {
+  const userId = await getUserId();
+  if (!userId) return { consecutiveStillSore: {}, restartAtAnchor: {} };
+
+  const { data: days, error: daysError } = await supabase
+    .from('program_days')
+    .select('id')
+    .eq('program_id', programId);
+  if (daysError) throw daysError;
+  if (!days?.length) return { consecutiveStillSore: {}, restartAtAnchor: {} };
+
+  const { data: workouts, error: workoutsError } = await supabase
+    .from('workouts')
+    .select('id, completed_at')
+    .eq('user_id', userId)
+    .in('program_day_id', days.map((day) => day.id))
+    .is('deleted_at', null)
+    .order('completed_at', { ascending: false });
+  if (workoutsError) throw workoutsError;
+  if (!workouts?.length) return { consecutiveStillSore: {}, restartAtAnchor: {} };
+
+  const { data: feedback, error: feedbackError } = await supabase
+    .from('workout_feedback')
+    .select('workout_id, muscle_group, soreness')
+    .in('workout_id', workouts.map((workout) => workout.id));
+  if (feedbackError) throw feedbackError;
+
+  const feedbackByWorkout = new Map<string, typeof feedback>();
+  for (const row of feedback ?? []) {
+    const rows = feedbackByWorkout.get(row.workout_id) ?? [];
+    rows.push(row);
+    feedbackByWorkout.set(row.workout_id, rows);
+  }
+
+  const responses: Record<string, Array<string | null>> = {};
+  for (const workout of workouts) {
+    for (const row of feedbackByWorkout.get(workout.id) ?? []) {
+      (responses[row.muscle_group] ??= []).push(row.soreness);
+    }
+  }
+  const consecutiveStillSore: Record<string, number> = {};
+  const restartAtAnchor: Record<string, boolean> = {};
+  for (const [muscle, values] of Object.entries(responses)) {
+    const count = values.findIndex((value) => value !== 'Still sore');
+    const streak = count === -1 ? values.length : count;
+    if (streak > 0) consecutiveStillSore[muscle] = streak;
+    // VA-020: the first recovered response after two recovery failures starts
+    // the next productive exposure back at MEV/MV instead of calendar MAV.
+    restartAtAnchor[muscle] = values[0] !== 'Still sore'
+      && values[1] === 'Still sore'
+      && values[2] === 'Still sore';
+  }
+  return { consecutiveStillSore, restartAtAnchor };
 }
 
 /**

@@ -5,6 +5,8 @@ export type WorkoutSet = {
   skipped?: boolean;
   type?: 'Regular' | 'M' | 'MM';
   rir?: number;
+  // Actual effort reported after completing the set; distinct from prescribed RIR.
+  reportedRir?: number;
   // Target rep count for this set — used to auto-fill reps on completion for non-RIR sets.
   targetReps?: number;
 };
@@ -16,6 +18,7 @@ export type WorkoutSetRow = {
   weight: number;
   set_index: number;
   rir?: number | null;
+  reported_rir?: number | null;
 };
 
 export type Exercise = {

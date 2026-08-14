@@ -1,6 +1,7 @@
 import type { ExerciseType, ExperienceLevel, SlotRole } from '../types/program';
 import type { ExerciseProgressionProfile } from '../data/exerciseProgressionProfiles';
 import { PROGRESSION_CATEGORY_PROFILES } from '../data/exerciseProgressionProfiles';
+import { rirForWeek } from './volumeRamp';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -36,14 +37,11 @@ export interface SlotPrescription {
 // Sorted newest-first at call site.
 export interface SessionPerformance {
   date: string;
-  // HV-033: rir is optional and, as of 2026-08-04, never populated by any
+  // HV-033: rir is optional user-reported actual RIR. Legacy sessions may
   // production caller — workout_sets.rir stores only the prescribed RIR
-  // pre-filled at workout start, never a user-reported "how many reps in
-  // reserve did this actually feel like" value, and no per-set reported-RIR
-  // capture UI exists. This field is forward-compatible only:
+  // omit it; current sessions populate it through workout_sets.reported_rir.
   // calculatePerformanceScore degrades to pure tonnage (weight x reps) when
-  // it's absent, which is 100% of real sessions today. Do not treat its
-  // presence in the type as evidence the data exists.
+  // it is absent.
   sets: { weight: number; reps: number; rir?: number }[];
 }
 
@@ -77,6 +75,12 @@ export interface ProgressionContext {
   // rather than progress it into next week. See getMuscleSorenessForWorkout
   // in src/api/history.ts for where this is fetched from.
   soreness?: SorenessLevel;
+  // VA-020: consecutive program-scoped exposures where this muscle was still
+  // sore. Two signals trigger a recovery exposure rather than another ramp.
+  consecutiveStillSoreCount?: number;
+  // VA-020: first productive exposure after two recovery failures restarts
+  // from MEV/MV rather than jumping back to the calendar ramp.
+  restartAtVolumeAnchor?: boolean;
   // VA-018: when the caller (src/api/progression.ts's byMuscle loop) has
   // computed a fatigue-weighted redistribution of the VA-013 soreness trim
   // across this muscle's sibling exercises (redistributeSorenessTrim in
@@ -327,10 +331,53 @@ function peakRepsAtWorkingWeight(session: SessionPerformance): number {
   return atWW.length > 0 ? Math.max(...atWW.map((s) => s.reps)) : 0;
 }
 
-interface Perf { weight: number; maxReps: number }
+// ST-013: A load increase requires the whole working-weight prescription to
+// clear the rep ceiling, not one standout top set. Standard double progression
+// advances load only after all prescribed working sets reach the top of the
+// range with the intended effort (NSCA Essentials of Strength Training and
+// Conditioning). Using the minimum working-set reps also makes set-to-set
+// fatigue visible instead of hiding it behind the best set.
+function completedRepsAtWorkingWeight(session: SessionPerformance): number {
+  const ww = workingWeight(session);
+  if (ww === 0) return 0;
+  const atWW = session.sets.filter((s) => s.weight === ww);
+  return atWW.length > 0 ? Math.min(...atWW.map((s) => s.reps)) : 0;
+}
+
+interface Perf { weight: number; maxReps: number; completedReps: number }
 
 function sessionPerf(session: SessionPerformance): Perf {
-  return { weight: workingWeight(session), maxReps: peakRepsAtWorkingWeight(session) };
+  return {
+    weight: workingWeight(session),
+    maxReps: peakRepsAtWorkingWeight(session),
+    completedReps: completedRepsAtWorkingWeight(session),
+  };
+}
+
+function reportedEffortAllowsLoad(session: SessionPerformance, prescribedRir: number): boolean {
+  const workingSets = session.sets;
+  const reported = workingSets.filter((set) => set.rir !== undefined);
+  // Backward compatibility for existing history: when actual RIR was not
+  // captured, the stricter all-working-sets rep gate still applies.
+  if (reported.length === 0) return true;
+  // Partial reporting is not enough to certify the whole prescription.
+  return reported.length === workingSets.length
+    && reported.every((set) => (set.rir as number) >= prescribedRir);
+}
+
+// ST-013/ST-015: NSCA double progression assumes a completed straight-set
+// prescription. Until top and backoff sets are explicitly modeled, mixed
+// loads or fewer-than-prescribed sets hold automatically.
+function completedStraightSetPrescription(
+  session: SessionPerformance,
+  prescribedSets: number,
+  repCeiling: number,
+): boolean {
+  if (session.sets.length < prescribedSets || session.sets.length === 0) return false;
+  const load = session.sets[0].weight;
+  return load > 0
+    && session.sets.every((set) => set.weight === load)
+    && session.sets.every((set) => set.reps >= repCeiling);
 }
 
 // ─── HV-033: Performance Trend Score ───────────────────────────────────────
@@ -343,9 +390,7 @@ function sessionPerf(session: SessionPerformance): Perf {
 // value (see SessionPerformance's doctrine comment) — every real call
 // degrades to pure tonnage, which is exactly what the pre-existing
 // same-load/same-reps stall check already implied. This is intentionally a
-// forward-compatible no-op until reported-RIR logging exists, not dead code:
-// once it does, plateau detection and fatigue detection below start using it
-// with no further changes needed here.
+// actual RIR now contributes to plateau and fatigue detection when reported.
 export function calculatePerformanceScore(sets: { weight: number; reps: number; rir?: number }[]): number {
   const tonnage = sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
   const rated = sets.filter((s) => s.rir !== undefined);
@@ -536,8 +581,7 @@ export function recommendProgression(
   // Only affects the flat per-exercise ramp — the HV-021 landmark override is
   // already muscle-level MRV-aware and isn't second-guessed here except by
   // the VA-013 safety trim, which still applies to both paths unchanged.
-  const rampWeek = ctx.soreness === 'Not sore' ? ctx.mesoWeek + 1
-    : ctx.soreness === 'Just in time' ? ctx.mesoWeek - 1
+  const rampWeek = ctx.soreness === 'Just in time' ? ctx.mesoWeek - 1
     : ctx.mesoWeek;
   const baseSetCount = prescription.sets;
   const weekBonus = ctx.musclePriority === 'emphasize' ? Math.max(0, rampWeek - 1) : 0;
@@ -563,7 +607,17 @@ export function recommendProgression(
   // the flat 1-set trim — extends VA-013, doesn't replace its "never below
   // baseSetCount" invariant.
   const sorenessTrim = ctx.sorenessTrimOverride ?? 1;
-  const effectiveSets = stillSore ? Math.max(baseSetCount, rawEffectiveSets - sorenessTrim) : rawEffectiveSets;
+  // The landmark override has already applied soreness in rampSets(). Do not
+  // trim it twice. Unlike the legacy path, rampSets floors at Week-1 MEV/MV,
+  // not last session's actual sets, so it can genuinely reduce an excessive
+  // prior workload.
+  const hasLandmarkOverride = ctx.programFocus === 'hypertrophy' && !!ctx.hypertrophyVolumeOverride;
+  let effectiveSets = stillSore && !hasLandmarkOverride
+    ? Math.max(1, rawEffectiveSets - sorenessTrim)
+    : rawEffectiveSets;
+  if (ctx.restartAtVolumeAnchor) {
+    effectiveSets = Math.max(1, Math.min(effectiveSets, baseSetCount));
+  }
 
   // HV-032: previous sets = last actual logged set count (no separate stored
   // field needed — sessions[0] IS last week's real performance). Falls back
@@ -634,10 +688,12 @@ export function recommendProgression(
     ctx.mesoWeek !== undefined &&
     ctx.totalMesoWeeks !== undefined
   ) {
-    const trainingWeeks = ctx.totalMesoWeeks - 1; // last week is deload
-    const weeksRemaining = trainingWeeks - ctx.mesoWeek; // 0 on final training week
-    const taperFloor = ctx.experienceLevel === 'beginner' ? 2 : 0;
-    base.nextRir = Math.max(taperFloor, base.nextRir - weeksRemaining);
+    base.nextRir = rirForWeek(base.nextRir, ctx.musclePriority, {
+      weekNumber: ctx.mesoWeek,
+      totalTrainingWeeks: Math.max(1, ctx.totalMesoWeeks - 1),
+      isDeload: false,
+      experienceLevel: ctx.experienceLevel,
+    });
   }
 
   // HV-019: Hard RIR floor for deadlift-pattern exercises.
@@ -662,6 +718,21 @@ export function recommendProgression(
     base.nextRir,
     categoryFailureFloor[profile.failurePolicy] + (ctx.programFocus === 'cut' ? 1 : 0),
   );
+
+  // HV-038/HV-039: RP fatigue management reserves true failure for the final
+  // training week on failure-tolerant exercises with positive recovery. If
+  // sets rise or recovery is late, effort cannot intensify at the same time.
+  const finalTrainingWeek = ctx.mesoWeek >= Math.max(1, ctx.totalMesoWeeks - 1);
+  const zeroRirEligible = finalTrainingWeek
+    && profile.failurePolicy === 'allowed'
+    && !volumeRecentlyIncreased
+    && (ctx.soreness === 'Healed early' || ctx.soreness === 'Just in time');
+  if (!zeroRirEligible) base.nextRir = Math.max(1, base.nextRir);
+  if (volumeRecentlyIncreased || ctx.soreness === 'Still sore' || ctx.soreness === 'Just in time') {
+    base.nextRir = Math.max(base.nextRir, prescription.rir);
+  }
+  const repeatedRecoveryFailure = ctx.soreness === 'Still sore'
+    && (ctx.consecutiveStillSoreCount ?? 1) >= 2;
 
   // ── Priority 1: Deload week — protocol varies by focus ────────────────────
   // HV-035/ST-012: deload load-reduction percentages — SUPERSEDES HV-025 and
@@ -698,7 +769,9 @@ export function recommendProgression(
     // HV-028: bodyweight has no load to reduce — see heldOrAdjustedWeight.
     const deloadWeight = deloadWeightFor(lastWeight, isBodyweight, deloadLoadReductionPct);
     if (isStrength) {
-      const deloadSets = Math.max(2, Math.ceil(baseSetCount * 0.60));
+      const scheduledDeloadSets = Math.max(2, Math.ceil(baseSetCount * 0.60));
+      const recoverySets = sessions.length > 0 ? Math.max(1, Math.ceil(sessions[0].sets.length * 0.5)) : scheduledDeloadSets;
+      const deloadSets = repeatedRecoveryFailure ? Math.min(scheduledDeloadSets, recoverySets) : scheduledDeloadSets;
       return {
         ...base,
         nextWeight: deloadWeight,
@@ -722,9 +795,11 @@ export function recommendProgression(
     // reduction (HV-035) still applies uniformly regardless of which
     // set-count path is used.
     const hasVolumeOverride = ctx.programFocus === 'hypertrophy' && !!ctx.hypertrophyVolumeOverride;
-    const deloadSets = hasVolumeOverride
+    const scheduledDeloadSets = hasVolumeOverride
       ? ctx.hypertrophyVolumeOverride!.deloadSets
       : Math.max(1, Math.ceil(baseSetCount * 0.5));
+    const recoverySets = sessions.length > 0 ? Math.max(1, Math.ceil(sessions[0].sets.length * 0.5)) : scheduledDeloadSets;
+    const deloadSets = repeatedRecoveryFailure ? Math.min(scheduledDeloadSets, recoverySets) : scheduledDeloadSets;
     // HV-035: bodyweight deload reps soften 25% rather than the loaded-lift
     // 50% halving — reps are bodyweight's only progression axis, so halving
     // them every deload is disproportionate versus a loaded lift softening
@@ -764,6 +839,28 @@ export function recommendProgression(
     };
   }
 
+  // VA-020/RC-012: Dr. Mike Israetel / RP response indicators. A second
+  // consecutive recovery failure becomes a temporary recovery exposure at
+  // half the last actual volume (minimum one), RIR 4, and the existing deload
+  // load reduction. MEV/MV are not floors for an unrecovered athlete.
+  if (repeatedRecoveryFailure) {
+    const lastPerf = sessionPerf(sessions[0]);
+    const recoveryReductionPct = isStrength ? 0.20 : 0.225;
+    const recoveryWeight = deloadWeightFor(lastPerf.weight, isBodyweight, recoveryReductionPct);
+    const recoverySets = Math.max(1, Math.ceil(sessions[0].sets.length * 0.5));
+    return {
+      ...base,
+      nextWeight: recoveryWeight,
+      nextSets: recoverySets,
+      nextRepsMin: Math.max(1, Math.ceil(effectiveRepsMin * 0.5)),
+      nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * 0.5)),
+      nextRir: Math.max(4, prescription.rir),
+      action: 'DELOAD_NEEDED',
+      reason: `Still sore for 2 consecutive exposures. Recovery session: ${recoverySets} sets, reduced load and reps, RIR 4. Resume from the starting volume anchor after recovery.`,
+      isPlateauWarning: true,
+    };
+  }
+
   // ── Priority 3: Maintenance focus — hold performance, no auto-increment ──
   // Equivalent to fat-loss hold: maintaining is the success criterion.
   if (isMaintenance) {
@@ -780,6 +877,8 @@ export function recommendProgression(
 
   const last = sessions[0];
   const lastPerf = sessionPerf(last);
+  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir)
+    && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);
 
@@ -828,8 +927,8 @@ export function recommendProgression(
   // to throttle, so their reps keep climbing unscaled during a cut — a
   // reasonable interpretation, not explicit in the spec.
   if (isCut) {
-    const ceilingHit = lastPerf.maxReps >= effectiveRepsMax && lastPerf.weight > 0;
-    if (ceilingHit && !isBodyweight && !volumeAdjustment.holdLoad) {
+    const ceilingHit = lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0;
+    if (ceilingHit && effortAllowsLoad && !isBodyweight && !volumeAdjustment.holdLoad && !volumeRecentlyIncreased) {
       const CUT_SPEED_FACTOR = 0.65;
       const granularity = roundToRealisticIncrement(lastPerf.weight);
       const cutIncrement = roundToIncrement(increment * CUT_SPEED_FACTOR, granularity);
@@ -864,12 +963,12 @@ export function recommendProgression(
 
   if (ctx.experienceLevel === 'beginner') {
     return evaluateBeginnerLinear(prescription, sessions, ctx, {
-      lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeAdjustment.holdLoad,
+      lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad,
     });
   }
 
   return evaluateDoubleProgression(prescription, sessions, ctx, {
-    lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeAdjustment.holdLoad,
+    lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad,
   });
 }
 
@@ -1003,13 +1102,14 @@ interface EvalInputs {
   // HV-032: true when the transition-adjustment penalty was severe enough
   // that load should hold even if the (already-lowered) ceiling is hit.
   holdLoad: boolean;
+  effortAllowsLoad: boolean;
 }
 
 function evaluateBeginnerLinear(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad }: EvalInputs,
+  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad }: EvalInputs,
 ): ProgressionRecommendation {
 
   // Plateau detection — must deload before any load reduction (doctrine 1.2).
@@ -1072,7 +1172,7 @@ function evaluateBeginnerLinear(
   // ceiling checked here is effectiveRepsMax (lowered this session if
   // volume just increased), not the template's raw repsMax, and load holds
   // when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.maxReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad) {
+  if (lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad && effortAllowsLoad) {
     return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression');
   }
 
@@ -1101,15 +1201,15 @@ function evaluateBeginnerLinear(
 //   - When the rep ceiling is reached at the prescribed RIR, advance load.
 //   - HV-034: Stall threshold: intermediate/advanced = 3 exposures (2 pairs) each.
 //
-// NOTE: RIR validation (reportedRir vs prescribedRir) requires a reportedRir field
-// that is not yet logged per-set. The ceiling-hit check is used as the sole
-// advance-load gate until reportedRir is added to the session log schema.
+// ST-013: when actual per-set RIR is available, every working set must meet
+// the prescribed effort target before load advances. Legacy sessions without
+// actual RIR retain the rep-based fallback.
 
 function evaluateDoubleProgression(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad }: EvalInputs,
+  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad }: EvalInputs,
 ): ProgressionRecommendation {
 
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
@@ -1181,7 +1281,7 @@ function evaluateDoubleProgression(
   // "ceiling hit + RIR ≤ prescribedRir + 1" assumption.) HV-032: the ceiling
   // checked here is effectiveRepsMax, not the template's raw repsMax, and
   // load holds when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.maxReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad) {
+  if (lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad && effortAllowsLoad) {
     return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression');
   }
 

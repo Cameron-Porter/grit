@@ -43,12 +43,12 @@ describe('calculateVolumeBudget — VA-011 per-muscle hypertrophy targets', () =
     expect(chest.targetEffectiveSets).not.toBe(hamstrings.targetEffectiveSets);
   });
 
-  it('emphasize priority targets the muscle\'s own MRV — the overreach ceiling', () => {
+    it('emphasize priority targets the muscle\'s own MAV by default', () => {
     const [forearms] = calculateVolumeBudget('hypertrophy', { Forearms: 'emphasize' }, ['Forearms'], []);
     const [back] = calculateVolumeBudget('hypertrophy', { Back: 'emphasize' }, ['Back'], []);
-    expect(forearms.targetEffectiveSets).toBe(16);
-    expect(back.targetEffectiveSets).toBe(25);
-    expect(forearms.directSetsNeeded).toBe(16);
+    expect(forearms.targetEffectiveSets).toBe(10);
+    expect(back.targetEffectiveSets).toBe(18);
+    expect(forearms.directSetsNeeded).toBe(10);
   });
 
   it('non-hypertrophy focus keeps the flat TARGET_EFFECTIVE_SETS table regardless of landmark', () => {
@@ -62,10 +62,10 @@ describe('calculateVolumeBudget — VA-011 per-muscle hypertrophy targets', () =
 });
 
 describe('calculateVolumeBudget — VA-010 MRV backstop', () => {
-  it('hypertrophy/emphasize is bounded by MRV by construction (VA-011), with VA-010 as a no-op backstop', () => {
+    it('hypertrophy/emphasize remains bounded below MRV by the MAV default', () => {
     const [result] = calculateVolumeBudget('hypertrophy', { Forearms: 'emphasize' }, ['Forearms'], []);
-    expect(result.directSetsNeeded).toBe(16);
-    expect(result.weeklySets).toBe(16);
+    expect(result.directSetsNeeded).toBe(10);
+    expect(result.weeklySets).toBe(10);
   });
 
   it('leaves the target untouched when it is well under the MRV landmark', () => {

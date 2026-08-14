@@ -1,6 +1,6 @@
 import { getSlotRoleConfigs } from '../data/slotRoleConfig';
 import { getLandmark } from '../utils/volumeLandmarks';
-import { capSetsPerExercise, rampSets } from './volumeRamp';
+import { capSetsPerExercise, rampSets, rirForWeek } from './volumeRamp';
 import type {
   AdjustedVolumeTarget,
   ExerciseSlot,
@@ -245,13 +245,7 @@ function applyWeekParams(
   // Made Simple's beginner RIR table tapers 4-5 RIR down to 2 RIR, not to
   // failure, since beginners' technique under fatigue is less reliable.
   // Source: RP Strength "Hypertrophy Made Simple" (2023).
-  const taperFloor = params.experienceLevel === 'beginner' ? 2 : 0;
-
-  // RIR progression only for muscles the user is actively building
-  const rir =
-    priority === 'emphasize' || priority === 'grow'
-      ? Math.max(taperFloor, (baseRir + 1) - (params.weekNumber - 1))
-      : baseRir;
+  const rir = rirForWeek(baseRir, priority, params);
 
   return { sets, rir };
 }

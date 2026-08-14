@@ -43,6 +43,7 @@ function buildPayload(
         reps: s.reps,
         weight: s.weight,
         rir: s.rir ?? null,
+        reportedRir: s.reportedRir ?? null,
         completed: s.completed,
       })),
     })),
@@ -173,11 +174,35 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       replaceExercise: (exerciseId, newName, newMuscleGroup, newEquipment, newLogMode) => {
         set((state) => ({
-          exercises: state.exercises.map((ex) =>
-            ex.id === exerciseId
-              ? { ...ex, name: newName, muscleGroup: newMuscleGroup, equipment: newEquipment, logMode: newLogMode }
-              : ex,
-          ),
+          exercises: state.exercises.map((ex) => {
+            if (ex.id !== exerciseId) return ex;
+
+            // A different movement has a different strength curve and loading context.
+            // Preserve the authored session prescription (set count, target reps, set
+            // type, and prescribed RIR), but never attribute the old movement's
+            // execution data to its replacement. Dr. Mike Israetel / RP exercise
+            // selection guidance: establish performance on the new movement before
+            // progressing it from that movement's own baseline.
+            const sets = ex.sets.map((workSet) => ({
+              ...(workSet.type !== undefined ? { type: workSet.type } : {}),
+              ...(workSet.rir !== undefined ? { rir: workSet.rir } : {}),
+              ...(workSet.targetReps !== undefined ? { targetReps: workSet.targetReps } : {}),
+              reps: 0,
+              weight: 0,
+              completed: false,
+            }));
+
+            return {
+              ...ex,
+              name: newName,
+              muscleGroup: newMuscleGroup,
+              equipment: newEquipment,
+              logMode: newLogMode,
+              musclePriority: state.activeProgramMusclePriorities?.[newMuscleGroup],
+              painWarning: undefined,
+              sets,
+            };
+          }),
         }));
       },
 

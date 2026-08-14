@@ -58,7 +58,16 @@ async function resolveExerciseTarget(
   const allSessions = await getExerciseAllSessions(exercise.name);
   const sessions: SessionPerformance[] = allSessions
     .slice(0, 8)
-    .map((s) => ({ date: s.date, sets: s.sets.filter((set) => set.reps > 0) }))
+    .map((s) => ({
+      date: s.date,
+      sets: s.sets
+        .filter((set) => set.reps > 0)
+        .map((set) => ({
+          weight: set.weight,
+          reps: set.reps,
+          rir: set.reported_rir ?? undefined,
+        })),
+    }))
     .filter((s) => s.sets.length > 0);
 
   const exerciseDef = getExerciseByName(exercise.name);
@@ -97,7 +106,9 @@ async function resolveExerciseTarget(
       mesoWeek: 1,
       totalMesoWeeks: 2,
       programFocus: focus,
-      musclePriority: 'grow',
+      // HV-001 (Dr. Mike Israetel / RP Hypertrophy): an ad-hoc workout has
+      // no mesocycle position, so preserve the authored slot RIR.
+      musclePriority: 'maintain',
     },
   );
 

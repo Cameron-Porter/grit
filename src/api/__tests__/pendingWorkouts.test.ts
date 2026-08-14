@@ -46,7 +46,7 @@ const buildPayload = (): PendingWorkoutPayload => ({
       musclePriority: null,
       equipment: 'Barbell',
       note: null,
-      sets: [{ reps: 8, weight: 135, rir: 2, completed: true }],
+      sets: [{ reps: 8, weight: 135, rir: 2, reportedRir: 1, completed: true }],
     },
   ],
   feedback: [],
@@ -67,9 +67,10 @@ beforeEach(async () => {
 
 describe('drainPendingWorkouts — progression target computation', () => {
   it('awaits computeAndSaveProgressionTargets before resolving', async () => {
+    const workoutSetsChain = makeChain({ data: null, error: null });
     mockFrom.mockImplementation((table: string) => {
       if (table === 'workouts') return makeChain({ data: null, error: null });
-      if (table === 'workout_sets') return makeChain({ data: null, error: null });
+      if (table === 'workout_sets') return workoutSetsChain;
       return makeChain({ data: null, error: null });
     });
 
@@ -90,6 +91,9 @@ describe('drainPendingWorkouts — progression target computation', () => {
     // VA-013: workoutId is now threaded through so progression can look up
     // this workout's soreness feedback (see src/api/progression.ts).
     expect(mockComputeTargets).toHaveBeenCalledWith('day-1', 'intermediate', 'w1');
+    expect(workoutSetsChain.insert).toHaveBeenCalledWith([
+      expect.objectContaining({ rir: 2, reported_rir: 1 }),
+    ]);
   });
 
   it('still resolves the queue entry even if progression computation throws', async () => {

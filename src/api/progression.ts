@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/react-native';
-import { getExerciseAllSessions, getMuscleSorenessForWorkout } from './history';
+import { getConsecutiveStillSoreByMuscle, getExerciseAllSessions, getMuscleSorenessForWorkout } from './history';
 import { getTemplateDayExercises, saveProgramDayTargets } from './programs';
 import { supabase } from './supabase';
 import { getExerciseByName } from '../data/exerciseDatabase';
@@ -65,7 +65,10 @@ export function resolveMusclePerSessionAnchors(
   let peakWeekly: number;
   if (priority === 'emphasize') {
     week1Weekly = landmark.mev;
-    peakWeekly = landmark.mrv;
+    // VA-019: MRV is an estimated boundary, not an automatic destination.
+    // Default emphasized work to upper MAV; moving beyond it must be earned
+    // by multiple positive response indicators.
+    peakWeekly = landmark.mav;
   } else if (priority === 'grow') {
     week1Weekly = landmark.mev;
     peakWeekly = landmark.mav;
@@ -131,16 +134,26 @@ export async function computeAndSaveProgressionTargets(
     if (nextDayRow) {
       const isDeload = nextWeek === totalMesoWeeks;
       const sorenessByMuscle = workoutId ? await getMuscleSorenessForWorkout(workoutId) : {};
+      const recoverySignals = workoutId
+        ? await getConsecutiveStillSoreByMuscle(dayRow.program_id)
+        : { consecutiveStillSore: {}, restartAtAnchor: {} };
 
       // Pass 1: gather each exercise's history/session data (independent of
       // any other exercise) so muscle-level totals can be computed before
       // any individual recommendation is made.
       const enriched = await Promise.all(
         templateExercises.map(async (ex) => {
-          const allSessions = await getExerciseAllSessions(ex.exercise_name);
+          const allSessions = await getExerciseAllSessions(ex.exercise_name, dayRow.program_id);
           const sessions: SessionPerformance[] = allSessions
             .slice(0, 8)
-            .map((s) => ({ date: s.date, sets: s.sets.filter((set) => set.reps > 0) }))
+            .map((s) => ({
+              date: s.date,
+              sets: s.sets.filter((set) => set.reps > 0).map((set) => ({
+                weight: set.weight,
+                reps: set.reps,
+                rir: set.reported_rir ?? undefined,
+              })),
+            }))
             .filter((s) => s.sets.length > 0);
 
           const exerciseDef = getExerciseByName(ex.exercise_name);
@@ -245,6 +258,12 @@ export async function computeAndSaveProgressionTargets(
               mesoWeek: nextWeek,
               totalMesoWeeks,
               soreness,
+              consecutiveStillSoreCount: ex.muscle_group
+                ? recoverySignals.consecutiveStillSore[ex.muscle_group] ?? 0
+                : 0,
+              restartAtVolumeAnchor: ex.muscle_group
+                ? recoverySignals.restartAtAnchor[ex.muscle_group] ?? false
+                : false,
               programFocus,
               musclePriority,
               hypertrophyVolumeOverride: overrideByExercise.get(ex.exercise_name),
@@ -295,7 +314,7 @@ export async function computeAndSaveProgressionTargets(
       ).filter((t): t is NonNullable<typeof t> => t !== null);
 
       // RC-010: each exercise's sets were computed independently (HV-021
-      // ramps toward MRV per muscle, HV-023 caps only the individual
+      // ramps toward MAV per muscle, HV-023 caps only the individual
       // exercise) — nothing had checked the day's new total against the
       // whole-session cap. Re-enforce it here, the same way
       // enforceSessionCaps does at generation time, but without ever
@@ -332,7 +351,7 @@ export async function computeAndSaveProgressionTargets(
       const targets = (
         await Promise.all(
           shared.map(async (ex) => {
-            const allSessions = await getExerciseAllSessions(ex.exercise_name);
+            const allSessions = await getExerciseAllSessions(ex.exercise_name, dayRow.program_id);
             if (!allSessions.length) return null;
             const lastWeight = Math.max(...allSessions[0].sets.map((s) => s.weight));
             if (!lastWeight) return null;

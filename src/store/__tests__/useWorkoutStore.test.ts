@@ -170,6 +170,54 @@ describe('replaceExercise', () => {
     useWorkoutStore.getState().replaceExercise(id, 'Dips', 'Chest', 'Bodyweight');
     expect(useWorkoutStore.getState().exercises[1].name).toBe('Squat');
   });
+
+  it('preserves the authored prescription but resets movement-specific performance', () => {
+    useWorkoutStore.getState().addExercise('Bench Press', 'Chest', 'Barbell');
+    const id = useWorkoutStore.getState().exercises[0].id;
+    useWorkoutStore.setState({
+      exercises: [{
+        ...useWorkoutStore.getState().exercises[0],
+        sets: [
+          {
+            reps: 10,
+            weight: 185,
+            completed: true,
+            skipped: true,
+            type: 'M',
+            rir: 2,
+            reportedRir: 0,
+            targetReps: 10,
+          },
+        ],
+      }],
+    });
+
+    useWorkoutStore.getState().replaceExercise(id, 'Incline Press', 'Chest', 'Dumbbell');
+
+    expect(useWorkoutStore.getState().exercises[0].sets).toEqual([{
+      reps: 0,
+      weight: 0,
+      completed: false,
+      type: 'M',
+      rir: 2,
+      targetReps: 10,
+    }]);
+  });
+
+  it('updates muscle priority and clears an exercise-specific pain warning', () => {
+    useWorkoutStore.getState().addExercise('Bench Press', 'Chest', 'Barbell');
+    const exercise = useWorkoutStore.getState().exercises[0];
+    useWorkoutStore.setState({
+      activeProgramMusclePriorities: { Chest: 'maintain', Back: 'emphasize' },
+      exercises: [{ ...exercise, musclePriority: 'maintain', painWarning: 'Avoid this pressing variation.' }],
+    });
+
+    useWorkoutStore.getState().replaceExercise(exercise.id, 'Chest-Supported Row', 'Back', 'Dumbbell');
+
+    const replaced = useWorkoutStore.getState().exercises[0];
+    expect(replaced.musclePriority).toBe('emphasize');
+    expect(replaced.painWarning).toBeUndefined();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

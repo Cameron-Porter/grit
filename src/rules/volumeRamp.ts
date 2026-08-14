@@ -7,6 +7,24 @@ export interface SetAnchors {
   deload: number;
 }
 
+// HV-001/HV-026/HV-027: one RIR taper shared by program generation and
+// week-to-week progression. RP Hypertrophy Made Simple starts a mesocycle
+// conservatively and approaches the experience/category floor over time.
+export function rirForWeek(
+  baseRir: number,
+  priority: 'emphasize' | 'grow' | 'maintain' | 'mev' | undefined,
+  params: WeekParams,
+): number {
+  if (params.isDeload) return 4;
+  if (priority !== 'emphasize' && priority !== 'grow') return baseRir;
+  const floor = params.experienceLevel === 'beginner' ? 2 : 0;
+  const startRir = Math.max(floor, baseRir + 1);
+  const progress = params.totalTrainingWeeks <= 1
+    ? 1
+    : Math.max(0, Math.min(1, (params.weekNumber - 1) / (params.totalTrainingWeeks - 1)));
+  return Math.max(floor, Math.round(startRir - ((startRir - floor) * progress)));
+}
+
 // HV-021: one shared ramp shape for how weekly sets move across a mesocycle —
 // used both when a program is first generated (slotBuilder.ts) and when
 // computing week-to-week progression for an already-running program
@@ -37,8 +55,8 @@ export function rampSets(anchors: SetAnchors, params: WeekParams, soreness?: Sor
   }
 
   const { weekNumber, totalTrainingWeeks } = params;
-  const rampWeek = soreness === 'Not sore' ? weekNumber + 1
-    : soreness === 'Just in time' ? weekNumber - 1
+  // VA-015: soreness alone is not enough evidence to accelerate volume.
+  const rampWeek = soreness === 'Just in time' ? weekNumber - 1
     : weekNumber;
 
   const progressFraction = totalTrainingWeeks <= 1

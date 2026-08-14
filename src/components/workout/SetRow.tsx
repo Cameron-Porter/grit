@@ -20,6 +20,7 @@ interface SetRowProps {
   isActive: boolean;
   onWeightChange: (val: number) => void;
   onRepsChange: (val: number) => void;
+  onReportedRirChange: (val: number) => void;
   onComplete: (autoReps?: number) => void;
   onMenuPress: () => void;
   onTimerPress?: () => void;
@@ -48,6 +49,7 @@ export default function SetRow({
   isActive,
   onWeightChange,
   onRepsChange,
+  onReportedRirChange,
   onComplete,
   onMenuPress,
   onTimerPress,
@@ -209,6 +211,27 @@ export default function SetRow({
         </View>
       </View>
 
+      {set.completed && set.rir !== undefined && (
+        <View style={styles.actualRirRow}>
+          <Text style={[TypeScale.l2, { color: colors.textSecondary }]}>Actual RIR</Text>
+          {[0, 1, 2, 3, 4, 5].map((value) => (
+            <Pressable
+              key={value}
+              onPress={() => onReportedRirChange(value)}
+              style={[
+                styles.rirChip,
+                {
+                  backgroundColor: set.reportedRir === value ? colors.primary : colors.inputBg,
+                  borderColor: set.reportedRir === value ? colors.primary : colors.border,
+                },
+              ]}
+            >
+              <Text style={[TypeScale.l2, { color: set.reportedRir === value ? colors.background : colors.text }]}>{value}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       {!set.completed && (
         <View style={[styles.separator, { backgroundColor: colors.separator }]} />
       )}
@@ -269,5 +292,20 @@ const styles = StyleSheet.create({
   separator: {
     height: StyleSheet.hairlineWidth,
     marginHorizontal: Space[2],
+  },
+  actualRirRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Space[2],
+    paddingBottom: Space[1],
+  },
+  rirChip: {
+    width: 30,
+    height: 30,
+    borderRadius: Radius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

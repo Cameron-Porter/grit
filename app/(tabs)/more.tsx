@@ -334,12 +334,16 @@ export default function ProfileAndSettings() {
               <Toggle
                 value={workoutRemindersEnabled}
                 onToggle={async () => {
-                  if (workoutRemindersEnabled) {
-                    await cancelWorkoutReminders();
-                    setWorkoutRemindersEnabled(false);
-                  } else {
-                    await scheduleRemindersFromHistory(8);
-                    setWorkoutRemindersEnabled(true);
+                  try {
+                    if (workoutRemindersEnabled) {
+                      await cancelWorkoutReminders();
+                      setWorkoutRemindersEnabled(false);
+                    } else {
+                      await scheduleRemindersFromHistory(8);
+                      setWorkoutRemindersEnabled(true);
+                    }
+                  } catch {
+                    Alert.alert('Could not update reminders', 'Your reminder setting was not changed. Check notification permissions and try again.');
                   }
                 }}
               />

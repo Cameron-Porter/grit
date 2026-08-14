@@ -25,6 +25,7 @@ export interface PendingWorkoutPayload {
       reps: number;
       weight: number;
       rir: number | null;
+      reportedRir: number | null;
       completed: boolean;
     }>;
   }>;
@@ -116,6 +117,7 @@ export async function drainPendingWorkouts(): Promise<number> {
             weight: s.weight,
             completed: true,
             rir: s.rir,
+            reported_rir: s.reportedRir,
           })),
       );
 

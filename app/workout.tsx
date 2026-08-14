@@ -403,15 +403,23 @@ export default function ActiveWorkout() {
     setQuickWorkoutOpen(true);
   };
 
+  const closeProgramMenuThen = (action: () => void) => {
+    setProgramMenuOpen(false);
+    setTimeout(action, 250);
+  };
+
   const handleOpenRename = () => {
     setRenameText(activeProgramName ?? '');
-    setProgramMenuOpen(false);
-    setRenameOpen(true);
+    closeProgramMenuThen(() => setRenameOpen(true));
   };
 
   const handleSaveRename = async () => {
     const trimmed = renameText.trim();
-    if (!trimmed || !activeProgramId) return;
+    if (!trimmed) {
+      Alert.alert('Program name required', 'Enter a name before saving.');
+      return;
+    }
+    if (!activeProgramId) return;
     try {
       await renameProgram(activeProgramId, trimmed);
       useWorkoutStore.setState({ activeProgramName: trimmed });
@@ -423,13 +431,16 @@ export default function ActiveWorkout() {
 
   const handleOpenBodyweight = () => {
     setBwText(bodyWeight != null ? String(bodyWeight) : '');
-    setProgramMenuOpen(false);
-    setBwOpen(true);
+    closeProgramMenuThen(() => setBwOpen(true));
   };
 
   const handleSaveBodyweight = () => {
     const val = parseFloat(bwText);
-    if (!isNaN(val) && val > 0) setBodyWeight(val);
+    if (!Number.isFinite(val) || val <= 0) {
+      Alert.alert('Invalid bodyweight', 'Enter a bodyweight greater than zero.');
+      return;
+    }
+    setBodyWeight(val);
     setBwOpen(false);
   };
 
@@ -437,11 +448,15 @@ export default function ActiveWorkout() {
     if (!activeProgramId) return;
     // Load current priorities from the program (already stored in store via startFromProgramDay,
     // but simplest source of truth is re-fetching so edits made since launch are reflected)
-    const { getProgram } = await import('../src/api/programs');
-    const prog = await getProgram(activeProgramId);
-    setEditPriorities((prog?.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'>) ?? {});
     setProgramMenuOpen(false);
-    setPriorityOpen(true);
+    try {
+      const { getProgram } = await import('../src/api/programs');
+      const prog = await getProgram(activeProgramId);
+      setEditPriorities((prog?.muscle_priorities as Record<string, 'emphasize' | 'grow' | 'maintain'>) ?? {});
+      setTimeout(() => setPriorityOpen(true), 250);
+    } catch {
+      Alert.alert('Could not load priorities', 'Please try again.');
+    }
   };
 
   const handleSavePriorities = async () => {
@@ -456,19 +471,23 @@ export default function ActiveWorkout() {
   };
 
   const handleEndProgram = () => {
-    setProgramMenuOpen(false);
-    confirm(
+    closeProgramMenuThen(() => confirm(
       'End Program',
       `This will deactivate "${activeProgramName}" and return you to the programs list. Your workout history is kept.`,
       async () => {
         if (restTimer.active) restTimerControls.stop();
-        try { await endCurrentProgram(); } catch { /* non-fatal */ }
+        try {
+          await endCurrentProgram();
+        } catch {
+          Alert.alert('Could not end program', 'Your program is still active. Please try again.');
+          return;
+        }
         endWorkout();
         router.replace('/(tabs)/programs');
       },
       'End Program',
       true,
-    );
+    ));
   };
 
   const handleConfirmReplace = async () => {
@@ -821,7 +840,9 @@ export default function ActiveWorkout() {
               if (feedbackMuscleRef.current) {
                 setPendingFeedbackGroups((prev) => [...prev, muscle]);
               } else {
-                setFeedbackMuscle(muscle);
+                // ExerciseMenuModal closes after this callback. Wait for its
+                // bottom-sheet animation before presenting feedback on iOS.
+                setTimeout(() => setFeedbackMuscle(muscle), 250);
               }
             }
           }
@@ -870,8 +891,14 @@ export default function ActiveWorkout() {
         onClose={() => setReplaceTargetId(null)}
         onSelect={(name, muscle, equipment, logMode) => {
           if (!replaceTargetId) return;
-          setReplacePending({ targetId: replaceTargetId, name, muscle, equipment, logMode });
+          const targetId = replaceTargetId;
+          setReplaceTargetId(null);
           setReplacePersist(false);
+          // ExercisePicker is a native Modal. Let its dismissal animation
+          // finish before presenting the confirmation Modal on iOS.
+          setTimeout(() => {
+            setReplacePending({ targetId, name, muscle, equipment, logMode });
+          }, 250);
         }}
       />
 
@@ -882,6 +909,28 @@ export default function ActiveWorkout() {
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 6 }}>
               Replace with {replacePending?.name}?
             </Text>
+            {(() => {
+              const exercise = exercises.find((ex) => ex.id === replacePending?.targetId);
+              const hasEnteredPerformance = exercise?.sets.some((set) =>
+                set.completed || set.skipped || set.weight > 0 || set.reps > 0 || set.reportedRir !== undefined,
+              );
+              const changesMuscle = !!exercise && !!replacePending?.muscle
+                && exercise.muscleGroup !== replacePending.muscle;
+              return (hasEnteredPerformance || changesMuscle) ? (
+                <View style={{ gap: 6, marginTop: 6 }}>
+                  {hasEnteredPerformance && (
+                    <Text style={{ color: colors.warning, fontSize: 13, lineHeight: 18 }}>
+                      Your entered sets for {exercise?.name} will be reset. The planned set count and targets will remain.
+                    </Text>
+                  )}
+                  {changesMuscle && (
+                    <Text style={{ color: colors.warning, fontSize: 13, lineHeight: 18 }}>
+                      This changes the slot from {exercise?.muscleGroup} to {replacePending?.muscle} and will change how weekly muscle volume is counted.
+                    </Text>
+                  )}
+                </View>
+              ) : null;
+            })()}
             {activeProgramDayId && (
               <Pressable
                 onPress={() => setReplacePersist((v) => !v)}
@@ -982,10 +1031,10 @@ export default function ActiveWorkout() {
           {[
             activeProgramId && { icon: 'pencil-outline',     label: 'Rename Program',           onPress: handleOpenRename },
             activeProgramId && { icon: 'tune-vertical',      label: 'Update Muscle Priorities', onPress: handleOpenPriorities },
-            { icon: 'note-text-outline',                     label: dayNote ? 'Edit Day Note' : 'Add Day Note', onPress: () => { setDayNoteText(dayNote ?? ''); setProgramMenuOpen(false); setDayNoteOpen(true); } },
-            { icon: 'plus-circle-outline',                   label: 'Add Exercise',             onPress: () => { setProgramMenuOpen(false); setPickerOpen(true); } },
+            { icon: 'note-text-outline',                     label: dayNote ? 'Edit Day Note' : 'Add Day Note', onPress: () => { setDayNoteText(dayNote ?? ''); closeProgramMenuThen(() => setDayNoteOpen(true)); } },
+            { icon: 'plus-circle-outline',                   label: 'Add Exercise',             onPress: () => closeProgramMenuThen(() => setPickerOpen(true)) },
             { icon: 'weight',                                label: 'Update Bodyweight',        onPress: handleOpenBodyweight },
-            { icon: 'skip-next-outline',                     label: 'Skip Workout',             onPress: () => { setProgramMenuOpen(false); handleSkipWorkout(); } },
+            { icon: 'skip-next-outline',                     label: 'Skip Workout',             onPress: () => closeProgramMenuThen(handleSkipWorkout) },
             activeProgramId && { icon: 'stop-circle-outline', label: 'End Program',             onPress: handleEndProgram, destructive: true },
           ].filter(Boolean).map(({ icon, label, onPress, destructive }: any) => (
             <Pressable key={label} onPress={onPress}

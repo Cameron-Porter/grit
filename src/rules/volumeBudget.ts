@@ -123,7 +123,7 @@ function sessionFrequency(directSetsNeeded: number, priority: MusclePriority | '
 //   mev       → that muscle's own MEV (deprioritized — just enough for growth)
 //   maintain  → that muscle's own MV (literally "maintain" = hold current size)
 //   grow      → that muscle's own MAV (the textbook sweet spot)
-//   emphasize → that muscle's own MRV (the overreach ceiling for this cycle's focus)
+//   emphasize → that muscle's own MAV (MRV stays a recovery boundary)
 // Scoped to hypertrophy only — strength/powerbuilding volume is already cited
 // to Prilepin/NSCA (ST-XXX) and Kizen/PHAT (PB-XXX); swapping in RP/Israetel
 // landmarks there would contradict those tags rather than extend them. Falls
@@ -134,7 +134,7 @@ function hypertrophyPriorityTarget(muscle: MuscleGroup, priority: MusclePriority
   if (priority === 'mev') return landmark.mev;
   if (priority === 'maintain') return landmark.mv;
   if (priority === 'grow') return landmark.mav;
-  return landmark.mrv; // emphasize
+  return landmark.mav; // VA-019: emphasize defaults to upper MAV, not MRV
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ export function calculateVolumeBudget(
     // VA-010: cap weekly direct sets at the muscle's MRV (Maximum Recoverable
     // Volume) — RP Strength / Israetel et al. landmarks in volumeLandmarks.ts.
     // Since VA-011, hypertrophy's own targets already top out at each muscle's
-    // MRV by construction (emphasize === landmark.mrv), so this is a no-op
+    // MRV by construction (emphasize defaults to MAV), so this is a no-op
     // backstop there — kept for safety against future data changes, and still
     // fully load-bearing for strength/powerbuilding/general/maintenance/cut,
     // which stay on the flat TARGET_EFFECTIVE_SETS table.

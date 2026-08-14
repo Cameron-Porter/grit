@@ -525,22 +525,46 @@ export async function replaceExerciseInTemplate(
   newMuscleGroup: string,
   newEquipment: string,
 ): Promise<void> {
-  const { data: dayRow } = await supabase
+  const userId = await getUserId();
+  if (!userId) throw new Error('You must be signed in to update a program.');
+
+  const { data: dayRow, error: dayError } = await supabase
     .from("program_days")
     .select("program_id, day_number")
     .eq("id", programDayId)
-    .single();
-  if (!dayRow) return;
+    .maybeSingle();
+  if (dayError) throw dayError;
+  if (!dayRow) throw new Error('Program day not found.');
 
   const templateExercises = await getTemplateDayExercises(dayRow.program_id, dayRow.day_number);
   const target = templateExercises.find((e) => e.exercise_name === oldExerciseName);
-  if (!target) return;
+  if (!target) throw new Error('Exercise is no longer present in this program day.');
 
-  await supabase.from("program_exercises").update({
+  const { error: templateError } = await supabase.from("program_exercises").update({
     exercise_name: newExerciseName,
     muscle_group: newMuscleGroup || target.muscle_group,
     equipment: newEquipment || target.equipment,
   }).eq("id", target.id);
+  if (templateError) throw templateError;
+
+  // A replacement can have a different strength curve and loading history.
+  // Remove stale future prescriptions so each future day is conservatively
+  // rebuilt from the replacement exercise's own program-scoped history.
+  const { data: matchingDays, error: daysError } = await supabase
+    .from('program_days')
+    .select('id')
+    .eq('program_id', dayRow.program_id)
+    .eq('day_number', dayRow.day_number)
+    .eq('completed', false);
+  if (daysError) throw daysError;
+  if (matchingDays?.length) {
+    const { error: targetsError } = await supabase
+      .from('program_day_targets')
+      .delete()
+      .in('program_day_id', matchingDays.map((day) => day.id))
+      .eq('exercise_name', oldExerciseName);
+    if (targetsError) throw targetsError;
+  }
 }
 
 export async function getProgramDayTargets(programDayId: string): Promise<ProgramDayTarget[]> {

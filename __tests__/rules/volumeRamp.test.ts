@@ -1,4 +1,21 @@
-import { capSetsPerExercise, MAX_SETS_PER_EXERCISE, rampSets } from '../../src/rules/volumeRamp';
+import { capSetsPerExercise, MAX_SETS_PER_EXERCISE, rampSets, rirForWeek } from '../../src/rules/volumeRamp';
+
+describe('rirForWeek — HV-038 final-week floor', () => {
+  it('does not reach 0 RIR before the final week of a long mesocycle', () => {
+    const params = { totalTrainingWeeks: 6, isDeload: false, experienceLevel: 'intermediate' as const };
+    expect(rirForWeek(2, 'grow', { ...params, weekNumber: 5 })).toBeGreaterThanOrEqual(1);
+    expect(rirForWeek(2, 'grow', { ...params, weekNumber: 6 })).toBe(0);
+  });
+
+  it('retains the beginner RIR 2 floor', () => {
+    expect(rirForWeek(2, 'grow', {
+      weekNumber: 6,
+      totalTrainingWeeks: 6,
+      isDeload: false,
+      experienceLevel: 'beginner',
+    })).toBe(2);
+  });
+});
 
 describe('rampSets', () => {
   it('returns the week1 anchor at the start of the meso', () => {
@@ -63,9 +80,9 @@ describe('rampSets — VA-015 graduated soreness response', () => {
   const params = { weekNumber: 3, totalTrainingWeeks: 5, isDeload: false };
   // Baseline (no soreness signal / 'Healed early'): fraction = (3-1)/(5-1) = 0.5 -> 12
 
-  it('takes an extra ramp step for "Not sore" (under-dosed signal)', () => {
-    // rampWeek = 4 -> fraction = (4-1)/4 = 0.75 -> 8 + 8*0.75 = 14
-    expect(rampSets(anchors, params, 'Not sore')).toBe(14);
+  it('does not accelerate volume from soreness alone', () => {
+    // Week 3 remains week 3: fraction = (3-1)/4 = 0.5 -> 8 + 8*0.5 = 12.
+    expect(rampSets(anchors, params, 'Not sore')).toBe(12);
   });
 
   it('repeats last week\'s step for "Just in time" (at the MRV ceiling)', () => {

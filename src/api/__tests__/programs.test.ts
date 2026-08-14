@@ -17,6 +17,7 @@ import {
   unskipProgramDay,
   getNextProgramWorkout,
   getFutureScheduledSetsByMuscle,
+  replaceExerciseInTemplate,
 } from '../programs';
 
 const mockFrom = supabase.from as jest.Mock;
@@ -33,6 +34,7 @@ const makeChain = (result: { data: any; error: any }) => {
     order: jest.fn().mockReturnThis(),
     in: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue(result),
+    maybeSingle: jest.fn().mockResolvedValue(result),
   };
   Object.defineProperty(chain, 'then', {
     get() {
@@ -43,6 +45,35 @@ const makeChain = (result: { data: any; error: any }) => {
 };
 
 beforeEach(() => jest.clearAllMocks());
+
+describe('replaceExerciseInTemplate', () => {
+  it('updates the template and removes stale future targets', async () => {
+    const updateChain = makeChain({ data: null, error: null });
+    const deleteChain = makeChain({ data: null, error: null });
+    mockFrom
+      .mockReturnValueOnce(makeChain({ data: { program_id: 'p1', day_number: 1 }, error: null }))
+      .mockReturnValueOnce(makeChain({ data: { id: 'template-day' }, error: null }))
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'pe1', exercise_name: 'Bench Press', muscle_group: 'Chest', equipment: 'Barbell' }], error: null }))
+      .mockReturnValueOnce(updateChain)
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'future-day' }], error: null }))
+      .mockReturnValueOnce(deleteChain);
+
+    await replaceExerciseInTemplate('day-1', 'Bench Press', 'Dumbbell Bench Press', 'Chest', 'Dumbbell');
+
+    expect(updateChain.update).toHaveBeenCalledWith(expect.objectContaining({
+      exercise_name: 'Dumbbell Bench Press',
+      equipment: 'Dumbbell',
+    }));
+    expect(deleteChain.delete).toHaveBeenCalled();
+    expect(deleteChain.eq).toHaveBeenCalledWith('exercise_name', 'Bench Press');
+  });
+
+  it('surfaces a missing program day instead of silently doing nothing', async () => {
+    mockFrom.mockReturnValueOnce(makeChain({ data: null, error: null }));
+    await expect(replaceExerciseInTemplate('missing', 'A', 'B', 'Chest', 'Dumbbell'))
+      .rejects.toThrow('Program day not found');
+  });
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // getPrograms
