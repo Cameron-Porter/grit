@@ -293,6 +293,7 @@ export default function ExerciseCard({
               <View style={{ width: 40 }} />
               <Text style={[styles.colLabel, { color: colors.textSecondary }]}>WEIGHT</Text>
               <Text style={[styles.colLabel, { color: colors.textSecondary }]}>{isTimeBased ? 'SECS' : 'REPS'}</Text>
+              <Text style={[styles.colLabelEffort, { color: colors.textSecondary }]}>RIR</Text>
               <Text style={[styles.colLabelRight, { color: colors.textSecondary }]}>LOG</Text>
             </View>
 
@@ -434,7 +435,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   colLabelRight: {
-    width: 64,
+    width: 52,
+    textAlign: 'center',
+    fontFamily: FontFamily.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+  colLabelEffort: {
+    width: 44,
     textAlign: 'center',
     fontFamily: FontFamily.bodyBold,
     fontSize: 10,

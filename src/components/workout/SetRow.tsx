@@ -14,6 +14,7 @@ import { WorkoutSet } from '../../types/workout';
 import { useColors } from '../../utils/useColors';
 import { haptic } from '../../utils/haptics';
 import { FontFamily, Radius, Space, TypeScale } from '../../utils/tokens';
+import RirPickerModal from './RirPickerModal';
 
 interface SetRowProps {
   set: WorkoutSet;
@@ -58,6 +59,7 @@ export default function SetRow({
   const shakeX = useSharedValue(0);
   const checkScale = useSharedValue(1);
   const [rirError, setRirError] = useState(false);
+  const [rirPickerOpen, setRirPickerOpen] = useState(false);
 
   const rowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shakeX.value }],
@@ -111,6 +113,7 @@ export default function SetRow({
         <Text style={[styles.skippedValue, { color: colors.setSkipped }]}>
           {set.reps > 0 ? String(set.reps) : '—'}
         </Text>
+        <View style={styles.rirCell} />
         <Pressable
           onPress={() => onComplete()}
           hitSlop={8}
@@ -191,6 +194,27 @@ export default function SetRow({
           </View>
         </View>
 
+        {/* Effort — quiet until the set has been logged. */}
+        <View style={styles.rirCell}>
+          {set.completed && set.rir !== undefined && (
+            <Pressable
+              accessibilityLabel={set.reportedRir === undefined ? 'Report set effort' : `Reported effort ${set.reportedRir} reps in reserve`}
+              onPress={() => setRirPickerOpen(true)}
+              style={[
+                styles.rirButton,
+                {
+                  backgroundColor: set.reportedRir === undefined ? 'transparent' : `${colors.primary}18`,
+                  borderColor: set.reportedRir === undefined ? colors.border : colors.primary,
+                },
+              ]}
+            >
+              <Text style={[styles.rirButtonText, { color: set.reportedRir === undefined ? colors.textSecondary : colors.primary }]}>
+                {set.reportedRir === undefined ? '—' : set.reportedRir}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
         {/* Check */}
         <View style={styles.checkCell}>
           <Pressable onPress={handleComplete} hitSlop={8}>
@@ -211,26 +235,13 @@ export default function SetRow({
         </View>
       </View>
 
-      {set.completed && set.rir !== undefined && (
-        <View style={styles.actualRirRow}>
-          <Text style={[TypeScale.l2, { color: colors.textSecondary }]}>Actual RIR</Text>
-          {[0, 1, 2, 3, 4, 5].map((value) => (
-            <Pressable
-              key={value}
-              onPress={() => onReportedRirChange(value)}
-              style={[
-                styles.rirChip,
-                {
-                  backgroundColor: set.reportedRir === value ? colors.primary : colors.inputBg,
-                  borderColor: set.reportedRir === value ? colors.primary : colors.border,
-                },
-              ]}
-            >
-              <Text style={[TypeScale.l2, { color: set.reportedRir === value ? colors.background : colors.text }]}>{value}</Text>
-            </Pressable>
-          ))}
-        </View>
-      )}
+      <RirPickerModal
+        visible={rirPickerOpen}
+        value={set.reportedRir}
+        prescribedRir={set.rir}
+        onSelect={onReportedRirChange}
+        onClose={() => setRirPickerOpen(false)}
+      />
 
       {!set.completed && (
         <View style={[styles.separator, { backgroundColor: colors.separator }]} />
@@ -278,7 +289,7 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bodySemi,
   },
   checkCell: {
-    width: 64,
+    width: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -293,19 +304,14 @@ const styles = StyleSheet.create({
     height: StyleSheet.hairlineWidth,
     marginHorizontal: Space[2],
   },
-  actualRirRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: Space[2],
-    paddingBottom: Space[1],
-  },
-  rirChip: {
-    width: 30,
-    height: 30,
-    borderRadius: Radius.sm,
+  rirCell: { width: 44, alignItems: 'center', justifyContent: 'center' },
+  rirButton: {
+    width: 34,
+    height: 34,
+    borderRadius: Radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  rirButtonText: { ...TypeScale.l1, fontFamily: FontFamily.bodyBold },
 });
