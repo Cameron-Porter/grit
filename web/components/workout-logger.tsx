@@ -28,6 +28,10 @@ export const muscleCompletionState = (exercises:ExercisePrescription[],draft:Dra
 export const rirDescription = (rir:number) => rir === 0 ? 'No clean reps left' : rir === 1 ? '1 clean rep left' : rir < 5 ? `${rir} clean reps left` : '5+ clean reps left';
 export const shouldPromptSoreness = (week:number,hadCompletedSet:boolean,hasCompletedSet:boolean,alreadyPrompted:boolean) => week > 1 && !hadCompletedSet && hasCompletedSet && !alreadyPrompted;
 export const shouldStartRestTimer = (completedSets:number,totalSets:number) => completedSets > 0 && completedSets < totalSets;
+export const clearWorkoutLocalState = (storage:Pick<Storage,'removeItem'>,storageKey:string,queueKey:string) => {
+  storage.removeItem(queueKey);
+  storage.removeItem(storageKey);
+};
 
 export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPrescription; userId:string; catalog:ExerciseOption[] }) {
   const router = useRouter();
@@ -164,7 +168,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
     try {
       const response = await fetch('/api/workouts',{ method:'PATCH',headers:{ 'content-type':'application/json' },body:JSON.stringify({ programDayId:workout.dayId,skipped:true }) });
       const result = await response.json() as { error?:string }; if (!response.ok) throw new Error(result.error ?? 'Workout could not be skipped.');
-      localStorage.removeItem(storageKey); router.refresh();
+      clearWorkoutLocalState(localStorage,storageKey,queueKey); router.refresh();
     } catch(error) { setMessage(error instanceof Error ? error.message : 'Workout could not be skipped.'); }
     finally { setSyncing(false); }
   };
