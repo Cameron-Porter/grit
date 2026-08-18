@@ -3,6 +3,7 @@ import {
   recommendInitialMesocycleTarget,
   calculateVolumeTransitionAdjustment,
   calculatePerformanceScore,
+  isUsableLoggedWeight,
 } from '../../src/rules/progressionEngine';
 import { validateDayExercises, validateProgram } from '../../src/rules/validation';
 import { PROGRESSION_CATEGORY_PROFILES } from '../../src/data/exerciseProgressionProfiles';
@@ -799,6 +800,12 @@ describe('VA-015 — graduated soreness-based ramp step', () => {
 // for equipment: 'Bodyweight', with the training decision expressed purely
 // on the reps axis instead.
 describe('HV-028 — bodyweight equipment holds weight, progresses reps only', () => {
+  it('distinguishes valid zero external load from missing loaded-exercise weight', () => {
+    expect(isUsableLoggedWeight(0, 'Bodyweight')).toBe(true);
+    expect(isUsableLoggedWeight(0, 'Cable')).toBe(false);
+    expect(isUsableLoggedWeight(100, 'Cable')).toBe(true);
+  });
+
   it('treats zero external load as completed bodyweight work and advances the rep target', () => {
     const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(

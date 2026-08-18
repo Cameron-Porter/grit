@@ -336,6 +336,52 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
   });
 });
 
+describe('computeAndSaveProgressionTargets — zero-load bodyweight persistence', () => {
+  it('upserts a zero-weight bodyweight recommendation with its rep progression intact', async () => {
+    const dayRow = { program_id: 'program-1', week_number: 1, day_number: 1 };
+    const programRow = { total_weeks: 6, focus: 'general', muscle_priorities: { Back: 'grow' } };
+    const templateDay = { id: 'template-day-1' };
+    const templateExercises = [{
+      id: 'pe-1', program_day_id: 'template-day-1', exercise_name: 'Pull-Up', muscle_group: 'Back',
+      equipment: 'Bodyweight', sort_order: 0, target_sets: 3, target_reps_min: 8,
+      target_reps_max: 12, target_weight: 0, rir: 2, role: 'Primary',
+    }];
+    const workoutSets = Array.from({ length: 3 }, (_, set_index) => ({
+      workout_id: 'w1', weight: 0, reps: 12, set_index, reported_rir: 2,
+    }));
+    const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_day_id: 'history-day-1' }];
+    const upsertMock = jest.fn().mockResolvedValue({ error: null });
+
+    const responsesByTable: Record<string, any[]> = {
+      program_days: [
+        makeChain({ data: dayRow, error: null }),
+        makeChain({ data: templateDay, error: null }),
+        makeChain({ data: { id: 'next-day-1' }, error: null }),
+        makeChain({ data: [{ id: 'history-day-1' }], error: null }),
+        makeChain({ data: [], error: null }),
+      ],
+      programs: [makeChain({ data: programRow, error: null })],
+      program_exercises: [makeChain({ data: templateExercises, error: null })],
+      workout_sets: [makeChain({ data: workoutSets, error: null })],
+      workouts: [makeChain({ data: workouts, error: null })],
+      program_day_targets: [{ upsert: upsertMock }],
+    };
+    const callCounts: Record<string, number> = {};
+    mockFrom.mockImplementation((table: string) => {
+      const index = callCounts[table] ?? 0;
+      callCounts[table] = index + 1;
+      return responsesByTable[table][index];
+    });
+
+    await computeAndSaveProgressionTargets('day-1', 'intermediate');
+
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    expect(upsertMock.mock.calls[0][0]).toEqual([
+      expect.objectContaining({ exercise_name: 'Pull-Up', target_weight: 0, target_reps_max: 13 }),
+    ]);
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // computeAndSaveProgressionTargets — RC-010 whole-session set cap
 //

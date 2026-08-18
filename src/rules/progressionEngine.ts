@@ -256,6 +256,10 @@ export function roundToIncrement(weight: number, increment: number): number {
 // reps-first progression, with external load only entering via a genuinely
 // weighted variation (weighted vest/belt), which isn't something this app
 // can auto-detect from a rep-ceiling hit.
+export function isUsableLoggedWeight(weight: number, equipment?: string | null): boolean {
+  return weight > 0 || (weight === 0 && equipment === 'Bodyweight');
+}
+
 function heldOrAdjustedWeight(
   lastWeight: number,
   isBodyweight: boolean,

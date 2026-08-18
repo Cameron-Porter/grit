@@ -9,6 +9,7 @@ import { capSessionSets, getSessionMaxSets } from '../rules/sessionTrimmer';
 import { redistributeSorenessTrim } from '../rules/volumeBudget';
 import { getLandmark } from '../utils/volumeLandmarks';
 import {
+  isUsableLoggedWeight,
   recommendProgression,
   type MusclePriority,
   type ProgressionContext,
@@ -295,7 +296,7 @@ export async function computeAndSaveProgressionTargets(
               ctx,
             );
 
-            if (rec.action === 'FIRST_SESSION' || rec.nextWeight === 0) return null;
+            if (rec.action === 'FIRST_SESSION') return null;
             return {
               exerciseName: ex.exercise_name,
               sets: rec.nextSets,
@@ -354,7 +355,7 @@ export async function computeAndSaveProgressionTargets(
             const allSessions = await getExerciseAllSessions(ex.exercise_name, dayRow.program_id);
             if (!allSessions.length) return null;
             const lastWeight = Math.max(...allSessions[0].sets.map((s) => s.weight));
-            if (!lastWeight) return null;
+            if (!isUsableLoggedWeight(lastWeight, ex.equipment)) return null;
             return {
               exerciseName: ex.exercise_name,
               sets: ex.target_sets,
