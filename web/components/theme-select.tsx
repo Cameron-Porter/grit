@@ -8,6 +8,15 @@ export function storedDarkMode(saved: string | null, systemDark: boolean) {
   return systemDark;
 }
 
+/**
+ * The exact inline script injected into the document head so the saved theme applies
+ * before first paint. Kept as a single source string (rather than duplicated logic)
+ * so `storedDarkMode`'s behavior and this script can never drift: both branch on the
+ * same three states (`'dark'`, `'light'`, anything else falls back to the system
+ * preference).
+ */
+export const themeBootstrapScript = `(function(){try{var saved=localStorage.getItem('grit-theme');var dark=saved==='dark'?true:saved==='light'?false:window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light';}catch(e){}})();`;
+
 export function ThemeSelect() {
   const [dark, setDark] = useState(false);
 

@@ -5,6 +5,7 @@ import './program-schedule-compact.css';
 import './template-editor.css';
 import './rest-timer.css';
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
+import { themeBootstrapScript } from '@/components/theme-select';
 
 export const metadata: Metadata = {
   title: { default: 'GRIT', template: '%s · GRIT' },
@@ -19,6 +20,7 @@ export const viewport: Viewport = { themeColor: '#101216', colorScheme: 'dark li
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} /></head>
       <body><ServiceWorkerRegistration />{children}</body>
     </html>
   );
