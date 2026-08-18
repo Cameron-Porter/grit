@@ -1,10 +1,12 @@
 import { requireUser } from '@/lib/auth/require-user';
+import { requirePremiumAccess } from '@/lib/billing/require-premium';
 import { AiProgramBuilder } from '@/components/ai-program-builder';
 import { filterCatalogByEquipment, type AiBuilderInput, type AiCatalogExercise } from '@/lib/ai/program';
 export const dynamic = 'force-dynamic';
 
 export default async function AiProgramPage({ searchParams }: { searchParams: Promise<Record<string,string|string[]|undefined>> }) {
   const query = await searchParams, { supabase, user } = await requireUser();
+  await requirePremiumAccess(supabase, user.id);
   const [{data:profile,error:profileError},{data:current,error:currentError},{data:catalogRows,error:catalogError},{data:workouts,error:workoutError}] = await Promise.all([
     supabase.from('user_profiles').select('experience_level,use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle(),
     supabase.from('programs').select('muscle_priorities').eq('user_id',user.id).eq('is_current',true).is('deleted_at',null).maybeSingle(),

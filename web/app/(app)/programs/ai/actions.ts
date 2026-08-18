@@ -2,11 +2,14 @@
 import { randomUUID } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/require-user';
+import { requirePremiumAccess } from '@/lib/billing/require-premium';
 import { buildAiProgramBase, validAiBuilderInput, validateAiSelection, type AiBuilderInput, type AiCatalogExercise, type AiProgramSelection } from '@/lib/ai/program';
 import { recommendInitialMesocycleTarget, type SessionPerformance } from '@grit/rules/progressionEngine';
 const fail=(message:string):never=>redirect(`/programs/ai/review?error=${encodeURIComponent(message)}`);
 
 export async function saveAiProgram(formData:FormData){
+  const{supabase,user}=await requireUser();
+  await requirePremiumAccess(supabase,user.id);
   let input:unknown,selection:unknown;
   try{input=JSON.parse(String(formData.get('input')??''));selection=JSON.parse(String(formData.get('selection')??''))}catch{fail('The generated program could not be read.')}
   if(!validAiBuilderInput(input))fail('The program settings are invalid.');
@@ -14,7 +17,6 @@ export async function saveAiProgram(formData:FormData){
   if(!base.validation.valid)fail('The selected configuration does not pass the GRIT rules engine.');
   const names=[...new Set(chosen.days?.flatMap(day=>day.selections?.map(item=>item.exerciseName)??[])??[])];
   if(!names.length)fail('The generated program contains no exercises.');
-  const{supabase,user}=await requireUser();
   const[{data:catalogRows,error:catalogError},{data:profile,error:profileError}]=await Promise.all([
     supabase.from('exercises').select('name,muscle_group,equipment,movement_category,beginner_suitable').in('name',names),
     supabase.from('user_profiles').select('use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle(),
