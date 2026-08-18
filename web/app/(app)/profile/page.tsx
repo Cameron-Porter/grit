@@ -19,5 +19,7 @@ export default async function Profile({ searchParams }: { searchParams: Promise<
     <form action={saveProfile} className="surface profile-form"><label>Body weight (lb)<input name="bodyWeight" type="number" min="50" max="1000" step="0.1" defaultValue={profile?.body_weight??''}/></label><label>Training experience<CustomSelect name="experience" defaultValue={profile?.experience_level??'intermediate'} options={[{value:'beginner',label:'Beginner'},{value:'intermediate',label:'Intermediate'},{value:'advanced',label:'Advanced'}]}/></label><ThemeSelect/><EquipmentPreferences equipment={equipment} initiallyEnabled={profile?.use_preferred_equipment??false} initiallyPreferred={[...preferred]}/><button className="primary full">Save profile</button></form>
     <AiKeySettings/>
     <section className="surface account-actions"><div><h2>Account & billing</h2><p>Manage your membership, download your data, or sign out.</p></div><form action={profile?.stripe_customer_id ? '/api/billing/portal' : '/api/billing/checkout'} method="post"><button className="primary full">{profile?.stripe_customer_id ? 'Manage billing' : 'Upgrade with Stripe'}</button></form><a className="secondary full button-link" href="/api/export" role="button">Export workout data</a><form action={signOut}><button className="secondary full">Log out</button></form></section>
-    <DeleteAccountButton/></main>;
+    <DeleteAccountButton/>
+    <nav className="legal-nav"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a></nav>
+  </main>;
 }
