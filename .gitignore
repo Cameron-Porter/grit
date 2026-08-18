@@ -43,6 +43,9 @@ yarn-error.*
 
 example
 
+# generated agent worktrees
+.claude/worktrees/
+
 # generated native folders
 /ios
 /android
