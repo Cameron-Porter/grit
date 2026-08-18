@@ -331,6 +331,54 @@ function peakRepsAtWorkingWeight(session: SessionPerformance): number {
   return atWW.length > 0 ? Math.max(...atWW.map((s) => s.reps)) : 0;
 }
 
+export interface InitialMesocycleTarget {
+  weight: number;
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  rir: number;
+  seededFromHistory: boolean;
+}
+
+// ─── HV-040: Known-performance seed for a new hypertrophy mesocycle ─────────
+// Source: Dr. Mike Israetel / RP Hypertrophy — begin a new mesocycle at its
+// conservative Week-1 volume and effort while using established exercise
+// performance to select a realistic working load. Starting a block is not a
+// load-progression event: retain a successfully demonstrated load, clamp its
+// completed reps into the new slot's authored band, and never copy the old
+// session's larger set count into the Week-1 MEV prescription.
+export function recommendInitialMesocycleTarget(
+  prescription: SlotPrescription,
+  sessions: SessionPerformance[],
+): InitialMesocycleTarget {
+  const fallback: InitialMesocycleTarget = {
+    weight: 0,
+    sets: prescription.sets,
+    repsMin: prescription.repsMin,
+    repsMax: prescription.repsMax,
+    rir: prescription.rir,
+    seededFromHistory: false,
+  };
+  const latest = sessions[0];
+  if (!latest?.sets.length) return fallback;
+  const weights = new Set(latest.sets.map((set) => set.weight));
+  const successful = weights.size === 1
+    && latest.sets.every((set) => set.reps >= prescription.repsMin
+      && (prescription.equipment === 'Bodyweight' || set.weight > 0));
+  if (!successful) return fallback;
+  const demonstratedReps = Math.min(...latest.sets.map((set) => set.reps));
+  const seededReps = Math.max(prescription.repsMin, Math.min(prescription.repsMax, demonstratedReps));
+  const demonstratedWeight = latest.sets[0].weight;
+  return {
+    weight: prescription.equipment === 'Bodyweight' ? 0 : demonstratedWeight,
+    sets: prescription.sets,
+    repsMin: seededReps,
+    repsMax: seededReps,
+    rir: prescription.rir,
+    seededFromHistory: true,
+  };
+}
+
 // ST-013: A load increase requires the whole working-weight prescription to
 // clear the rep ceiling, not one standout top set. Standard double progression
 // advances load only after all prescribed working sets reach the top of the

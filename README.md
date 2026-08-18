@@ -95,12 +95,13 @@ Weekly volume scales from 70% in Week 1 to 100% at peak, with RIR decreasing by 
 
 | Layer | Technology |
 |---|---|
-| Framework | [Expo](https://expo.dev) 56 (React Native 0.85, React 19) |
+| Web framework | [Next.js](https://nextjs.org) 16 PWA (React 19) |
+| Native client | [Expo](https://expo.dev) 56 (retained during migration) |
 | Language | TypeScript |
 | Navigation | [Expo Router](https://expo.github.io/router) v56 (file-based, typed routes) |
 | State Management | [Zustand](https://zustand-demo.pmnd.rs) v5 with persist middleware |
 | Backend | [Supabase](https://supabase.com) (PostgreSQL, Auth, Row Level Security) |
-| Monetization | [RevenueCat](https://www.revenuecat.com) (`react-native-purchases`) |
+| Web monetization | [Stripe Billing](https://stripe.com/billing) Checkout + Customer Portal |
 | Error Monitoring | [Sentry](https://sentry.io) (`@sentry/react-native`) |
 | Animations | React Native Reanimated v4 |
 | Gestures | React Native Gesture Handler v2 |

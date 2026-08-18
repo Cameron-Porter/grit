@@ -10,7 +10,7 @@ import type {
   WeekPlan,
 } from '../types/program';
 import { assignMuscleSessions } from './assignment';
-import { deriveSplit, SESSION_LABELS } from './splitDeriver';
+import { deriveSplit, LOWER_SESSION_TYPES, SESSION_LABELS } from './splitDeriver';
 import { buildDaySlots } from './slotBuilder';
 import { enforceSessionCaps, estimateSessionMinutes } from './sessionTrimmer';
 import { validateProgram } from './validation';
@@ -24,13 +24,27 @@ const ALL_MUSCLES: MuscleGroup[] = [
 // ── Main builder ──────────────────────────────────────────────────────────────
 export function buildProgram(config: ProgramConfig): GeneratedProgram {
   // Step 1: Derive split
-  const { splitType, sessionSequence, derivation } = deriveSplit(
+  const derived = deriveSplit(
     config.daysPerWeek,
     config.musclePriorities,
   );
+  if (config.requestedSessionSequence && config.requestedSessionSequence.length !== config.selectedDays.length) {
+    throw new Error('Requested split must define exactly one session for each selected training day.');
+  }
+  const sessionSequence = config.requestedSessionSequence ?? derived.sessionSequence;
+  const splitType = config.requestedSplitType ?? derived.splitType;
   const weekSessions: SessionType[] = config.selectedDays.map(
     (_, i) => sessionSequence[i % sessionSequence.length],
   );
+  const lowerTypes = weekSessions.filter((session) => LOWER_SESSION_TYPES.includes(session));
+  const upperTypes = weekSessions.filter((session) => !LOWER_SESSION_TYPES.includes(session));
+  const derivation = {
+    ...derived.derivation,
+    upperDays: upperTypes.length,
+    lowerDays: lowerTypes.length,
+    upperTypes,
+    lowerTypes,
+  };
 
   // Step 2: Volume budget (passes experienceLevel for VA-009 beginner scaling)
   const volumeTargets = calculateVolumeBudget(

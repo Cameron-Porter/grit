@@ -1,0 +1,2 @@
+'use client';
+export default function AppError({reset}:{error:Error&{digest?:string};reset:()=>void}){return <main className="content"><section className="surface empty-state" role="alert"><div className="eyebrow">SOMETHING WENT WRONG</div><h1>We couldn’t load this page</h1><p>Your workout drafts remain stored on this device. Check your connection and try again.</p><button onClick={reset}>Try again</button></section></main>}

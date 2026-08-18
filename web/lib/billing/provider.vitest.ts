@@ -1,0 +1,1 @@
+import{describe,expect,it}from'vitest';import{checkoutIntegrationIdentifier}from'./provider';describe('checkoutIntegrationIdentifier',()=>{it('uses the required eight-letter suffix',()=>expect(checkoutIntegrationIdentifier()).toMatch(/^grit_pwa_[a-z]{8}$/))});

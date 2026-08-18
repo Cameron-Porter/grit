@@ -23,6 +23,8 @@ const EXAMPLE_CONFIG = {
   experienceLevel: 'intermediate' as const,
 };
 
+describe('buildProgram — explicit user split',()=>{it('honors the requested session sequence while retaining rules-engine validation and caps',()=>{const program=buildProgram({...EXAMPLE_CONFIG,daysPerWeek:4,selectedDays:['Monday','Tuesday','Thursday','Friday'],requestedSessionSequence:['Upper','Lower','Upper','Lower'] as const,requestedSplitType:'upper-lower'});expect(program.days.map((day)=>day.sessionType)).toEqual(['Upper','Lower','Upper','Lower']);expect(program.splitType).toBe('upper-lower');expect(program.days.every((day)=>day.slots.length<=SESSION_MAX_EXERCISES&&day.totalSets<=SESSION_MAX_SETS)).toBe(true)});it('rejects a split that does not cover every selected day',()=>expect(()=>buildProgram({...EXAMPLE_CONFIG,requestedSessionSequence:['Push']})).toThrow('exactly one session'))});
+
 describe('buildProgram — 5-day Chest/Shoulders/Triceps emphasize example', () => {
   const program = buildProgram(EXAMPLE_CONFIG);
 

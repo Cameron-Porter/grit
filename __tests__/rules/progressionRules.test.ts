@@ -1,5 +1,6 @@
 import {
   recommendProgression,
+  recommendInitialMesocycleTarget,
   calculateVolumeTransitionAdjustment,
   calculatePerformanceScore,
 } from '../../src/rules/progressionEngine';
@@ -122,6 +123,22 @@ describe('HV-019 — deadlift RIR hard floor', () => {
     const ctx = makeCtx({ isDeload: true, experienceLevel: 'advanced' });
     const rec = recommendProgression(prescription, makeSessions(100, 10, 1), ctx);
     expect(rec.nextRir).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('HV-040 — history-aware Week-1 mesocycle seed', () => {
+  const prescription: SlotPrescription = { sets: 2, repsMin: 5, repsMax: 10, rir: 3, equipment: 'Dumbbell' };
+  it('holds a demonstrated load, clamps reps to the authored band, and retains Week-1 volume', () => {
+    const target = recommendInitialMesocycleTarget(prescription,[{date:'2026-08-01',sets:Array.from({length:4},()=>({weight:60,reps:12,rir:2}))}]);
+    expect(target).toEqual({weight:60,sets:2,repsMin:10,repsMax:10,rir:3,seededFromHistory:true});
+  });
+  it('does not guess from unsuccessful or mixed-load history', () => {
+    const target = recommendInitialMesocycleTarget(prescription,[{date:'2026-08-01',sets:[{weight:60,reps:4},{weight:55,reps:8}]}]);
+    expect(target).toEqual({weight:0,sets:2,repsMin:5,repsMax:10,rir:3,seededFromHistory:false});
+  });
+  it('keeps external load at zero for bodyweight work', () => {
+    const target = recommendInitialMesocycleTarget({...prescription,equipment:'Bodyweight'},[{date:'2026-08-01',sets:[{weight:0,reps:12},{weight:0,reps:12}]}]);
+    expect(target.weight).toBe(0);expect(target.repsMin).toBe(10);expect(target.seededFromHistory).toBe(true);
   });
 });
 
