@@ -2,19 +2,31 @@
 -- Backfill three objects that migration 20260814185248 (harden_function_execute_
 -- grants) referenced by name — revoke/grant on delete_my_account() and
 -- rls_auto_enable(), plus an RLS policy on user_exercises — but that no earlier
--- checked-in migration ever created. That migration's REVOKE/GRANT/ALTER
--- statements silently no-op against a nonexistent function, and its CREATE POLICY
--- would fail outright against a nonexistent table on a truly fresh database.
+-- checked-in migration ever created.
 --
--- These are written from scratch, following this repo's own conventions
--- (public.permanently_delete_user_data's structure, user_id as text matching
--- auth.uid()::text as in every other user-owned table), NOT copied from a live
--- database — GRIT Audit 2026-08-17 found no working credentials to introspect
--- the production instance. If the production database already defines these
--- objects with different bodies, this migration's `create or replace` /
--- `create table if not exists` are safe no-ops for anything already identical,
--- but a manually-diverged live definition should be reconciled against this
--- file (or this file updated to match) before applying to production.
+-- 2026-08-18: Cameron ran this migration against production and it failed on
+-- rls_auto_enable() with "42P13 cannot change return type of existing
+-- function" (rolled back as a whole — nothing else in this file was applied).
+-- That proves rls_auto_enable() (and very likely delete_my_account() and
+-- user_exercises, applied together at the same time originally) were already
+-- created directly against production — outside any checked-in migration —
+-- with a signature/body this file doesn't know. `delete_my_account()` is
+-- known-working in production today (native app calls it successfully), so
+-- this file must NOT risk silently replacing its real body with a guess.
+--
+-- This migration is therefore written to be safe to run against a database
+-- where these objects already exist in an unknown shape:
+--   - user_exercises / its RLS policy: idempotent (`create table if not
+--     exists`, `drop policy if exists` then recreate) — safe either way.
+--   - delete_my_account(): only created if the function does not already
+--     exist (checked via pg_proc, not `create or replace`), so a real
+--     production body is never touched by this migration.
+--   - rls_auto_enable(): DROP FUNCTION IF EXISTS first (matching the error's
+--     own hint), then recreate with the shape below. Only run the DROP/CREATE
+--     for this one after confirming with Cameron whether its current
+--     production behavior differs from the "enable RLS on tables missing it"
+--     admin helper implemented here — dropping it destroys the original body
+--     with no recovery path from this repo alone.
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- ── user_exercises ─────────────────────────────────────────────────────────
@@ -44,70 +56,57 @@ create policy "Users manage own exercise preferences"
   using ((select auth.uid())::text = user_id)
   with check ((select auth.uid())::text = user_id);
 
+drop trigger if exists user_exercises_updated_at on public.user_exercises;
 create trigger user_exercises_updated_at
   before update on public.user_exercises
   for each row execute procedure public.touch_updated_at();
 
 -- ── delete_my_account ────────────────────────────────────────────────────────
--- Self-service hard delete for the *calling* user (no admin role required —
--- this is the RPC web/app/api/account/route.ts and src/api/userProfile.ts call
--- after canceling any Stripe/RevenueCat subscription). Modeled on
--- permanently_delete_user_data (20260626000009) but scoped to auth.uid() and
--- callable by any authenticated user for their own row only.
-create or replace function public.delete_my_account()
-returns void language plpgsql security definer as $$
-declare v_user_id uuid := auth.uid();
+-- Self-service hard delete for the *calling* user. Confirmed to already exist
+-- and work in production (native app calls it via RPC) — so this block only
+-- fills the gap on a database where it is genuinely missing (e.g. a fresh
+-- local/staging environment) and never touches an existing definition.
+do $$
 begin
-  if v_user_id is null then
-    raise exception 'authentication_required';
+  if not exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'delete_my_account'
+  ) then
+    execute $fn$
+      create function public.delete_my_account()
+      returns void language plpgsql security definer as $body$
+      declare v_user_id uuid := auth.uid();
+      begin
+        if v_user_id is null then
+          raise exception 'authentication_required';
+        end if;
+
+        delete from public.user_exercises  where user_id = v_user_id::text;
+        delete from public.workouts        where user_id = v_user_id::text;
+        delete from public.programs        where user_id = v_user_id::text;
+        delete from public.personal_records where user_id = v_user_id::text;
+        delete from public.retention_status where user_id = v_user_id;
+
+        insert into public.retention_audit_log (user_id, action, performed_by)
+        values (v_user_id, 'self_service_account_deleted', v_user_id);
+
+        delete from public.user_profiles where id = v_user_id;
+      end;
+      $body$;
+    $fn$;
+    execute 'alter function public.delete_my_account() set search_path = public, pg_temp';
+    execute 'revoke execute on function public.delete_my_account() from public, anon';
+    execute 'grant execute on function public.delete_my_account() to authenticated';
   end if;
-
-  delete from public.user_exercises  where user_id = v_user_id::text;
-  delete from public.workouts        where user_id = v_user_id::text;
-  delete from public.programs        where user_id = v_user_id::text;
-  delete from public.personal_records where user_id = v_user_id::text;
-  delete from public.retention_status where user_id = v_user_id;
-
-  insert into public.retention_audit_log (user_id, action, performed_by)
-  values (v_user_id, 'self_service_account_deleted', v_user_id);
-
-  delete from public.user_profiles where id = v_user_id;
 end;
 $$;
-
-alter function public.delete_my_account() set search_path = public, pg_temp;
-revoke execute on function public.delete_my_account() from public, anon;
-grant execute on function public.delete_my_account() to authenticated;
 
 -- ── rls_auto_enable ───────────────────────────────────────────────────────────
--- Admin maintenance helper: enable row level security on every public table
--- that doesn't already have it, so a future table added without RLS never
--- silently ships open. Idempotent — tables already RLS-enabled are skipped.
-create or replace function public.rls_auto_enable()
-returns table (enabled_table text)
-language plpgsql security definer as $$
-declare
-  v_row record;
-begin
-  if public.get_my_role() != 'admin' then
-    raise exception 'permission_denied: admins only';
-  end if;
-
-  for v_row in
-    select c.relname
-    from pg_class c
-    join pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'public'
-      and c.relkind = 'r'
-      and not c.relrowsecurity
-  loop
-    execute format('alter table public.%I enable row level security', v_row.relname);
-    enabled_table := v_row.relname;
-    return next;
-  end loop;
-end;
-$$;
-
-alter function public.rls_auto_enable() set search_path = public, pg_temp;
-revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
-grant execute on function public.rls_auto_enable() to authenticated;
+-- CONFIRMED to already exist in production with a return type this repo's
+-- earlier guess didn't match (2026-08-18 42P13 error). Deliberately NOT
+-- recreated here — dropping and replacing an unknown, possibly-relied-upon
+-- admin helper with a guessed body is not safe to do blind. Once Cameron
+-- confirms the current production definition (or confirms it is safe to
+-- replace), update this file with the real `drop function ... ; create
+-- function ...` pair and remove this comment.
