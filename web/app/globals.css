@@ -61,3 +61,4 @@ button:focus-visible,.button-link:focus-visible,.program-card:focus-visible,.his
    overflow while keeping the checkbox/menu tap targets at the 44px minimum via
    .set-check-wrap in workout-logger.tsx. RC: mobile-first touch-target floor. */
 @media(max-width:390px){.exercise-card{padding:14px 12px}.set-grid{grid-template-columns:20px minmax(44px,1fr) minmax(44px,1fr) 44px 40px;gap:4px;padding:6px 2px}.set-grid-header{font-size:.66rem}}
+.confirm-modal{width:min(100%,400px)}.confirm-modal #confirm-message{margin:0}

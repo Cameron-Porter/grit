@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { WebWorkoutPayload } from '@/lib/workout/payload';
 import { useDialogFocusTrap } from '@/lib/hooks/use-dialog-focus-trap';
+import { useConfirmDialog } from './confirm-dialog';
 import { CustomSelect } from './custom-select';
 
 type ExercisePrescription = { name:string; muscleGroup:string|null; musclePriority:string|null; equipment:string|null; sets:number; repsMin:number; repsMax:number; weight:number; rir:number };
@@ -55,6 +56,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
   const promptedCompletion = useRef(new Set<string>());
   const rirDialogRef = useRef<HTMLElement | null>(null);
   const feedbackDialogRef = useRef<HTMLElement | null>(null);
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   useDialogFocusTrap(rirPrompt !== null, rirDialogRef);
   useDialogFocusTrap(feedbackPrompt !== null, feedbackDialogRef);
 
@@ -155,8 +157,10 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
   };
 
   const removeExercise = (exerciseIndex:number) => {
-    if (!window.confirm(`Remove ${exercises[exerciseIndex].name} from this workout?`)) return;
-    setExercises((current) => current.filter((_,index) => index !== exerciseIndex)); setDraft((current) => current.filter((_,index) => index !== exerciseIndex)); setNotes((current) => current.filter((_,index) => index !== exerciseIndex));
+    void confirm({ message:`Remove ${exercises[exerciseIndex].name} from this workout?`, tone:'danger', confirmLabel:'Remove exercise' }).then((confirmed) => {
+      if (!confirmed) return;
+      setExercises((current) => current.filter((_,index) => index !== exerciseIndex)); setDraft((current) => current.filter((_,index) => index !== exerciseIndex)); setNotes((current) => current.filter((_,index) => index !== exerciseIndex));
+    });
   };
 
   const addExercise = (optionId:string) => {
@@ -168,7 +172,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
   };
 
   const skipWorkout = async() => {
-    if (!window.confirm('Skip this workout? You can still reopen it from the program later.')) return;
+    if (!(await confirm({ message:'Skip this workout? You can still reopen it from the program later.', confirmLabel:'Skip workout' }))) return;
     setSyncing(true); setMessage(null);
     try {
       const response = await fetch('/api/workouts',{ method:'PATCH',headers:{ 'content-type':'application/json' },body:JSON.stringify({ programDayId:workout.dayId,skipped:true }) });
@@ -191,5 +195,6 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
     <section className="surface migration-guard"><strong>Your draft saves on this device.</strong><p>If the connection drops, Finish keeps the workout queued and retries when you reconnect.</p>{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions"><button className="quiet" disabled={syncing} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={syncing || completed === 0} onClick={finish}>{syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
     {rirPrompt&&<div className="modal-backdrop rir-backdrop" role="presentation"><section ref={(node)=>{rirDialogRef.current=node}} tabIndex={-1} className="feedback-modal rir-modal" role="dialog" aria-modal="true" aria-labelledby="rir-title"><div className="eyebrow">SET COMPLETE</div><h2 id="rir-title">How many reps were left?</h2><p>RIR means “reps in reserve”: the number of clean reps you could still have completed with good form.</p><div className="rir-options">{[0,1,2,3,4,5].map(rir=><button type="button" className="quiet" key={rir} onClick={()=>{updateSet(rirPrompt.exerciseIndex,rirPrompt.setIndex,{reportedRir:rir});setRirPrompt(null)}}><strong>{rir}</strong><span>{rirDescription(rir)}</span></button>)}</div><button type="button" className="rir-skip" onClick={()=>setRirPrompt(null)}>Not sure — skip</button></section></div>}
     {feedbackPrompt&&<div className="modal-backdrop" role="presentation"><section ref={(node)=>{feedbackDialogRef.current=node}} tabIndex={-1} className="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title"><div className="eyebrow">{feedbackPrompt.muscle.toUpperCase()}</div><h2 id="feedback-title">{feedbackPrompt.stage==='soreness'?'How sore were you before training?':'How did that muscle work feel?'}</h2><p>{feedbackPrompt.stage==='soreness'?'This early check helps prevent adding work while you are still recovering.':'You finished every exercise for this muscle. This feedback shapes its next prescription.'}</p>{feedbackPrompt.stage==='soreness'?<label>Soreness<select autoFocus value={feedback[feedbackPrompt.muscle]?.soreness??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'soreness',event.target.value)}><option value="">Not reported</option><option>Healed early</option><option>Just in time</option><option>Still sore</option></select></label>:<div className="feedback-modal-fields"><label>Pump<select autoFocus value={feedback[feedbackPrompt.muscle]?.pump??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'pump',event.target.value)}><option value="">Not reported</option><option>None</option><option>Low</option><option>Good</option><option>Excellent</option></select></label><label>Volume<select value={feedback[feedbackPrompt.muscle]?.volume??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'volume',event.target.value)}><option value="">Not reported</option><option>Too little</option><option>About right</option><option>Too much</option></select></label><label>Joint pain<select value={feedback[feedbackPrompt.muscle]?.jointPain??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'jointPain',event.target.value)}><option value="">Not reported</option><option>None</option><option>Mild</option><option>Moderate</option><option>Severe</option></select></label></div>}<div className="modal-actions"><button className="quiet" onClick={()=>setFeedbackPrompt(null)}>Skip</button><button className="primary" onClick={()=>setFeedbackPrompt(null)}>Continue</button></div></section></div>}
+    {confirmDialog}
   </>;
 }

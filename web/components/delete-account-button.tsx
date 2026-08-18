@@ -2,13 +2,15 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useConfirmDialog } from './confirm-dialog';
 
 export function DeleteAccountButton() {
   const router = useRouter();
   const [deleting,setDeleting] = useState(false);
   const [error,setError] = useState<string|null>(null);
+  const { confirm, dialog } = useConfirmDialog();
   const remove = async() => {
-    if (!window.confirm('Permanently delete your account, workouts, programs, and subscription? This cannot be undone.')) return;
+    if (!(await confirm({ message:'Permanently delete your account, workouts, programs, and subscription? This cannot be undone.', tone:'danger' }))) return;
     setDeleting(true); setError(null);
     try {
       const response = await fetch('/api/account',{ method:'DELETE' });
@@ -19,5 +21,5 @@ export function DeleteAccountButton() {
     } catch(error) { setError(error instanceof Error ? error.message : 'Account deletion failed.'); }
     finally { setDeleting(false); }
   };
-  return <section className="danger-zone"><div><h2>Danger zone</h2><p>Permanently remove your account, programs, workout history, and subscription.</p></div><button className="secondary full danger" disabled={deleting} onClick={remove}>{deleting ? 'Deleting…' : 'Delete account'}</button>{error && <p className="notice error" role="alert">{error}</p>}</section>;
+  return <section className="danger-zone"><div><h2>Danger zone</h2><p>Permanently remove your account, programs, workout history, and subscription.</p></div><button className="secondary full danger" disabled={deleting} onClick={remove}>{deleting ? 'Deleting…' : 'Delete account'}</button>{error && <p className="notice error" role="alert">{error}</p>}{dialog}</section>;
 }
