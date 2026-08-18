@@ -11,7 +11,7 @@ export function LegalPage({ title, children }: { title: string; children: ReactN
     <main className="legal-page content">
       <Link className="back-link" href="/">← {appName}</Link>
       <header className="page-header"><div><div className="eyebrow">{appName.toUpperCase()}</div><h1>{title}</h1><p>Last updated: {legalUpdatedDate}</p></div></header>
-      <nav className="legal-nav"><Link href="/privacy">Privacy Policy</Link><Link href="/terms">Terms of Service</Link></nav>
+      <nav className="legal-nav"><Link href="/privacy">Privacy Policy</Link><Link href="/terms">Terms of Service</Link><Link href="/support">Support</Link></nav>
       <article className="legal-body">{children}</article>
       <footer className="legal-footer"><span>© 2026 {appName}. All rights reserved.</span><span>Questions? <a href={`mailto:${contactEmail}`}>{contactEmail}</a></span></footer>
     </main>
