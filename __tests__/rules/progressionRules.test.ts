@@ -48,7 +48,7 @@ function makePrescription(overrides: Partial<SlotPrescription> = {}): SlotPrescr
 function makeSessions(weight = 100, reps = 10, count = 0, setsPerSession = 3): SessionPerformance[] {
   return Array.from({ length: count }, () => ({
     date: '2026-01-01',
-    sets: Array.from({ length: setsPerSession }, () => ({ weight, reps })),
+    sets: Array.from({ length: setsPerSession }, () => ({ weight, reps, rir: 2 })),
   }));
 }
 
@@ -302,6 +302,38 @@ describe('ST-013 — whole-prescription and actual-effort load gate', () => {
     const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx());
     expect(rec.action).toBe('HOLD');
     expect(rec.nextWeight).toBe(100);
+  });
+
+  it('holds an intermediate load increase when no actual RIR was reported', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextWeight).toBe(100);
+  });
+
+  it('holds when effort reporting is only partial', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: [
+        { weight: 100, reps: 12, rir: 2 },
+        { weight: 100, reps: 12 },
+        { weight: 100, reps: 12, rir: 2 },
+      ],
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
+    expect(rec.action).toBe('HOLD');
+  });
+
+  it('retains beginner linear progression when RIR has not been learned yet', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'beginner' }));
+    expect(rec.action).toBe('ADVANCE_LOAD');
   });
 
   it('advances after every working set clears the ceiling at acceptable actual RIR', () => {

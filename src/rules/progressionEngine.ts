@@ -406,12 +406,17 @@ function sessionPerf(session: SessionPerformance): Perf {
   };
 }
 
-function reportedEffortAllowsLoad(session: SessionPerformance, prescribedRir: number): boolean {
+function reportedEffortAllowsLoad(
+  session: SessionPerformance,
+  prescribedRir: number,
+  experienceLevel: ExperienceLevel,
+): boolean {
   const workingSets = session.sets;
   const reported = workingSets.filter((set) => set.rir !== undefined);
-  // Backward compatibility for existing history: when actual RIR was not
-  // captured, the stricter all-working-sets rep gate still applies.
-  if (reported.length === 0) return true;
+  // ST-013: intermediate/advanced load increases require complete effort
+  // evidence. Beginners retain the simpler whole-prescription rep gate so
+  // linear progression remains usable while they learn RIR reporting.
+  if (reported.length === 0) return experienceLevel === 'beginner';
   // Partial reporting is not enough to certify the whole prescription.
   return reported.length === workingSets.length
     && reported.every((set) => (set.rir as number) >= prescribedRir);
@@ -934,7 +939,7 @@ export function recommendProgression(
 
   const last = sessions[0];
   const lastPerf = sessionPerf(last);
-  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir)
+  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir, ctx.experienceLevel)
     && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax, isBodyweight);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);

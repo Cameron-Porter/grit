@@ -307,7 +307,7 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
     const nextDayRow = { id: 'next-day-1' };
 
     // Hit the rep ceiling last time (15 reps at 20 lb) -> ceiling-hit branch fires.
-    const workoutSets = [{ workout_id: 'w1', weight: 20, reps: 15, set_index: 0 }];
+    const workoutSets = [{ workout_id: 'w1', weight: 20, reps: 15, set_index: 0, reported_rir: 2 }];
     const programDays = [{ id: 'history-day-1' }];
     const workouts = [{ id: 'w1', completed_at: '2026-01-01T00:00:00Z', program_name: 'Test', program_day_id: 'history-day-1' }];
 
