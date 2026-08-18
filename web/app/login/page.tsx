@@ -11,7 +11,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         {message && <p role="alert" className="error">{message}</p>}
         <button formAction={login}>Sign in</button>
         <button className="secondary" formAction={signup}>Create account</button>
-        <button className="quiet" formAction={signInWithGoogle}>Continue with Google</button>
+        <button className="quiet" formAction={signInWithGoogle} formNoValidate>Continue with Google</button>
       </form>
     </main>
   );

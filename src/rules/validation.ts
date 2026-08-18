@@ -25,6 +25,12 @@ import { SESSION_MAX_EXERCISES, SESSION_MAX_SETS, SESSION_TARGET_SETS_MIN } from
 // of MRV is itself a meaningful training threshold.
 const EMPHASIZE_TOLERANCE = 0.80;
 
+// RC-001: Per-session per-muscle volume cap. Muscle protein synthesis appears
+// to saturate around 6–8 direct sets for a muscle in one session; volume above
+// the top of that range is better distributed to another weekly exposure.
+// Source: G.R.I.T. doctrine A-8, building_delts_hypertrophy.md.
+const PER_MUSCLE_SESSION_SET_CAP = 8;
+
 // ─── HV-013: Intra-session deadlift + barbell-row compatibility check ─────────
 //
 // Deadlift-pattern + barbell-row on the same day creates excessive lumbar load.
@@ -136,6 +142,21 @@ export function validateProgram(
         message: `${day.splitName} (day ${day.dayIndex + 1}): only ${day.totalSets} sets (recommended ${SESSION_TARGET_SETS_MIN}–${SESSION_MAX_SETS})`,
         dayIndex: day.dayIndex,
       });
+    }
+
+    const directSetsByMuscle: Partial<Record<MuscleGroup, number>> = {};
+    for (const slot of day.slots) {
+      directSetsByMuscle[slot.muscle] = (directSetsByMuscle[slot.muscle] ?? 0) + slot.sets;
+    }
+    for (const [muscle, directSets] of Object.entries(directSetsByMuscle) as [MuscleGroup, number][]) {
+      if (directSets > PER_MUSCLE_SESSION_SET_CAP) {
+        issues.push({
+          type: 'proportionality',
+          severity: 'warning',
+          message: `${directSets} sets for ${muscle} in one session — consider splitting volume across two sessions for better set quality.`,
+          dayIndex: day.dayIndex,
+        });
+      }
     }
   }
 

@@ -573,6 +573,42 @@ describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () 
   });
 });
 
+// ─── RC-001: Per-session per-muscle set cap ───────────────────────────────────
+
+describe('RC-001 — validateProgram: per-session per-muscle volume cap', () => {
+  it('warns when a single muscle receives more than 8 direct sets in one session', () => {
+    const slots: ExerciseSlot[] = [
+      makeSlot({ id: 'c1', muscle: 'Chest', role: 'Primary', sets: 5 }),
+      makeSlot({ id: 'c2', muscle: 'Chest', role: 'Secondary', sets: 4 }),
+    ];
+    const program = makeProgram([makeDay(slots, { sessionType: 'Push', splitName: 'Push' })]);
+
+    const result = validateProgram(program, []);
+    const capIssues = result.issues.filter((i) =>
+      i.type === 'proportionality' && i.message.includes('9 sets for Chest'),
+    );
+
+    expect(capIssues).toHaveLength(1);
+    expect(capIssues[0].severity).toBe('warning');
+    expect(result.valid).toBe(true);
+  });
+
+  it('does not warn at the 8-set per-muscle session ceiling', () => {
+    const slots: ExerciseSlot[] = [
+      makeSlot({ id: 'c1', muscle: 'Chest', role: 'Primary', sets: 4 }),
+      makeSlot({ id: 'c2', muscle: 'Chest', role: 'Secondary', sets: 4 }),
+    ];
+    const program = makeProgram([makeDay(slots, { sessionType: 'Push', splitName: 'Push' })]);
+
+    const result = validateProgram(program, []);
+    const capIssues = result.issues.filter((i) =>
+      i.type === 'proportionality' && i.message.includes('sets for Chest'),
+    );
+
+    expect(capIssues).toHaveLength(0);
+  });
+});
+
 // Bug fix regression: programFocus: 'maintenance' previously had zero test
 // coverage anywhere, and its branch ran *before* the FIRST_SESSION check, so
 // a maintenance-focus muscle with no logged history returned a nonsense
@@ -695,6 +731,40 @@ describe('ST-011 — percentage-based, equipment-gated load increment (supersede
       ctx,
     );
     expect(rec.action).toBe('CUT_HOLD');
+  });
+});
+
+describe('RC-003 — lengthened-position partials for equipment-limited isolation work', () => {
+  it('uses lengthened partials when an experienced accessory isolation hits the ceiling but load is equipment-limited', () => {
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 10, repsMax: 12, role: 'Accessory', profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      makeSessions(20, 12, 1),
+      makeCtx({ experienceLevel: 'intermediate' }),
+    );
+
+    expect(rec.action).toBe('LENGTHENED_PARTIALS');
+    expect(rec.nextWeight).toBe(20);
+    expect(rec.reason).toContain('3–5 lengthened partials');
+  });
+
+  it('does not suggest lengthened partials to beginners', () => {
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 10, repsMax: 12, role: 'Accessory', profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      makeSessions(20, 12, 1),
+      makeCtx({ experienceLevel: 'beginner' }),
+    );
+
+    expect(rec.action).toBe('HOLD');
+  });
+
+  it('does not suggest lengthened partials for primary compound slots', () => {
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 10, repsMax: 12, role: 'Primary', profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      makeSessions(20, 12, 1),
+      makeCtx({ experienceLevel: 'advanced' }),
+    );
+
+    expect(rec.action).toBe('HOLD');
   });
 });
 

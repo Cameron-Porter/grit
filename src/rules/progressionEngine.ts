@@ -116,6 +116,9 @@ export interface ProgressionContext {
 // CUT_PROGRESS      — RC-011: fat-loss phase, ceiling hit → reduced-speed load advance
 // ADVANCE_DIFFICULTY — HV-037: bodyweight exercise hit its rep ceiling → advance via
 //                       tempo/ROM/leverage/external load instead of more reps
+// LENGTHENED_PARTIALS — RC-003: experienced accessory isolation hits the rep ceiling
+//                       but load is equipment-limited → extend the final set in the
+//                       lengthened position instead of chasing an oversized jump
 export type ProgressionAction =
   | 'FIRST_SESSION'
   | 'DELOAD'
@@ -126,7 +129,8 @@ export type ProgressionAction =
   | 'DELOAD_NEEDED'
   | 'CUT_HOLD'
   | 'CUT_PROGRESS'
-  | 'ADVANCE_DIFFICULTY';
+  | 'ADVANCE_DIFFICULTY'
+  | 'LENGTHENED_PARTIALS';
 
 export interface ProgressionRecommendation {
   nextWeight: number;
@@ -463,7 +467,7 @@ function isStalledPair(current: SessionPerformance, previous: SessionPerformance
   if (neitherRated) return true;
   if (currentRir.some((rir) => rir === undefined) || previousRir.some((rir) => rir === undefined)) return false;
 
-  const average = (values: Array<number | undefined>) =>
+  const average = (values: (number | undefined)[]) =>
     values.reduce<number>((sum, value) => sum + (value as number), 0) / values.length;
   return average(currentRir) <= average(previousRir);
 }
@@ -1052,6 +1056,7 @@ function resolveCeilingHit(
   equipmentLimited: boolean,
   base: EvalInputs['base'],
   progressionLabel: 'Linear progression' | 'Double progression',
+  experienceLevel: ExperienceLevel,
 ): ProgressionRecommendation {
   // HV-037: bodyweight has its own multi-dimension ladder (reps -> tempo ->
   // range of motion -> leverage -> external load), not more reps forever —
@@ -1098,6 +1103,24 @@ function resolveCeilingHit(
   // load and extend reps past the ceiling instead, up to a rep buffer, then
   // force the jump anyway so it can't stall forever.
   if (equipmentLimited) {
+    // RC-003: lengthened-position partials are reserved for experienced
+    // lifters on stable accessory/isolation work when the load jump is too
+    // large; the 3–5 partial-rep cue comes from the G.R.I.T. doctrine update
+    // citing the 2026 IJES lengthened-partials study.
+    const lengthenedPartialsEligible =
+      experienceLevel !== 'beginner' &&
+      prescription.role === 'Accessory' &&
+      (profile.category === 'isolation' || profile.category === 'cable_accessory');
+    if (lengthenedPartialsEligible) {
+      return {
+        ...base,
+        nextWeight: lastPerf.weight,
+        nextRepsMax: prescription.repsMax,
+        action: 'LENGTHENED_PARTIALS',
+        reason: `Hit the ${prescription.repsMax}-rep ceiling at ${lastPerf.weight} lb, but the next load jump is too large. Add 3–5 lengthened partials at the bottom of the final set instead of increasing load.`,
+      };
+    }
+
     const repsPastCeiling = lastPerf.maxReps - prescription.repsMax;
     if (repsPastCeiling < EQUIPMENT_LIMITED_REP_BUFFER) {
       const nextTarget = lastPerf.maxReps + 1;
@@ -1235,7 +1258,7 @@ function evaluateBeginnerLinear(
   // volume just increased), not the template's raw repsMax, and load holds
   // when the transition penalty was severe enough (holdLoad).
   if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression');
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression', ctx.experienceLevel);
   }
 
   // Within rep band — rep progress is occurring. ST-007: target last session's
@@ -1344,7 +1367,7 @@ function evaluateDoubleProgression(
   // checked here is effectiveRepsMax, not the template's raw repsMax, and
   // load holds when the transition penalty was severe enough (holdLoad).
   if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression');
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression', ctx.experienceLevel);
   }
 
   // ── Within rep band — normal hold ────────────────────────────────────────

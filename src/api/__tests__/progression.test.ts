@@ -329,10 +329,12 @@ describe('computeAndSaveProgressionTargets — role-aware load increment', () =>
 
     const savedRows = upsertMock.mock.calls[0][0];
     expect(savedRows).toHaveLength(1);
-    // Held at 20 lb, not forced to 25 (or even 22.5) — reps extend past the
-    // 15-rep ceiling instead.
+    // Held at 20 lb, not forced to 25 (or even 22.5) — experienced accessory
+    // isolation work now adds lengthened partials instead of extending the
+    // straight-rep target past the authored ceiling.
     expect(savedRows[0].target_weight).toBe(20);
-    expect(savedRows[0].target_reps_max).toBe(16);
+    expect(savedRows[0].target_reps_max).toBe(15);
+    expect(savedRows[0].ai_rationale).toContain('3–5 lengthened partials');
   });
 });
 
