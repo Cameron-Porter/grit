@@ -40,8 +40,8 @@ export interface SessionPerformance {
   // HV-033: rir is optional user-reported actual RIR. Legacy sessions may
   // production caller — workout_sets.rir stores only the prescribed RIR
   // omit it; current sessions populate it through workout_sets.reported_rir.
-  // calculatePerformanceScore degrades to pure tonnage (weight x reps) when
-  // it is absent.
+  // Plateau comparison uses it only when every set in both sessions reports
+  // RIR; partial effort data is not strong enough to classify a stall.
   sets: { weight: number; reps: number; rir?: number }[];
 }
 
@@ -435,25 +435,32 @@ function completedStraightSetPrescription(
     && session.sets.every((set) => set.reps >= repCeiling);
 }
 
-// ─── HV-033: Performance Trend Score ───────────────────────────────────────
+// ─── HV-033: Comparable performance trend ────────────────────────────────────
 //
-// A hidden metric combining load, reps, sets, and (when available) RIR, so
-// e.g. 225x10@3RIR and 225x10@1RIR — identical weight/reps, different
-// effort — don't read as the same performance. Core is tonnage
-// (weight x reps, summed across sets); RIR applies a small multiplier when
-// present. As of 2026-08-04 no production session ever carries a `rir`
-// value (see SessionPerformance's doctrine comment) — every real call
-// degrades to pure tonnage, which is exactly what the pre-existing
-// same-load/same-reps stall check already implied. This is intentionally a
-// actual RIR now contributes to plateau and fatigue detection when reported.
-export function calculatePerformanceScore(sets: { weight: number; reps: number; rir?: number }[]): number {
-  const tonnage = sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
-  const rated = sets.filter((s) => s.rir !== undefined);
-  if (rated.length === 0) return tonnage;
-  const avgRir = rated.reduce((sum, s) => sum + (s.rir as number), 0) / rated.length;
-  // 0 RIR (failure) -> 1.15x, 5 RIR (very conservative) -> 0.85x, 2.5 RIR
-  // (this app's typical prescribed midpoint) -> 1.0x, unchanged.
-  return tonnage * (1 + (2.5 - avgRir) * 0.06);
+// Plateau detection compares like-for-like sessions rather than collapsing
+// load, reps, set count, and RIR into a directionally ambiguous tonnage score.
+// A set-count change is not comparable. At identical output, higher reported
+// RIR means the athlete achieved the work with more reserve and therefore
+// improved; lower or equal RIR is not improvement. Partial RIR histories are
+// not strong enough evidence to classify a plateau.
+function isStalledPair(current: SessionPerformance, previous: SessionPerformance): boolean {
+  if (current.sets.length !== previous.sets.length || current.sets.length === 0) return false;
+  const currentPerf = sessionPerf(current);
+  const previousPerf = sessionPerf(previous);
+  if (currentPerf.weight !== previousPerf.weight
+    || currentPerf.completedReps !== previousPerf.completedReps
+    || currentPerf.maxReps !== previousPerf.maxReps) return false;
+
+  const currentRir = current.sets.map((set) => set.rir);
+  const previousRir = previous.sets.map((set) => set.rir);
+  const neitherRated = currentRir.every((rir) => rir === undefined)
+    && previousRir.every((rir) => rir === undefined);
+  if (neitherRated) return true;
+  if (currentRir.some((rir) => rir === undefined) || previousRir.some((rir) => rir === undefined)) return false;
+
+  const average = (values: Array<number | undefined>) =>
+    values.reduce<number>((sum, value) => sum + (value as number), 0) / values.length;
+  return average(currentRir) <= average(previousRir);
 }
 
 // Count identical consecutive *pairs* (sessions[i] == sessions[i+1]) from the
@@ -468,8 +475,8 @@ export function calculatePerformanceScore(sets: { weight: number; reps: number; 
 // exposures / 2 pairs each) are applied where stallThreshold is computed in
 // recommendProgression — this function's pair-counting logic is unchanged,
 // only what counts as a "stalled pair" is stricter: HV-034 additionally
-// requires the performance score not to have improved (see
-// calculatePerformanceScore above), not just identical load+reps. The old
+// requires comparable set counts, whole-prescription reps, and no RIR
+// improvement, not just identical peak load+reps. The old
 // "advanced accommodates faster, so flag sooner" rationale is explicitly
 // retracted, not just renumbered — advanced now requires the same 2-pair
 // confirmation as intermediate before calling a plateau.
@@ -477,12 +484,7 @@ function countConsecutiveStalls(sessions: SessionPerformance[]): number {
   if (sessions.length < 2) return 0;
   let count = 0;
   for (let i = 0; i < sessions.length - 1; i++) {
-    const a = sessionPerf(sessions[i]);
-    const b = sessionPerf(sessions[i + 1]);
-    const sameLoadReps = a.weight === b.weight && a.maxReps === b.maxReps;
-    const scoreA = calculatePerformanceScore(sessions[i].sets);
-    const scoreB = calculatePerformanceScore(sessions[i + 1].sets);
-    if (sameLoadReps && scoreA <= scoreB) {
+    if (isStalledPair(sessions[i], sessions[i + 1])) {
       count++;
     } else {
       break;

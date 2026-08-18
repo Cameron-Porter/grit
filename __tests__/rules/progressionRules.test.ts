@@ -2,7 +2,6 @@ import {
   recommendProgression,
   recommendInitialMesocycleTarget,
   calculateVolumeTransitionAdjustment,
-  calculatePerformanceScore,
   isUsableLoggedWeight,
 } from '../../src/rules/progressionEngine';
 import { validateDayExercises, validateProgram } from '../../src/rules/validation';
@@ -964,18 +963,6 @@ describe('calculateVolumeTransitionAdjustment — standalone unit tests', () => 
   });
 });
 
-describe('calculatePerformanceScore — standalone unit tests', () => {
-  it('degrades to pure tonnage when no rir is present — 100% of real session data today', () => {
-    const score = calculatePerformanceScore([{ weight: 225, reps: 10 }]);
-    expect(score).toBe(2250);
-  });
-
-  it('225x10 @1 RIR scores higher than 225x10 @3 RIR — same tonnage, different effort', () => {
-    const lowRir = calculatePerformanceScore([{ weight: 225, reps: 10, rir: 1 }]);
-    const highRir = calculatePerformanceScore([{ weight: 225, reps: 10, rir: 3 }]);
-    expect(lowRir).toBeGreaterThan(highRir);
-  });
-});
 
 // ─── RC-011: Cut phase runs at reduced speed instead of a hard hold — required scenario 3
 
@@ -1017,6 +1004,27 @@ describe('HV-034 — plateau requires more exposures than before, including for 
     const ctx = makeCtx({ experienceLevel: 'advanced' });
     const rec = recommendProgression(makePrescription(), makeSessions(100, 10, 3), ctx);
     expect(rec.action).toBe('PLATEAU_DELOAD');
+  });
+
+  it('does not call a plateau when identical output improves at a higher reported RIR', () => {
+    const sets = (rir: number) => Array.from({ length: 3 }, () => ({ weight: 100, reps: 10, rir }));
+    const sessions: SessionPerformance[] = [
+      { date: '2026-01-15', sets: sets(3) },
+      { date: '2026-01-08', sets: sets(2) },
+      { date: '2026-01-01', sets: sets(1) },
+    ];
+    const rec = recommendProgression(makePrescription({ sets: 3 }), sessions, makeCtx({ experienceLevel: 'advanced' }));
+    expect(rec.action).not.toBe('PLATEAU_DELOAD');
+  });
+
+  it('does not compare changed set counts as a performance plateau', () => {
+    const sessions: SessionPerformance[] = [
+      { date: '2026-01-15', sets: Array.from({ length: 2 }, () => ({ weight: 100, reps: 10 })) },
+      { date: '2026-01-08', sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 10 })) },
+      { date: '2026-01-01', sets: Array.from({ length: 4 }, () => ({ weight: 100, reps: 10 })) },
+    ];
+    const rec = recommendProgression(makePrescription({ sets: 2 }), sessions, makeCtx({ experienceLevel: 'advanced' }));
+    expect(rec.action).not.toBe('PLATEAU_DELOAD');
   });
 
   it('does not call a plateau if volume recently increased, even with identical load/reps history', () => {
