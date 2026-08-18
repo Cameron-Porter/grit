@@ -325,8 +325,8 @@ function workingWeight(session: SessionPerformance): number {
 
 // Peak reps completed at the working weight.
 function peakRepsAtWorkingWeight(session: SessionPerformance): number {
+  if (!session.sets.length) return 0;
   const ww = workingWeight(session);
-  if (ww === 0) return 0;
   const atWW = session.sets.filter((s) => s.weight === ww);
   return atWW.length > 0 ? Math.max(...atWW.map((s) => s.reps)) : 0;
 }
@@ -386,8 +386,8 @@ export function recommendInitialMesocycleTarget(
 // Conditioning). Using the minimum working-set reps also makes set-to-set
 // fatigue visible instead of hiding it behind the best set.
 function completedRepsAtWorkingWeight(session: SessionPerformance): number {
+  if (!session.sets.length) return 0;
   const ww = workingWeight(session);
-  if (ww === 0) return 0;
   const atWW = session.sets.filter((s) => s.weight === ww);
   return atWW.length > 0 ? Math.min(...atWW.map((s) => s.reps)) : 0;
 }
@@ -420,10 +420,13 @@ function completedStraightSetPrescription(
   session: SessionPerformance,
   prescribedSets: number,
   repCeiling: number,
+  allowZeroLoad: boolean,
 ): boolean {
   if (session.sets.length < prescribedSets || session.sets.length === 0) return false;
   const load = session.sets[0].weight;
-  return load > 0
+  // HV-028: bodyweight work uses zero to mean valid zero external load, not
+  // missing performance. Loaded exercises still require a positive load.
+  return (load > 0 || allowZeroLoad)
     && session.sets.every((set) => set.weight === load)
     && session.sets.every((set) => set.reps >= repCeiling);
 }
@@ -926,7 +929,7 @@ export function recommendProgression(
   const last = sessions[0];
   const lastPerf = sessionPerf(last);
   const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir)
-    && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax);
+    && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax, isBodyweight);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);
 
@@ -1182,7 +1185,7 @@ function evaluateBeginnerLinear(
   }
 
   // Below rep floor — hold or reduce.
-  if (lastPerf.maxReps < effectiveRepsMin && lastPerf.weight > 0) {
+  if (lastPerf.maxReps < effectiveRepsMin && (lastPerf.weight > 0 || isBodyweight)) {
     const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
     const twoConsecutiveBelow =
       prev !== null &&
@@ -1220,7 +1223,7 @@ function evaluateBeginnerLinear(
   // ceiling checked here is effectiveRepsMax (lowered this session if
   // volume just increased), not the template's raw repsMax, and load holds
   // when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad && effortAllowsLoad) {
+  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
     return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression');
   }
 
@@ -1291,7 +1294,7 @@ function evaluateDoubleProgression(
   }
 
   // ── Below rep floor ───────────────────────────────────────────────────────
-  if (lastPerf.maxReps < effectiveRepsMin && lastPerf.weight > 0) {
+  if (lastPerf.maxReps < effectiveRepsMin && (lastPerf.weight > 0 || isBodyweight)) {
     const twoConsecutiveBelow =
       prev !== null &&
       prev.maxReps < effectiveRepsMin &&
@@ -1329,7 +1332,7 @@ function evaluateDoubleProgression(
   // "ceiling hit + RIR ≤ prescribedRir + 1" assumption.) HV-032: the ceiling
   // checked here is effectiveRepsMax, not the template's raw repsMax, and
   // load holds when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad && effortAllowsLoad) {
+  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
     return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression');
   }
 

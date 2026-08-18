@@ -799,6 +799,18 @@ describe('VA-015 — graduated soreness-based ramp step', () => {
 // for equipment: 'Bodyweight', with the training decision expressed purely
 // on the reps axis instead.
 describe('HV-028 — bodyweight equipment holds weight, progresses reps only', () => {
+  it('treats zero external load as completed bodyweight work and advances the rep target', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({ sets: 3, repsMin: 8, repsMax: 12, equipment: 'Bodyweight' }),
+      makeSessions(0, 12, 1, 3),
+      ctx,
+    );
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextWeight).toBe(0);
+    expect(rec.nextRepsMax).toBe(13);
+  });
+
   it('ADVANCE_LOAD: keeps weight unchanged and climbs reps past the ceiling instead of resetting to the floor', () => {
     const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(
@@ -1018,6 +1030,20 @@ describe('HV-034 — plateau requires more exposures than before, including for 
 // ─── HV-037: Bodyweight progresses beyond reps — required scenario 6 ─────────
 
 describe('HV-037 — bodyweight multi-dimension progression', () => {
+  it('advances difficulty when zero-load bodyweight work reaches its rep ceiling', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({
+        sets: 3, repsMin: 8, repsMax: 20, equipment: 'Bodyweight', profile: PROGRESSION_CATEGORY_PROFILES.bodyweight,
+      }),
+      makeSessions(0, 30, 1, 3),
+      ctx,
+    );
+    expect(rec.action).toBe('ADVANCE_DIFFICULTY');
+    expect(rec.nextWeight).toBe(0);
+    expect(rec.nextRepsMax).toBe(30);
+  });
+
   it('required scenario: a bodyweight exercise at its rep ceiling advances via difficulty, not more reps', () => {
     const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(
