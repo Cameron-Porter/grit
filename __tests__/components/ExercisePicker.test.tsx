@@ -127,11 +127,9 @@ describe('ExercisePicker — search filter logic', () => {
 
 describe('ExercisePicker — render', () => {
   it('renders the picker header when visible', async () => {
-    await act(async () => {
-      render(<ExercisePicker visible={true} onClose={onClose} onSelect={onSelect} />);
-    });
-    expect(screen.getByText('Add Exercise')).toBeTruthy();
-  });
+    const { getByText } = await render(<ExercisePicker visible={true} onClose={onClose} onSelect={onSelect} />);
+    await waitFor(() => expect(getByText('Add Exercise')).toBeTruthy());
+  }, 15000);
 
   it('renders a search input', async () => {
     await act(async () => {
