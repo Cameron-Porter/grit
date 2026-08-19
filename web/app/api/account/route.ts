@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cancelStripeSubscriptionForAccountDeletion } from '@/lib/billing/account-deletion';
 import { stripe } from '@/lib/billing/stripe';
 import { createClient } from '@/lib/supabase/server';
 
@@ -15,7 +16,7 @@ export async function DELETE() {
   if (profileError) return NextResponse.json({ error: 'Account details could not be loaded.' }, { status: 500 });
 
   try {
-    if (profile?.stripe_subscription_id) await stripe().subscriptions.cancel(profile.stripe_subscription_id);
+    await cancelStripeSubscriptionForAccountDeletion(stripe(), profile?.stripe_subscription_id);
   } catch (error) {
     console.error('Stripe subscription cancellation failed during account deletion.', error);
     return NextResponse.json({ error: 'Your subscription could not be canceled, so your account was not deleted.' }, { status: 502 });
