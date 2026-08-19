@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import path from 'node:path';
+import { withSentryConfig } from '@sentry/nextjs';
 
 // Local migration convenience: reuse the existing Expo Supabase credentials.
 // Production still requires the explicit NEXT_PUBLIC_* variables from web/.env.example.
@@ -27,4 +28,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+});
