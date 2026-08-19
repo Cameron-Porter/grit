@@ -15,6 +15,7 @@ type Draft = LoggedSet[][];
 type Feedback = { jointPain:string; pump:string; volume:string; soreness:string };
 type FeedbackPrompt = { muscle:string; stage:'soreness'|'completion' };
 type RirPrompt = { exerciseIndex:number; setIndex:number };
+type WorkoutSyncState = 'local'|'queued'|'syncing'|'synced';
 export type SavedDraft = { sets:Draft; exercises:ExercisePrescription[]; notes?:string[]; feedback?:Record<string,Feedback> };
 
 export const createInitialDraft = (workout:WorkoutPrescription):Draft => workout.exercises.map((exercise) => Array.from({ length:exercise.sets }, () => ({ reps:exercise.repsMin, weight:exercise.weight, reportedRir:null, complete:false })));
@@ -41,6 +42,12 @@ export const clearWorkoutLocalState = (storage:Pick<Storage,'removeItem'>,storag
   storage.removeItem(storageKey);
 };
 export const workoutRecoveryCopy = () => ({ heading:'Local draft recovery', body:'Your sets are saved on this device, not synced offline. Finish still needs a connection — if it drops mid-request, the workout stays queued and retries automatically.' });
+export const workoutSyncStateCopy = (state:WorkoutSyncState):{label:string;description:string;tone:'neutral'|'warning'|'info'|'success'} => ({
+  local:{label:'Local draft',description:'Changes are saved on this device until you finish.',tone:'neutral'},
+  queued:{label:'Queued retry',description:'Finish was saved locally and will retry when the connection returns.',tone:'warning'},
+  syncing:{label:'Syncing…',description:'Sending this workout to your account now.',tone:'info'},
+  synced:{label:'Synced',description:'Workout saved to your account.',tone:'success'},
+} as const)[state];
 
 export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPrescription; userId:string; catalog:ExerciseOption[] }) {
   const router = useRouter();
@@ -54,6 +61,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
   const [timerSeconds,setTimerSeconds] = useState(0);
   const [timerRunning,setTimerRunning] = useState(false);
   const [syncing,setSyncing] = useState(false);
+  const [syncState,setSyncState] = useState<WorkoutSyncState>('local');
   const [message,setMessage] = useState<string|null>(null);
   const [feedbackPrompt,setFeedbackPrompt] = useState<FeedbackPrompt|null>(null);
   const [rirPrompt,setRirPrompt] = useState<RirPrompt|null>(null);
@@ -80,9 +88,10 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
           if (restoredDraft.feedback) {setFeedback(restoredDraft.feedback);for(const[muscle,value]of Object.entries(restoredDraft.feedback)){if(value.soreness)promptedSoreness.current.add(muscle);if(value.pump||value.volume||value.jointPain)promptedCompletion.current.add(muscle)}}
         }
       }
+      if (window.localStorage.getItem(queueKey)) setSyncState('queued');
     } catch { /* Keep logging in memory when storage is unavailable. */ }
     setRestored(true);
-  },[storageKey]);
+  },[queueKey,storageKey]);
 
   useEffect(() => {
     if (!restored) return;
@@ -126,24 +135,24 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
 
   const finish = async() => {
     if (completed === 0) { setMessage('Complete at least one set before finishing.'); return; }
-    setSyncing(true); setMessage(null);
+    setSyncing(true); setSyncState('syncing'); setMessage(null);
     let payload = buildPayload();
     try {
       const queued = localStorage.getItem(queueKey);
       if (queued) payload = JSON.parse(queued) as WebWorkoutPayload;
       else localStorage.setItem(queueKey,JSON.stringify(payload));
       await syncPayload(payload);
-      localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); router.refresh();
-    } catch(error) { setMessage(error instanceof Error ? error.message : 'Workout sync failed. Your local copy is safe.'); }
+      localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); setSyncState('synced'); router.refresh();
+    } catch(error) { setSyncState('queued'); setMessage(error instanceof Error ? error.message : 'Workout sync failed. Your local copy is safe.'); }
     finally { setSyncing(false); }
   };
 
   useEffect(() => {
     const retry = async() => {
       const raw = localStorage.getItem(queueKey); if (!raw) return;
-      setSyncing(true);
-      try { await syncPayload(JSON.parse(raw) as WebWorkoutPayload); localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); router.refresh(); }
-      catch { setMessage('Workout sync is still pending. Your local copy is safe.'); }
+      setSyncing(true); setSyncState('syncing');
+      try { await syncPayload(JSON.parse(raw) as WebWorkoutPayload); localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); setSyncState('synced'); router.refresh(); }
+      catch { setSyncState('queued'); setMessage('Workout sync is still pending. Your local copy is safe.'); }
       finally { setSyncing(false); }
     };
     window.addEventListener('online',retry); if (navigator.onLine) void retry();
@@ -200,7 +209,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
     </section>)}</div>
     {exercises.length === 0 && <section className="surface empty-state"><h2>No exercises scheduled</h2><p>This training day has no exercises yet. Add one below to get started.</p></section>}
     <section className="surface add-exercise-card"><label>Add an exercise<CustomSelect ariaLabel="Add an exercise" value={addExerciseChoice} onChange={value=>{setAddExerciseChoice(value);addExercise(value);setAddExerciseChoice('')}} options={[{value:'',label:'Choose an exercise…',disabled:true},...catalog.map(option=>({value:option.id,label:`${option.name} · ${option.equipment??'Equipment not listed'}`}))]}/></label></section>
-    <section className="surface migration-guard"><strong>{workoutRecoveryCopy().heading}</strong><p>{workoutRecoveryCopy().body}</p>{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions"><button className="quiet" disabled={syncing} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={syncing || completed === 0} onClick={finish}>{syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
+    <section className="surface migration-guard"><strong>{workoutRecoveryCopy().heading}</strong><p>{workoutRecoveryCopy().body}</p><p className={`sync-status ${workoutSyncStateCopy(syncState).tone}`} aria-live="polite"><span>{workoutSyncStateCopy(syncState).label}</span>{workoutSyncStateCopy(syncState).description}</p>{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions"><button className="quiet" disabled={syncing} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={syncing || completed === 0} onClick={finish}>{syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
     {rirPrompt&&<div className="modal-backdrop rir-backdrop" role="presentation"><section ref={(node)=>{rirDialogRef.current=node}} tabIndex={-1} className="feedback-modal rir-modal" role="dialog" aria-modal="true" aria-labelledby="rir-title"><div className="eyebrow">SET COMPLETE</div><h2 id="rir-title">How many reps were left?</h2><p>RIR means “reps in reserve”: the number of clean reps you could still have completed with good form.</p><div className="rir-options">{[0,1,2,3,4,5].map(rir=><button type="button" className="quiet" key={rir} onClick={()=>{updateSet(rirPrompt.exerciseIndex,rirPrompt.setIndex,{reportedRir:rir});setRirPrompt(null)}}><strong>{rir}</strong><span>{rirDescription(rir)}</span></button>)}</div><button type="button" className="rir-skip" onClick={()=>setRirPrompt(null)}>Not sure — skip</button></section></div>}
     {feedbackPrompt&&<div className="modal-backdrop" role="presentation"><section ref={(node)=>{feedbackDialogRef.current=node}} tabIndex={-1} className="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title"><div className="eyebrow">{feedbackPrompt.muscle.toUpperCase()}</div><h2 id="feedback-title">{feedbackPrompt.stage==='soreness'?'How sore were you before training?':'How did that muscle work feel?'}</h2><p>{feedbackPrompt.stage==='soreness'?'This early check helps prevent adding work while you are still recovering.':'You finished every exercise for this muscle. This feedback shapes its next prescription.'}</p>{feedbackPrompt.stage==='soreness'?<label>Soreness<select autoFocus value={feedback[feedbackPrompt.muscle]?.soreness??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'soreness',event.target.value)}><option value="">Not reported</option><option>Healed early</option><option>Just in time</option><option>Still sore</option></select></label>:<div className="feedback-modal-fields"><label>Pump<select autoFocus value={feedback[feedbackPrompt.muscle]?.pump??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'pump',event.target.value)}><option value="">Not reported</option><option>None</option><option>Low</option><option>Good</option><option>Excellent</option></select></label><label>Volume<select value={feedback[feedbackPrompt.muscle]?.volume??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'volume',event.target.value)}><option value="">Not reported</option><option>Too little</option><option>About right</option><option>Too much</option></select></label><label>Joint pain<select value={feedback[feedbackPrompt.muscle]?.jointPain??''} onChange={(event)=>updateFeedback(feedbackPrompt.muscle,'jointPain',event.target.value)}><option value="">Not reported</option><option>None</option><option>Mild</option><option>Moderate</option><option>Severe</option></select></label></div>}<div className="modal-actions"><button className="quiet" onClick={()=>setFeedbackPrompt(null)}>Skip</button><button className="primary" onClick={()=>setFeedbackPrompt(null)}>Continue</button></div></section></div>}
     {confirmDialog}
