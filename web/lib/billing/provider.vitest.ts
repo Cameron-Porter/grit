@@ -20,6 +20,10 @@ describe('StripeBillingProvider.getEntitlement',()=>{
     const provider=new StripeBillingProvider(makeDatabase({role:'user',subscription_status:'active'}));
     expect(await provider.getEntitlement('user-1')).toBe('pro');
   });
+  it('grants pro to an ordinary user with only an active Stripe subscription',async()=>{
+    const provider=new StripeBillingProvider(makeDatabase({role:'user',subscription_status:'inactive',stripe_subscription_status:'active'}));
+    expect(await provider.getEntitlement('user-1')).toBe('pro');
+  });
   it('denies access when no profile row exists',async()=>{
     const provider=new StripeBillingProvider(makeDatabase(null));
     expect(await provider.getEntitlement('user-1')).toBe('free');

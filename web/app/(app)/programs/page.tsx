@@ -12,7 +12,7 @@ export default async function Programs({ searchParams }:{ searchParams:Promise<R
   const { supabase,user } = await requireUser();
   const [{ data,error },{ data:profile,error:profileError }] = await Promise.all([
     supabase.from('programs').select('id,name,total_weeks,days_per_week,is_current,focus,program_days(completed,skipped)').eq('user_id',user.id).is('deleted_at',null).order('created_at',{ ascending:false }),
-    supabase.from('user_profiles').select('role,subscription_status').eq('id',user.id).maybeSingle(),
+    supabase.from('user_profiles').select('role,subscription_status,stripe_subscription_status').eq('id',user.id).maybeSingle(),
   ]);
   if(error)throw new Error('Could not load programs.');
   if(profileError)throw new Error('Could not load your membership status.');

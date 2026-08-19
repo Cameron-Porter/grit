@@ -34,7 +34,7 @@ export async function POST(request: Request) {
       const update = admin.from('user_profiles').update({
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
-        subscription_status: subscriptionStatus(subscription.status),
+        stripe_subscription_status: subscriptionStatus(subscription.status),
       });
       const { error } = userId ? await update.eq('id', userId) : await update.eq('stripe_customer_id', customerId);
       if (error) throw error;

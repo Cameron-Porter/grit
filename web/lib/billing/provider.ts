@@ -17,7 +17,7 @@ export class StripeBillingProvider implements BillingProvider {
   async createCheckout(userId: string, email: string, origin: string) {
     const price = process.env.STRIPE_PRO_PRICE_ID;
     if (!price) throw new Error('STRIPE_PRO_PRICE_ID is not configured.');
-    const { data, error } = await this.database.from('user_profiles').select('role,stripe_customer_id,subscription_status').eq('id', userId).maybeSingle();
+    const { data, error } = await this.database.from('user_profiles').select('role,stripe_customer_id,subscription_status,stripe_subscription_status').eq('id', userId).maybeSingle();
     if (error) throw error;
     if (resolveEntitlement(data) === 'pro' && data?.stripe_customer_id) return this.createPortal(userId, origin);
     const session = await stripe().checkout.sessions.create({
@@ -42,7 +42,7 @@ export class StripeBillingProvider implements BillingProvider {
   }
 
   async getEntitlement(userId: string): Promise<Entitlement> {
-    const { data, error } = await this.database.from('user_profiles').select('role,subscription_status').eq('id', userId).maybeSingle();
+    const { data, error } = await this.database.from('user_profiles').select('role,subscription_status,stripe_subscription_status').eq('id', userId).maybeSingle();
     if (error) throw error;
     return resolveEntitlement(data);
   }

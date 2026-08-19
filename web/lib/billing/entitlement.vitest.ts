@@ -8,12 +8,18 @@ describe('web entitlement resolution', () => {
       expect(resolveEntitlement({ role, subscription_status: null })).toBe('pro');
     }
   });
-  it('grants pro to an ordinary user with an active subscription', () => {
+  it('grants pro to an ordinary user with an active RevenueCat/shared subscription', () => {
     expect(resolveEntitlement({ role: 'user', subscription_status: 'active' })).toBe('pro');
   });
-  it('denies an ordinary user without an active subscription', () => {
+  it('grants pro to an ordinary user with only an active Stripe subscription', () => {
+    expect(resolveEntitlement({ role: 'user', subscription_status: 'inactive', stripe_subscription_status: 'active' })).toBe('pro');
+  });
+  it('grants pro when both Stripe and RevenueCat/shared statuses are active', () => {
+    expect(resolveEntitlement({ role: 'user', subscription_status: 'active', stripe_subscription_status: 'active' })).toBe('pro');
+  });
+  it('denies an ordinary user without an active subscription on either provider', () => {
     for (const status of ['inactive', 'canceled', 'past_due', null, undefined]) {
-      expect(resolveEntitlement({ role: 'user', subscription_status: status })).toBe('free');
+      expect(resolveEntitlement({ role: 'user', subscription_status: status, stripe_subscription_status: status })).toBe('free');
     }
   });
   it('denies access when no profile has loaded yet', () => {

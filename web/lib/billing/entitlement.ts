@@ -5,16 +5,27 @@ export type Entitlement = 'free' | 'pro';
  * web must agree on which roles bypass billing. */
 export const PREMIUM_ROLES = ['vip', 'admin', 'coach', 'ambassador', 'beta_tester'] as const;
 
-export type EntitlementProfile = { role?: string | null; subscription_status?: string | null };
+export type EntitlementProfile = {
+  role?: string | null;
+  /** RevenueCat/shared/native billing status — never written by the Stripe webhook. */
+  subscription_status?: string | null;
+  /** Stripe-only billing status, written exclusively by the Stripe webhook. */
+  stripe_subscription_status?: string | null;
+};
 
 /**
- * The one place web entitlement is decided. Never inspect `role` or
- * `subscription_status` directly outside this function — StripeBillingProvider
- * .getEntitlement() and every AI-program guard call through here so a role
- * change and a billing-status change are always evaluated the same way.
+ * The one place web entitlement is decided. Never inspect `role`,
+ * `subscription_status`, or `stripe_subscription_status` directly outside
+ * this function — StripeBillingProvider.getEntitlement() and every
+ * AI-program guard call through here so a role change and a billing-status
+ * change on either provider are always evaluated the same way. Effective
+ * access is an OR across all three: a premium role, an active RevenueCat/
+ * shared subscription, or an active Stripe subscription.
  */
 export function resolveEntitlement(profile: EntitlementProfile | null | undefined): Entitlement {
   if (!profile) return 'free';
   if (profile.role && (PREMIUM_ROLES as readonly string[]).includes(profile.role)) return 'pro';
-  return profile.subscription_status === 'active' ? 'pro' : 'free';
+  if (profile.subscription_status === 'active') return 'pro';
+  if (profile.stripe_subscription_status === 'active') return 'pro';
+  return 'free';
 }
