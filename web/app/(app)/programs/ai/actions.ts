@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/require-user';
 import { requirePremiumAccess } from '@/lib/billing/require-premium';
 import { buildAiProgramBase, validAiBuilderInput, validateAiSelection, type AiBuilderInput, type AiCatalogExercise, type AiProgramSelection } from '@/lib/ai/program';
+import { saveAiProgramTransaction } from '@/lib/ai/program-save';
 import { recommendInitialMesocycleTarget, type SessionPerformance } from '@grit/rules/progressionEngine';
 const fail=(message:string):never=>redirect(`/programs/ai/review?error=${encodeURIComponent(message)}`);
 
@@ -35,19 +36,11 @@ export async function saveAiProgram(formData:FormData){
   const historyByExercise=new Map<string,SessionPerformance[]>();
   for(const name of names){const sessions:SessionPerformance[]=[];for(const workout of historyWorkouts??[]){const sets=setsByExerciseWorkout.get(`${name}\u0000${workout.id}`);if(sets?.length)sessions.push({date:workout.completed_at??'',sets})}historyByExercise.set(name,sessions)}
   const catalogByName=new Map(catalog.map(exercise=>[exercise.name,exercise])),selectionByDay=new Map(chosen.days.map(day=>[day.dayIndex,day])),programId=randomUUID();
-  const cleanup=async()=>{const{error}=await supabase.from('programs').delete().eq('id',programId).eq('user_id',user.id);return error};
-  const{error:programError}=await supabase.from('programs').insert({id:programId,user_id:user.id,name:validInput.name.trim(),total_weeks:validInput.weeks,days_per_week:validInput.daysPerWeek,focus:validInput.focus,muscle_priorities:validInput.priorities,is_current:false});
-  if(programError)fail('The program could not be created.');
-  const dayRows=base.weeks.flatMap(week=>week.days.map(day=>({program_id:programId,week_number:week.weekNumber,day_number:day.dayIndex+1,label:(selectionByDay.get(day.dayIndex)?.label||day.splitName).slice(0,80)})));
-  const{data:savedDays,error:dayError}=await supabase.from('program_days').insert(dayRows).select('id,week_number,day_number');
-  if(dayError||!savedDays){const cleanupError=await cleanup();fail(cleanupError?'Training days failed and cleanup also failed. Contact support.':'Training days could not be saved. No partial program was kept.')}
-  const dayId=new Map((savedDays??[]).map(day=>[`${day.week_number}:${day.day_number}`,day.id]));
-  if(dayId.size!==dayRows.length){const cleanupError=await cleanup();fail(cleanupError?'Saved days were incomplete and cleanup failed. Contact support.':'Saved days were incomplete. No partial program was kept.')}
+  const programRow={id:programId,user_id:user.id,name:validInput.name.trim(),total_weeks:validInput.weeks,days_per_week:validInput.daysPerWeek,focus:validInput.focus,muscle_priorities:validInput.priorities,is_current:false};
+  const dayRows=base.weeks.flatMap(week=>week.days.map(day=>({id:randomUUID(),program_id:programId,week_number:week.weekNumber,day_number:day.dayIndex+1,label:(selectionByDay.get(day.dayIndex)?.label||day.splitName).slice(0,80)})));
+  const dayId=new Map(dayRows.map(day=>[`${day.week_number}:${day.day_number}`,day.id]));
   const templateRows=base.days.flatMap(day=>{const selected=new Map(selectionByDay.get(day.dayIndex)!.selections.map(item=>[item.slotId,item]));return day.slots.map((slot,index)=>{const choice=selected.get(slot.id)!,exercise=catalogByName.get(choice.exerciseName)!;return{program_day_id:dayId.get(`1:${day.dayIndex+1}`)!,exercise_name:exercise.name,muscle_group:slot.muscle,equipment:exercise.equipment,sort_order:index,target_sets:slot.sets,target_reps_min:slot.repsMin,target_reps_max:slot.repsMax,target_weight:0,rir:slot.rir,role:slot.role}})});
-  const{error:templateError}=await supabase.from('program_exercises').insert(templateRows);
-  if(templateError){const cleanupError=await cleanup();fail(cleanupError?'Exercise templates failed and cleanup also failed. Contact support.':'Exercise templates could not be saved. No partial program was kept.')}
   const targetRows=base.weeks.flatMap(week=>week.days.flatMap(day=>{const selected=new Map(selectionByDay.get(day.dayIndex)!.selections.map(item=>[item.slotId,item]));return day.slots.map(slot=>{const choice=selected.get(slot.id)!,exercise=catalogByName.get(choice.exerciseName)!,seed=week.weekNumber===1&&validInput.focus==='hypertrophy'?recommendInitialMesocycleTarget({sets:slot.sets,repsMin:slot.repsMin,repsMax:slot.repsMax,rir:slot.rir,role:slot.role,equipment:exercise.equipment??undefined},historyByExercise.get(choice.exerciseName)??[]):null;return{program_day_id:dayId.get(`${week.weekNumber}:${day.dayIndex+1}`)!,exercise_name:choice.exerciseName,target_sets:slot.sets,target_reps_min:seed?.repsMin??slot.repsMin,target_reps_max:seed?.repsMax??slot.repsMax,target_weight:seed?.weight??0,rir:slot.rir,ai_rationale:choice.reason.slice(0,300)}})}));
-  const{error:targetError}=await supabase.from('program_day_targets').insert(targetRows);
-  if(targetError){const cleanupError=await cleanup();fail(cleanupError?'Weekly targets failed and cleanup also failed. Contact support.':'Weekly progression targets could not be saved. No partial program was kept.')}
+  try{await saveAiProgramTransaction(supabase,{programId,program:programRow,days:dayRows,templateExercises:templateRows,targets:targetRows})}catch{fail('The program could not be saved atomically. No partial program was kept.')}
   redirect(`/programs/${programId}`);
 }
