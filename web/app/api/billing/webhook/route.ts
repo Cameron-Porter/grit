@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { NextResponse } from 'next/server';
 import { stripe, subscriptionStatus } from '@/lib/billing/stripe';
+import { shouldApplyStripeSubscriptionEvent } from '@/lib/billing/webhook-ordering';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: Request) {
@@ -31,12 +32,17 @@ export async function POST(request: Request) {
       const subscription = event.data.object;
       const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
       const userId = subscription.metadata.user_id;
-      const update = admin.from('user_profiles').update({
+      const profileQuery = admin.from('user_profiles').select('id,stripe_subscription_event_created,stripe_subscription_event_id');
+      const { data: profile, error: profileError } = userId ? await profileQuery.eq('id', userId).maybeSingle() : await profileQuery.eq('stripe_customer_id', customerId).maybeSingle();
+      if (profileError) throw profileError;
+      if (!profile || !shouldApplyStripeSubscriptionEvent(profile, { created:event.created, id:event.id })) return NextResponse.json({ received: true, ignored: true });
+      const { error } = await admin.from('user_profiles').update({
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
         stripe_subscription_status: subscriptionStatus(subscription.status),
-      });
-      const { error } = userId ? await update.eq('id', userId) : await update.eq('stripe_customer_id', customerId);
+        stripe_subscription_event_created: event.created,
+        stripe_subscription_event_id: event.id,
+      }).eq('id', profile.id);
       if (error) throw error;
     }
   } catch (error) {
