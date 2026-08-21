@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
+import { getOAuthCallbackUrl } from '@/lib/env/app-url';
 
 function credentials(formData: FormData) {
   return { email: String(formData.get('email') ?? ''), password: String(formData.get('password') ?? '') };
@@ -24,8 +25,9 @@ export async function signup(formData: FormData) {
 
 export async function signInWithGoogle() {
   const supabase = await createClient();
-  const origin = (await headers()).get('origin') ?? '';
-  const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: `${origin}/auth/callback` } });
+  const requestOrigin = (await headers()).get('origin') ?? '';
+  const redirectTo = getOAuthCallbackUrl({ APP_URL: process.env.APP_URL }, requestOrigin);
+  const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
   if (error) redirect(`/login?message=${encodeURIComponent(error.message)}`);
   if (data.url) redirect(data.url);
 }

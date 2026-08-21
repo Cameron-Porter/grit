@@ -19,6 +19,7 @@ Open `http://localhost:3000`. Prefer `web/.env.local` from `web/.env.example` fo
 ```text
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+APP_URL=
 STRIPE_API_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PRO_PRICE_ID=
@@ -26,6 +27,10 @@ SUPABASE_SERVICE_ROLE_KEY=
 ```
 
 Use a least-privilege Stripe restricted key where supported. The Supabase service-role key is server-only; never expose it with a `NEXT_PUBLIC_` prefix.
+
+## Canonical app origin
+
+Set `APP_URL` to the canonical production origin, for example `https://app.example.com`. Google OAuth callbacks use `APP_URL/auth/callback` when configured, and fall back to the active request origin only for local/preview environments.
 
 ## Database
 
