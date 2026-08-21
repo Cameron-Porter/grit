@@ -24,7 +24,11 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   const { data: days, error: daysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
   if (daysError) throw new Error(`Could not load program days: ${daysError.message}`);
   const nextDay=days?.find((day)=>!day.completed&&!day.skipped);
-  if (!nextDay) return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
+  if (!nextDay) {
+    const { error: clearError } = await supabase.from('programs').update({ is_current: false }).eq('id', current.id).eq('user_id', user.id).eq('is_current', true);
+    if (clearError) console.error('Could not clear completed program from active status.', clearError);
+    return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
+  }
   const templateDay=days?.find((day)=>day.week_number===1&&day.day_number===nextDay.day_number);
   if(!templateDay) throw new Error('The program is missing its Week 1 exercise template.');
   const [{data:exercises,error:exerciseError},{data:targets,error:targetError},{data:catalog,error:catalogError},{data:profile,error:profileError},{data:pastWorkouts,error:pastWorkoutError}]=await Promise.all([
