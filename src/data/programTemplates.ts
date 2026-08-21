@@ -736,3 +736,7 @@ export function getEquipmentForTemplateExercise(name: string): string {
   if (!exercise) throw new Error(`Exercise not found in database: "${name}"`);
   return exercise.equipment;
 }
+
+export function getProgramTemplateById(id: string): ProgramTemplate | undefined {
+  return PROGRAM_TEMPLATES.find((template) => template.id === id);
+}
