@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { appendedExercisePrescription, clearWorkoutLocalState, createInitialDraft, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, workoutRecoveryCopy, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { validateWorkoutPayload } from '@/lib/workout/payload';
+import { appendedExercisePrescription, buildWorkoutPayload, clearWorkoutLocalState, createInitialDraft, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
+const quickWorkout: WorkoutPrescription = { dayId:null,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
 
 describe('createInitialDraft',()=>{
   it('creates exactly the prescribed sets with safe incomplete defaults',()=>{
@@ -17,6 +19,39 @@ describe('soreness prompt timing',()=>{it('does not automatically ask during wee
 describe('automatic rest timer',()=>{it('starts after a completed set except the final workout set',()=>{expect(shouldStartRestTimer(1,8)).toBe(true);expect(shouldStartRestTimer(8,8)).toBe(false);expect(shouldStartRestTimer(0,8)).toBe(false)})});
 describe('local draft recovery copy',()=>{it('describes local draft recovery and queued finish retry without implying full offline support',()=>{expect(workoutRecoveryCopy()).toEqual({heading:'Local draft recovery',body:'Your sets are saved on this device, not synced offline. Finish still needs a connection — if it drops mid-request, the workout stays queued and retries automatically.'})})});
 describe('explicit workout sync state copy',()=>{it('labels each local-to-synced state distinctly',()=>{expect(workoutSyncStateCopy('local')).toMatchObject({label:'Local draft',tone:'neutral'});expect(workoutSyncStateCopy('queued')).toMatchObject({label:'Queued retry',tone:'warning'});expect(workoutSyncStateCopy('syncing')).toMatchObject({label:'Syncing…',tone:'info'});expect(workoutSyncStateCopy('synced')).toMatchObject({label:'Synced',tone:'success'})})});
+describe('local storage keys for a null-day Quick Workout',()=>{
+  it('uses a stable "quick" key instead of the literal string "null"',()=>{
+    expect(workoutStorageKeys('user-1',null)).toEqual({storageKey:'grit-web-workout:user-1:quick',queueKey:'grit-web-workout-queue:user-1:quick'});
+  });
+  it('keeps the existing key shape for a scheduled program day',()=>{
+    expect(workoutStorageKeys('user-1','day-1')).toEqual({storageKey:'grit-web-workout:user-1:day-1',queueKey:'grit-web-workout-queue:user-1:day-1'});
+  });
+});
+describe('workout heading copy',()=>{
+  it('hides the Week/Day eyebrow for a Quick Workout instead of showing fake values',()=>{
+    expect(workoutHeadingCopy(quickWorkout)).toEqual({eyebrow:null,title:'Quick Workout',subtitle:'Quick Workout'});
+  });
+  it('still shows the Week/Day eyebrow for a scheduled program day',()=>{
+    expect(workoutHeadingCopy(workout)).toEqual({eyebrow:'WEEK 4 · DAY 2',title:'Pull',subtitle:'Mid Summer'});
+  });
+});
+describe('building a Quick Workout finish payload',()=>{
+  it('preserves programDayId:null and validates once a set is complete',()=>{
+    const exercises=[{name:'Row',muscleGroup:'Back',musclePriority:null,equipment:'Cable',sets:1,repsMin:8,repsMax:12,weight:100,rir:2}];
+    const draft=[[{reps:10,weight:100,reportedRir:2,complete:true}]];
+    const payload=buildWorkoutPayload({workoutId:'00000000-0000-4000-8000-000000000001',programDayId:null,name:'Quick Workout',programName:'Quick Workout',completedAt:new Date().toISOString(),exercises,draft,notes:[''],feedback:{},muscles:['Back']});
+    expect(payload.programDayId).toBeNull();
+    expect(validateWorkoutPayload(payload)).toBe(true);
+  });
+});
+describe('skip-vs-discard behavior for null-day workouts',()=>{
+  it('does not build a skip PATCH request for a Quick Workout',()=>{
+    expect(skipWorkoutRequest(null)).toBeNull();
+  });
+  it('still builds a skip PATCH request for a scheduled program day',()=>{
+    expect(skipWorkoutRequest('day-1')).toEqual({programDayId:'day-1',skipped:true});
+  });
+});
 describe('adding an exercise to an empty training day',()=>{
   const option={id:'x1',name:'Leg Press',muscleGroup:'Quads',equipment:'Machine',repsMin:10,repsMax:15};
   it('gives a sensible default prescription when the day has no exercises to anchor from',()=>{

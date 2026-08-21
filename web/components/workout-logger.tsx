@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { WebWorkoutPayload } from '@/lib/workout/payload';
+import type { WebWorkoutPayload, WorkoutDayUpdate } from '@/lib/workout/payload';
 import { useDialogFocusTrap } from '@/lib/hooks/use-dialog-focus-trap';
 import { useConfirmDialog } from './confirm-dialog';
 import { CustomSelect } from './custom-select';
 
 type ExercisePrescription = { name:string; muscleGroup:string|null; musclePriority:string|null; equipment:string|null; sets:number; repsMin:number; repsMax:number; weight:number; rir:number };
-export type WorkoutPrescription = { dayId:string; programName:string; week:number; day:number; label:string; exercises:ExercisePrescription[] };
+export type WorkoutPrescription = { dayId:string|null; programName:string; week:number|null; day:number|null; label:string; exercises:ExercisePrescription[] };
 export type ExerciseOption = { id:string; name:string; muscleGroup:string|null; equipment:string|null; repsMin:number|null; repsMax:number|null };
 type LoggedSet = { reps:number; weight:number; reportedRir:number|null; complete:boolean };
 type Draft = LoggedSet[][];
@@ -48,11 +48,25 @@ export const workoutSyncStateCopy = (state:WorkoutSyncState):{label:string;descr
   syncing:{label:'Syncing…',description:'Sending this workout to your account now.',tone:'info'},
   synced:{label:'Synced',description:'Workout saved to your account.',tone:'success'},
 } as const)[state];
+export const workoutStorageKeys = (userId:string,dayId:string|null) => {
+  const key = dayId ?? 'quick';
+  return { storageKey:`grit-web-workout:${userId}:${key}`, queueKey:`grit-web-workout-queue:${userId}:${key}` };
+};
+export const workoutHeadingCopy = (workout:WorkoutPrescription) => ({
+  eyebrow: workout.dayId === null ? null : `WEEK ${workout.week} · DAY ${workout.day}`,
+  title: workout.label,
+  subtitle: workout.programName,
+});
+export const buildWorkoutPayload = (args:{workoutId:string;programDayId:string|null;name:string;programName:string;completedAt:string;exercises:ExercisePrescription[];draft:Draft;notes:string[];feedback:Record<string,Feedback>;muscles:string[]}):WebWorkoutPayload => ({
+  workoutId:args.workoutId, programDayId:args.programDayId, name:args.name, programName:args.programName, completedAt:args.completedAt,
+  exercises:args.exercises.map((exercise,index) => ({ name:exercise.name,muscleGroup:exercise.muscleGroup,musclePriority:exercise.musclePriority,equipment:exercise.equipment,note:args.notes[index]?.trim() || null,sets:(args.draft[index] ?? []).map((set) => ({ reps:set.reps,weight:set.weight,reportedRir:set.reportedRir,completed:set.complete,rir:exercise.rir })) })),
+  feedback:args.muscles.map((muscle) => ({ muscleGroup:muscle,jointPain:args.feedback[muscle]?.jointPain || null,pump:args.feedback[muscle]?.pump || null,volume:args.feedback[muscle]?.volume || null,soreness:args.feedback[muscle]?.soreness || null })),
+});
+export const skipWorkoutRequest = (dayId:string|null):WorkoutDayUpdate|null => dayId === null ? null : { programDayId:dayId, skipped:true };
 
 export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPrescription; userId:string; catalog:ExerciseOption[] }) {
   const router = useRouter();
-  const storageKey = `grit-web-workout:${userId}:${workout.dayId}`;
-  const queueKey = `grit-web-workout-queue:${userId}:${workout.dayId}`;
+  const { storageKey, queueKey } = workoutStorageKeys(userId,workout.dayId);
   const [draft,setDraft] = useState<Draft>(() => createInitialDraft(workout));
   const [exercises,setExercises] = useState(workout.exercises);
   const [notes,setNotes] = useState<string[]>(() => workout.exercises.map(() => ''));
@@ -117,7 +131,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
     const next=draft.map((sets,index)=>index===exerciseIndex?sets.map((set,position)=>position===setIndex?{...set,complete}:set):sets),muscle=exercises[exerciseIndex]?.muscleGroup;
     setDraft(next);
     if(complete){const nextCompleted=next.flat().filter(set=>set.complete).length;if(shouldStartRestTimer(nextCompleted,total)){setTimerSeconds(90);setTimerRunning(true)}else{setTimerSeconds(0);setTimerRunning(false)}setRirPrompt({exerciseIndex,setIndex});}
-    if(complete&&muscle){const before=muscleCompletionState(exercises,draft,muscle),after=muscleCompletionState(exercises,next,muscle),prompts:FeedbackPrompt[]=[];if(shouldPromptSoreness(workout.week,before.hasCompletedSet,after.hasCompletedSet,promptedSoreness.current.has(muscle))){promptedSoreness.current.add(muscle);prompts.push({muscle,stage:'soreness'})}if(!before.allExercisesComplete&&after.allExercisesComplete&&!promptedCompletion.current.has(muscle)){promptedCompletion.current.add(muscle);prompts.push({muscle,stage:'completion'})}if(prompts.length)setFeedbackQueue((queue)=>[...queue,...prompts])}
+    if(complete&&muscle){const before=muscleCompletionState(exercises,draft,muscle),after=muscleCompletionState(exercises,next,muscle),prompts:FeedbackPrompt[]=[];if(shouldPromptSoreness(workout.week ?? 1,before.hasCompletedSet,after.hasCompletedSet,promptedSoreness.current.has(muscle))){promptedSoreness.current.add(muscle);prompts.push({muscle,stage:'soreness'})}if(!before.allExercisesComplete&&after.allExercisesComplete&&!promptedCompletion.current.has(muscle)){promptedCompletion.current.add(muscle);prompts.push({muscle,stage:'completion'})}if(prompts.length)setFeedbackQueue((queue)=>[...queue,...prompts])}
   };
 
   const syncPayload = useCallback(async(payload:WebWorkoutPayload) => {
@@ -127,10 +141,9 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
     return result;
   },[]);
 
-  const buildPayload = ():WebWorkoutPayload => ({
+  const buildPayload = ():WebWorkoutPayload => buildWorkoutPayload({
     workoutId:crypto.randomUUID(), programDayId:workout.dayId, name:workout.label, programName:workout.programName, completedAt:new Date().toISOString(),
-    exercises:exercises.map((exercise,index) => ({ name:exercise.name,muscleGroup:exercise.muscleGroup,musclePriority:exercise.musclePriority,equipment:exercise.equipment,note:notes[index]?.trim() || null,sets:(draft[index] ?? []).map((set) => ({ reps:set.reps,weight:set.weight,reportedRir:set.reportedRir,completed:set.complete,rir:exercise.rir })) })),
-    feedback:muscles.map((muscle) => ({ muscleGroup:muscle,jointPain:feedback[muscle]?.jointPain || null,pump:feedback[muscle]?.pump || null,volume:feedback[muscle]?.volume || null,soreness:feedback[muscle]?.soreness || null })),
+    exercises,draft,notes,feedback,muscles,
   });
 
   const finish = async() => {
@@ -189,9 +202,11 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
 
   const skipWorkout = async() => {
     if (!(await confirm({ message:'Skip this workout? You can still reopen it from the program later.', confirmLabel:'Skip workout' }))) return;
+    const skipRequest = skipWorkoutRequest(workout.dayId);
+    if (!skipRequest) { clearWorkoutLocalState(localStorage,storageKey,queueKey); router.push('/workout'); return; }
     setSyncing(true); setMessage(null);
     try {
-      const response = await fetch('/api/workouts',{ method:'PATCH',headers:{ 'content-type':'application/json' },body:JSON.stringify({ programDayId:workout.dayId,skipped:true }) });
+      const response = await fetch('/api/workouts',{ method:'PATCH',headers:{ 'content-type':'application/json' },body:JSON.stringify(skipRequest) });
       const result = await response.json() as { error?:string }; if (!response.ok) throw new Error(result.error ?? 'Workout could not be skipped.');
       clearWorkoutLocalState(localStorage,storageKey,queueKey); router.refresh();
     } catch(error) { setMessage(error instanceof Error ? error.message : 'Workout could not be skipped.'); }
@@ -199,7 +214,7 @@ export function WorkoutLogger({ workout, userId, catalog }:{ workout:WorkoutPres
   };
 
   return <>
-    <header className="page-header workout-heading"><div><div className="eyebrow">WEEK {workout.week} · DAY {workout.day}</div><h1>{workout.label}</h1><p>{workout.programName}</p></div><span className="status">{completed}/{total} sets</span></header>
+    <header className="page-header workout-heading"><div>{workoutHeadingCopy(workout).eyebrow && <div className="eyebrow">{workoutHeadingCopy(workout).eyebrow}</div>}<h1>{workoutHeadingCopy(workout).title}</h1><p>{workoutHeadingCopy(workout).subtitle}</p></div><span className="status">{completed}/{total} sets</span></header>
     <section className={`surface timer-card rest-panel ${timerRunning?'running':''}`} aria-label="Rest timer"><div className="rest-status"><span className="rest-icon" aria-hidden>◷</span><div><small>{timerRunning?'RESTING':'REST TIMER'}</small><strong aria-live="polite">{Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2,'0')}</strong></div></div><div className="rest-controls"><button className="quiet compact" onClick={() => { setTimerSeconds(90); setTimerRunning(true); }}>{timerSeconds===0?'Start':'Reset'}</button><button className="quiet compact" onClick={() => setTimerRunning(value => !value)} disabled={timerSeconds === 0}>{timerRunning ? 'Pause' : 'Resume'}</button><button className="timer-dismiss" aria-label="Clear rest timer" onClick={() => { setTimerSeconds(0); setTimerRunning(false); }} disabled={timerSeconds === 0}>Clear</button></div></section>
     <div className="exercise-stack">{exercises.map((exercise,exerciseIndex) => <section className="surface exercise-card" key={`${exerciseIndex}:${exercise.name}`}>
       <div className="exercise-title"><div><h2>{exercise.name}</h2><p>{[exercise.muscleGroup,exercise.equipment].filter(Boolean).join(' · ')}</p>{notes[exerciseIndex]?.trim()&&<p className="exercise-note-preview"><span aria-hidden>✎</span>{notes[exerciseIndex].trim()}</p>}</div><div className="exercise-title-actions"><span className="rir-target">Target RIR {exercise.rir}</span><details className="exercise-menu"><summary aria-label={`${exercise.name} menu`}>•••</summary><div className="exercise-menu-panel"><button className="quiet compact" onClick={() => addSet(exerciseIndex)}>Add set</button><div className="exercise-feedback-actions"><button className="quiet compact" onClick={()=>openFeedback(exercise.muscleGroup,'soreness')}>Soreness feedback</button><button className="quiet compact" onClick={()=>openFeedback(exercise.muscleGroup,'completion')}>Training feedback</button></div><label>Exercise note<textarea value={notes[exerciseIndex] ?? ''} maxLength={500} onChange={(event) => setNotes((current) => current.map((note,index) => index === exerciseIndex ? event.target.value : note))} placeholder="Technique cue, setup, or pain note"/></label><label>Replace exercise<select defaultValue="" onChange={(event) => { replaceExercise(exerciseIndex,event.target.value); event.target.value=''; }}><option value="" disabled>Choose…</option>{catalog.filter((option) => option.id && option.name !== exercise.name).map((option) => <option value={option.id} key={option.id}>{option.name} — {option.equipment}</option>)}</select></label><button className="danger compact" onClick={() => removeExercise(exerciseIndex)}>Remove exercise</button></div></details></div></div>

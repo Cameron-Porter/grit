@@ -8,15 +8,23 @@ import type { ExperienceLevel } from '@grit/types/program';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Workout() {
+export default async function Workout({ searchParams }:{ searchParams:Promise<Record<string,string|string[]|undefined>> }) {
   const { supabase, user } = await requireUser();
+  const params=await searchParams, quick=Array.isArray(params.quick)?params.quick[0]:params.quick;
+  if (quick === 'blank') {
+    const { data:catalog, error:catalogError } = await supabase.from('exercises').select('id,name,muscle_group,equipment,rep_range_min,rep_range_max').order('name');
+    if(catalogError) throw new Error(`Could not load exercise catalog: ${catalogError.message}`);
+    const workout:WorkoutPrescription={dayId:null,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[]};
+    const options:ExerciseOption[]=(catalog??[]).map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max}));
+    return <><main className="app-shell page-frame"><WorkoutLogger key="quick-workout" workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
+  }
   const { data: current, error: programError } = await supabase.from('programs').select('id,name,muscle_priorities,total_weeks,focus').eq('user_id', user.id).eq('is_current', true).is('deleted_at', null).maybeSingle();
   if (programError) throw new Error(`Could not load current program: ${programError.message}`);
-  if (!current) return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>No active program</h1><p>Choose a program before starting a workout.</p><a className="primary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
+  if (!current) return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
   const { data: days, error: daysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
   if (daysError) throw new Error(`Could not load program days: ${daysError.message}`);
   const nextDay=days?.find((day)=>!day.completed&&!day.skipped);
-  if (!nextDay) return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p></section></main><AppNav /></>;
+  if (!nextDay) return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
   const templateDay=days?.find((day)=>day.week_number===1&&day.day_number===nextDay.day_number);
   if(!templateDay) throw new Error('The program is missing its Week 1 exercise template.');
   const [{data:exercises,error:exerciseError},{data:targets,error:targetError},{data:catalog,error:catalogError},{data:profile,error:profileError},{data:pastWorkouts,error:pastWorkoutError}]=await Promise.all([
