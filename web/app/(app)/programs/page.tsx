@@ -19,7 +19,7 @@ export default async function Programs({ searchParams }:{ searchParams:Promise<R
   if(error)throw new Error('Could not load programs.');
   const isPro = profileError ? false : resolveEntitlement({...profile,stripe_subscription_status:stripeSubscriptionStatus}) === 'pro';
   return <main className="content">
-    <header className="page-header"><div><div className="eyebrow">TRAINING</div><h1>Programs</h1></div><div className="header-actions"><Link className="secondary compact" href="/programs/templates">Templates</Link>{isPro ? <Link className="primary compact" href="/programs/ai">Build with AI</Link> : <Link className="secondary compact" href="/profile">Upgrade for AI programs</Link>}</div></header>
+    <header className="page-header"><div><div className="eyebrow">TRAINING</div><h1>Programs</h1></div><div className="header-actions"><Link className="secondary button-link compact header-action" href="/programs/templates">Templates</Link>{isPro ? <Link className="primary compact" href="/programs/ai">Build with AI</Link> : <Link className="secondary compact" href="/profile">Upgrade for AI programs</Link>}</div></header>
     {profileError&&<p className="notice error" role="alert">Could not load your membership status. Showing free-tier options.</p>}
     {params.error&&<p className="notice error" role="alert">{String(params.error)}</p>}
     <details className="surface create-panel"><summary>Create manually</summary><form action={createProgram} className="form-grid"><label>Name<input name="name" required maxLength={80}/></label><label>Weeks<CustomSelect name="weeks" defaultValue="5" options={weekOptions}/></label><label>Days/week<CustomSelect name="days" defaultValue="4" options={dayOptions}/></label><button>Create</button></form></details>
