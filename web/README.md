@@ -12,7 +12,7 @@ npm --prefix web install
 npm run dev
 ```
 
-Open `http://localhost:3000`. During local development, the PWA can reuse the root Expo-era Supabase variables while migration cleanup is in progress. Prefer `web/.env.local` from `web/.env.example` for new setup.
+Open `http://localhost:3000`. Prefer `web/.env.local` from `web/.env.example` for local setup.
 
 ## Required production environment
 

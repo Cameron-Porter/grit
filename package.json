@@ -1,66 +1,9 @@
 {
   "name": "grit",
   "version": "1.0.0",
-  "dependencies": {
-    "@expo-google-fonts/inter": "^0.4.2",
-    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
-    "@expo/ui": "~56.0.16",
-    "@expo/vector-icons": "^15.1.1",
-    "@react-native-async-storage/async-storage": "2.2.0",
-    "@sentry/react-native": "~7.11.0",
-    "@supabase/supabase-js": "^2.107.0",
-    "@tanstack/react-query": "^5.101.0",
-    "@types/jest": "29.5.14",
-    "expo": "~56.0.9",
-    "expo-apple-authentication": "~56.0.4",
-    "expo-audio": "~56.0.13",
-    "expo-constants": "~56.0.16",
-    "expo-dev-client": "~56.0.20",
-    "expo-device": "~56.0.4",
-    "expo-file-system": "~56.0.8",
-    "expo-font": "~56.0.5",
-    "expo-glass-effect": "~56.0.4",
-    "expo-haptics": "~56.0.3",
-    "expo-image": "~56.0.11",
-    "expo-linear-gradient": "~56.0.4",
-    "expo-linking": "~56.0.13",
-    "expo-notifications": "~56.0.21",
-    "expo-router": "~56.2.9",
-    "expo-sharing": "~56.0.18",
-    "expo-splash-screen": "~56.0.10",
-    "expo-status-bar": "~56.0.4",
-    "expo-symbols": "~56.0.6",
-    "expo-system-ui": "~56.0.5",
-    "expo-web-browser": "~56.0.5",
-    "jszip": "^3.10.1",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
-    "react-native": "0.85.3",
-    "react-native-gesture-handler": "~2.31.1",
-    "react-native-get-random-values": "~1.11.0",
-    "react-native-purchases": "^10.3.0",
-    "react-native-reanimated": "4.3.1",
-    "react-native-safe-area-context": "~5.7.0",
-    "react-native-screens": "4.25.2",
-    "react-native-svg": "15.15.4",
-    "react-native-web": "~0.21.0",
-    "react-native-worklets": "0.8.3",
-    "uuid": "^14.0.0",
-    "zustand": "^5.0.14"
-  },
-  "devDependencies": {
-    "@testing-library/react-native": "^14.0.0",
-    "@types/jest": "^30.0.0",
-    "@types/react": "~19.2.2",
-    "jest-expo": "^56.0.4",
-    "jest-matcher-utils": "^29.7.0",
-    "puppeteer": "^25.1.0",
-    "sharp": "^0.35.2",
-    "typescript": "~6.0.3"
-  },
+  "private": true,
   "scripts": {
     "start": "npm --prefix web run dev --",
-    "reset-project": "node ./scripts/reset-project.js",
     "web": "npm --prefix web run dev",
     "pwa:dev": "npm --prefix web run dev --",
     "pwa:build": "npm --prefix web run build",
@@ -68,34 +11,9 @@
     "pwa:typecheck": "npm --prefix web run typecheck",
     "lint": "npm --prefix web run lint",
     "test": "npm --prefix web test",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "dev": "npm --prefix web run dev --",
     "build": "npm --prefix web run build",
     "typecheck": "npm --prefix web run typecheck",
-    "test:rules": "jest --testPathPattern=\"rules\"",
-    "test:native": "jest"
-  },
-  "jest": {
-    "preset": "jest-expo",
-    "setupFiles": [
-      "./jest.setup.ts"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/.claude/"
-    ],
-    "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@testing-library/.*|@sentry/.*|zustand|uuid)"
-    ],
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
-    },
-    "collectCoverageFrom": [
-      "src/**/*.{ts,tsx}",
-      "app/**/*.{ts,tsx}",
-      "!**/*.d.ts"
-    ]
-  },
-  "private": true
+    "test:rules": "npm --prefix web exec -- vitest run --config web/vitest.rules.config.mts"
+  }
 }

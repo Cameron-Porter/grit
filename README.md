@@ -8,7 +8,7 @@ G.R.I.T. is a Next.js PWA for lifters who want structured, progressive training 
 
 ## Current Direction
 
-The product is moving to **PWA-only**. The Next.js app under `web/` is the production client; root-level commands now route to that PWA. Legacy Expo/React Native code may still exist while migration work is being removed or harvested, but it is no longer the default runtime target.
+The product is **PWA-only**. The Next.js app under `web/` is the production client; root-level commands route to that PWA. Expo/React Native app entrypoints, native build configuration, and native runtime dependencies have been removed. Shared training logic remains in `src/` for the PWA to import and test.
 
 Stripe/billing work is intentionally not part of this cleanup pass.
 
@@ -67,7 +67,7 @@ Every training parameter in the rules engine must remain doctrine-tagged and cov
 |---|---|
 | Web app | Next.js 16 PWA, React 19, TypeScript |
 | Backend | Supabase PostgreSQL/Auth/RLS |
-| Tests | Vitest for PWA, Jest for shared rules/legacy coverage |
+| Tests | Vitest for PWA and shared rules-engine coverage |
 | Monitoring | Sentry for Next.js |
 | Billing | Stripe code exists but is not part of the current PWA-only cleanup pass |
 
