@@ -46,9 +46,6 @@ example
 # generated agent worktrees
 .claude/worktrees/
 
-# local autonomous-agent checkpoints
-.ai/
-
 # generated native folders
 /ios
 /android
