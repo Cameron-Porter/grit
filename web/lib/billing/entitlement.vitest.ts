@@ -26,4 +26,9 @@ describe('web entitlement resolution', () => {
     expect(resolveEntitlement(null)).toBe('free');
     expect(resolveEntitlement(undefined)).toBe('free');
   });
+  it('grants pro for premium roles regardless of case or surrounding whitespace', () => {
+    for (const role of ['VIP', ' vip ', 'Vip', 'AMBASSADOR']) {
+      expect(resolveEntitlement({ role, subscription_status: 'inactive' })).toBe('pro');
+    }
+  });
 });

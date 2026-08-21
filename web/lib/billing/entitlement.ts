@@ -24,7 +24,8 @@ export type EntitlementProfile = {
  */
 export function resolveEntitlement(profile: EntitlementProfile | null | undefined): Entitlement {
   if (!profile) return 'free';
-  if (profile.role && (PREMIUM_ROLES as readonly string[]).includes(profile.role)) return 'pro';
+  const role = profile.role?.trim().toLowerCase();
+  if (role && (PREMIUM_ROLES as readonly string[]).includes(role)) return 'pro';
   if (profile.subscription_status === 'active') return 'pro';
   if (profile.stripe_subscription_status === 'active') return 'pro';
   return 'free';

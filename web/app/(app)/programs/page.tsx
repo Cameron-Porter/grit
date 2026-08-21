@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { requireUser } from '@/lib/auth/require-user';
 import { CustomSelect } from '@/components/custom-select';
 import { resolveEntitlement } from '@/lib/billing/entitlement';
+import { fetchStripeSubscriptionStatus } from '@/lib/billing/fetch-entitlement-profile';
 import { createProgram, setCurrentProgram } from './actions';
 
 const weekOptions = Array.from({ length:15 },(_,index) => ({ value:String(index + 2),label:`${index + 2} weeks` }));
@@ -10,12 +11,13 @@ const dayOptions = Array.from({ length:7 },(_,index) => ({ value:String(index + 
 export default async function Programs({ searchParams }:{ searchParams:Promise<Record<string,string|string[]|undefined>> }) {
   const params = await searchParams;
   const { supabase,user } = await requireUser();
-  const [{ data,error },{ data:profile,error:profileError }] = await Promise.all([
+  const [{ data,error },{ data:profile,error:profileError },stripeSubscriptionStatus] = await Promise.all([
     supabase.from('programs').select('id,name,total_weeks,days_per_week,is_current,focus,program_days(completed,skipped)').eq('user_id',user.id).is('deleted_at',null).order('created_at',{ ascending:false }),
-    supabase.from('user_profiles').select('role,subscription_status,stripe_subscription_status').eq('id',user.id).maybeSingle(),
+    supabase.from('user_profiles').select('role,subscription_status').eq('id',user.id).maybeSingle(),
+    fetchStripeSubscriptionStatus(supabase,user.id),
   ]);
   if(error)throw new Error('Could not load programs.');
-  const isPro = profileError ? false : resolveEntitlement(profile) === 'pro';
+  const isPro = profileError ? false : resolveEntitlement({...profile,stripe_subscription_status:stripeSubscriptionStatus}) === 'pro';
   return <main className="content">
     <header className="page-header"><div><div className="eyebrow">TRAINING</div><h1>Programs</h1></div><div className="header-actions"><Link className="secondary compact" href="/programs/templates">Templates</Link>{isPro ? <Link className="primary compact" href="/programs/ai">Build with AI</Link> : <Link className="secondary compact" href="/profile">Upgrade for AI programs</Link>}</div></header>
     {profileError&&<p className="notice error" role="alert">Could not load your membership status. Showing free-tier options.</p>}
