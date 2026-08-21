@@ -66,4 +66,18 @@ describe('POST /api/workouts retry and partial-save handling', () => {
     await expect(response.json()).resolves.toEqual({ error: 'Your workout could not be saved. Your local copy is still available.' });
     expect(computeProgression).not.toHaveBeenCalled();
   });
+
+  it('saves a Quick Workout with no program day without checking ownership or computing progression', async () => {
+    const supabase = supabaseWithRpcResult('saved');
+    createClient.mockResolvedValue(supabase);
+    const { POST } = await import('./route');
+
+    const response = await POST(request({ ...payload, programDayId: null }));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ saved: true, idempotent: false });
+    expect(supabase.from).not.toHaveBeenCalledWith('program_days');
+    expect(supabase.rpc).toHaveBeenCalledWith('save_web_workout', expect.objectContaining({ p_program_day_id: null }));
+    expect(computeProgression).not.toHaveBeenCalled();
+  });
 });
