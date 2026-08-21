@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth/require-user';
+import { CustomSelect } from '@/components/custom-select';
 
 type ExerciseRow = {
   id: string;
@@ -45,8 +46,8 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Pr
     <header className="page-header"><div><div className="eyebrow">CATALOG</div><h1>Exercises</h1><p>Search the Supabase exercise catalog used by programs and workout logging.</p></div><Link className="secondary button-link compact header-action" href="/plate-calculator">Plate calculator</Link></header>
     <form className="surface catalog-filters" action="/exercises">
       <label>Search<input name="q" defaultValue={query} placeholder="Bench, squat, cable..." /></label>
-      <label>Muscle<select name="muscle" defaultValue={muscle}><option value="">All muscles</option>{muscles.map((item) => <option key={item}>{item}</option>)}</select></label>
-      <label>Equipment<select name="equipment" defaultValue={equipment}><option value="">All equipment</option>{equipmentOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+      <label>Muscle<CustomSelect name="muscle" ariaLabel="Muscle" defaultValue={muscle} options={[{ value: '', label: 'All muscles' }, ...muscles.map((item) => ({ value: item, label: item }))]} /></label>
+      <label>Equipment<CustomSelect name="equipment" ariaLabel="Equipment" defaultValue={equipment} options={[{ value: '', label: 'All equipment' }, ...equipmentOptions.map((item) => ({ value: item, label: item }))]} /></label>
       <button className="secondary compact">Filter</button>
     </form>
     <div className="section-heading"><h2>{filtered.length} exercises</h2><span>{rows.length} total</span></div>
