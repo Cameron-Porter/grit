@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const links = [
+export const appNavLinks = [
   ['Today', '/workout'],
   ['Programs', '/programs'],
+  ['Exercises', '/exercises'],
   ['Progress', '/progress'],
   ['Profile', '/profile'],
 ] as const;
@@ -19,7 +20,7 @@ export function AppNav() {
 
   return (
     <nav className="app-nav" aria-label="Primary">
-      {links.map(([label, href]) => {
+      {appNavLinks.map(([label, href]) => {
         const active = isActiveAppNavLink(pathname, href);
         return (
           <Link
