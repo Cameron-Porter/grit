@@ -1,10 +1,15 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const rootPackage = JSON.parse(readFileSync(resolve(process.cwd(), '..', 'package.json'), 'utf8')) as {
+const repoRoot = resolve(process.cwd(), '..');
+const rootPackage = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), 'utf8')) as {
   main?: string;
   scripts?: Record<string, string>;
+};
+const webPackage = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8')) as {
+  scripts?: Record<string, string>;
+  devDependencies?: Record<string, string>;
 };
 
 describe('PWA-only root project commands', () => {
@@ -17,5 +22,12 @@ describe('PWA-only root project commands', () => {
     expect(rootPackage.scripts?.lint).toBe('npm --prefix web run lint');
     expect(rootPackage.scripts).not.toHaveProperty('android');
     expect(rootPackage.scripts).not.toHaveProperty('ios');
+  });
+
+  it('uses a checked-in ESLint configuration for the PWA lint gate', () => {
+    expect(webPackage.scripts?.lint).toBe('eslint . --max-warnings=0');
+    expect(existsSync(resolve(process.cwd(), 'eslint.config.mjs'))).toBe(true);
+    expect(webPackage.devDependencies).toHaveProperty('eslint');
+    expect(webPackage.devDependencies).toHaveProperty('typescript-eslint');
   });
 });

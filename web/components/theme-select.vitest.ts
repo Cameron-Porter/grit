@@ -22,7 +22,6 @@ describe('pre-paint theme bootstrap script', () => {
       window: { matchMedia: () => ({ matches: systemDark }) },
       document: { documentElement: { dataset: {} as Record<string, string> } },
     };
-    // eslint-disable-next-line no-new-func -- exercising the literal script injected into <head>, not a proxy for it.
     new Function('localStorage', 'window', 'document', themeBootstrapScript)(sandbox.localStorage, sandbox.window, sandbox.document);
     return sandbox.document.documentElement.dataset.theme;
   };

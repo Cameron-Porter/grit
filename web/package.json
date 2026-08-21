@@ -8,7 +8,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "lint": "eslint . --max-warnings=0"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",
@@ -23,7 +23,9 @@
     "@types/node": "24.10.1",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "eslint": "^10.9.0",
     "typescript": "6.0.3",
+    "typescript-eslint": "^8.67.0",
     "vitest": "^4.1.0"
   }
 }
