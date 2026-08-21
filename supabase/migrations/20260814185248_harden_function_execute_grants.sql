@@ -41,6 +41,7 @@ alter function public.run_retention_job() set search_path = public, pg_temp;
 alter function public.set_retention_exempt(uuid, boolean) set search_path = public, pg_temp;
 
 -- This user-owned table had RLS enabled but no policy, making legitimate rows inaccessible.
+drop policy if exists "Users manage own exercise preferences" on public.user_exercises;
 create policy "Users manage own exercise preferences"
   on public.user_exercises
   for all
