@@ -42,7 +42,7 @@ export default async function ExercisesPage({ searchParams }: { searchParams: Pr
   const filtered = rows.filter((row) => matches(row, query, muscle, equipment));
 
   return <main className="content">
-    <header className="page-header"><div><div className="eyebrow">CATALOG</div><h1>Exercises</h1><p>Search the Supabase exercise catalog used by programs and workout logging.</p></div></header>
+    <header className="page-header"><div><div className="eyebrow">CATALOG</div><h1>Exercises</h1><p>Search the Supabase exercise catalog used by programs and workout logging.</p></div><Link className="secondary button-link compact header-action" href="/plate-calculator">Plate calculator</Link></header>
     <form className="surface catalog-filters" action="/exercises">
       <label>Search<input name="q" defaultValue={query} placeholder="Bench, squat, cable..." /></label>
       <label>Muscle<select name="muscle" defaultValue={muscle}><option value="">All muscles</option>{muscles.map((item) => <option key={item}>{item}</option>)}</select></label>
