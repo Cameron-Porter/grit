@@ -1,6 +1,6 @@
 # GRIT PWA
 
-The production web client is a Next.js TypeScript PWA backed by the same Supabase project and training rules as the native app.
+The production client is a Next.js TypeScript PWA backed by Supabase and the shared deterministic training rules in `src/`.
 
 ## Local development
 
@@ -9,10 +9,10 @@ From the repository root:
 ```bash
 npm install
 npm --prefix web install
-npm run pwa:dev
+npm run dev
 ```
 
-Open `http://localhost:3000`. During local development, the PWA can reuse the root Expo Supabase variables. You can instead create `web/.env.local` from `web/.env.example`.
+Open `http://localhost:3000`. During local development, the PWA can reuse the root Expo-era Supabase variables while migration cleanup is in progress. Prefer `web/.env.local` from `web/.env.example` for new setup.
 
 ## Required production environment
 
@@ -25,36 +25,36 @@ STRIPE_PRO_PRICE_ID=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-Use a least-privilege Stripe restricted key where supported. The Supabase service-role key is server-only and is used by the verified Stripe webhook; never expose it with a `NEXT_PUBLIC_` prefix.
+Use a least-privilege Stripe restricted key where supported. The Supabase service-role key is server-only; never expose it with a `NEXT_PUBLIC_` prefix.
 
 ## Database
 
-Apply the repository migrations before deploying the web client. The PWA depends on the Stripe profile columns, `reported_rir`, and the atomic `save_web_workout` RPC. User-data queries remain RLS/auth scoped.
+Apply the repository migrations before deploying the web client. The PWA depends on `reported_rir`, `program_day_targets`, and the atomic `save_web_workout` RPC. User-data queries remain RLS/auth scoped.
 
-## Stripe
+## PWA install behavior
 
-Create a recurring Price and set its ID as `STRIPE_PRO_PRICE_ID`. Register the production webhook endpoint:
+- Manifest route: `/manifest.webmanifest`
+- Start URL: `/workout`
+- Scope: `/`
+- Display: standalone
+- Static offline fallback: `/offline.html`
+- Service worker: caches same-origin static assets only; it does **not** cache authenticated pages, Supabase requests, auth callbacks, API responses, or billing routes.
 
-```text
-https://YOUR_DOMAIN/api/billing/webhook
-```
-
-Subscribe it to:
-
-- `checkout.session.completed`
-- `customer.subscription.created`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-
-Copy the signing secret to `STRIPE_WEBHOOK_SECRET`. Checkout and the Billing Portal are created server-side; subscription state is changed only by signed webhook events.
+PWA installation and service workers require HTTPS outside localhost.
 
 ## Release checks
 
+Root commands are PWA-first:
+
 ```bash
-npm run pwa:typecheck
-npm run pwa:test
-npm run pwa:build
-npm test -- --no-coverage
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
-PWA installation and service workers require HTTPS outside localhost. The service worker caches only versioned same-origin static assets and never caches authenticated pages, Supabase traffic, auth callbacks, or API responses.
+Shared rules-engine regression tests are still available while the PWA imports the engine from `src/`:
+
+```bash
+npm run test:rules
+```
