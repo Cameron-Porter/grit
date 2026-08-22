@@ -6,24 +6,11 @@ web/.next/
 web/node_modules/
 web/.env.local
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
-# Native
-.kotlin/
+# credentials / backups
 *.orig.*
-*.jks
-*.keystore
 *.p8
 *.p12
 *.key
-*.mobileprovision
-
-# Metro
-.metro-health-check*
 
 # debug
 npm-debug.*
@@ -45,9 +32,5 @@ example
 
 # generated agent worktrees
 .claude/worktrees/
-
-# generated native folders
-/ios
-/android
 
 .env.local

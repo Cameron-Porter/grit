@@ -63,3 +63,18 @@ Shared rules-engine regression tests are still available while the PWA imports t
 ```bash
 npm run test:rules
 ```
+
+Public unauthenticated browser smoke coverage is available via:
+
+```bash
+npm run pwa:e2e
+```
+
+## Deploy, rollback, backup, webhook replay
+
+See [`../docs/deploy.md`](../docs/deploy.md) for the full runbook: pre-deploy
+checks, migration ordering, rollback (app and database), Supabase backup
+commands, and Stripe webhook replay/idempotency behavior.
+
+See [`../docs/pwa-browser-acceptance.md`](../docs/pwa-browser-acceptance.md)
+for the latest local public-page browser acceptance sweep.

@@ -12,7 +12,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['__tests__/rules/**/*.test.ts'],
+    include: ['__tests__/rules/**/*.test.ts', 'src/data/__tests__/**/*.test.ts', 'src/utils/__tests__/**/*.test.ts'],
     globals: true,
   },
 });

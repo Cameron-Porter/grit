@@ -94,6 +94,7 @@ npm run typecheck
 npm run lint
 npm test
 npm run build
+npm run pwa:e2e
 ```
 
 Rules-engine regression tests remain available while the shared engine lives in `src/`:
@@ -101,6 +102,12 @@ Rules-engine regression tests remain available while the shared engine lives in 
 ```bash
 npm run test:rules
 ```
+
+Deploy, rollback, backup, and Stripe webhook replay steps live in
+[`docs/deploy.md`](docs/deploy.md).
+
+The latest local public-page browser acceptance sweep is recorded in
+[`docs/pwa-browser-acceptance.md`](docs/pwa-browser-acceptance.md).
 
 ---
 
