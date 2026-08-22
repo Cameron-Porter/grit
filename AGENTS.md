@@ -208,6 +208,21 @@ Silent failures are bugs. Every async operation that writes user data must eithe
 
 Never leave a `catch` block that only resets a loading spinner without informing the user.
 
+### 6. PWA visual consistency
+
+The Next.js PWA uses a restrained Apple/Google-inspired visual language. Before adding or changing UI under `web/`:
+
+- Reuse an existing component or established utility class before creating a one-off control style.
+- Text actions in page headers and compact toolbars use pill geometry (`border-radius: 999px`), a minimum 40px height, centered content, and the existing primary/secondary/quiet color treatment. Do not ship a square or card-shaped header action beside pill actions.
+- Standard form and full-width account actions use the shared button geometry already defined in `globals.css`; controls within the same visual group must have matching height, radius, padding, typography, and border treatment.
+- Cards use the existing `.surface` geometry. Pills are reserved for actions, statuses, switches, and compact navigation; do not mix card and pill silhouettes for equivalent controls.
+- Every interactive control needs hover, active, focus-visible, disabled, and reduced-motion behavior. Preserve a minimum 44px touch target unless the control is a compact desktop-only supplement with an accessible larger target.
+- Verify every changed screen in both light and dark themes. Text and icons must use theme tokens rather than hard-coded white or black, except for intentional filled destructive/accent actions.
+- Verify responsive containment at narrow mobile widths: no menu, select, modal, button row, or bottom navigation may overflow the viewport.
+- When matching an existing UI element, inspect its complete computed style contract—shape, height, padding, border, color, hover, and focus—not only its class name.
+
+For UI-only changes that are not practical to unit test, explicitly record the light/dark, keyboard-focus, and narrow-width checks performed.
+
 ---
 
 ## Agent Behavior

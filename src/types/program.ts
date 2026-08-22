@@ -293,6 +293,10 @@ export interface ProgramConfig {
   trainingPhase?: TrainingPhase;
   daysPerWeek: number;
   selectedDays: string[];
+  // Optional explicit split chosen by the user. The rules engine still owns
+  // volume, slot construction, progression parameters, caps, and validation.
+  requestedSessionSequence?: SessionType[];
+  requestedSplitType?: string;
   musclePriorities: Partial<Record<MuscleGroup, MusclePriority>>;
   totalWeeks: number;
 }

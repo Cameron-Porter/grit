@@ -1,7 +1,8 @@
 import {
   recommendProgression,
+  recommendInitialMesocycleTarget,
   calculateVolumeTransitionAdjustment,
-  calculatePerformanceScore,
+  isUsableLoggedWeight,
 } from '../../src/rules/progressionEngine';
 import { validateDayExercises, validateProgram } from '../../src/rules/validation';
 import { PROGRESSION_CATEGORY_PROFILES } from '../../src/data/exerciseProgressionProfiles';
@@ -47,7 +48,7 @@ function makePrescription(overrides: Partial<SlotPrescription> = {}): SlotPrescr
 function makeSessions(weight = 100, reps = 10, count = 0, setsPerSession = 3): SessionPerformance[] {
   return Array.from({ length: count }, () => ({
     date: '2026-01-01',
-    sets: Array.from({ length: setsPerSession }, () => ({ weight, reps })),
+    sets: Array.from({ length: setsPerSession }, () => ({ weight, reps, rir: 2 })),
   }));
 }
 
@@ -122,6 +123,22 @@ describe('HV-019 — deadlift RIR hard floor', () => {
     const ctx = makeCtx({ isDeload: true, experienceLevel: 'advanced' });
     const rec = recommendProgression(prescription, makeSessions(100, 10, 1), ctx);
     expect(rec.nextRir).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe('HV-040 — history-aware Week-1 mesocycle seed', () => {
+  const prescription: SlotPrescription = { sets: 2, repsMin: 5, repsMax: 10, rir: 3, equipment: 'Dumbbell' };
+  it('holds a demonstrated load, clamps reps to the authored band, and retains Week-1 volume', () => {
+    const target = recommendInitialMesocycleTarget(prescription,[{date:'2026-08-01',sets:Array.from({length:4},()=>({weight:60,reps:12,rir:2}))}]);
+    expect(target).toEqual({weight:60,sets:2,repsMin:10,repsMax:10,rir:3,seededFromHistory:true});
+  });
+  it('does not guess from unsuccessful or mixed-load history', () => {
+    const target = recommendInitialMesocycleTarget(prescription,[{date:'2026-08-01',sets:[{weight:60,reps:4},{weight:55,reps:8}]}]);
+    expect(target).toEqual({weight:0,sets:2,repsMin:5,repsMax:10,rir:3,seededFromHistory:false});
+  });
+  it('keeps external load at zero for bodyweight work', () => {
+    const target = recommendInitialMesocycleTarget({...prescription,equipment:'Bodyweight'},[{date:'2026-08-01',sets:[{weight:0,reps:12},{weight:0,reps:12}]}]);
+    expect(target.weight).toBe(0);expect(target.repsMin).toBe(10);expect(target.seededFromHistory).toBe(true);
   });
 });
 
@@ -285,6 +302,38 @@ describe('ST-013 — whole-prescription and actual-effort load gate', () => {
     const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx());
     expect(rec.action).toBe('HOLD');
     expect(rec.nextWeight).toBe(100);
+  });
+
+  it('holds an intermediate load increase when no actual RIR was reported', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextWeight).toBe(100);
+  });
+
+  it('holds when effort reporting is only partial', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: [
+        { weight: 100, reps: 12, rir: 2 },
+        { weight: 100, reps: 12 },
+        { weight: 100, reps: 12, rir: 2 },
+      ],
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
+    expect(rec.action).toBe('HOLD');
+  });
+
+  it('retains beginner linear progression when RIR has not been learned yet', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'beginner' }));
+    expect(rec.action).toBe('ADVANCE_LOAD');
   });
 
   it('advances after every working set clears the ceiling at acceptable actual RIR', () => {
@@ -524,6 +573,42 @@ describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () 
   });
 });
 
+// ─── RC-001: Per-session per-muscle set cap ───────────────────────────────────
+
+describe('RC-001 — validateProgram: per-session per-muscle volume cap', () => {
+  it('warns when a single muscle receives more than 8 direct sets in one session', () => {
+    const slots: ExerciseSlot[] = [
+      makeSlot({ id: 'c1', muscle: 'Chest', role: 'Primary', sets: 5 }),
+      makeSlot({ id: 'c2', muscle: 'Chest', role: 'Secondary', sets: 4 }),
+    ];
+    const program = makeProgram([makeDay(slots, { sessionType: 'Push', splitName: 'Push' })]);
+
+    const result = validateProgram(program, []);
+    const capIssues = result.issues.filter((i) =>
+      i.type === 'proportionality' && i.message.includes('9 sets for Chest'),
+    );
+
+    expect(capIssues).toHaveLength(1);
+    expect(capIssues[0].severity).toBe('warning');
+    expect(result.valid).toBe(true);
+  });
+
+  it('does not warn at the 8-set per-muscle session ceiling', () => {
+    const slots: ExerciseSlot[] = [
+      makeSlot({ id: 'c1', muscle: 'Chest', role: 'Primary', sets: 4 }),
+      makeSlot({ id: 'c2', muscle: 'Chest', role: 'Secondary', sets: 4 }),
+    ];
+    const program = makeProgram([makeDay(slots, { sessionType: 'Push', splitName: 'Push' })]);
+
+    const result = validateProgram(program, []);
+    const capIssues = result.issues.filter((i) =>
+      i.type === 'proportionality' && i.message.includes('sets for Chest'),
+    );
+
+    expect(capIssues).toHaveLength(0);
+  });
+});
+
 // Bug fix regression: programFocus: 'maintenance' previously had zero test
 // coverage anywhere, and its branch ran *before* the FIRST_SESSION check, so
 // a maintenance-focus muscle with no logged history returned a nonsense
@@ -646,6 +731,40 @@ describe('ST-011 — percentage-based, equipment-gated load increment (supersede
       ctx,
     );
     expect(rec.action).toBe('CUT_HOLD');
+  });
+});
+
+describe('RC-003 — lengthened-position partials for equipment-limited isolation work', () => {
+  it('uses lengthened partials when an experienced accessory isolation hits the ceiling but load is equipment-limited', () => {
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 10, repsMax: 12, role: 'Accessory', profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      makeSessions(20, 12, 1),
+      makeCtx({ experienceLevel: 'intermediate' }),
+    );
+
+    expect(rec.action).toBe('LENGTHENED_PARTIALS');
+    expect(rec.nextWeight).toBe(20);
+    expect(rec.reason).toContain('3–5 lengthened partials');
+  });
+
+  it('does not suggest lengthened partials to beginners', () => {
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 10, repsMax: 12, role: 'Accessory', profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      makeSessions(20, 12, 1),
+      makeCtx({ experienceLevel: 'beginner' }),
+    );
+
+    expect(rec.action).toBe('HOLD');
+  });
+
+  it('does not suggest lengthened partials for primary compound slots', () => {
+    const rec = recommendProgression(
+      makePrescription({ repsMin: 10, repsMax: 12, role: 'Primary', profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
+      makeSessions(20, 12, 1),
+      makeCtx({ experienceLevel: 'advanced' }),
+    );
+
+    expect(rec.action).toBe('HOLD');
   });
 });
 
@@ -782,6 +901,24 @@ describe('VA-015 — graduated soreness-based ramp step', () => {
 // for equipment: 'Bodyweight', with the training decision expressed purely
 // on the reps axis instead.
 describe('HV-028 — bodyweight equipment holds weight, progresses reps only', () => {
+  it('distinguishes valid zero external load from missing loaded-exercise weight', () => {
+    expect(isUsableLoggedWeight(0, 'Bodyweight')).toBe(true);
+    expect(isUsableLoggedWeight(0, 'Cable')).toBe(false);
+    expect(isUsableLoggedWeight(100, 'Cable')).toBe(true);
+  });
+
+  it('treats zero external load as completed bodyweight work and advances the rep target', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({ sets: 3, repsMin: 8, repsMax: 12, equipment: 'Bodyweight' }),
+      makeSessions(0, 12, 1, 3),
+      ctx,
+    );
+    expect(rec.action).toBe('HOLD');
+    expect(rec.nextWeight).toBe(0);
+    expect(rec.nextRepsMax).toBe(13);
+  });
+
   it('ADVANCE_LOAD: keeps weight unchanged and climbs reps past the ceiling instead of resetting to the floor', () => {
     const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(
@@ -928,18 +1065,6 @@ describe('calculateVolumeTransitionAdjustment — standalone unit tests', () => 
   });
 });
 
-describe('calculatePerformanceScore — standalone unit tests', () => {
-  it('degrades to pure tonnage when no rir is present — 100% of real session data today', () => {
-    const score = calculatePerformanceScore([{ weight: 225, reps: 10 }]);
-    expect(score).toBe(2250);
-  });
-
-  it('225x10 @1 RIR scores higher than 225x10 @3 RIR — same tonnage, different effort', () => {
-    const lowRir = calculatePerformanceScore([{ weight: 225, reps: 10, rir: 1 }]);
-    const highRir = calculatePerformanceScore([{ weight: 225, reps: 10, rir: 3 }]);
-    expect(lowRir).toBeGreaterThan(highRir);
-  });
-});
 
 // ─── RC-011: Cut phase runs at reduced speed instead of a hard hold — required scenario 3
 
@@ -983,6 +1108,27 @@ describe('HV-034 — plateau requires more exposures than before, including for 
     expect(rec.action).toBe('PLATEAU_DELOAD');
   });
 
+  it('does not call a plateau when identical output improves at a higher reported RIR', () => {
+    const sets = (rir: number) => Array.from({ length: 3 }, () => ({ weight: 100, reps: 10, rir }));
+    const sessions: SessionPerformance[] = [
+      { date: '2026-01-15', sets: sets(3) },
+      { date: '2026-01-08', sets: sets(2) },
+      { date: '2026-01-01', sets: sets(1) },
+    ];
+    const rec = recommendProgression(makePrescription({ sets: 3 }), sessions, makeCtx({ experienceLevel: 'advanced' }));
+    expect(rec.action).not.toBe('PLATEAU_DELOAD');
+  });
+
+  it('does not compare changed set counts as a performance plateau', () => {
+    const sessions: SessionPerformance[] = [
+      { date: '2026-01-15', sets: Array.from({ length: 2 }, () => ({ weight: 100, reps: 10 })) },
+      { date: '2026-01-08', sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 10 })) },
+      { date: '2026-01-01', sets: Array.from({ length: 4 }, () => ({ weight: 100, reps: 10 })) },
+    ];
+    const rec = recommendProgression(makePrescription({ sets: 2 }), sessions, makeCtx({ experienceLevel: 'advanced' }));
+    expect(rec.action).not.toBe('PLATEAU_DELOAD');
+  });
+
   it('does not call a plateau if volume recently increased, even with identical load/reps history', () => {
     // 3 identical sessions would normally plateau an advanced lifter (see
     // above) — but if this week's sets just increased, HV-034 gates the
@@ -1001,6 +1147,20 @@ describe('HV-034 — plateau requires more exposures than before, including for 
 // ─── HV-037: Bodyweight progresses beyond reps — required scenario 6 ─────────
 
 describe('HV-037 — bodyweight multi-dimension progression', () => {
+  it('advances difficulty when zero-load bodyweight work reaches its rep ceiling', () => {
+    const ctx = makeCtx({ experienceLevel: 'intermediate' });
+    const rec = recommendProgression(
+      makePrescription({
+        sets: 3, repsMin: 8, repsMax: 20, equipment: 'Bodyweight', profile: PROGRESSION_CATEGORY_PROFILES.bodyweight,
+      }),
+      makeSessions(0, 30, 1, 3),
+      ctx,
+    );
+    expect(rec.action).toBe('ADVANCE_DIFFICULTY');
+    expect(rec.nextWeight).toBe(0);
+    expect(rec.nextRepsMax).toBe(30);
+  });
+
   it('required scenario: a bodyweight exercise at its rep ceiling advances via difficulty, not more reps', () => {
     const ctx = makeCtx({ experienceLevel: 'intermediate' });
     const rec = recommendProgression(

@@ -40,8 +40,8 @@ export interface SessionPerformance {
   // HV-033: rir is optional user-reported actual RIR. Legacy sessions may
   // production caller — workout_sets.rir stores only the prescribed RIR
   // omit it; current sessions populate it through workout_sets.reported_rir.
-  // calculatePerformanceScore degrades to pure tonnage (weight x reps) when
-  // it is absent.
+  // Plateau comparison uses it only when every set in both sessions reports
+  // RIR; partial effort data is not strong enough to classify a stall.
   sets: { weight: number; reps: number; rir?: number }[];
 }
 
@@ -116,6 +116,9 @@ export interface ProgressionContext {
 // CUT_PROGRESS      — RC-011: fat-loss phase, ceiling hit → reduced-speed load advance
 // ADVANCE_DIFFICULTY — HV-037: bodyweight exercise hit its rep ceiling → advance via
 //                       tempo/ROM/leverage/external load instead of more reps
+// LENGTHENED_PARTIALS — RC-003: experienced accessory isolation hits the rep ceiling
+//                       but load is equipment-limited → extend the final set in the
+//                       lengthened position instead of chasing an oversized jump
 export type ProgressionAction =
   | 'FIRST_SESSION'
   | 'DELOAD'
@@ -126,7 +129,8 @@ export type ProgressionAction =
   | 'DELOAD_NEEDED'
   | 'CUT_HOLD'
   | 'CUT_PROGRESS'
-  | 'ADVANCE_DIFFICULTY';
+  | 'ADVANCE_DIFFICULTY'
+  | 'LENGTHENED_PARTIALS';
 
 export interface ProgressionRecommendation {
   nextWeight: number;
@@ -256,6 +260,10 @@ export function roundToIncrement(weight: number, increment: number): number {
 // reps-first progression, with external load only entering via a genuinely
 // weighted variation (weighted vest/belt), which isn't something this app
 // can auto-detect from a rep-ceiling hit.
+export function isUsableLoggedWeight(weight: number, equipment?: string | null): boolean {
+  return weight > 0 || (weight === 0 && equipment === 'Bodyweight');
+}
+
 function heldOrAdjustedWeight(
   lastWeight: number,
   isBodyweight: boolean,
@@ -325,10 +333,58 @@ function workingWeight(session: SessionPerformance): number {
 
 // Peak reps completed at the working weight.
 function peakRepsAtWorkingWeight(session: SessionPerformance): number {
+  if (!session.sets.length) return 0;
   const ww = workingWeight(session);
-  if (ww === 0) return 0;
   const atWW = session.sets.filter((s) => s.weight === ww);
   return atWW.length > 0 ? Math.max(...atWW.map((s) => s.reps)) : 0;
+}
+
+export interface InitialMesocycleTarget {
+  weight: number;
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  rir: number;
+  seededFromHistory: boolean;
+}
+
+// ─── HV-040: Known-performance seed for a new hypertrophy mesocycle ─────────
+// Source: Dr. Mike Israetel / RP Hypertrophy — begin a new mesocycle at its
+// conservative Week-1 volume and effort while using established exercise
+// performance to select a realistic working load. Starting a block is not a
+// load-progression event: retain a successfully demonstrated load, clamp its
+// completed reps into the new slot's authored band, and never copy the old
+// session's larger set count into the Week-1 MEV prescription.
+export function recommendInitialMesocycleTarget(
+  prescription: SlotPrescription,
+  sessions: SessionPerformance[],
+): InitialMesocycleTarget {
+  const fallback: InitialMesocycleTarget = {
+    weight: 0,
+    sets: prescription.sets,
+    repsMin: prescription.repsMin,
+    repsMax: prescription.repsMax,
+    rir: prescription.rir,
+    seededFromHistory: false,
+  };
+  const latest = sessions[0];
+  if (!latest?.sets.length) return fallback;
+  const weights = new Set(latest.sets.map((set) => set.weight));
+  const successful = weights.size === 1
+    && latest.sets.every((set) => set.reps >= prescription.repsMin
+      && (prescription.equipment === 'Bodyweight' || set.weight > 0));
+  if (!successful) return fallback;
+  const demonstratedReps = Math.min(...latest.sets.map((set) => set.reps));
+  const seededReps = Math.max(prescription.repsMin, Math.min(prescription.repsMax, demonstratedReps));
+  const demonstratedWeight = latest.sets[0].weight;
+  return {
+    weight: prescription.equipment === 'Bodyweight' ? 0 : demonstratedWeight,
+    sets: prescription.sets,
+    repsMin: seededReps,
+    repsMax: seededReps,
+    rir: prescription.rir,
+    seededFromHistory: true,
+  };
 }
 
 // ST-013: A load increase requires the whole working-weight prescription to
@@ -338,8 +394,8 @@ function peakRepsAtWorkingWeight(session: SessionPerformance): number {
 // Conditioning). Using the minimum working-set reps also makes set-to-set
 // fatigue visible instead of hiding it behind the best set.
 function completedRepsAtWorkingWeight(session: SessionPerformance): number {
+  if (!session.sets.length) return 0;
   const ww = workingWeight(session);
-  if (ww === 0) return 0;
   const atWW = session.sets.filter((s) => s.weight === ww);
   return atWW.length > 0 ? Math.min(...atWW.map((s) => s.reps)) : 0;
 }
@@ -354,12 +410,17 @@ function sessionPerf(session: SessionPerformance): Perf {
   };
 }
 
-function reportedEffortAllowsLoad(session: SessionPerformance, prescribedRir: number): boolean {
+function reportedEffortAllowsLoad(
+  session: SessionPerformance,
+  prescribedRir: number,
+  experienceLevel: ExperienceLevel,
+): boolean {
   const workingSets = session.sets;
   const reported = workingSets.filter((set) => set.rir !== undefined);
-  // Backward compatibility for existing history: when actual RIR was not
-  // captured, the stricter all-working-sets rep gate still applies.
-  if (reported.length === 0) return true;
+  // ST-013: intermediate/advanced load increases require complete effort
+  // evidence. Beginners retain the simpler whole-prescription rep gate so
+  // linear progression remains usable while they learn RIR reporting.
+  if (reported.length === 0) return experienceLevel === 'beginner';
   // Partial reporting is not enough to certify the whole prescription.
   return reported.length === workingSets.length
     && reported.every((set) => (set.rir as number) >= prescribedRir);
@@ -372,33 +433,43 @@ function completedStraightSetPrescription(
   session: SessionPerformance,
   prescribedSets: number,
   repCeiling: number,
+  allowZeroLoad: boolean,
 ): boolean {
   if (session.sets.length < prescribedSets || session.sets.length === 0) return false;
   const load = session.sets[0].weight;
-  return load > 0
+  // HV-028: bodyweight work uses zero to mean valid zero external load, not
+  // missing performance. Loaded exercises still require a positive load.
+  return (load > 0 || allowZeroLoad)
     && session.sets.every((set) => set.weight === load)
     && session.sets.every((set) => set.reps >= repCeiling);
 }
 
-// ─── HV-033: Performance Trend Score ───────────────────────────────────────
+// ─── HV-033: Comparable performance trend ────────────────────────────────────
 //
-// A hidden metric combining load, reps, sets, and (when available) RIR, so
-// e.g. 225x10@3RIR and 225x10@1RIR — identical weight/reps, different
-// effort — don't read as the same performance. Core is tonnage
-// (weight x reps, summed across sets); RIR applies a small multiplier when
-// present. As of 2026-08-04 no production session ever carries a `rir`
-// value (see SessionPerformance's doctrine comment) — every real call
-// degrades to pure tonnage, which is exactly what the pre-existing
-// same-load/same-reps stall check already implied. This is intentionally a
-// actual RIR now contributes to plateau and fatigue detection when reported.
-export function calculatePerformanceScore(sets: { weight: number; reps: number; rir?: number }[]): number {
-  const tonnage = sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
-  const rated = sets.filter((s) => s.rir !== undefined);
-  if (rated.length === 0) return tonnage;
-  const avgRir = rated.reduce((sum, s) => sum + (s.rir as number), 0) / rated.length;
-  // 0 RIR (failure) -> 1.15x, 5 RIR (very conservative) -> 0.85x, 2.5 RIR
-  // (this app's typical prescribed midpoint) -> 1.0x, unchanged.
-  return tonnage * (1 + (2.5 - avgRir) * 0.06);
+// Plateau detection compares like-for-like sessions rather than collapsing
+// load, reps, set count, and RIR into a directionally ambiguous tonnage score.
+// A set-count change is not comparable. At identical output, higher reported
+// RIR means the athlete achieved the work with more reserve and therefore
+// improved; lower or equal RIR is not improvement. Partial RIR histories are
+// not strong enough evidence to classify a plateau.
+function isStalledPair(current: SessionPerformance, previous: SessionPerformance): boolean {
+  if (current.sets.length !== previous.sets.length || current.sets.length === 0) return false;
+  const currentPerf = sessionPerf(current);
+  const previousPerf = sessionPerf(previous);
+  if (currentPerf.weight !== previousPerf.weight
+    || currentPerf.completedReps !== previousPerf.completedReps
+    || currentPerf.maxReps !== previousPerf.maxReps) return false;
+
+  const currentRir = current.sets.map((set) => set.rir);
+  const previousRir = previous.sets.map((set) => set.rir);
+  const neitherRated = currentRir.every((rir) => rir === undefined)
+    && previousRir.every((rir) => rir === undefined);
+  if (neitherRated) return true;
+  if (currentRir.some((rir) => rir === undefined) || previousRir.some((rir) => rir === undefined)) return false;
+
+  const average = (values: (number | undefined)[]) =>
+    values.reduce<number>((sum, value) => sum + (value as number), 0) / values.length;
+  return average(currentRir) <= average(previousRir);
 }
 
 // Count identical consecutive *pairs* (sessions[i] == sessions[i+1]) from the
@@ -413,8 +484,8 @@ export function calculatePerformanceScore(sets: { weight: number; reps: number; 
 // exposures / 2 pairs each) are applied where stallThreshold is computed in
 // recommendProgression — this function's pair-counting logic is unchanged,
 // only what counts as a "stalled pair" is stricter: HV-034 additionally
-// requires the performance score not to have improved (see
-// calculatePerformanceScore above), not just identical load+reps. The old
+// requires comparable set counts, whole-prescription reps, and no RIR
+// improvement, not just identical peak load+reps. The old
 // "advanced accommodates faster, so flag sooner" rationale is explicitly
 // retracted, not just renumbered — advanced now requires the same 2-pair
 // confirmation as intermediate before calling a plateau.
@@ -422,12 +493,7 @@ function countConsecutiveStalls(sessions: SessionPerformance[]): number {
   if (sessions.length < 2) return 0;
   let count = 0;
   for (let i = 0; i < sessions.length - 1; i++) {
-    const a = sessionPerf(sessions[i]);
-    const b = sessionPerf(sessions[i + 1]);
-    const sameLoadReps = a.weight === b.weight && a.maxReps === b.maxReps;
-    const scoreA = calculatePerformanceScore(sessions[i].sets);
-    const scoreB = calculatePerformanceScore(sessions[i + 1].sets);
-    if (sameLoadReps && scoreA <= scoreB) {
+    if (isStalledPair(sessions[i], sessions[i + 1])) {
       count++;
     } else {
       break;
@@ -877,8 +943,8 @@ export function recommendProgression(
 
   const last = sessions[0];
   const lastPerf = sessionPerf(last);
-  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir)
-    && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax);
+  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir, ctx.experienceLevel)
+    && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax, isBodyweight);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);
 
@@ -990,6 +1056,7 @@ function resolveCeilingHit(
   equipmentLimited: boolean,
   base: EvalInputs['base'],
   progressionLabel: 'Linear progression' | 'Double progression',
+  experienceLevel: ExperienceLevel,
 ): ProgressionRecommendation {
   // HV-037: bodyweight has its own multi-dimension ladder (reps -> tempo ->
   // range of motion -> leverage -> external load), not more reps forever —
@@ -1036,6 +1103,24 @@ function resolveCeilingHit(
   // load and extend reps past the ceiling instead, up to a rep buffer, then
   // force the jump anyway so it can't stall forever.
   if (equipmentLimited) {
+    // RC-003: lengthened-position partials are reserved for experienced
+    // lifters on stable accessory/isolation work when the load jump is too
+    // large; the 3–5 partial-rep cue comes from the G.R.I.T. doctrine update
+    // citing the 2026 IJES lengthened-partials study.
+    const lengthenedPartialsEligible =
+      experienceLevel !== 'beginner' &&
+      prescription.role === 'Accessory' &&
+      (profile.category === 'isolation' || profile.category === 'cable_accessory');
+    if (lengthenedPartialsEligible) {
+      return {
+        ...base,
+        nextWeight: lastPerf.weight,
+        nextRepsMax: prescription.repsMax,
+        action: 'LENGTHENED_PARTIALS',
+        reason: `Hit the ${prescription.repsMax}-rep ceiling at ${lastPerf.weight} lb, but the next load jump is too large. Add 3–5 lengthened partials at the bottom of the final set instead of increasing load.`,
+      };
+    }
+
     const repsPastCeiling = lastPerf.maxReps - prescription.repsMax;
     if (repsPastCeiling < EQUIPMENT_LIMITED_REP_BUFFER) {
       const nextTarget = lastPerf.maxReps + 1;
@@ -1134,7 +1219,7 @@ function evaluateBeginnerLinear(
   }
 
   // Below rep floor — hold or reduce.
-  if (lastPerf.maxReps < effectiveRepsMin && lastPerf.weight > 0) {
+  if (lastPerf.maxReps < effectiveRepsMin && (lastPerf.weight > 0 || isBodyweight)) {
     const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
     const twoConsecutiveBelow =
       prev !== null &&
@@ -1172,8 +1257,8 @@ function evaluateBeginnerLinear(
   // ceiling checked here is effectiveRepsMax (lowered this session if
   // volume just increased), not the template's raw repsMax, and load holds
   // when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression');
+  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression', ctx.experienceLevel);
   }
 
   // Within rep band — rep progress is occurring. ST-007: target last session's
@@ -1243,7 +1328,7 @@ function evaluateDoubleProgression(
   }
 
   // ── Below rep floor ───────────────────────────────────────────────────────
-  if (lastPerf.maxReps < effectiveRepsMin && lastPerf.weight > 0) {
+  if (lastPerf.maxReps < effectiveRepsMin && (lastPerf.weight > 0 || isBodyweight)) {
     const twoConsecutiveBelow =
       prev !== null &&
       prev.maxReps < effectiveRepsMin &&
@@ -1281,8 +1366,8 @@ function evaluateDoubleProgression(
   // "ceiling hit + RIR ≤ prescribedRir + 1" assumption.) HV-032: the ceiling
   // checked here is effectiveRepsMax, not the template's raw repsMax, and
   // load holds when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0 && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression');
+  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression', ctx.experienceLevel);
   }
 
   // ── Within rep band — normal hold ────────────────────────────────────────

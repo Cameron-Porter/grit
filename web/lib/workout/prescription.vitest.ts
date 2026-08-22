@@ -1,0 +1,3 @@
+import{describe,expect,it}from'vitest';import{resolveExercisePrescription}from'./prescription';
+const template={exercise_name:'Row',muscle_group:'Back',equipment:'Cable',target_sets:3,target_reps_min:8,target_reps_max:12,target_weight:100,rir:2};
+describe('resolveExercisePrescription',()=>{it('uses persisted progression targets without inventing doctrine defaults',()=>expect(resolveExercisePrescription(template,{target_sets:4,target_reps_min:9,target_reps_max:13,target_weight:105,rir:1},'grow')).toMatchObject({sets:4,repsMin:9,repsMax:13,weight:105,rir:1}));it('rejects malformed prescriptions instead of silently substituting training parameters',()=>expect(()=>resolveExercisePrescription({...template,target_sets:null},undefined,'grow')).toThrow('missing sets'))});

@@ -2,6 +2,9 @@
 
 # dependencies
 node_modules/
+web/.next/
+web/node_modules/
+web/.env.local
 
 # Expo
 .expo/
@@ -39,6 +42,9 @@ yarn-error.*
 *.tsbuildinfo
 
 example
+
+# generated agent worktrees
+.claude/worktrees/
 
 # generated native folders
 /ios
