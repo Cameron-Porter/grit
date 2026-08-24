@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { SVGProps } from 'react';
 
-type NavIcon = 'dumbbell' | 'programs' | 'progress' | 'profile';
+type NavIcon = 'home' | 'dumbbell' | 'programs' | 'progress' | 'profile';
 
 type AppNavLink = {
   label: string;
@@ -13,7 +13,8 @@ type AppNavLink = {
 };
 
 export const appNavLinks = [
-  { label: 'Today', href: '/workout', icon: 'dumbbell' },
+  { label: 'Home', href: '/dashboard', icon: 'home' },
+  { label: 'Workout', href: '/workout', icon: 'dumbbell' },
   { label: 'Programs', href: '/programs', icon: 'programs' },
   { label: 'Progress', href: '/history', icon: 'progress' },
   { label: 'Profile', href: '/profile', icon: 'profile' },
@@ -25,6 +26,14 @@ export function isActiveAppNavLink(pathname: string, href: string): boolean {
 
 function AppNavIcon({ icon, ...props }: { icon: NavIcon } & SVGProps<SVGSVGElement>) {
   switch (icon) {
+    case 'home':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
+          <path d="M4.75 11.25 12 5.25l7.25 6" />
+          <path d="M6.75 10.25v8h10.5v-8" />
+          <path d="M10 18.25v-4.5h4v4.5" />
+        </svg>
+      );
     case 'dumbbell':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
