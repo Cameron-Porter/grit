@@ -1,10 +1,8 @@
 # Deploy, Rollback, Backup, and Webhook Replay
 
-Operational runbook for the GRIT PWA (`web/`) and its Supabase backend. This
-is host-agnostic: production hosting target is not yet decided (see the
-project kanban's "Blocked / Decisions needed" list), so the steps below name
-the Next.js/Supabase-level actions and call out where a specific host's
-dashboard/CLI is required instead of assuming one.
+Operational runbook for the GRIT PWA (`web/`) and its Supabase backend. The
+production web app deploys through Vercel from the repository root, with the
+actual Next.js app and dependency lockfile under `web/`.
 
 No production secrets are recorded here or anywhere in the repository. Real
 values live only in the hosting provider's environment configuration and in
@@ -22,9 +20,8 @@ npm run build
 npm run test:rules
 ```
 
-All five must pass. There are no CI quality gates wired up yet (tracked on
-the kanban under Iteration 5), so these currently have to be run locally or
-in whatever ad hoc pipeline is standing in for CI before a deploy goes out.
+All five must pass locally before a deploy goes out. The GitHub quality
+workflow also runs these gates for `main` changes.
 
 ## Deploy
 
@@ -41,10 +38,20 @@ in whatever ad hoc pipeline is standing in for CI before a deploy goes out.
    ```
 
    against the target project. Never run this from an agent session.
-3. Build and deploy the `web/` Next.js app through the chosen host's normal
-   flow (git-triggered build, CLI deploy, etc.). The app is a standard
-   `next build` / `next start` app with no custom server, so any Next.js
-   16-compatible host works.
+3. Build and deploy the `web/` Next.js app through Vercel's git-triggered
+   flow. The checked-in `vercel.json` keeps Vercel's repository-root project
+   aligned with the nested PWA:
+
+   - `installCommand: npm ci --prefix web` installs the Next.js dependencies
+     from `web/package-lock.json` before Vercel runs the root build script.
+   - `buildCommand: npm run build` preserves the root command contract, which
+     delegates to `npm --prefix web run build`.
+   - `outputDirectory: web/.next` points Vercel at the generated Next.js
+     build output.
+
+   Do not replace the install step with a bare root `npm install`; the root
+   package has no Next.js dependency, so a root-only install leaves `next`
+   unavailable when the delegated `web/` build runs.
 4. Verify the deploy:
 
    ```bash
