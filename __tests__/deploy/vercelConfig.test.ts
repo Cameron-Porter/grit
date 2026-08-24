@@ -3,31 +3,36 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const repoRoot = path.resolve(import.meta.dirname, '..', '..');
+const webRoot = path.join(repoRoot, 'web');
 
-const vercelConfig = JSON.parse(fs.readFileSync(path.join(repoRoot, 'vercel.json'), 'utf-8'));
-const rootPackageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf-8'));
+const vercelConfig = JSON.parse(fs.readFileSync(path.join(webRoot, 'vercel.json'), 'utf-8'));
+const webPackageJson = JSON.parse(fs.readFileSync(path.join(webRoot, 'package.json'), 'utf-8'));
 
-describe('vercel.json deploy config', () => {
-  // Regression test for the "sh: line 1: next: command not found" Vercel
-  // build failure: the Next.js app lives in web/, but the repo's Vercel
-  // Root Directory is "/". Without an explicit installCommand, Vercel's
-  // default `npm install` only installs the (dependency-less) root
-  // package.json and never populates web/node_modules, so `next` is never
-  // on PATH when the root "build" script delegates into web/.
-  it('installs web/ dependencies before building, mirroring CI', () => {
-    expect(vercelConfig.installCommand).toBe('npm ci --prefix web');
+describe('Vercel deploy config', () => {
+  // Regression coverage for Vercel failing before the build with
+  // "No Next.js version detected" / "next: command not found". The Vercel
+  // project Root Directory must be `web`, where the real Next package and
+  // lockfile live, rather than the dependency-less repository root.
+  it('keeps the checked-in Vercel config scoped to the web app root', () => {
+    expect(fs.existsSync(path.join(repoRoot, 'vercel.json'))).toBe(false);
+    expect(fs.existsSync(path.join(webRoot, 'package-lock.json'))).toBe(true);
+    expect(webPackageJson.dependencies).toHaveProperty('next');
   });
 
-  it('declares the Next.js framework so Vercel packages web/.next output correctly', () => {
+  it('uses the web app install command so next is installed before build', () => {
+    expect(vercelConfig.installCommand).toBe('npm ci');
+  });
+
+  it('declares the Next.js framework so Vercel packages .next output correctly', () => {
     expect(vercelConfig.framework).toBe('nextjs');
   });
 
-  it('points outputDirectory at web/.next, since builds run with cwd=web', () => {
-    expect(vercelConfig.outputDirectory).toBe('web/.next');
+  it('points outputDirectory at the web-root .next build output', () => {
+    expect(vercelConfig.outputDirectory).toBe('.next');
   });
 
-  it('buildCommand runs the root "build" script, which delegates into web/', () => {
+  it('runs the web package build script directly from the Vercel root directory', () => {
     expect(vercelConfig.buildCommand).toBe('npm run build');
-    expect(rootPackageJson.scripts.build).toBe('npm --prefix web run build');
+    expect(webPackageJson.scripts.build).toBe('next build');
   });
 });

@@ -1,8 +1,8 @@
 # Deploy, Rollback, Backup, and Webhook Replay
 
 Operational runbook for the GRIT PWA (`web/`) and its Supabase backend. The
-production web app deploys through Vercel from the repository root, with the
-actual Next.js app and dependency lockfile under `web/`.
+production web app deploys through Vercel with the project Root Directory set
+to `web`, where the actual Next.js app and dependency lockfile live.
 
 No production secrets are recorded here or anywhere in the repository. Real
 values live only in the hosting provider's environment configuration and in
@@ -39,19 +39,19 @@ workflow also runs these gates for `main` changes.
 
    against the target project. Never run this from an agent session.
 3. Build and deploy the `web/` Next.js app through Vercel's git-triggered
-   flow. The checked-in `vercel.json` keeps Vercel's repository-root project
-   aligned with the nested PWA:
+   flow. The Vercel project settings and checked-in `web/vercel.json` must
+   stay aligned with the nested PWA:
 
-   - `installCommand: npm ci --prefix web` installs the Next.js dependencies
-     from `web/package-lock.json` before Vercel runs the root build script.
-   - `buildCommand: npm run build` preserves the root command contract, which
-     delegates to `npm --prefix web run build`.
-   - `outputDirectory: web/.next` points Vercel at the generated Next.js
-     build output.
+   - Root Directory: `web` — Vercel must detect `web/package.json`, where
+     `next` is declared.
+   - `installCommand: npm ci` installs dependencies from `web/package-lock.json`.
+   - `buildCommand: npm run build` runs the `web/package.json` build script.
+   - `outputDirectory: .next` points Vercel at the generated Next.js build
+     output relative to `web`.
 
-   Do not replace the install step with a bare root `npm install`; the root
-   package has no Next.js dependency, so a root-only install leaves `next`
-   unavailable when the delegated `web/` build runs.
+   Do not leave the project Root Directory at the repository root. The root
+   package has no Next.js dependency, so Vercel cannot detect the framework
+   there and preview builds fail before `next build` runs.
 4. Verify the deploy:
 
    ```bash

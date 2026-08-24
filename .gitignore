@@ -34,3 +34,4 @@ example
 .claude/worktrees/
 
 .env.local
+.vercel
