@@ -45,6 +45,7 @@ describe('exact native app port contracts', () => {
   it('keeps secondary/deep-link pages on the same native shell and list-card pattern', () => {
     for (const file of [
       'app/(app)/exercises/[id]/page.tsx',
+      'app/(app)/history/[id]/page.tsx',
       'app/(app)/programs/[id]/page.tsx',
       'app/(app)/programs/templates/page.tsx',
       'app/(app)/programs/templates/[id]/page.tsx',
@@ -53,5 +54,12 @@ describe('exact native app port contracts', () => {
       expect(source).toContain('native-gradient-background');
       expect(source).toMatch(/native-(page-header|list-card|section|settings-group)/);
     }
+  });
+
+  it('uses native empty-state shells for app loading and error states', () => {
+    expect(read('app/(app)/loading.tsx')).toContain('native-empty-state');
+    expect(read('app/(app)/loading.tsx')).toContain('native-gradient-background');
+    expect(read('app/(app)/error.tsx')).toContain('native-empty-state');
+    expect(read('app/(app)/error.tsx')).toContain('native-gradient-background');
   });
 });
