@@ -45,7 +45,7 @@ describe('exact native app port contracts', () => {
     expect(logger).not.toContain('rir-target');
     expect(css).toContain('native-rest-progress');
     expect(css).toContain('sheet-action-row');
-    expect(css).toContain('grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 44px 52px');
+    expect(css).toContain('grid-template-columns:44px minmax(72px,1fr) minmax(72px,1fr) 54px 64px');
   });
 
   it('keeps secondary/deep-link pages on the same native shell and list-card pattern', () => {

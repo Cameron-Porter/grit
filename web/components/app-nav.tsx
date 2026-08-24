@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { SVGProps } from 'react';
 
-type NavIcon = 'today' | 'programs' | 'progress' | 'profile';
+type NavIcon = 'dumbbell' | 'programs' | 'progress' | 'profile';
 
 type AppNavLink = {
   label: string;
@@ -13,7 +13,7 @@ type AppNavLink = {
 };
 
 export const appNavLinks = [
-  { label: 'Today', href: '/workout', icon: 'today' },
+  { label: 'Today', href: '/workout', icon: 'dumbbell' },
   { label: 'Programs', href: '/programs', icon: 'programs' },
   { label: 'Progress', href: '/history', icon: 'progress' },
   { label: 'Profile', href: '/profile', icon: 'profile' },
@@ -25,11 +25,12 @@ export function isActiveAppNavLink(pathname: string, href: string): boolean {
 
 function AppNavIcon({ icon, ...props }: { icon: NavIcon } & SVGProps<SVGSVGElement>) {
   switch (icon) {
-    case 'today':
+    case 'dumbbell':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-          <path d="M4.75 10.25c0-1.1.9-2 2-2h10.5c1.1 0 2 .9 2 2v6.5c0 1.1-.9 2-2 2H6.75c-1.1 0-2-.9-2-2v-6.5Z" />
-          <path d="M8 5.25v4M16 5.25v4M7.5 12.25h9" />
+          <path d="M4.75 9.75v4.5M19.25 9.75v4.5M7.25 8.25v7.5M16.75 8.25v7.5" />
+          <path d="M7.25 12h9.5" />
+          <path d="M3.25 11.25v1.5M20.75 11.25v1.5" />
         </svg>
       );
     case 'programs':

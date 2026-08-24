@@ -22,4 +22,8 @@ describe('app navigation state', () => {
     expect(appNavLinks).toHaveLength(4);
     expect(appNavLinks.every((link) => link.icon.length > 0)).toBe(true);
   });
+
+  it('uses a dumbbell icon for the workout tab', () => {
+    expect(appNavLinks[0]).toMatchObject({ label: 'Today', href: '/workout', icon: 'dumbbell' });
+  });
 });
