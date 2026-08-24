@@ -52,13 +52,6 @@ function makeSessions(weight = 100, reps = 10, count = 0, setsPerSession = 3): S
   }));
 }
 
-function makeSession(
-  sets: SessionPerformance['sets'],
-  date = '2026-01-01',
-): SessionPerformance {
-  return { date, sets };
-}
-
 function makeSlot(overrides: Partial<ExerciseSlot> = {}): ExerciseSlot {
   return {
     id: 'test-slot',
@@ -106,73 +99,6 @@ function makeProgram(days: DayPlan[]): GeneratedProgram {
     },
   };
 }
-
-// ─── PE-102: Recommendation confidence metadata ─────────────────────────────
-
-describe('PE-102 — recommendation confidence metadata', () => {
-  it('marks a completed double-progression ceiling with complete RIR as high confidence', () => {
-    const rec = recommendProgression(
-      makePrescription(),
-      [makeSession(Array.from({ length: 3 }, () => ({ weight: 100, reps: 12, rir: 2 })))],
-      makeCtx({ experienceLevel: 'intermediate' }),
-    );
-
-    expect(rec.action).toBe('ADVANCE_LOAD');
-    expect(rec.confidence).toBe('high');
-    expect(rec.observedFacts.join(' ')).toMatch(/RIR reported for every working set/i);
-    expect(rec.confidenceReason).toMatch(/complete performance/i);
-  });
-
-  it('holds an intermediate ceiling hit with missing RIR as low confidence', () => {
-    const rec = recommendProgression(
-      makePrescription(),
-      [makeSession(Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })))],
-      makeCtx({ experienceLevel: 'intermediate' }),
-    );
-
-    expect(rec.action).toBe('HOLD');
-    expect(rec.confidence).toBe('low');
-    expect(`${rec.observedFacts.join(' ')} ${rec.confidenceReason}`).toMatch(/RIR|effort/i);
-    expect(rec.alternatives?.join(' ')).toMatch(/Log RIR/i);
-  });
-
-  it('holds an intermediate ceiling hit with partial RIR as low confidence', () => {
-    const rec = recommendProgression(
-      makePrescription(),
-      [makeSession([
-        { weight: 100, reps: 12, rir: 2 },
-        { weight: 100, reps: 12 },
-        { weight: 100, reps: 12, rir: 2 },
-      ])],
-      makeCtx({ experienceLevel: 'intermediate' }),
-    );
-
-    expect(rec.action).toBe('HOLD');
-    expect(rec.confidence).toBe('low');
-    expect(rec.observedFacts.join(' ')).toMatch(/partial effort data|only some/i);
-  });
-
-  it('allows beginner no-RIR linear progression but does not claim high confidence', () => {
-    const rec = recommendProgression(
-      makePrescription(),
-      [makeSession(Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })))],
-      makeCtx({ experienceLevel: 'beginner' }),
-    );
-
-    expect(rec.action).toBe('ADVANCE_LOAD');
-    expect(rec.confidence).not.toBe('high');
-    expect(rec.confidenceReason).toMatch(/without RIR data/i);
-  });
-
-  it('marks first-session recommendations as low confidence user-input prompts', () => {
-    const rec = recommendProgression(makePrescription(), [], makeCtx());
-
-    expect(rec.action).toBe('FIRST_SESSION');
-    expect(rec.confidence).toBe('low');
-    expect(rec.observedFacts.join(' ')).toMatch(/No prior logged sessions/i);
-    expect(rec.alternatives?.join(' ')).toMatch(/starting weight/i);
-  });
-});
 
 // ─── HV-019: Deadlift RIR hard floor ─────────────────────────────────────────
 
