@@ -62,4 +62,15 @@ describe('exact native app port contracts', () => {
     expect(read('app/(app)/error.tsx')).toContain('native-empty-state');
     expect(read('app/(app)/error.tsx')).toContain('native-gradient-background');
   });
+
+  it('keeps AI program flows and workout empty states on the native shell', () => {
+    for (const file of ['components/ai-program-builder.tsx', 'components/ai-program-review.tsx']) {
+      const source = read(file);
+      expect(source).toContain('native-gradient-background');
+      expect(source).toMatch(/native-(page-header|settings-group|section|list-card|empty-state)/);
+    }
+    const workoutPage = read('app/workout/page.tsx');
+    expect(workoutPage).toContain('native-gradient-background');
+    expect(workoutPage).toContain('native-empty-state');
+  });
 });
