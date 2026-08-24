@@ -30,7 +30,7 @@ Use a least-privilege Stripe restricted key where supported. The Supabase servic
 
 ## Canonical app origin
 
-Set `APP_URL` to the canonical production origin, for example `https://app.example.com`. Google OAuth callbacks use `APP_URL/auth/callback` when configured, and fall back to the active request origin only for local/preview environments.
+Set `APP_URL` to the canonical production origin, for example `https://app.example.com`. Google OAuth callbacks use `APP_URL/auth/callback` when configured, and fall back to the active request origin only for local/preview environments. The same callback URL must also be allow-listed in Supabase Auth Redirect URLs; otherwise Supabase can fall back to the dashboard Site URL (often localhost in early setup).
 
 ## Database
 

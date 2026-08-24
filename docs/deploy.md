@@ -64,11 +64,13 @@ workflow also runs these gates for `main` changes.
    and (if billing is enabled in that environment) a Stripe test-mode
    checkout completes and updates entitlement.
 5. Confirm `APP_URL` matches the deployed origin exactly — it drives the
-   Google OAuth callback (`web/lib/env/app-url.ts`). A mismatch here is the
-   known cause of the OAuth failure logged on the kanban ("Google OAuth
-   sign-in fails on the deployed/production PWA"). Stripe checkout and portal
-   return URLs still use the active request origin until billing canonical-origin
-   work resumes.
+   Google OAuth callback (`web/lib/env/app-url.ts`). A missing or localhost
+   `APP_URL` is a known cause of deployed Google OAuth returning to localhost.
+   Also confirm Supabase Auth URL Configuration allow-lists
+   `https://app.cameron-porter.com/auth/callback`; Supabase documents that the
+   `redirectTo` value passed to `signInWithOAuth` must match the project's
+   Redirect URLs list. Stripe checkout and portal return URLs still use the
+   active request origin until billing canonical-origin work resumes.
 
 ## Rollback
 
