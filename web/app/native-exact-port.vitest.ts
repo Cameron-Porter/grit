@@ -31,10 +31,15 @@ describe('exact native app port contracts', () => {
 
   it('ports workout surfaces to native workout card and sticky finish patterns', () => {
     const logger = read('components/workout-logger.tsx');
+    const css = read('app/globals.css') + read('app/rest-timer.css') + read('app/workout-controls.css');
     expect(logger).toContain('native-workout-screen');
     expect(logger).toContain('native-workout-card');
+    expect(logger).toContain('native-muscle-stripe');
     expect(logger).toContain('native-set-row');
     expect(logger).toContain('native-finish-bar');
+    expect(logger).toContain('native-bottom-sheet');
+    expect(css).toContain('native-rest-progress');
+    expect(css).toContain('sheet-action-row');
   });
 
   it('keeps secondary/deep-link pages on the same native shell and list-card pattern', () => {
