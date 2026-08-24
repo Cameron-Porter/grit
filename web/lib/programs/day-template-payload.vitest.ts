@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildProgramExerciseRows,
+  filterExercisesByEquipmentPreference,
   filterExercisesByMuscleGroup,
+  parseProgramDayExerciseItems,
   parseStagedExerciseItems,
+  stagedDefaultsForExercise,
   uniqueMuscleGroups,
   validateStagedExerciseInput,
   type CatalogExercise,
@@ -73,6 +76,17 @@ describe('parseStagedExerciseItems', () => {
   });
 });
 
+describe('parseProgramDayExerciseItems', () => {
+  it('requires one non-empty exercise list for each configured training day', () => {
+    expect(parseProgramDayExerciseItems(JSON.stringify([[valid], [{ ...valid, exerciseId: 'ex-2' }]]), 2)).toEqual([
+      [valid],
+      [{ ...valid, exerciseId: 'ex-2' }],
+    ]);
+    expect(parseProgramDayExerciseItems(JSON.stringify([[valid], []]), 2)).toBeNull();
+    expect(parseProgramDayExerciseItems(JSON.stringify([[valid]]), 2)).toBeNull();
+  });
+});
+
 describe('buildProgramExerciseRows', () => {
   it('builds one row per staged item, in order, continuing sort_order and using catalog name/muscle_group/equipment (no fallbacks)', () => {
     const rows = buildProgramExerciseRows('day-1', [valid, { ...valid, exerciseId: 'ex-2' }], catalog, 5);
@@ -95,6 +109,26 @@ describe('filterExercisesByMuscleGroup', () => {
   it('returns the full catalog for "all" or an empty filter', () => {
     expect(filterExercisesByMuscleGroup(catalog, 'all')).toEqual(catalog);
     expect(filterExercisesByMuscleGroup(catalog, '')).toEqual(catalog);
+  });
+});
+
+describe('filterExercisesByEquipmentPreference', () => {
+  it('limits the selectable catalog to preferred equipment when enabled', () => {
+    expect(filterExercisesByEquipmentPreference(catalog, { enabled: true, preferred: ['Cable'] })).toEqual([catalog[1], catalog[3]]);
+  });
+
+  it('leaves the catalog alone when equipment preference is disabled', () => {
+    expect(filterExercisesByEquipmentPreference(catalog, { enabled: false, preferred: ['Cable'] })).toEqual(catalog);
+  });
+});
+
+describe('stagedDefaultsForExercise', () => {
+  it('prefills editable targets from prior-history suggestions before static defaults', () => {
+    expect(stagedDefaultsForExercise({ ...catalog[0], rep_range_min: 6, rep_range_max: 10, suggestion: { sets: 4, repsMin: 10, repsMax: 12, weight: 185, rir: 1 } })).toEqual({ sets: 4, repsMin: 10, repsMax: 12, weight: 185, rir: 1 });
+  });
+
+  it('falls back to catalog rep ranges and conservative defaults when there is no history', () => {
+    expect(stagedDefaultsForExercise({ ...catalog[2], rep_range_min: 8, rep_range_max: 15 })).toEqual({ sets: 3, repsMin: 8, repsMax: 15, weight: 0, rir: 2 });
   });
 });
 
