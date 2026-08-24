@@ -269,3 +269,8 @@ html,body{background:var(--bg);color:var(--text)}
 .native-modal-menu[open] .sheet-action-row{min-height:54px!important;padding-inline:2px!important;font-size:15px!important}
 @keyframes nativeSheetUp{from{transform:translateY(18px);opacity:.92}to{transform:translateY(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){.native-modal-menu[open] :is(.bottom-sheet,.exercise-menu-panel){animation:none!important}}
+
+/* Workout menu history and confirmation layering. */
+.native-exercise-history{display:grid;gap:8px;margin:4px 0 8px;padding:12px;border:1px solid var(--separator);border-radius:16px;background:var(--surface2)}
+.native-exercise-history>div{display:grid;gap:3px;padding-bottom:8px;border-bottom:1px solid var(--separator)}
+.native-exercise-history>div:last-child{padding-bottom:0;border-bottom:0}.native-exercise-history strong{font-size:13px;color:var(--text)}.native-exercise-history span,.native-exercise-history p{margin:0;color:var(--muted);font-size:12px;line-height:17px}.confirm-backdrop{z-index:92!important}.confirm-backdrop .confirm-modal{z-index:93!important}

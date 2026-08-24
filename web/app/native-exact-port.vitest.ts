@@ -52,6 +52,10 @@ describe('exact native app port contracts', () => {
     const logger = read('components/workout-logger.tsx');
     const css = read('app/globals.css');
     expect(logger).toContain('native-modal-menu');
+    expect(logger).toContain('View history');
+    expect(logger).toContain('native-exercise-history');
+    expect(logger).toContain('Skip set');
+    expect(logger).toContain('closeWorkoutMenus');
     expect(css).toContain('.native-modal-menu[open]::before');
     expect(css).toContain('position:fixed!important;z-index:80');
     expect(css).toContain('backdrop-filter:blur(8px)');
