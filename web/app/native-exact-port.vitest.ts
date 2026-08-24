@@ -38,8 +38,14 @@ describe('exact native app port contracts', () => {
     expect(logger).toContain('native-set-row');
     expect(logger).toContain('native-finish-bar');
     expect(logger).toContain('native-bottom-sheet');
+    expect(logger).toContain('native-set-menu-cell');
+    expect(logger).toContain('WEIGHT');
+    expect(logger).toContain('RIR');
+    expect(logger).toContain('LOG');
+    expect(logger).not.toContain('rir-target');
     expect(css).toContain('native-rest-progress');
     expect(css).toContain('sheet-action-row');
+    expect(css).toContain('grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 44px 52px');
   });
 
   it('keeps secondary/deep-link pages on the same native shell and list-card pattern', () => {
