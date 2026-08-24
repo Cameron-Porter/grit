@@ -29,9 +29,9 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
   const exercise = data as ExerciseDetail;
   const tags = Array.isArray(exercise.exercise_tags) ? exercise.exercise_tags : [];
 
-  return <main className="content">
+  return <main className="content native-page native-gradient-background">
     <Link className="back-link" href="/exercises">← Exercise catalog</Link>
-    <article className="surface exercise-detail">
+    <article className="surface exercise-detail native-list-card">
       <div className="eyebrow">{exercise.muscle_group ?? 'Exercise'}</div>
       <h1>{exercise.name}</h1>
       <dl className="detail-grid">
