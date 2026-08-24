@@ -145,6 +145,123 @@ export interface ProgressionRecommendation {
   loadIncrement: number;
   // True for PLATEAU_DELOAD, DELOAD_NEEDED, REDUCE_LOAD — prompts UI warning.
   isPlateauWarning: boolean;
+  // PE-102: how much the fields above can be trusted, derived from how
+  // complete the underlying performance/effort data was — not a new
+  // training-doctrine numeric threshold, just a description of evidence
+  // already computed above. See withConfidence().
+  confidence: RecommendationConfidence;
+  observedFacts: string[];
+  confidenceReason: string;
+  alternatives?: string[];
+}
+
+// ─── PE-102: Recommendation confidence metadata ────────────────────────────
+//
+// Describes how much evidence backs the recommendation above, without adding
+// any new numeric training threshold — it only reports on completeness of
+// the performance/effort data the branches above already computed.
+//
+// High confidence requires BOTH a complete, comparable performance
+// prescription AND (where the engine's decision actually depends on effort)
+// complete RIR data meeting the prescribed target. Missing or partial RIR
+// for an intermediate/advanced lifter keeps the recommendation at HOLD
+// (existing ST-013 behavior) and is reported as low confidence with an
+// explicit reason and alternative. FIRST_SESSION has no performance history
+// at all, so it is always low confidence. Deload/warning/recovery branches
+// are medium by default — they're protective defaults grounded in real
+// session data, not unverified guesses, but they're not "advance load"
+// decisions that demand the highest evidence bar.
+export type RecommendationConfidence = 'high' | 'medium' | 'low';
+
+type EffortDataStatus = 'complete' | 'partial' | 'missing' | 'not-applicable';
+
+function effortDataStatus(session: SessionPerformance | undefined): EffortDataStatus {
+  if (!session || session.sets.length === 0) return 'not-applicable';
+  const reported = session.sets.filter((s) => s.rir !== undefined);
+  if (reported.length === 0) return 'missing';
+  if (reported.length === session.sets.length) return 'complete';
+  return 'partial';
+}
+
+interface ConfidenceFacts {
+  experienceLevel: ExperienceLevel;
+  effortStatus: EffortDataStatus;
+  // True only for the specific case where a rep ceiling was actually cleared
+  // this session but load could not advance because RIR data wasn't
+  // complete/high enough to certify it (the ST-013 gate held). Distinguishes
+  // that low-confidence case from an ordinary in-band/below-floor HOLD,
+  // which doesn't depend on effort data at all.
+  blockedByMissingEffort?: boolean;
+}
+
+type RecommendationCore = Omit<
+  ProgressionRecommendation,
+  'confidence' | 'observedFacts' | 'confidenceReason' | 'alternatives'
+>;
+
+// Decorates a finished recommendation with confidence metadata. Centralizing
+// the decision here (rather than duplicating it per branch) is what lets
+// every return site in this file stay a one-line wrap.
+function withConfidence(rec: RecommendationCore, facts: ConfidenceFacts): ProgressionRecommendation {
+  const { experienceLevel, effortStatus, blockedByMissingEffort } = facts;
+  const observedFacts: string[] = [];
+  let confidence: RecommendationConfidence;
+  let confidenceReason: string;
+  let alternatives: string[] | undefined;
+
+  if (rec.action === 'FIRST_SESSION') {
+    confidence = 'low';
+    observedFacts.push('No prior logged sessions exist for this exercise.');
+    confidenceReason = 'No performance history exists yet — this is a user-supplied starting point, not a data-driven recommendation.';
+    alternatives = ['Log a conservative starting weight; the engine will calibrate from the next completed session.'];
+  } else if (blockedByMissingEffort) {
+    confidence = 'low';
+    observedFacts.push('The prescribed rep ceiling was reached this session.');
+    observedFacts.push(
+      effortStatus === 'missing'
+        ? 'RIR was not reported for this session, so effort cannot be verified.'
+        : effortStatus === 'partial'
+          ? 'RIR was reported for only some working sets — partial effort data cannot certify the full prescription.'
+          : 'Reported RIR did not meet the prescribed effort target on every working set.',
+    );
+    confidenceReason = `Load cannot advance without complete effort (RIR) data confirming every working set met the prescribed target for a ${experienceLevel} lifter — holding at the current load instead.`;
+    alternatives = ['Log RIR for every working set next session so the engine can verify effort and advance load if warranted.'];
+  } else if (
+    rec.action === 'ADVANCE_LOAD' || rec.action === 'CUT_PROGRESS' ||
+    rec.action === 'ADVANCE_DIFFICULTY' || rec.action === 'LENGTHENED_PARTIALS'
+  ) {
+    observedFacts.push('Rep ceiling cleared on a complete, comparable working-set prescription.');
+    if (effortStatus === 'complete') {
+      observedFacts.push('RIR reported for every working set and met the prescribed target.');
+      confidence = 'high';
+      confidenceReason = 'Complete performance and complete effort data both support this recommendation.';
+    } else {
+      // Only reachable here for a beginner with no RIR reported at all — see
+      // ST-013's reportedEffortAllowsLoad, which is the sole gate that lets
+      // these actions fire without complete RIR.
+      observedFacts.push('No RIR reported — beginner linear progression allows advancing on rep-ceiling completion alone.');
+      confidence = 'medium';
+      confidenceReason = 'Beginner linear progression can advance on rep-ceiling completion alone, but without RIR data this is not a high-confidence call.';
+      alternatives = ['Log RIR for every working set to confirm effort supports future load increases.'];
+    }
+  } else if (
+    rec.action === 'DELOAD' || rec.action === 'DELOAD_NEEDED' ||
+    rec.action === 'PLATEAU_DELOAD' || rec.action === 'REDUCE_LOAD'
+  ) {
+    confidence = 'medium';
+    observedFacts.push('Recommendation driven by a scheduled deload, accumulated fatigue, or a comparable-session plateau/regression pattern.');
+    confidenceReason = 'This is a protective recommendation based on the available session data — treat it as a strong default rather than a fully-verified certainty.';
+  } else {
+    // HOLD (not blocked by missing effort), CUT_HOLD, and any other
+    // steady-state branch — a directionally sound read of the latest
+    // session, but not a load-changing decision that demands the highest
+    // evidence bar.
+    confidence = 'medium';
+    observedFacts.push('Recommendation reflects the most recently logged session; no load change is being made.');
+    confidenceReason = 'Directionally sound based on the latest session data, but not a load-changing decision that requires the strongest evidence bar.';
+  }
+
+  return { ...rec, confidence, observedFacts, confidenceReason, ...(alternatives ? { alternatives } : {}) };
 }
 
 // ─── ST-011: Load increment — percentage-based, equipment-gated ───────────────
@@ -605,6 +722,10 @@ export function recommendProgression(
   const { amount: increment, equipmentLimited } = isBodyweight
     ? { amount: 0, equipmentLimited: false }
     : getLoadIncrementAmount(baselineWeight, profile);
+  // PE-102: computed once up front (independent of focus/dispatch branch) so
+  // every return site below can wrap its result with withConfidence().
+  const effortStatus = effortDataStatus(sessions[0]);
+  const confidenceBase = { experienceLevel: ctx.experienceLevel, effortStatus };
 
   // Bug fix: this used to read ctx.trainingPhase, a field no call site ever
   // populates, so cut-phase behavior below was unreachable in production.
@@ -639,7 +760,10 @@ export function recommendProgression(
   // get pumped/sore from current volume grow better with more volume, while
   // muscle groups still sore at the next session have exceeded recoverable
   // volume). Implemented by shifting which week's ramp step applies:
-  //   Not sore     → take next week's step early (under-dosed, push further)
+  //   Not sore     → normal ramp (unchanged); absence of soreness alone is
+  //                  not a positive signal strong enough to accelerate
+  //                  volume ahead of schedule (PE-203 — "Not sore" alone
+  //                  never increases sets)
   //   Healed early → normal ramp (unchanged)
   //   Just in time → repeat last week's step (recovery and volume are
   //                  matched — this is the MRV signal, don't advance further)
@@ -838,7 +962,7 @@ export function recommendProgression(
       const scheduledDeloadSets = Math.max(2, Math.ceil(baseSetCount * 0.60));
       const recoverySets = sessions.length > 0 ? Math.max(1, Math.ceil(sessions[0].sets.length * 0.5)) : scheduledDeloadSets;
       const deloadSets = repeatedRecoveryFailure ? Math.min(scheduledDeloadSets, recoverySets) : scheduledDeloadSets;
-      return {
+      return withConfidence({
         ...base,
         nextWeight: deloadWeight,
         nextSets: deloadSets,
@@ -847,7 +971,7 @@ export function recommendProgression(
         reason: isBodyweight
           ? `Strength deload — sets reduced to ${deloadSets} (pattern maintained, never dropped), bodyweight held at ${lastWeight} lb (no external load to reduce).`
           : `Strength deload — load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), sets reduced to ${deloadSets} (pattern maintained, never dropped).`,
-      };
+      }, confidenceBase);
     }
     // PB-006: Powerbuilding deload still borrows the hypertrophy protocol
     // wholesale — pointer-only supersession of PB-004, no numbers of its own.
@@ -872,7 +996,7 @@ export function recommendProgression(
     // on two axes (load + reps) simultaneously at once. Not explicit in the
     // user's spec; an interpolation from "bodyweight: reduce sets/reps only."
     const repReductionPct = isBodyweight ? 0.25 : 0.5;
-    return {
+    return withConfidence({
       ...base,
       nextWeight: deloadWeight,
       nextSets: deloadSets,
@@ -887,7 +1011,7 @@ export function recommendProgression(
         : (hasVolumeOverride
           ? `Deload week — sets dropped to Maintenance Volume, reps halved, load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`
           : `Deload week — sets and reps halved, load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), effort capped at RIR 4.`),
-    };
+    }, confidenceBase);
   }
 
   // ── Priority 2: First session — no history ────────────────────────────────
@@ -897,12 +1021,12 @@ export function recommendProgression(
   // for a starting weight. Every focus-specific branch needs real history to
   // say anything meaningful, so FIRST_SESSION must win regardless of focus.
   if (sessions.length === 0) {
-    return {
+    return withConfidence({
       ...base,
       nextWeight: 0,
       action: 'FIRST_SESSION',
       reason: 'First session — enter your starting weight.',
-    };
+    }, confidenceBase);
   }
 
   // VA-020/RC-012: Dr. Mike Israetel / RP response indicators. A second
@@ -914,7 +1038,7 @@ export function recommendProgression(
     const recoveryReductionPct = isStrength ? 0.20 : 0.225;
     const recoveryWeight = deloadWeightFor(lastPerf.weight, isBodyweight, recoveryReductionPct);
     const recoverySets = Math.max(1, Math.ceil(sessions[0].sets.length * 0.5));
-    return {
+    return withConfidence({
       ...base,
       nextWeight: recoveryWeight,
       nextSets: recoverySets,
@@ -924,7 +1048,7 @@ export function recommendProgression(
       action: 'DELOAD_NEEDED',
       reason: `Still sore for 2 consecutive exposures. Recovery session: ${recoverySets} sets, reduced load and reps, RIR 4. Resume from the starting volume anchor after recovery.`,
       isPlateauWarning: true,
-    };
+    }, confidenceBase);
   }
 
   // ── Priority 3: Maintenance focus — hold performance, no auto-increment ──
@@ -932,13 +1056,13 @@ export function recommendProgression(
   if (isMaintenance) {
     const lastWeight = sessionPerf(sessions[0]).weight;
     const lastReps = sessionPerf(sessions[0]).maxReps;
-    return {
+    return withConfidence({
       ...base,
       nextWeight: lastWeight,
       nextSets: baseSetCount,
       action: 'CUT_HOLD',
       reason: `Maintenance focus — holding ${lastReps} reps × ${lastWeight} lbs. No auto-increment; maintaining muscle is the goal.`,
-    };
+    }, confidenceBase);
   }
 
   const last = sessions[0];
@@ -960,7 +1084,7 @@ export function recommendProgression(
     // has no load to reduce.
     const badSessionReductionPct = isStrength ? 0.20 : 0.225;
     const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, badSessionReductionPct);
-    return {
+    return withConfidence({
       ...base,
       nextWeight: deloadWeight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
@@ -970,7 +1094,7 @@ export function recommendProgression(
         ? `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — bodyweight held at ${lastPerf.weight} lb (no external load to reduce); this is accumulated fatigue, not a plateau.`
         : `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — load reduced ${Math.round(badSessionReductionPct * 100)}% (${lastPerf.weight} → ${deloadWeight} lbs); this is accumulated fatigue, not a plateau.`,
       isPlateauWarning: true,
-    };
+    }, confidenceBase);
   }
 
   // ── Priority 5: Cut phase — reduced-speed progression, not a hold ────────
@@ -1000,7 +1124,7 @@ export function recommendProgression(
       const cutIncrement = roundToIncrement(increment * CUT_SPEED_FACTOR, granularity);
       if (cutIncrement > 0) {
         const nextWeight = roundToIncrement(lastPerf.weight + cutIncrement, granularity);
-        return {
+        return withConfidence({
           ...base,
           nextWeight,
           nextRepsMin: effectiveRepsMin,
@@ -1008,33 +1132,36 @@ export function recommendProgression(
           loadIncrement: cutIncrement,
           action: 'CUT_PROGRESS',
           reason: `Hit ceiling during fat-loss phase — partial progression: +${cutIncrement} lb (~65% of the full +${increment} lb this would otherwise get).`,
-        };
+        }, confidenceBase);
       }
       // Scaled increment rounds to 0 at this weight — falls through to
       // CUT_HOLD below; naturally re-attempted next session as
       // percentage-based increments grow with weight, no separate "banked
       // progress" state needed.
     }
-    return {
+    // PE-102: same effort-data gate as ST-013's ceiling-hit check above —
+    // a ceiling reached without effortAllowsLoad is a missing/partial-RIR
+    // hold, not an ordinary maintenance hold.
+    return withConfidence({
       ...base,
       nextWeight: lastPerf.weight,
       action: 'CUT_HOLD',
       reason: ceilingHit
         ? `Hit rep ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb) during fat-loss phase. Maintaining is still success.`
         : `Fat-loss phase — maintaining ${lastPerf.maxReps} reps × ${lastPerf.weight} lb is the target.`,
-    };
+    }, { ...confidenceBase, blockedByMissingEffort: ceilingHit && !effortAllowsLoad });
   }
 
   // ── Priority 6: Experience-level dispatch ─────────────────────────────────
 
   if (ctx.experienceLevel === 'beginner') {
     return evaluateBeginnerLinear(prescription, sessions, ctx, {
-      lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad,
+      lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad, effortStatus,
     });
   }
 
   return evaluateDoubleProgression(prescription, sessions, ctx, {
-    lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad,
+    lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad, effortStatus,
   });
 }
 
@@ -1057,7 +1184,14 @@ function resolveCeilingHit(
   base: EvalInputs['base'],
   progressionLabel: 'Linear progression' | 'Double progression',
   experienceLevel: ExperienceLevel,
+  effortStatus: EffortDataStatus,
 ): ProgressionRecommendation {
+  // PE-102: every return below is reached only when the caller has already
+  // confirmed effortAllowsLoad (see the ceiling-hit `if` in
+  // evaluateBeginnerLinear/evaluateDoubleProgression) — so effortStatus here
+  // is always 'complete', or 'missing' for the sole ST-013 beginner
+  // exception. Never 'partial' or 'not-applicable' by construction.
+  const confidenceFacts: ConfidenceFacts = { experienceLevel, effortStatus };
   // HV-037: bodyweight has its own multi-dimension ladder (reps -> tempo ->
   // range of motion -> leverage -> external load), not more reps forever —
   // SUPERSEDES HV-028's original "uncapped by design" framing below (kept
@@ -1081,21 +1215,21 @@ function resolveCeilingHit(
     const ceiling = profile.bodyweightRepCeiling ?? 30;
     if (lastPerf.maxReps < ceiling) {
       const nextTarget = advanceRepsForBodyweight(lastPerf.maxReps);
-      return {
+      return withConfidence({
         ...base,
         nextWeight: lastPerf.weight,
         nextRepsMax: nextTarget,
         action: 'HOLD',
         reason: `Bodyweight exercise — no load to add. ${lastPerf.maxReps} reps at ${lastPerf.weight} lb cleared the ${prescription.repsMax}-rep ceiling; climbing toward the ${ceiling}-rep ceiling before advancing difficulty. Aim for ${nextTarget} next session.`,
-      };
+      }, confidenceFacts);
     }
-    return {
+    return withConfidence({
       ...base,
       nextWeight: lastPerf.weight,
       nextRepsMax: ceiling,
       action: 'ADVANCE_DIFFICULTY',
       reason: `Reached the ${ceiling}-rep ceiling at bodyweight. Advance difficulty instead: tempo → range of motion → leverage (e.g. feet-elevated, single-limb) → external load (weighted vest/belt). Advisory only — pick the next variation yourself.`,
-    };
+    }, confidenceFacts);
   }
 
   // ST-011: equipment-limited exercise (isolation/cable_accessory) whose own
@@ -1112,36 +1246,36 @@ function resolveCeilingHit(
       prescription.role === 'Accessory' &&
       (profile.category === 'isolation' || profile.category === 'cable_accessory');
     if (lengthenedPartialsEligible) {
-      return {
+      return withConfidence({
         ...base,
         nextWeight: lastPerf.weight,
         nextRepsMax: prescription.repsMax,
         action: 'LENGTHENED_PARTIALS',
         reason: `Hit the ${prescription.repsMax}-rep ceiling at ${lastPerf.weight} lb, but the next load jump is too large. Add 3–5 lengthened partials at the bottom of the final set instead of increasing load.`,
-      };
+      }, confidenceFacts);
     }
 
     const repsPastCeiling = lastPerf.maxReps - prescription.repsMax;
     if (repsPastCeiling < EQUIPMENT_LIMITED_REP_BUFFER) {
       const nextTarget = lastPerf.maxReps + 1;
-      return {
+      return withConfidence({
         ...base,
         nextWeight: lastPerf.weight,
         nextRepsMax: nextTarget,
         action: 'HOLD',
         reason: `Smallest available increment would be a >${Math.round((profile.maxAcceptableEquipmentLimitedPct ?? 0.10) * 100)}% jump at ${lastPerf.weight} lb — holding load, extending reps instead. Aim for ${nextTarget} next session.`,
-      };
+      }, confidenceFacts);
     }
     const forced = roundToRealisticIncrement(lastPerf.weight);
     const nextWeight = roundToIncrement(lastPerf.weight + forced, forced);
-    return {
+    return withConfidence({
       ...base,
       nextWeight,
       nextRepsMax: effectiveRepsMin,
       loadIncrement: forced,
       action: 'ADVANCE_LOAD',
       reason: `Forced load increase — proportional gate exhausted after ${EQUIPMENT_LIMITED_REP_BUFFER}+ reps past ceiling. Add ${forced} lb → target ${effectiveRepsMin} reps at new load.`,
-    };
+    }, confidenceFacts);
   }
 
   // Round to the realistic plate/dumbbell granularity, not to `increment`
@@ -1150,7 +1284,7 @@ function resolveCeilingHit(
   // *increment* step would drift the result to a value that isn't actually
   // weight + increment when weight isn't itself aligned to that step.
   const nextWeight = roundToIncrement(lastPerf.weight + increment, roundToRealisticIncrement(lastPerf.weight));
-  return {
+  return withConfidence({
     ...base,
     nextWeight,
     // ST-007: reset the rep target to the floor at the new load — double
@@ -1161,7 +1295,7 @@ function resolveCeilingHit(
     reason: progressionLabel === 'Linear progression'
       ? `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Linear progression: add ${increment} lb.`
       : `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Double progression: add ${increment} lb → target ${effectiveRepsMin} reps at new load.`,
-  };
+  }, confidenceFacts);
 }
 
 // ─── Beginner: Linear Progression ────────────────────────────────────────────
@@ -1180,7 +1314,7 @@ interface EvalInputs {
   equipmentLimited: boolean;
   effectiveRepsMin: number;
   effectiveRepsMax: number;
-  base: Omit<ProgressionRecommendation, 'nextWeight' | 'action' | 'reason'>;
+  base: Omit<RecommendationCore, 'nextWeight' | 'action' | 'reason'>;
   isBodyweight: boolean;
   profile: ExerciseProgressionProfile;
   volumeRecentlyIncreased: boolean;
@@ -1188,14 +1322,20 @@ interface EvalInputs {
   // that load should hold even if the (already-lowered) ceiling is hit.
   holdLoad: boolean;
   effortAllowsLoad: boolean;
+  // PE-102: completeness of this session's RIR reporting — see
+  // effortDataStatus(). Threaded through so both dispatch functions and
+  // resolveCeilingHit can wrap their returns with withConfidence() without
+  // recomputing it from sessions[0] repeatedly.
+  effortStatus: EffortDataStatus;
 }
 
 function evaluateBeginnerLinear(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad }: EvalInputs,
+  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad, effortStatus }: EvalInputs,
 ): ProgressionRecommendation {
+  const confidenceFacts: ConfidenceFacts = { experienceLevel: ctx.experienceLevel, effortStatus };
 
   // Plateau detection — must deload before any load reduction (doctrine 1.2).
   // HV-034: gated off when volume recently increased — that session's rep
@@ -1205,7 +1345,7 @@ function evaluateBeginnerLinear(
     // HV-035: category-aware load reduction, same as the scheduled-deload
     // branch. HV-028: bodyweight has no load to reduce.
     const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225);
-    return {
+    return withConfidence({
       ...base,
       nextWeight: deloadWeight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
@@ -1215,7 +1355,7 @@ function evaluateBeginnerLinear(
         ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is the most likely cause. Retest reps after deload.`
         : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.`,
       isPlateauWarning: true,
-    };
+    }, confidenceFacts);
   }
 
   // Below rep floor — hold or reduce.
@@ -1229,7 +1369,7 @@ function evaluateBeginnerLinear(
     if (twoConsecutiveBelow) {
       // HV-028: bodyweight has no load to reduce.
       const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile);
-      return {
+      return withConfidence({
         ...base,
         nextWeight,
         nextRepsMax: effectiveRepsMin,
@@ -1238,18 +1378,18 @@ function evaluateBeginnerLinear(
           ? `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild reps from the floor at bodyweight.`
           : `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild from new base.`,
         isPlateauWarning: true,
-      };
+      }, confidenceFacts);
     }
     // ST-007: nudge toward the floor 1 rep at a time rather than restating the
     // full ceiling while still below the minimum.
     const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
-    return {
+    return withConfidence({
       ...base,
       nextWeight: lastPerf.weight,
       nextRepsMax: nextTarget,
       action: 'HOLD',
       reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
-    };
+    }, confidenceFacts);
   }
 
   // Rep ceiling hit with bar speed intact (approximated: reps ≥ ceiling).
@@ -1257,8 +1397,9 @@ function evaluateBeginnerLinear(
   // ceiling checked here is effectiveRepsMax (lowered this session if
   // volume just increased), not the template's raw repsMax, and load holds
   // when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression', ctx.experienceLevel);
+  const ceilingHit = lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight);
+  if (ceilingHit && !holdLoad && effortAllowsLoad) {
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression', ctx.experienceLevel, effortStatus);
   }
 
   // Within rep band — rep progress is occurring. ST-007: target last session's
@@ -1270,13 +1411,17 @@ function evaluateBeginnerLinear(
     ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
     : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
-  return {
+  // PE-102: reaching here despite ceilingHit means effort data (ST-013's
+  // reportedEffortAllowsLoad gate) — not volume-transition holdLoad — is
+  // what's actually blocking the load advance; report that precisely rather
+  // than treating it as an ordinary in-band hold.
+  return withConfidence({
     ...base,
     nextWeight: lastPerf.weight,
     nextRepsMax: nextTarget,
     action: 'HOLD',
     reason,
-  };
+  }, { ...confidenceFacts, blockedByMissingEffort: ceilingHit && !holdLoad && !effortAllowsLoad });
 }
 
 // ─── Intermediate + Advanced: Double Progression ──────────────────────────────
@@ -1294,8 +1439,9 @@ function evaluateDoubleProgression(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad }: EvalInputs,
+  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad, effortStatus }: EvalInputs,
 ): ProgressionRecommendation {
+  const confidenceFacts: ConfidenceFacts = { experienceLevel: ctx.experienceLevel, effortStatus };
 
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
 
@@ -1312,7 +1458,7 @@ function evaluateDoubleProgression(
     // true-plateau branch below has its own distinct 10%-reduction
     // recommendation, unchanged. HV-028: bodyweight has no load to reduce.
     const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225);
-    return {
+    return withConfidence({
       ...base,
       nextWeight: fatigueLikely ? deloadWeight : lastPerf.weight,
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
@@ -1324,7 +1470,7 @@ function evaluateDoubleProgression(
           : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest at the reduced load after deload.`)
         : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps after a recent deload. This may be a true plateau — consider a 10% load reduction and rebuild.`,
       isPlateauWarning: true,
-    };
+    }, confidenceFacts);
   }
 
   // ── Below rep floor ───────────────────────────────────────────────────────
@@ -1337,7 +1483,7 @@ function evaluateDoubleProgression(
     if (twoConsecutiveBelow) {
       // HV-028: bodyweight has no load to reduce.
       const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile);
-      return {
+      return withConfidence({
         ...base,
         nextWeight,
         nextRepsMax: effectiveRepsMin,
@@ -1346,18 +1492,18 @@ function evaluateDoubleProgression(
           ? `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild to ${effectiveRepsMin} reps at bodyweight before advancing.`
           : `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild to ${effectiveRepsMin} reps before advancing.`,
         isPlateauWarning: true,
-      };
+      }, confidenceFacts);
     }
     // ST-007: nudge toward the floor 1 rep at a time rather than restating the
     // full ceiling while still below the minimum.
     const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
-    return {
+    return withConfidence({
       ...base,
       nextWeight: lastPerf.weight,
       nextRepsMax: nextTarget,
       action: 'HOLD',
       reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
-    };
+    }, confidenceFacts);
   }
 
   // ── Rep ceiling hit → ADVANCE_LOAD ───────────────────────────────────────
@@ -1366,8 +1512,9 @@ function evaluateDoubleProgression(
   // "ceiling hit + RIR ≤ prescribedRir + 1" assumption.) HV-032: the ceiling
   // checked here is effectiveRepsMax, not the template's raw repsMax, and
   // load holds when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression', ctx.experienceLevel);
+  const ceilingHit = lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight);
+  if (ceilingHit && !holdLoad && effortAllowsLoad) {
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression', ctx.experienceLevel, effortStatus);
   }
 
   // ── Within rep band — normal hold ────────────────────────────────────────
@@ -1379,11 +1526,16 @@ function evaluateDoubleProgression(
     ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
     : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
-  return {
+  // PE-102: reaching here despite ceilingHit means ST-013's effort gate
+  // (missing/partial/insufficient RIR), not volume-transition holdLoad, is
+  // what's blocking the advance — this is the ST-013 "holds an intermediate
+  // load increase when no actual RIR was reported" / "holds when effort
+  // reporting is only partial" case, surfaced as low confidence.
+  return withConfidence({
     ...base,
     nextWeight: lastPerf.weight,
     nextRepsMax: nextTarget,
     action: 'HOLD',
     reason,
-  };
+  }, { ...confidenceFacts, blockedByMissingEffort: ceilingHit && !holdLoad && !effortAllowsLoad });
 }

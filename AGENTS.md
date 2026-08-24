@@ -2,7 +2,7 @@
 
 ## Framework
 
-Expo has changed significantly. Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any Expo or React Native code.
+The product is a Next.js PWA under `web/`. Check `web/package.json` for the current major version before relying on App Router or framework behavior — conventions change between majors. Shared training logic in `src/` is framework-agnostic pure TypeScript with no Next.js or DOM dependency.
 
 ---
 
@@ -88,7 +88,7 @@ Files in `src/rules/` are pure functions with no side effects. They take plain d
 1. Identify which file owns the rule.
 2. Add or update the relevant doctrine tag(s) with source citation.
 3. Write a test that *fails without the rule* and *passes with it* (see Testing below).
-4. Run `npx jest --testPathPattern="rules"` and confirm all existing tests still pass before committing.
+4. Run `npm run test:rules` and confirm all existing tests still pass before committing.
 
 ---
 
@@ -99,32 +99,28 @@ Files in `src/rules/` are pure functions with no side effects. They take plain d
 ```
 __tests__/
   rules/
-    progressionRules.test.ts   — progressionEngine + validation
-    splitDeriver.test.ts       — deriveSplit
+    progressionRules.test.ts       — progressionEngine + validation
+    splitDeriver.test.ts           — deriveSplit
     programBuilder.example.test.ts — full-program integration smoke test
-  stores/
-    useProfileStore.test.ts
-    useWorkoutStore.test.ts
-  components/
-    ExercisePicker.test.tsx
-  navigation/
-    redirect.test.tsx
-  api/
-    programs.test.ts
+    (assignment, exerciseSelector, movementClassMap, sessionTrimmer, slotBuilder,
+     volumeAdaptiveTargeting, volumeBudget, volumeRamp, progressionEngine.hv021,
+     quickWorkoutBuilder — one file per rule area)
 src/
-  api/__tests__/
-    exercises.test.ts
-    programs.test.ts
-    personalRecords.test.ts
-  store/__tests__/
-    useWorkoutStore.test.ts
+  data/__tests__/
+    programTemplates.test.ts
+  utils/__tests__/
+    oneRepMax.test.ts
+    volumeLandmarks.test.ts
+web/
+  **/*.vitest.ts   — colocated next to the file under test (app/, components/, lib/)
+  tests/e2e/       — Playwright browser smoke tests
 ```
 
 ### Rules engine test standards
 
 **Test outcomes, not internals.** Assert on the output of `buildProgram`, `buildDaySlots`, `deriveSplit`, `recommendProgression`. Do not spy on internal functions or assert call counts.
 
-**No mocks for pure functions.** The rules engine is pure — test it directly with data. Only mock Supabase calls (`api/`) and React Native modules that aren't available in Node.
+**No mocks for pure functions.** The rules engine is pure — test it directly with data, no I/O and no mocks needed. In `web/`, only mock Supabase calls and browser/DOM APIs that aren't available in Node.
 
 **Every doctrine rule needs a test that can fail.** If you add ST-007 (a new strength parameter), write a test where violating that rule produces a wrong output, and confirm the correct rule fixes it.
 
@@ -143,12 +139,11 @@ src/
 ### Running tests
 
 ```bash
-npx jest                            # full suite
-npx jest --testPathPattern="rules"  # rules engine only
-npx jest --testPathPattern="rules" --verbose  # with output
+npm run test:rules   # rules engine + src/data + src/utils (vitest)
+npm test             # web/ app unit tests (vitest)
 ```
 
-Always run the rules suite before committing any change to `src/rules/` or `src/data/slotRoleConfig.ts`.
+Always run `npm run test:rules` before committing any change to `src/rules/` or `src/data/slotRoleConfig.ts`.
 
 ---
 
@@ -161,14 +156,11 @@ A task is not complete until all of the following are true. Do not report a task
 Run the full suite and confirm zero failures:
 
 ```bash
-npx jest --no-coverage
+npm test
+npm run test:rules
 ```
 
-If touching `src/rules/` or `src/data/slotRoleConfig.ts`, also run:
-
-```bash
-npx jest --testPathPattern="rules" --verbose
-```
+If touching `src/rules/` or `src/data/slotRoleConfig.ts`, re-run `npm run test:rules` and confirm it still passes.
 
 If a test fails because of a legitimate intentional change, update the test and document why in a comment. Never skip or delete a test to make the suite green.
 
@@ -176,20 +168,20 @@ If a test fails because of a legitimate intentional change, update the test and 
 
 Every change that alters observable behavior needs at least one test that would fail if the change were reverted. This includes:
 
-- New API functions or modified query logic → test in `src/api/__tests__/`
+- New API functions or query logic → test in a colocated `*.vitest.ts` next to the file (e.g. `web/lib/workout/payload.vitest.ts`)
 - New rules engine parameters or doctrine → test in `__tests__/rules/`
 - New auth guards or error paths → test the unauthenticated/error case explicitly
-- New store actions → test in `src/store/__tests__/`
+- New component or client state logic → test in a colocated `*.vitest.ts` next to the file
 
-If a change cannot be unit tested (UI-only, animation, native behaviour), document why in the PR description. Do not silently skip coverage.
+If a change cannot be unit tested (UI-only, animation, browser-only behaviour), document why in the PR description. Do not silently skip coverage.
 
-### 3. React Native / iOS modal and animation safety
+### 3. Dialog and modal safety
 
-Before shipping any UI change that involves modals, bottom sheets, or transitions, verify:
+Before shipping any UI change that involves modals, dialogs, or transitions, verify:
 
-- **No two Modals open simultaneously.** iOS cannot present a new `<Modal>` while another is still animating out. If a button press closes one modal and opens another, delay the second by at least 250ms (the `BottomSheet` close animation is ~220ms). Use `setTimeout(() => setNextModal(value), 250)` at the call site.
-- **Reanimated `useAnimatedStyle` always returns explicit values.** Returning `{}` does not clear a previously set property. Always return `{ backgroundColor: 'transparent' }` instead of `{}` when resetting color.
-- **Shared values are cleared only after animations complete.** If a shared value controls color or position, clear it in the `withTiming`/`withSpring` callback (`(finished) => { 'worklet'; if (finished) sharedValue.value = 0; }`), not before.
+- **Modals use `useDialogFocusTrap`** (`web/lib/hooks/use-dialog-focus-trap.ts`) so focus is trapped inside the dialog, Tab/Shift+Tab wraps at the boundaries, and focus is restored to the trigger element on close.
+- **No two modal backdrops stack.** If closing one modal opens another, let the first fully unmount before rendering the second rather than layering `.modal-backdrop` elements.
+- **CSS transitions respect `prefers-reduced-motion`**, per the reduced-motion requirement in §6 below.
 
 ### 4. Supabase query safety
 
@@ -235,7 +227,7 @@ For UI-only changes that are not practical to unit test, explicitly record the l
 
 ### Before reporting any task complete
 
-1. Run `npx jest --no-coverage` and confirm zero failures.
+1. Run `npm test` and `npm run test:rules` and confirm zero failures.
 2. Confirm new behavior has test coverage (see Definition of Done §2).
 3. If the change touches UI with modals or animations, confirm modal sequencing is safe (§3).
 4. If the change touches Supabase, confirm `.maybeSingle()` and auth guards are in place (§4).
