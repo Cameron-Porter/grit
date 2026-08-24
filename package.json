@@ -15,6 +15,9 @@
     "build": "npm --prefix web run build",
     "typecheck": "npm --prefix web run typecheck",
     "test:rules": "npm --prefix web exec -- vitest run --config web/vitest.rules.config.mts",
-    "pwa:e2e": "npm --prefix web run test:e2e"
+    "pwa:e2e": "npm --prefix web run test:e2e",
+    "test:unit": "npm --prefix web run test:unit",
+    "audit": "npm --prefix web run audit",
+    "quality": "npm --prefix web run quality"
   }
 }
