@@ -48,6 +48,16 @@ describe('exact native app port contracts', () => {
     expect(css).toContain('grid-template-columns:44px minmax(72px,1fr) minmax(72px,1fr) 54px 64px');
   });
 
+  it('opens workout exercise and set menus as dimmed bottom modal sheets', () => {
+    const logger = read('components/workout-logger.tsx');
+    const css = read('app/globals.css');
+    expect(logger).toContain('native-modal-menu');
+    expect(css).toContain('.native-modal-menu[open]::before');
+    expect(css).toContain('position:fixed!important;z-index:80');
+    expect(css).toContain('backdrop-filter:blur(8px)');
+    expect(css).toContain('border-radius:26px 26px 0 0');
+  });
+
   it('keeps secondary/deep-link pages on the same native shell and list-card pattern', () => {
     for (const file of [
       'app/(app)/exercises/[id]/page.tsx',
