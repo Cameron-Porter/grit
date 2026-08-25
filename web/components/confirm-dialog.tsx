@@ -27,7 +27,7 @@ export function useConfirmDialog() {
 
   const { confirmLabel, cancelLabel, confirmClassName } = resolveConfirmLabels(pending);
   const dialog = (
-    <div className="modal-backdrop" role="presentation" onClick={() => settle(false)}>
+    <div className="modal-backdrop confirm-backdrop" role="presentation" onClick={() => settle(false)}>
       <section
         ref={(node) => { dialogRef.current = node; }}
         tabIndex={-1}

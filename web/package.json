@@ -8,8 +8,12 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:rules": "vitest run --config vitest.rules.config.mts",
     "test:e2e": "playwright install chromium && playwright test",
-    "lint": "eslint . --max-warnings=0"
+    "lint": "eslint . --max-warnings=0",
+    "audit": "npm audit --audit-level=moderate",
+    "quality": "npm run lint && npm run typecheck && npm run test:unit && npm run test:rules && npm run build"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",

@@ -25,9 +25,8 @@ describe('standardized action button/link contract', () => {
     expect(workoutPage).toMatch(/<a className="secondary button-link" href="\/programs">View programs<\/a>/);
   });
 
-  it('keeps the Programs page "Templates" header action on the standardized pill header-action contract used by its peers', () => {
-    expect(programsPage).toMatch(
-      /<Link className="secondary button-link compact header-action" href="\/programs\/templates">Templates<\/Link>/,
-    );
+  it('keeps the Programs page "Templates" header action on the native pill action contract', () => {
+    expect(programsPage).toMatch(/className="native-pill-action" href="\/programs\/templates"/);
+    expect(globalsCss).toContain('.native-pill-action{display:inline-flex;min-height:44px');
   });
 });

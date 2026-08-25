@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { appendedExercisePrescription, buildWorkoutPayload, clearWorkoutLocalState, createInitialDraft, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { appendedExercisePrescription, buildWorkoutPayload, clearWorkoutLocalState, closeWorkoutMenus, createInitialDraft, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -50,6 +50,13 @@ describe('skip-vs-discard behavior for null-day workouts',()=>{
   });
   it('still builds a skip PATCH request for a scheduled program day',()=>{
     expect(skipWorkoutRequest('day-1')).toEqual({programDayId:'day-1',skipped:true});
+  });
+});
+describe('workout menu cleanup',()=>{
+  it('closes open workout bottom sheets before showing another modal',()=>{
+    const menus=[{removeAttribute:vi.fn()},{removeAttribute:vi.fn()}];
+    closeWorkoutMenus({querySelectorAll:vi.fn(()=>menus as unknown as NodeListOf<Element>)});
+    expect(menus.map(menu=>menu.removeAttribute.mock.calls)).toEqual([[['open']],[['open']]]);
   });
 });
 describe('adding an exercise to an empty training day',()=>{

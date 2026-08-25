@@ -9,9 +9,9 @@ export default async function ProgramTemplateDetailPage({ params }: { params: Pr
   if (!template) notFound();
   const start = buildTemplateStartFields(template);
 
-  return <main className="content">
+  return <main className="content native-page native-gradient-background">
     <Link className="back-link" href="/programs/templates">← Program templates</Link>
-    <article className="surface exercise-detail">
+    <article className="surface exercise-detail native-list-card">
       <div className="eyebrow">{template.focus}</div>
       <h1>{template.name}</h1>
       <p>{template.description}</p>
@@ -29,7 +29,7 @@ export default async function ProgramTemplateDetailPage({ params }: { params: Pr
       </form>
     </article>
     <div className="stack">
-      {template.days.map((day, index) => <section className="surface" key={`${day.label}-${index}`}>
+      {template.days.map((day, index) => <section className="surface native-section" key={`${day.label}-${index}`}>
         <div className="section-heading"><h2>{day.label}</h2><span>{day.exercises.length} exercises</span></div>
         <div className="ai-exercise-list">
           {day.exercises.map((exercise) => <div className="review-exercise" key={`${day.label}-${exercise.name}`}>

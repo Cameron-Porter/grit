@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({
 const { default: Home } = await import('./page');
 
 describe('root route', () => {
-  it('redirects to /login instead of rendering a public landing page', () => {
-    expect(() => Home()).toThrow('REDIRECT:/login');
+  it('redirects to the authenticated dashboard entry point', () => {
+    expect(() => Home()).toThrow('REDIRECT:/dashboard');
   });
 });

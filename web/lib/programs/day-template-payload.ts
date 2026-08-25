@@ -1,6 +1,7 @@
 export type StagedExerciseInput = { exerciseId: string; sets: number; repsMin: number; repsMax: number; weight: number; rir: number };
-export type CatalogExercise = { id: string; name: string; muscle_group: string | null; equipment: string | null };
+export type CatalogExercise = { id: string; name: string; muscle_group: string | null; equipment: string | null; rep_range_min?: number | null; rep_range_max?: number | null; suggestion?: Partial<Omit<StagedExerciseInput, 'exerciseId'>> | null };
 export type ProgramExerciseInsertRow = { program_day_id: string; exercise_name: string; muscle_group: string | null; equipment: string | null; sort_order: number; target_sets: number; target_reps_min: number; target_reps_max: number; target_weight: number; rir: number };
+export type EquipmentPreference = { enabled: boolean; preferred: string[] };
 
 export function validateStagedExerciseInput(value: unknown): value is StagedExerciseInput {
   if (!value || typeof value !== 'object') return false;
@@ -20,6 +21,18 @@ export function parseStagedExerciseItems(raw: string): StagedExerciseInput[] | n
   if (!Array.isArray(parsed) || parsed.length === 0) return null;
   if (!parsed.every(validateStagedExerciseInput)) return null;
   return parsed;
+}
+
+export function parseProgramDayExerciseItems(raw: string, expectedDays: number): StagedExerciseInput[][] | null {
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { return null; }
+  if (!Array.isArray(parsed) || parsed.length !== expectedDays) return null;
+  const days: StagedExerciseInput[][] = [];
+  for (const day of parsed) {
+    if (!Array.isArray(day) || day.length === 0 || !day.every(validateStagedExerciseInput)) return null;
+    days.push(day);
+  }
+  return days;
 }
 
 export function buildProgramExerciseRows(dayId: string, items: StagedExerciseInput[], catalog: CatalogExercise[], startSortOrder: number): ProgramExerciseInsertRow[] | null {
@@ -49,6 +62,28 @@ export function filterExercisesByMuscleGroup<T extends { muscle_group: string | 
   return catalog.filter(exercise => exercise.muscle_group === muscleGroup);
 }
 
+export function filterExercisesByEquipmentPreference<T extends { equipment: string | null }>(catalog: T[], preference: EquipmentPreference): T[] {
+  if (!preference.enabled || preference.preferred.length === 0) return catalog;
+  const allowed = new Set(preference.preferred);
+  return catalog.filter(exercise => exercise.equipment !== null && allowed.has(exercise.equipment));
+}
+
 export function uniqueMuscleGroups(catalog: { muscle_group: string | null }[]): string[] {
   return [...new Set(catalog.map(exercise => exercise.muscle_group).filter((group): group is string => Boolean(group)))].sort();
+}
+
+const positiveInteger = (value: unknown, fallback: number) => typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback;
+const finiteWeight = (value: unknown, fallback: number) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
+const boundedRir = (value: unknown, fallback: number) => typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 5 ? value : fallback;
+
+export function stagedDefaultsForExercise(exercise: CatalogExercise): Omit<StagedExerciseInput, 'exerciseId'> {
+  const repsMin = positiveInteger(exercise.suggestion?.repsMin, positiveInteger(exercise.rep_range_min, 8));
+  const repsMax = Math.max(repsMin, positiveInteger(exercise.suggestion?.repsMax, positiveInteger(exercise.rep_range_max, 12)));
+  return {
+    sets: positiveInteger(exercise.suggestion?.sets, 3),
+    repsMin,
+    repsMax,
+    weight: finiteWeight(exercise.suggestion?.weight, 0),
+    rir: boundedRir(exercise.suggestion?.rir, 2),
+  };
 }

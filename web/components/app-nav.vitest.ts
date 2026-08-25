@@ -9,7 +9,23 @@ describe('app navigation state', () => {
     expect(isActiveAppNavLink('/workouts', '/workout')).toBe(false);
   });
 
-  it('includes the exercise catalog as a first-class PWA route', () => {
-    expect(appNavLinks).toContainEqual(['Exercises', '/exercises']);
+  it('matches the native five-tab primary navigation', () => {
+    expect(appNavLinks.map(({ label, href }) => [label, href])).toEqual([
+      ['Home', '/dashboard'],
+      ['Workout', '/workout'],
+      ['Programs', '/programs'],
+      ['Progress', '/history'],
+      ['Profile', '/profile'],
+    ]);
+  });
+
+  it('provides an icon name for every native tab', () => {
+    expect(appNavLinks).toHaveLength(5);
+    expect(appNavLinks.every((link) => link.icon.length > 0)).toBe(true);
+  });
+
+  it('uses a home icon for the dashboard tab and a dumbbell icon for workout', () => {
+    expect(appNavLinks[0]).toMatchObject({ label: 'Home', href: '/dashboard', icon: 'home' });
+    expect(appNavLinks[1]).toMatchObject({ label: 'Workout', href: '/workout', icon: 'dumbbell' });
   });
 });

@@ -1,3 +1,72 @@
-import{notFound}from'next/navigation';import{requireUser}from'@/lib/auth/require-user';
-export const dynamic='force-dynamic';
-export default async function WorkoutHistoryDetail({params}:{params:Promise<{id:string}>}){const{id}=await params;const{supabase,user}=await requireUser();const{data:workout,error}=await supabase.from('workouts').select('id,name,program_name,completed_at').eq('id',id).eq('user_id',user.id).is('deleted_at',null).maybeSingle();if(error)throw new Error(`Could not load workout: ${error.message}`);if(!workout)notFound();const[{data:sets,error:setError},{data:feedback,error:feedbackError}]=await Promise.all([supabase.from('workout_sets').select('exercise_name,muscle_group,equipment,note,exercise_index,set_index,reps,weight,rir,reported_rir').eq('workout_id',id).order('exercise_index').order('set_index'),supabase.from('workout_feedback').select('muscle_group,joint_pain,pump,volume,soreness').eq('workout_id',id)]);if(setError)throw new Error(`Could not load sets: ${setError.message}`);if(feedbackError)throw new Error(`Could not load feedback: ${feedbackError.message}`);const grouped=new Map<string,typeof sets>();for(const set of sets??[]){const rows=grouped.get(set.exercise_name)??[];rows.push(set);grouped.set(set.exercise_name,rows)}return <main className="content"><a className="back-link" href="/history">← History</a><header className="page-header"><div><div className="eyebrow">{new Date(workout.completed_at).toLocaleDateString()}</div><h1>{workout.name}</h1><p>{workout.program_name}</p></div></header><div className="exercise-stack">{[...grouped].map(([name,rows])=><section className="surface exercise-card" key={name}><div className="exercise-title"><div><h2>{name}</h2><p>{[rows[0]?.muscle_group,rows[0]?.equipment].filter(Boolean).join(' · ')}</p></div></div>{rows.map((set,index)=><div className="history-set" key={set.set_index}><strong>Set {index+1}</strong><span>{set.weight} lb × {set.reps}</span><span>{set.reported_rir==null?'RIR not reported':`RIR ${set.reported_rir}`}</span></div>)}</section>)}</div>{feedback?.length?<section className="surface feedback-summary"><h2>Recovery feedback</h2>{feedback.map((item)=><div key={item.muscle_group}><strong>{item.muscle_group}</strong><span>{[item.soreness,item.joint_pain&&`Pain: ${item.joint_pain}`,item.pump&&`Pump: ${item.pump}`,item.volume].filter(Boolean).join(' · ')}</span></div>)}</section>:null}</main>}
+import { notFound } from 'next/navigation';
+import { requireUser } from '@/lib/auth/require-user';
+
+export const dynamic = 'force-dynamic';
+
+export default async function WorkoutHistoryDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const { supabase, user } = await requireUser();
+  const { data: workout, error } = await supabase
+    .from('workouts')
+    .select('id,name,program_name,completed_at')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .is('deleted_at', null)
+    .maybeSingle();
+  if (error) throw new Error(`Could not load workout: ${error.message}`);
+  if (!workout) notFound();
+
+  const [{ data: sets, error: setError }, { data: feedback, error: feedbackError }] = await Promise.all([
+    supabase
+      .from('workout_sets')
+      .select('exercise_name,muscle_group,equipment,note,exercise_index,set_index,reps,weight,rir,reported_rir')
+      .eq('workout_id', id)
+      .order('exercise_index')
+      .order('set_index'),
+    supabase.from('workout_feedback').select('muscle_group,joint_pain,pump,volume,soreness').eq('workout_id', id),
+  ]);
+  if (setError) throw new Error(`Could not load sets: ${setError.message}`);
+  if (feedbackError) throw new Error(`Could not load feedback: ${feedbackError.message}`);
+
+  const grouped = new Map<string, typeof sets>();
+  for (const set of sets ?? []) {
+    const rows = grouped.get(set.exercise_name) ?? [];
+    rows.push(set);
+    grouped.set(set.exercise_name, rows);
+  }
+
+  return <main className="content native-page native-gradient-background">
+    <a className="back-link" href="/history">← History</a>
+    <header className="page-header native-page-header">
+      <div>
+        <div className="eyebrow">{new Date(workout.completed_at).toLocaleDateString()}</div>
+        <h1>{workout.name}</h1>
+        <p>{workout.program_name}</p>
+      </div>
+    </header>
+    <div className="exercise-stack native-list-stack">
+      {[...grouped].map(([name, rows]) => <section className="surface exercise-card native-workout-card native-list-card" key={name}>
+        <span className="native-muscle-stripe" aria-hidden="true" />
+        <div className="exercise-title">
+          <div>
+            <div className="cap native-muscle-label">{rows[0]?.muscle_group ?? 'Exercise'}</div>
+            <h2>{name}</h2>
+            <p>{[rows[0]?.muscle_group, rows[0]?.equipment].filter(Boolean).join(' · ')}</p>
+          </div>
+        </div>
+        {rows.map((set, index) => <div className="history-set native-set-row" key={set.set_index}>
+          <strong>Set {index + 1}</strong>
+          <span>{set.weight} lb × {set.reps}</span>
+          <span>{set.reported_rir == null ? 'RIR not reported' : `RIR ${set.reported_rir}`}</span>
+        </div>)}
+      </section>)}
+    </div>
+    {feedback?.length ? <section className="surface feedback-summary native-section native-settings-group">
+      <h2>Recovery feedback</h2>
+      {feedback.map((item) => <div className="native-settings-row" key={item.muscle_group}>
+        <strong>{item.muscle_group}</strong>
+        <span>{[item.soreness, item.joint_pain && `Pain: ${item.joint_pain}`, item.pump && `Pump: ${item.pump}`, item.volume].filter(Boolean).join(' · ')}</span>
+      </div>)}
+    </section> : null}
+  </main>;
+}

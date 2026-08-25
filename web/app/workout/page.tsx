@@ -20,14 +20,14 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   }
   const { data: current, error: programError } = await supabase.from('programs').select('id,name,muscle_priorities,total_weeks,focus').eq('user_id', user.id).eq('is_current', true).is('deleted_at', null).maybeSingle();
   if (programError) throw new Error(`Could not load current program: ${programError.message}`);
-  if (!current) return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
+  if (!current) return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
   const { data: days, error: daysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
   if (daysError) throw new Error(`Could not load program days: ${daysError.message}`);
   const nextDay=days?.find((day)=>!day.completed&&!day.skipped);
   if (!nextDay) {
     const { error: clearError } = await supabase.from('programs').update({ is_current: false }).eq('id', current.id).eq('user_id', user.id).eq('is_current', true);
     if (clearError) console.error('Could not clear completed program from active status.', clearError);
-    return <><main className="app-shell page-frame"><section className="surface empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
+    return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
   }
   const templateDay=days?.find((day)=>day.week_number===1&&day.day_number===nextDay.day_number);
   if(!templateDay) throw new Error('The program is missing its Week 1 exercise template.');
@@ -49,7 +49,8 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   for(const set of pastSets??[]){const byWorkout=grouped.get(set.exercise_name)??new Map<string,SessionPerformance>(),meta=workoutOrder.get(set.workout_id);if(!meta)continue;const session:SessionPerformance=byWorkout.get(set.workout_id)??{date:meta.date,sets:[]};session.sets.push({weight:Number(set.weight),reps:set.reps,rir:set.reported_rir??undefined});byWorkout.set(set.workout_id,session);grouped.set(set.exercise_name,byWorkout)}
   const targetByExercise=new Map((targets??[]).map((target)=>[target.exercise_name,target]));
   for(const exercise of exercises??[]){const existing=targetByExercise.get(exercise.exercise_name);if(existing&&(Number(existing.target_weight)>0||exercise.equipment==='Bodyweight'))continue;const sessions=[...(grouped.get(exercise.exercise_name)?.entries()??[])].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,8),recovered=recoverMissingTarget(exercise,sessions,{experienceLevel:(profile?.experience_level??'intermediate')as ExperienceLevel,week:nextDay.week_number,totalWeeks:current.total_weeks,focus:(current.focus??'hypertrophy')as ProgramFocus});if(recovered)targetByExercise.set(exercise.exercise_name,{exercise_name:exercise.exercise_name,...recovered})}
+  const historyByExercise=Object.fromEntries([...grouped].map(([name,sessions])=>[name,[...sessions.entries()].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,3)]));
   const workout:WorkoutPrescription={dayId:nextDay.id,programName:current.name,week:nextDay.week_number,day:nextDay.day_number,label:nextDay.label??`Day ${nextDay.day_number}`,exercises:(exercises??[]).map((exercise)=>resolveExercisePrescription(exercise,targetByExercise.get(exercise.exercise_name),exercise.muscle_group?current.muscle_priorities?.[exercise.muscle_group]??null:null))};
   const options:ExerciseOption[]=(catalog??[]).map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max}));
-  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
+  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} catalog={options} historyByExercise={historyByExercise}/></main><AppNav /></>;
 }
