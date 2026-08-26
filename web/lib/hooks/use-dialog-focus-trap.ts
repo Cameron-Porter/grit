@@ -48,9 +48,27 @@ export const useDialogFocusTrap = (active: boolean, containerRef: RefObject<HTML
 
   useEffect(() => {
     if (!active) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previousOverflow; };
+    // overflow:hidden alone doesn't block touch-scroll on iOS Safari - body must be
+    // pinned with position:fixed (and the scroll offset restored on unlock) for the
+    // lock to actually hold there.
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    const previous = { position: style.position, top: style.top, left: style.left, right: style.right, width: style.width, overflow: style.overflow };
+    style.position = 'fixed';
+    style.top = `-${scrollY}px`;
+    style.left = '0';
+    style.right = '0';
+    style.width = '100%';
+    style.overflow = 'hidden';
+    return () => {
+      style.position = previous.position;
+      style.top = previous.top;
+      style.left = previous.left;
+      style.right = previous.right;
+      style.width = previous.width;
+      style.overflow = previous.overflow;
+      window.scrollTo(0, scrollY);
+    };
   }, [active]);
 
   useEffect(() => {
