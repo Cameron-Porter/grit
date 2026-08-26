@@ -1,3 +1,4 @@
+import { notFound, redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/require-user';
 import { AppNav } from '@/components/app-nav';
 import { WorkoutLogger, type ExerciseOption, type WorkoutPrescription } from '@/components/workout-logger';
@@ -9,9 +10,12 @@ import type { ExperienceLevel } from '@grit/types/program';
 
 export const dynamic = 'force-dynamic';
 
+type ActiveProgram = { id:string; name:string; muscle_priorities:Record<string,string|null>|null; total_weeks:number; focus:string|null };
+type ProgramDayRow = { id:string; week_number:number; day_number:number; label:string|null; completed:boolean; skipped:boolean };
+
 export default async function Workout({ searchParams }:{ searchParams:Promise<Record<string,string|string[]|undefined>> }) {
   const { supabase, user } = await requireUser();
-  const params=await searchParams, quick=Array.isArray(params.quick)?params.quick[0]:params.quick;
+  const params=await searchParams, quick=Array.isArray(params.quick)?params.quick[0]:params.quick, dayParam=Array.isArray(params.day)?params.day[0]:params.day;
   if (quick === 'blank') {
     const [{data:catalog,error:catalogError},{data:profile,error:profileError}]=await Promise.all([supabase.from('exercises').select('id,name,muscle_group,equipment,movement_category,rep_range_min,rep_range_max').order('name'),supabase.from('user_profiles').select('body_weight,use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle()]);
     if(catalogError) throw new Error(`Could not load exercise catalog: ${catalogError.message}`);
@@ -22,18 +26,39 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     const options:ExerciseOption[]=visibleCatalog.map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max,movementCategory:exercise.movement_category}));
     return <><main className="app-shell page-frame"><WorkoutLogger key="quick-workout" workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
   }
-  const { data: current, error: programError } = await supabase.from('programs').select('id,name,muscle_priorities,total_weeks,focus').eq('user_id', user.id).eq('is_current', true).is('deleted_at', null).maybeSingle();
-  if (programError) throw new Error(`Could not load current program: ${programError.message}`);
-  if (!current) return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
-  const { data: days, error: daysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
-  if (daysError) throw new Error(`Could not load program days: ${daysError.message}`);
-  const nextDay=days?.find((day)=>!day.completed&&!day.skipped);
-  if (!nextDay) {
-    const { error: clearError } = await supabase.from('programs').update({ is_current: false }).eq('id', current.id).eq('user_id', user.id).eq('is_current', true);
-    if (clearError) console.error('Could not clear completed program from active status.', clearError);
-    return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
+
+  let current:ActiveProgram, days:ProgramDayRow[], nextDay:ProgramDayRow;
+  if (dayParam) {
+    // Jumping straight to a specific day (e.g. from its program calendar) —
+    // any not-yet-completed day can be started out of order, regardless of
+    // which program is currently active.
+    const { data: dayRow, error: dayError } = await supabase.from('program_days').select('id,program_id,week_number,day_number,label,completed,skipped,programs!inner(id,name,muscle_priorities,total_weeks,focus,user_id,deleted_at)').eq('id', dayParam).eq('programs.user_id', user.id).maybeSingle();
+    if (dayError) throw new Error(`Could not load that training day: ${dayError.message}`);
+    const programRow = dayRow?.programs[0];
+    if (!dayRow || !programRow || programRow.deleted_at) notFound();
+    if (dayRow.completed) redirect(`/programs/${dayRow.program_id}/day/${dayRow.id}`);
+    current = { id:programRow.id, name:programRow.name, muscle_priorities:programRow.muscle_priorities, total_weeks:programRow.total_weeks, focus:programRow.focus };
+    const { data: allDays, error: allDaysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
+    if (allDaysError) throw new Error(`Could not load program days: ${allDaysError.message}`);
+    days = allDays ?? [];
+    nextDay = { id:dayRow.id, week_number:dayRow.week_number, day_number:dayRow.day_number, label:dayRow.label, completed:dayRow.completed, skipped:dayRow.skipped };
+  } else {
+    const { data: currentProgram, error: programError } = await supabase.from('programs').select('id,name,muscle_priorities,total_weeks,focus').eq('user_id', user.id).eq('is_current', true).is('deleted_at', null).maybeSingle();
+    if (programError) throw new Error(`Could not load current program: ${programError.message}`);
+    if (!currentProgram) return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
+    current = currentProgram;
+    const { data: allDays, error: daysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
+    if (daysError) throw new Error(`Could not load program days: ${daysError.message}`);
+    days = allDays ?? [];
+    const foundNext=days.find((day)=>!day.completed&&!day.skipped);
+    if (!foundNext) {
+      const { error: clearError } = await supabase.from('programs').update({ is_current: false }).eq('id', current.id).eq('user_id', user.id).eq('is_current', true);
+      if (clearError) console.error('Could not clear completed program from active status.', clearError);
+      return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
+    }
+    nextDay = foundNext;
   }
-  const templateDay=days?.find((day)=>day.week_number===1&&day.day_number===nextDay.day_number);
+  const templateDay=days.find((day)=>day.week_number===1&&day.day_number===nextDay.day_number);
   if(!templateDay) throw new Error('The program is missing its Week 1 exercise template.');
   const [{data:exercises,error:exerciseError},{data:targets,error:targetError},{data:catalog,error:catalogError},{data:profile,error:profileError},{data:pastWorkouts,error:pastWorkoutError}]=await Promise.all([
     supabase.from('program_exercises').select('exercise_name,muscle_group,equipment,sort_order,target_sets,target_reps_min,target_reps_max,target_weight,rir,role').eq('program_day_id',templateDay.id).order('sort_order'),

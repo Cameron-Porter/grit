@@ -79,11 +79,12 @@ export async function addProgramExercises(formData:FormData){
   if(error)detailFail('Could not add the exercises. No exercises were saved.');
   revalidatePath(`/programs/${programId}`);redirect(`/programs/${programId}`)
 }
-export async function removeProgramExercise(formData:FormData){const programId=String(formData.get('programId')??''),exerciseId=String(formData.get('exerciseId')??'');const{supabase,user}=await requireUser();const{data:row,error:readError}=await supabase.from('program_exercises').select('id,program_days!inner(programs!inner(user_id))').eq('id',exerciseId).eq('program_days.programs.user_id',user.id).maybeSingle();if(readError||!row)redirect(`/programs/${programId}?error=${encodeURIComponent('Exercise not found.')}`);const{error}=await supabase.from('program_exercises').delete().eq('id',exerciseId);if(error)redirect(`/programs/${programId}?error=${encodeURIComponent('Could not remove the exercise.')}`);revalidatePath(`/programs/${programId}`);redirect(`/programs/${programId}`)}
+const safeReturnPath=(programId:string,raw:FormDataEntryValue|null):string=>{const value=String(raw??'');return value.startsWith(`/programs/${programId}`)?value:`/programs/${programId}`};
+export async function removeProgramExercise(formData:FormData){const programId=String(formData.get('programId')??''),exerciseId=String(formData.get('exerciseId')??''),returnTo=safeReturnPath(programId,formData.get('returnTo'));const{supabase,user}=await requireUser();const{data:row,error:readError}=await supabase.from('program_exercises').select('id,program_days!inner(programs!inner(user_id))').eq('id',exerciseId).eq('program_days.programs.user_id',user.id).maybeSingle();if(readError||!row)redirect(`${returnTo}?error=${encodeURIComponent('Exercise not found.')}`);const{error}=await supabase.from('program_exercises').delete().eq('id',exerciseId);if(error)redirect(`${returnTo}?error=${encodeURIComponent('Could not remove the exercise.')}`);revalidatePath(`/programs/${programId}`);revalidatePath(returnTo);redirect(returnTo)}
 
 export async function replaceProgramExercise(formData:FormData){
-  const programId=String(formData.get('programId')??''),exerciseId=String(formData.get('exerciseId')??''),replacementId=String(formData.get('replacementId')??'');
-  const detailFail=(message:string):never=>redirect(`/programs/${programId}?error=${encodeURIComponent(message)}`);
+  const programId=String(formData.get('programId')??''),exerciseId=String(formData.get('exerciseId')??''),replacementId=String(formData.get('replacementId')??''),returnTo=safeReturnPath(programId,formData.get('returnTo'));
+  const detailFail=(message:string):never=>redirect(`${returnTo}?error=${encodeURIComponent(message)}`);
   if(!programId||!exerciseId||!replacementId)detailFail('Choose a replacement exercise.');
   const{supabase,user}=await requireUser();
   const{data:program,error:programError}=await supabase.from('programs').select('id').eq('id',programId).eq('user_id',user.id).is('deleted_at',null).maybeSingle();
@@ -109,5 +110,5 @@ export async function replaceProgramExercise(formData:FormData){
   if(matchingDaysError){await supabase.from('program_exercises').update({exercise_name:currentRow.exercise_name,muscle_group:currentRow.muscle_group,equipment:currentRow.equipment}).eq('id',exerciseId);detailFail('Could not update future training days; the template was restored.');}
   const futureDayIds=(matchingDays??[]).map(item=>item.id);
   if(futureDayIds.length){const{error:targetError}=await supabase.from('program_day_targets').update({exercise_name:replacementRow.name,target_weight:0}).in('program_day_id',futureDayIds).eq('exercise_name',currentRow.exercise_name);if(targetError){await supabase.from('program_exercises').update({exercise_name:currentRow.exercise_name,muscle_group:currentRow.muscle_group,equipment:currentRow.equipment}).eq('id',exerciseId);detailFail('Could not update future targets; the template was restored.')}}
-  revalidatePath(`/programs/${programId}`);revalidatePath('/workout');redirect(`/programs/${programId}`);
+  revalidatePath(`/programs/${programId}`);revalidatePath(returnTo);revalidatePath('/workout');redirect(returnTo);
 }

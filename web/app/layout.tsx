@@ -3,7 +3,6 @@ import { themeBootstrapScript } from '@/components/theme-select';
 import type { Metadata, Viewport } from 'next';
 import { inter, sora } from './fonts';
 import './globals.css';
-import './program-schedule-compact.css';
 import './program-schedule.css';
 import './rest-timer.css';
 import './template-editor.css';
