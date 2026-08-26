@@ -8,7 +8,7 @@ import { useConfirmDialog } from './confirm-dialog';
 import { CustomSelect, type SelectOption } from './custom-select';
 
 type ExercisePrescription = { name:string; muscleGroup:string|null; musclePriority:string|null; equipment:string|null; sets:number; repsMin:number; repsMax:number; weight:number; rir:number };
-export type WorkoutPrescription = { dayId:string|null; programName:string; week:number|null; day:number|null; label:string; exercises:ExercisePrescription[] };
+export type WorkoutPrescription = { dayId:string|null; templateDayId:string|null; bodyWeight:number; programName:string; week:number|null; day:number|null; label:string; exercises:ExercisePrescription[] };
 export type ExerciseOption = { id:string; name:string; muscleGroup:string|null; equipment:string|null; repsMin:number|null; repsMax:number|null };
 type LoggedSet = { reps:number; weight:number; reportedRir:number|null; complete:boolean };
 type ExerciseHistorySession = { date:string; sets:{ weight:number; reps:number; rir?:number }[] };
@@ -19,20 +19,22 @@ type RirPrompt = { exerciseIndex:number; setIndex:number };
 type WorkoutSyncState = 'local'|'queued'|'syncing'|'synced';
 export type SavedDraft = { sets:Draft; exercises:ExercisePrescription[]; notes?:string[]; feedback?:Record<string,Feedback> };
 
-export const createInitialDraft = (workout:WorkoutPrescription):Draft => workout.exercises.map((exercise) => Array.from({ length:exercise.sets }, () => ({ reps:exercise.repsMin, weight:exercise.weight, reportedRir:null, complete:false })));
+export const exerciseStartingWeight = (exercise:Pick<ExercisePrescription,'equipment'|'weight'>,bodyWeight:number):number => exercise.equipment==='Bodyweight'&&bodyWeight>0?bodyWeight:exercise.weight;
+export const weightInputValue = (weight:number):number|'' => weight===0?'':weight;
+export const createInitialDraft = (workout:WorkoutPrescription):Draft => workout.exercises.map((exercise) => Array.from({ length:exercise.sets }, () => ({ reps:exercise.repsMin, weight:exerciseStartingWeight(exercise,workout.bodyWeight), reportedRir:null, complete:false })));
 export const reconcileSavedDraft = (workout:WorkoutPrescription,saved:SavedDraft):SavedDraft => {
   const currentSets=createInitialDraft(workout),savedByName=new Map(saved.exercises.map((exercise,index)=>[exercise.name,index]));
-  const sets=currentSets.map((prescribedSets,exerciseIndex)=>{const savedIndex=savedByName.get(workout.exercises[exerciseIndex].name);if(savedIndex===undefined)return prescribedSets;return prescribedSets.map((prescribed,setIndex)=>{const prior=saved.sets[savedIndex]?.[setIndex];return prior?{...prior,weight:prior.weight>0?prior.weight:prescribed.weight}:prescribed})});
+  const sets=currentSets.map((prescribedSets,exerciseIndex)=>{const exercise=workout.exercises[exerciseIndex],savedIndex=savedByName.get(exercise.name);if(savedIndex===undefined)return prescribedSets;return prescribedSets.map((prescribed,setIndex)=>{const prior=saved.sets[savedIndex]?.[setIndex];return prior?{...prior,weight:exercise.equipment==='Bodyweight'?prescribed.weight:prior.weight>0?prior.weight:prescribed.weight}:prescribed})});
   return {sets,exercises:workout.exercises,notes:workout.exercises.map(exercise=>{const index=savedByName.get(exercise.name);return index===undefined?'':saved.notes?.[index]??''}),feedback:saved.feedback};
 };
 const emptyFeedback = ():Feedback => ({ jointPain:'', pump:'', volume:'', soreness:'' });
-export const replacementPrescription = (exercise:ExercisePrescription,option:ExerciseOption):ExercisePrescription => ({ ...exercise,name:option.name,muscleGroup:option.muscleGroup,musclePriority:option.muscleGroup === exercise.muscleGroup ? exercise.musclePriority : null,equipment:option.equipment,repsMin:option.repsMin ?? exercise.repsMin,repsMax:option.repsMax ?? exercise.repsMax,weight:0 });
+export const replacementPrescription = (exercise:ExercisePrescription,option:ExerciseOption,bodyWeight=0):ExercisePrescription => ({ ...exercise,name:option.name,muscleGroup:option.muscleGroup,musclePriority:option.muscleGroup === exercise.muscleGroup ? exercise.musclePriority : null,equipment:option.equipment,repsMin:option.repsMin ?? exercise.repsMin,repsMax:option.repsMax ?? exercise.repsMax,weight:option.equipment==='Bodyweight'?bodyWeight:0 });
 export const resetReplacementSets = (sets:LoggedSet[],exercise:ExercisePrescription):LoggedSet[] => sets.map(() => ({ reps:exercise.repsMin,weight:0,reportedRir:null,complete:false }));
-export const appendedExercisePrescription = (exercises:ExercisePrescription[],option:ExerciseOption):ExercisePrescription => {
+export const appendedExercisePrescription = (exercises:ExercisePrescription[],option:ExerciseOption,bodyWeight=0):ExercisePrescription => {
   const anchor = exercises.at(-1), repsMin = option.repsMin ?? anchor?.repsMin ?? 8, repsMax = option.repsMax ?? anchor?.repsMax ?? 12;
   return anchor
-    ? { ...anchor,name:option.name,muscleGroup:option.muscleGroup,musclePriority:null,equipment:option.equipment,repsMin,repsMax,weight:0 }
-    : { name:option.name,muscleGroup:option.muscleGroup,musclePriority:null,equipment:option.equipment,sets:3,repsMin,repsMax,weight:0,rir:2 };
+    ? { ...anchor,name:option.name,muscleGroup:option.muscleGroup,musclePriority:null,equipment:option.equipment,repsMin,repsMax,weight:option.equipment==='Bodyweight'?bodyWeight:0 }
+    : { name:option.name,muscleGroup:option.muscleGroup,musclePriority:null,equipment:option.equipment,sets:3,repsMin,repsMax,weight:option.equipment==='Bodyweight'?bodyWeight:0,rir:2 };
 };
 export const muscleCompletionState = (exercises:ExercisePrescription[],draft:Draft,muscle:string) => {const indexes=exercises.map((exercise,index)=>exercise.muscleGroup===muscle?index:-1).filter((index)=>index>=0),sets=indexes.flatMap((index)=>draft[index]??[]);return{hasCompletedSet:sets.some((set)=>set.complete),allExercisesComplete:sets.length>0&&sets.every((set)=>set.complete)}};
 export const rirDescription = (rir:number) => rir === 0 ? 'No clean reps left' : rir === 1 ? '1 clean rep left' : rir < 5 ? `${rir} clean reps left` : '5+ clean reps left';
@@ -65,6 +67,7 @@ export const buildWorkoutPayload = (args:{workoutId:string;programDayId:string|n
 });
 export const skipWorkoutRequest = (dayId:string|null):WorkoutDayUpdate|null => dayId === null ? null : { programDayId:dayId, skipped:true };
 export const closeWorkoutMenus = (root:Pick<Document,'querySelectorAll'>=document) => root.querySelectorAll('details.native-modal-menu[open]').forEach((menu) => menu.removeAttribute('open'));
+export const moveWorkoutItem = <T,>(items:T[],from:number,to:number):T[] => {if(from===to||from<0||to<0||from>=items.length||to>=items.length)return items;const next=[...items],[item]=next.splice(from,1);next.splice(to,0,item);return next};
 
 const sorenessOptions:SelectOption[] = [{value:'',label:'Not reported'},{value:'Healed early',label:'Healed early'},{value:'Just in time',label:'Just in time'},{value:'Still sore',label:'Still sore'}];
 const pumpOptions:SelectOption[] = [{value:'',label:'Not reported'},{value:'None',label:'None'},{value:'Low',label:'Low'},{value:'Good',label:'Good'},{value:'Excellent',label:'Excellent'}];
@@ -93,15 +96,22 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   const [feedbackPrompt,setFeedbackPrompt] = useState<FeedbackPrompt|null>(null);
   const [rirPrompt,setRirPrompt] = useState<RirPrompt|null>(null);
   const [historyExercise,setHistoryExercise] = useState<string|null>(null);
+  const [openExerciseMenu,setOpenExerciseMenu] = useState<number|null>(null);
+  const [openSetMenu,setOpenSetMenu] = useState<string|null>(null);
   const [addExerciseChoice,setAddExerciseChoice] = useState('');
+  const [reordering,setReordering] = useState(false);
   const [feedbackQueue,setFeedbackQueue] = useState<FeedbackPrompt[]>([]);
   const promptedSoreness = useRef(new Set<string>());
   const promptedCompletion = useRef(new Set<string>());
   const rirDialogRef = useRef<HTMLElement | null>(null);
   const feedbackDialogRef = useRef<HTMLElement | null>(null);
+  const exerciseMenuDialogRef = useRef<HTMLDivElement | null>(null);
+  const setMenuDialogRef = useRef<HTMLDivElement | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   useDialogFocusTrap(rirPrompt !== null, rirDialogRef);
   useDialogFocusTrap(feedbackPrompt !== null, feedbackDialogRef);
+  useDialogFocusTrap(openExerciseMenu !== null, exerciseMenuDialogRef);
+  useDialogFocusTrap(openSetMenu !== null, setMenuDialogRef);
 
   useEffect(() => {
     try {
@@ -136,6 +146,8 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   useEffect(() => { if(!rirPrompt&&!feedbackPrompt&&feedbackQueue.length){setFeedbackPrompt(feedbackQueue[0]);setFeedbackQueue((current)=>current.slice(1))} },[rirPrompt,feedbackPrompt,feedbackQueue]);
   useEffect(()=>{if(!feedbackPrompt)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')setFeedbackPrompt(null)};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[feedbackPrompt]);
   useEffect(()=>{if(!rirPrompt)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')setRirPrompt(null)};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[rirPrompt]);
+  useEffect(()=>{if(openExerciseMenu===null)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')closeWorkoutMenus()};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[openExerciseMenu]);
+  useEffect(()=>{if(openSetMenu===null)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')closeWorkoutMenus()};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[openSetMenu]);
 
   const completed = useMemo(() => draft.flat().filter((set) => set.complete).length,[draft]);
   const total = draft.flat().length;
@@ -187,14 +199,30 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   },[queueKey,router,storageKey,syncPayload]);
 
   const updateFeedback = (muscle:string,key:keyof Feedback,value:string) => setFeedback((current) => ({ ...current,[muscle]:{ ...(current[muscle] ?? emptyFeedback()),[key]:value } }));
-  const openFeedback = (muscle:string|null,stage:FeedbackPrompt['stage']) => {if(!muscle)return;if(stage==='soreness')promptedSoreness.current.add(muscle);else promptedCompletion.current.add(muscle);setFeedbackPrompt({muscle,stage})};
+  const openFeedback = (muscle:string|null,stage:FeedbackPrompt['stage']) => {if(!muscle)return;closeWorkoutMenus();if(stage==='soreness')promptedSoreness.current.add(muscle);else promptedCompletion.current.add(muscle);setFeedbackPrompt({muscle,stage})};
   const addSet = (exerciseIndex:number) => setDraft((current) => current.map((sets,index) => index === exerciseIndex ? [...sets,{ reps:exercises[index].repsMin,weight:sets.at(-1)?.weight ?? exercises[index].weight,reportedRir:null,complete:false }] : sets));
   const removeSet = (exerciseIndex:number,setIndex:number) => setDraft((current) => current.map((sets,index) => index === exerciseIndex ? sets.filter((_,position) => position !== setIndex) : sets));
   const skipSet = (exerciseIndex:number,setIndex:number) => { closeWorkoutMenus(); removeSet(exerciseIndex,setIndex); setMessage('Set skipped for this workout.'); };
 
+  const moveExercise = async(exerciseIndex:number,direction:-1|1) => {
+    const targetIndex=exerciseIndex+direction;
+    if(targetIndex<0||targetIndex>=exercises.length||!workout.templateDayId||reordering)return;
+    closeWorkoutMenus();setMessage(null);
+    const previousExercises=exercises,previousDraft=draft,previousNotes=notes;
+    const nextExercises=moveWorkoutItem(exercises,exerciseIndex,targetIndex);
+    setExercises(nextExercises);setDraft(moveWorkoutItem(draft,exerciseIndex,targetIndex));setNotes(moveWorkoutItem(notes,exerciseIndex,targetIndex));setReordering(true);
+    try{
+      const response=await fetch('/api/program-exercises/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({templateDayId:workout.templateDayId,exerciseNames:nextExercises.map(exercise=>exercise.name)})});
+      const result=await response.json() as {saved?:boolean;error?:string};
+      if(!response.ok)throw new Error(result.error??'Exercise order could not be saved.');
+      setMessage('Exercise order saved for future workouts on this day.');
+    }catch(error){setExercises(previousExercises);setDraft(previousDraft);setNotes(previousNotes);setMessage(error instanceof Error?error.message:'Exercise order could not be saved.');}
+    finally{setReordering(false)}
+  };
+
   const replaceExercise = (exerciseIndex:number,optionId:string) => {
     const option = catalog.find((item) => item.id === optionId); if (!option) return;
-    const oldExercise = exercises[exerciseIndex], replacement = replacementPrescription(oldExercise,option);
+    const oldExercise = exercises[exerciseIndex], replacement = replacementPrescription(oldExercise,option,workout.bodyWeight);
     setExercises((current) => current.map((exercise,index) => index === exerciseIndex ? replacement : exercise));
     setDraft((current) => current.map((sets,index) => index === exerciseIndex ? resetReplacementSets(sets,replacement) : sets));
     setMessage(option.muscleGroup !== oldExercise.muscleGroup ? 'Exercise replaced. Its muscle group changed, so review weekly volume before making this permanent.' : 'Exercise replaced. Previous set entries were reset for safety.');
@@ -211,8 +239,8 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   const addExercise = (optionId:string) => {
     const option = catalog.find((item) => item.id === optionId); if (!option) return;
     const hadAnchor = exercises.length > 0;
-    const exercise = appendedExercisePrescription(exercises,option);
-    setExercises((current) => [...current,exercise]); setDraft((current) => [...current,Array.from({ length:exercise.sets },() => ({ reps:exercise.repsMin,weight:0,reportedRir:null,complete:false }))]); setNotes((current) => [...current,'']);
+    const exercise = appendedExercisePrescription(exercises,option,workout.bodyWeight);
+    setExercises((current) => [...current,exercise]); setDraft((current) => [...current,Array.from({ length:exercise.sets },() => ({ reps:exercise.repsMin,weight:exerciseStartingWeight(exercise,workout.bodyWeight),reportedRir:null,complete:false }))]); setNotes((current) => [...current,'']);
     setMessage(hadAnchor ? 'Exercise added for this session. Choose a conservative starting load.' : 'Exercise added for this session: 3 sets of 8–12 at a conservative RIR of 2. Adjust as needed.');
   };
 
@@ -233,9 +261,9 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
     <header className="page-header workout-heading native-page-header"><div>{workoutHeadingCopy(workout).eyebrow && <div className="eyebrow">{workoutHeadingCopy(workout).eyebrow}</div>}<h1>{workoutHeadingCopy(workout).title}</h1><p>{workoutHeadingCopy(workout).subtitle}</p></div><span className="status native-badge tint">{completed}/{total} sets</span></header>
     <section className={`surface timer-card rest-panel native-rest-timer ${timerRunning?'running':''}`} aria-label="Rest timer"><span className="native-rest-progress" style={{ inlineSize:`${Math.max(0,Math.min(100,(timerSeconds / 90) * 100))}%` }} aria-hidden="true"/><div className="rest-status"><span className="rest-icon" aria-hidden>◷</span><div><small>{timerRunning?'RESTING':'REST TIMER'}</small><strong aria-live="polite">{Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2,'0')}</strong></div></div><div className="rest-controls"><button className="quiet compact" onClick={() => { setTimerSeconds(90); setTimerRunning(true); }}>{timerSeconds===0?'Start':'Reset'}</button><button className="quiet compact" onClick={() => setTimerRunning(value => !value)} disabled={timerSeconds === 0}>{timerRunning ? 'Pause' : 'Resume'}</button><button className="timer-dismiss" aria-label="Clear rest timer" onClick={() => { setTimerSeconds(0); setTimerRunning(false); }} disabled={timerSeconds === 0}>Clear</button></div></section>
     <div className="exercise-stack">{exercises.map((exercise,exerciseIndex) => <section className="surface exercise-card native-workout-card" key={`${exerciseIndex}:${exercise.name}`}><span className="native-muscle-stripe" aria-hidden="true"/>
-      <div className="exercise-title native-exercise-title"><div><div className="cap native-muscle-label">{exercise.muscleGroup ?? 'Exercise'}</div><h2>{exercise.name}</h2><p>{exercise.equipment || 'Bodyweight'}</p>{notes[exerciseIndex]?.trim()&&<p className="exercise-note-preview"><span aria-hidden>✎</span>{notes[exerciseIndex].trim()}</p>}</div><details className="exercise-menu native-bottom-sheet native-modal-menu"><summary aria-label={`${exercise.name} menu`}>⋮</summary><div className="exercise-menu-panel bottom-sheet"><span className="sheet-handle" aria-hidden="true"/><button className="quiet compact sheet-action-row" onClick={() => setHistoryExercise(historyExercise===exercise.name?null:exercise.name)}>View history</button>{historyExercise===exercise.name&&<div className="native-exercise-history">{(historyByExercise[exercise.name]??[]).slice(0,3).length?(historyByExercise[exercise.name]??[]).slice(0,3).map((session)=><div key={session.date}><strong>{new Date(session.date).toLocaleDateString()}</strong><span>{session.sets.map(set=>`${set.weight}×${set.reps}${set.rir==null?'':` @${set.rir}RIR`}`).join(' · ')}</span></div>):<p>No recent history for this exercise.</p>}</div>}<button className="quiet compact sheet-action-row" onClick={() => addSet(exerciseIndex)}>Add set</button><div className="exercise-feedback-actions"><button className="quiet compact sheet-action-row" onClick={()=>openFeedback(exercise.muscleGroup,'soreness')}>Soreness feedback</button><button className="quiet compact sheet-action-row" onClick={()=>openFeedback(exercise.muscleGroup,'completion')}>Training feedback</button></div><label>Exercise note<textarea value={notes[exerciseIndex] ?? ''} maxLength={500} onChange={(event) => setNotes((current) => current.map((note,index) => index === exerciseIndex ? event.target.value : note))} placeholder="Technique cue, setup, or pain note"/></label><label>Replace exercise<ReplaceExerciseSelect exercise={exercise} catalog={catalog} onReplace={(optionId) => replaceExercise(exerciseIndex,optionId)}/></label><button className="danger compact sheet-action-row" onClick={() => removeExercise(exerciseIndex)}>Remove exercise</button></div></details></div>
+      <div className="exercise-title native-exercise-title"><div><div className="cap native-muscle-label">{exercise.muscleGroup ?? 'Exercise'}</div><h2>{exercise.name}</h2><p>{exercise.equipment || 'Bodyweight'}</p>{notes[exerciseIndex]?.trim()&&<p className="exercise-note-preview"><span aria-hidden>✎</span>{notes[exerciseIndex].trim()}</p>}</div><details className="exercise-menu native-bottom-sheet native-modal-menu" onToggle={(event)=>setOpenExerciseMenu(event.currentTarget.open?exerciseIndex:(current)=>current===exerciseIndex?null:current)}><summary aria-label={`${exercise.name} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} menu`} onClick={()=>closeWorkoutMenus()}/><div ref={openExerciseMenu===exerciseIndex?exerciseMenuDialogRef:undefined} className="exercise-menu-panel bottom-sheet" role="dialog" aria-modal="true" aria-label={`${exercise.name} actions`}><span className="sheet-handle" aria-hidden="true"/><div className="sheet-header"><strong>{exercise.name}</strong><button type="button" className="sheet-close" aria-label={`Close ${exercise.name} menu`} onClick={()=>closeWorkoutMenus()}>×</button></div>{workout.templateDayId&&<div className="exercise-order-actions"><button className="quiet compact sheet-action-row" disabled={reordering||exerciseIndex===0} onClick={()=>void moveExercise(exerciseIndex,-1)}>Move up</button><button className="quiet compact sheet-action-row" disabled={reordering||exerciseIndex===exercises.length-1} onClick={()=>void moveExercise(exerciseIndex,1)}>Move down</button></div>}<button className="quiet compact sheet-action-row" onClick={() => setHistoryExercise(historyExercise===exercise.name?null:exercise.name)}>View history</button>{historyExercise===exercise.name&&<div className="native-exercise-history">{(historyByExercise[exercise.name]??[]).slice(0,3).length?(historyByExercise[exercise.name]??[]).slice(0,3).map((session)=><div key={session.date}><strong>{new Date(session.date).toLocaleDateString()}</strong><span>{session.sets.map(set=>`${set.weight}×${set.reps}${set.rir==null?'':` @${set.rir}RIR`}`).join(' · ')}</span></div>):<p>No recent history for this exercise.</p>}</div>}<button className="quiet compact sheet-action-row" onClick={() => addSet(exerciseIndex)}>+ Add Set</button><div className="exercise-feedback-actions"><button className="quiet compact sheet-action-row" onClick={()=>openFeedback(exercise.muscleGroup,'soreness')}>Soreness feedback</button><button className="quiet compact sheet-action-row" onClick={()=>openFeedback(exercise.muscleGroup,'completion')}>Training feedback</button></div><label>Exercise note<textarea value={notes[exerciseIndex] ?? ''} maxLength={500} onChange={(event) => setNotes((current) => current.map((note,index) => index === exerciseIndex ? event.target.value : note))} placeholder="Technique cue, setup, or pain note"/></label><label>Replace exercise<ReplaceExerciseSelect exercise={exercise} catalog={catalog} onReplace={(optionId) => replaceExercise(exerciseIndex,optionId)}/></label><button className="danger compact sheet-action-row" onClick={() => removeExercise(exerciseIndex)}>Remove exercise</button></div></details></div>
       <div className="set-grid set-grid-header native-set-row" aria-hidden="true"><span /><span>WEIGHT</span><span>REPS</span><span>RIR</span><span>LOG</span></div>
-      {draft[exerciseIndex]?.map((set,setIndex) => <div className={`set-grid native-set-row ${set.complete ? 'set-complete' : ''}`} key={setIndex}><details className="set-menu native-bottom-sheet native-set-menu-cell native-modal-menu"><summary aria-label={`${exercise.name} set ${setIndex + 1} menu`}>⋮</summary><div className="bottom-sheet"><span className="sheet-handle" aria-hidden="true"/><button className="quiet compact sheet-action-row" onClick={() => skipSet(exerciseIndex,setIndex)}>Skip set</button><button className="danger compact sheet-action-row" onClick={() => removeSet(exerciseIndex,setIndex)}>Remove set</button></div></details><input aria-label={`${exercise.name} set ${setIndex + 1} weight`} inputMode="decimal" type="number" min="0" step="0.5" value={set.weight} onChange={(event) => updateSet(exerciseIndex,setIndex,{ weight:Number(event.target.value) })}/><input aria-label={`${exercise.name} set ${setIndex + 1} reps`} inputMode="numeric" type="number" min="0" value={set.reps === 0 ? '' : set.reps} placeholder={`${exercise.rir} RIR`} onChange={(event) => updateSet(exerciseIndex,setIndex,{ reps:Number(event.target.value) })}/><button type="button" className={`native-rir-button ${set.reportedRir===null?'empty':''}`} disabled={!set.complete} onClick={() => setRirPrompt({exerciseIndex,setIndex})} aria-label={`${exercise.name} set ${setIndex + 1} RIR`}>{set.reportedRir ?? '—'}</button><label className="set-check-wrap"><input className="set-check" aria-label={`${exercise.name} set ${setIndex + 1} complete`} type="checkbox" checked={set.complete} onChange={(event) => completeSet(exerciseIndex,setIndex,event.target.checked)}/></label></div>)}
+      {draft[exerciseIndex]?.map((set,setIndex) => {const setMenuId=`${exerciseIndex}:${setIndex}`;return <div className={`set-grid native-set-row ${set.complete ? 'set-complete' : ''}`} key={setIndex}><details className="set-menu native-bottom-sheet native-set-menu-cell native-modal-menu" onToggle={(event)=>setOpenSetMenu(event.currentTarget.open?setMenuId:(current)=>current===setMenuId?null:current)}><summary aria-label={`${exercise.name} set ${setIndex + 1} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} set ${setIndex + 1} menu`} onClick={()=>closeWorkoutMenus()}/><div ref={openSetMenu===setMenuId?setMenuDialogRef:undefined} className="bottom-sheet" role="dialog" aria-modal="true" aria-label={`${exercise.name} set ${setIndex + 1} actions`}><span className="sheet-handle" aria-hidden="true"/><div className="sheet-header"><strong>Set {setIndex+1}</strong><button type="button" className="sheet-close" aria-label={`Close ${exercise.name} set ${setIndex + 1} menu`} onClick={()=>closeWorkoutMenus()}>×</button></div><button className="quiet compact sheet-action-row" onClick={() => skipSet(exerciseIndex,setIndex)}>Skip set</button><button className="danger compact sheet-action-row" onClick={() => removeSet(exerciseIndex,setIndex)}>Remove set</button></div></details><input aria-label={`${exercise.name} set ${setIndex + 1} weight`} inputMode="decimal" type="number" min="0" step="0.5" value={weightInputValue(set.weight)} placeholder="0" onChange={(event) => updateSet(exerciseIndex,setIndex,{ weight:Number(event.target.value) })}/><input aria-label={`${exercise.name} set ${setIndex + 1} reps`} inputMode="numeric" type="number" min="0" value={set.reps === 0 ? '' : set.reps} placeholder={`${exercise.rir} RIR`} onChange={(event) => updateSet(exerciseIndex,setIndex,{ reps:Number(event.target.value) })}/><button type="button" className={`native-rir-button ${set.reportedRir===null?'empty':''}`} disabled={!set.complete} onClick={() => setRirPrompt({exerciseIndex,setIndex})} aria-label={`${exercise.name} set ${setIndex + 1} RIR`}>{set.reportedRir ?? '—'}</button><label className="set-check-wrap"><input className="set-check" aria-label={`${exercise.name} set ${setIndex + 1} complete`} type="checkbox" checked={set.complete} onChange={(event) => completeSet(exerciseIndex,setIndex,event.target.checked)}/></label></div>})}
       <button type="button" className="native-add-set-row" onClick={() => addSet(exerciseIndex)}>+ Add Set</button>
       <p className="prescription">Prescription: {exercise.sets} × {exercise.repsMin}–{exercise.repsMax}{exercise.weight > 0 ? ` at ${exercise.weight} lb` : ''}</p>
     </section>)}</div>

@@ -1,14 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { appendedExercisePrescription, buildWorkoutPayload, clearWorkoutLocalState, closeWorkoutMenus, createInitialDraft, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { appendedExercisePrescription, buildWorkoutPayload, clearWorkoutLocalState, closeWorkoutMenus, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
-const workout: WorkoutPrescription = { dayId:'day-1',programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
-const quickWorkout: WorkoutPrescription = { dayId:null,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
+const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
+const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
 
 describe('createInitialDraft',()=>{
   it('creates exactly the prescribed sets with safe incomplete defaults',()=>{
     expect(createInitialDraft(workout)).toEqual([[{reps:8,weight:100,reportedRir:null,complete:false},{reps:8,weight:100,reportedRir:null,complete:false},{reps:8,weight:100,reportedRir:null,complete:false}]]);
   });
+});
+describe('empty set inputs',()=>{it('renders a zero weight as an empty controlled value so typing does not prepend zero',()=>{expect(weightInputValue(0)).toBe('');expect(weightInputValue(207)).toBe(207)})});
+describe('bodyweight workout loads',()=>{
+  it('uses profile body weight for exact Bodyweight equipment',()=>expect(exerciseStartingWeight({equipment:'Bodyweight',weight:0},185)).toBe(185));
+  it('does not replace external load for Bodyweight Loadable equipment',()=>expect(exerciseStartingWeight({equipment:'Bodyweight Loadable',weight:25},185)).toBe(25));
+  it('applies body weight when replacing an exercise with a bodyweight movement',()=>expect(replacementPrescription(workout.exercises[0],{id:'2',name:'Pull-Up',muscleGroup:'Back',equipment:'Bodyweight',repsMin:5,repsMax:10},185).weight).toBe(185));
+  it('refreshes a restored bodyweight draft from the current profile weight',()=>{const bodyweightWorkout={...workout,exercises:[{...workout.exercises[0],equipment:'Bodyweight',weight:0}]};const saved={exercises:bodyweightWorkout.exercises,sets:[[{reps:8,weight:175,reportedRir:null,complete:false}]]};expect(reconcileSavedDraft(bodyweightWorkout,saved).sets[0][0].weight).toBe(185)});
 });
 describe('saved workout recovery',()=>{it('does not let a stale zero-weight draft erase a recovered prescription',()=>{const saved={exercises:workout.exercises.map(exercise=>({...exercise,weight:0})),sets:[[{reps:8,weight:0,reportedRir:null,complete:false},{reps:9,weight:95,reportedRir:2,complete:true}]]};expect(reconcileSavedDraft(workout,saved).sets[0]).toEqual([{reps:8,weight:100,reportedRir:null,complete:false},{reps:9,weight:95,reportedRir:2,complete:true},{reps:8,weight:100,reportedRir:null,complete:false}])});it('ignores exercises left behind by a changed prescription',()=>{const saved={exercises:[{...workout.exercises[0],name:'Old Row'}],sets:[[{reps:12,weight:200,reportedRir:0,complete:true}]]};expect(reconcileSavedDraft(workout,saved).sets).toEqual(createInitialDraft(workout))})});
 describe('discarded workout recovery',()=>{it('removes both the draft and queued finish so a skipped workout cannot sync later',()=>{const removeItem=vi.fn();clearWorkoutLocalState({removeItem},'draft-key','queue-key');expect(removeItem.mock.calls).toEqual([['queue-key'],['draft-key']])})});
@@ -58,6 +65,10 @@ describe('workout menu cleanup',()=>{
     closeWorkoutMenus({querySelectorAll:vi.fn(()=>menus as unknown as NodeListOf<Element>)});
     expect(menus.map(menu=>menu.removeAttribute.mock.calls)).toEqual([[['open']],[['open']]]);
   });
+});
+describe('exercise ordering',()=>{
+  it('moves the selected item while preserving every other item',()=>expect(moveWorkoutItem(['Row','Curl','Raise'],2,1)).toEqual(['Row','Raise','Curl']));
+  it('does not mutate or reorder beyond the list boundaries',()=>{const items=['Row','Curl'];expect(moveWorkoutItem(items,0,-1)).toBe(items);expect(items).toEqual(['Row','Curl'])});
 });
 describe('adding an exercise to an empty training day',()=>{
   const option={id:'x1',name:'Leg Press',muscleGroup:'Quads',equipment:'Machine',repsMin:10,repsMax:15};

@@ -27,4 +27,27 @@ describe('native UI parity contracts', () => {
       expect(css).toContain(token);
     }
   });
+
+  it('keeps program deletion separate and history exercises vertically stacked', () => {
+    const program = read('app/(app)/programs/[id]/page.tsx');
+    const history = read('app/(app)/history/[id]/page.tsx');
+    expect(program).toContain('className="delete-program-action"');
+    expect(history).toContain('history-exercise-card');
+    expect(history).toContain('native-exercise-title');
+    expect(history).toContain('recovery-feedback-item');
+  });
+
+  it('applies preferred equipment to live workout exercise choices', () => {
+    const workout = read('app/workout/page.tsx');
+    expect(workout).toContain('use_preferred_equipment,preferred_equipment');
+    expect(workout.match(/filterExercisesByEquipmentPreference/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('gives exercise and set menus explicit and outside-click dismissal', () => {
+    const logger = read('components/workout-logger.tsx');
+    expect(logger.match(/className="menu-backdrop"/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(logger.match(/className="sheet-close"/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(logger).toContain('setMenuDialogRef');
+    expect(logger).toMatch(/openFeedback\s*=.*closeWorkoutMenus\(\)/);
+  });
 });

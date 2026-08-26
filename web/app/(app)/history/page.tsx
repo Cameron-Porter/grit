@@ -13,7 +13,7 @@ export default async function History() {
       <div className="native-stat-card"><strong>{thisWeek}</strong><span>sessions</span><small>This week</small></div>
       <div className="native-stat-card"><strong>{data?.length ?? 0}</strong><span>workouts</span><small>All time</small></div>
     </section>
-    <div className="native-list-stack">{data?.map(w => <Link className="native-list-card native-row history-row" href={`/history/${w.id}`} key={w.id}><div><h2>{w.name ?? w.program_name ?? 'Workout'}</h2><p>{new Date(w.completed_at ?? w.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p></div><span aria-hidden>›</span></Link>)}</div>
+    <div className="native-list-stack progress-history-list">{data?.map(w => <Link className="native-list-card history-row" href={`/history/${w.id}`} key={w.id}><div><h2>{w.name ?? w.program_name ?? 'Workout'}</h2><p>{new Date(w.completed_at ?? w.created_at).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</p></div><span aria-hidden>›</span></Link>)}</div>
     {!data?.length && <section className="native-empty-state"><div aria-hidden="true">🏋</div><h2>No workouts logged</h2><p>Complete your first workout to see your training history and progress here.</p><Link className="primary button-link" href="/workout">Start a Workout</Link></section>}
   </main>;
 }
