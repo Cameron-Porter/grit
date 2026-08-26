@@ -34,6 +34,25 @@ export async function createGuidedProgram(formData:FormData){
   revalidatePath('/programs');redirect(`/programs/${id}`);
 }
 export async function setCurrentProgram(formData:FormData){const id=String(formData.get('id')??'');const{supabase,user}=await requireUser();const{data:owned,error:ownedError}=await supabase.from('programs').select('id').eq('id',id).eq('user_id',user.id).is('deleted_at',null).maybeSingle();if(ownedError||!owned)fail('Program not found.');const{data:programDays,error:programDaysError}=await supabase.from('program_days').select('completed,skipped').eq('program_id',id);if(programDaysError)fail('Could not check the program.');if(programDays?.length&&programDays.every((day)=>day.completed||day.skipped))fail('This program is already complete and cannot be made active.');const{data:previous,error:previousError}=await supabase.from('programs').select('id').eq('user_id',user.id).eq('is_current',true).is('deleted_at',null);if(previousError)fail('Could not load the active program.');const{error:clearError}=await supabase.from('programs').update({is_current:false}).eq('user_id',user.id);if(clearError)fail('Could not change the active program.');const{error:setError}=await supabase.from('programs').update({is_current:true}).eq('id',id).eq('user_id',user.id);if(setError){if(previous?.length)await supabase.from('programs').update({is_current:true}).in('id',previous.map((program)=>program.id)).eq('user_id',user.id);fail('Could not change the active program; the previous selection was restored.')}revalidatePath('/programs');revalidatePath('/workout');redirect('/programs')}
+export async function copyProgram(formData:FormData){
+  const id=String(formData.get('id')??''),name=String(formData.get('name')??'').trim();
+  if(!id)fail('Program not found.');if(!name)fail('Name the copy before creating it.');
+  const{supabase,user}=await requireUser();
+  const{data:program,error:programError}=await supabase.from('programs').select('id,total_weeks,days_per_week,focus').eq('id',id).eq('user_id',user.id).is('deleted_at',null).maybeSingle();
+  if(programError||!program)fail('Program not found.');
+  const{data:days,error:daysError}=await supabase.from('program_days').select('id,week_number,day_number,label,program_exercises(exercise_name,muscle_group,equipment,sort_order,target_sets,target_reps_min,target_reps_max,target_weight,rir)').eq('program_id',id).order('week_number').order('day_number');
+  if(daysError)fail('Could not read the program to copy.');
+  const newId=randomUUID();
+  const{error:insertProgramError}=await supabase.from('programs').insert({id:newId,user_id:user.id,name,total_weeks:program!.total_weeks,days_per_week:program!.days_per_week,focus:program!.focus,is_current:false});
+  if(insertProgramError)fail('Could not create the copy.');
+  const dayIdMap=new Map((days??[]).map(day=>[day.id,randomUUID()]));
+  const dayRows=(days??[]).map(day=>({id:dayIdMap.get(day.id),program_id:newId,week_number:day.week_number,day_number:day.day_number,label:day.label}));
+  const{error:dayInsertError}=dayRows.length?await supabase.from('program_days').insert(dayRows):{error:null};
+  if(dayInsertError){await supabase.from('programs').delete().eq('id',newId).eq('user_id',user.id);fail('Could not copy the training days. No partial copy was kept.');}
+  const exerciseRows=(days??[]).filter(day=>day.week_number===1).flatMap(day=>(day.program_exercises??[]).map(exercise=>({program_day_id:dayIdMap.get(day.id)!,exercise_name:exercise.exercise_name,muscle_group:exercise.muscle_group,equipment:exercise.equipment,sort_order:exercise.sort_order,target_sets:exercise.target_sets,target_reps_min:exercise.target_reps_min,target_reps_max:exercise.target_reps_max,target_weight:exercise.target_weight,rir:exercise.rir})));
+  if(exerciseRows.length){const{error:exerciseInsertError}=await supabase.from('program_exercises').insert(exerciseRows);if(exerciseInsertError){await supabase.from('programs').delete().eq('id',newId).eq('user_id',user.id);fail('Could not copy the exercises. No partial copy was kept.');}}
+  revalidatePath('/programs');redirect(`/programs/${newId}`);
+}
 export async function softDeleteProgram(formData:FormData){const id=String(formData.get('id')??'');const{supabase,user}=await requireUser();const{error}=await supabase.from('programs').update({deleted_at:new Date().toISOString(),is_current:false}).eq('id',id).eq('user_id',user.id);if(error)fail('Could not delete the program.');revalidatePath('/programs');redirect('/programs')}
 export async function renameProgram(formData:FormData){const id=String(formData.get('id')??''),name=String(formData.get('name')??'').trim();if(!name)fail('Program name is required.');const{supabase,user}=await requireUser();const{error}=await supabase.from('programs').update({name}).eq('id',id).eq('user_id',user.id);if(error)fail('Could not rename the program.');revalidatePath(`/programs/${id}`);revalidatePath('/programs');redirect(`/programs/${id}`)}
 export async function addProgramExercises(formData:FormData){

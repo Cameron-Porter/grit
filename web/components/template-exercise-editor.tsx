@@ -16,15 +16,14 @@ export function TemplateExerciseEditor({programId,exercise,catalog}:{programId:s
   const recommendedIds=recommendedExerciseIds(choices.filter(option=>option.name!==exercise.exercise_name).map(option=>({id:option.id,name:option.name,muscleGroup:option.muscle_group,movementCategory:option.movement_category})),{originMovementClass:originClass});
   const removeFormRef=useRef<HTMLFormElement>(null);
   const { confirm, dialog } = useConfirmDialog();
-  const confirmRemove = async(event:React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const confirmRemove = async() => {
     if (await confirm({ message:`Remove ${exercise.exercise_name} from this program?`, tone:'danger', confirmLabel:'Remove exercise' })) removeFormRef.current?.requestSubmit();
   };
   return <article className="review-exercise template-review-exercise">
     <div><strong>{exercise.exercise_name}</strong><small>{exercise.muscle_group} · {exercise.equipment}</small><p>{exercise.target_sets} × {exercise.target_reps_min}–{exercise.target_reps_max} · RIR {exercise.rir}</p></div>
     <div className="template-review-controls">
       <form action={replaceProgramExercise}><input type="hidden" name="programId" value={programId}/><input type="hidden" name="exerciseId" value={exercise.id}/><CustomSelect name="replacementId" ariaLabel={`Swap ${exercise.exercise_name}`} defaultValue={current?.id??choices[0]?.id??''} options={withRecommendedOptions(choices.map(option=>({value:option.id,label:`${option.name} · ${option.equipment??'Equipment not listed'}`})),recommendedIds)}/><button className="secondary compact">Save swap</button></form>
-      <form ref={removeFormRef} action={removeProgramExercise} onSubmit={confirmRemove}><input type="hidden" name="programId" value={programId}/><input type="hidden" name="exerciseId" value={exercise.id}/><button className="danger compact">Delete</button></form>
+      <form ref={removeFormRef} action={removeProgramExercise}><input type="hidden" name="programId" value={programId}/><input type="hidden" name="exerciseId" value={exercise.id}/><button type="button" className="danger compact" onClick={confirmRemove}>Delete</button></form>
     </div>
     {dialog}
   </article>;
