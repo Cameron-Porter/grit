@@ -19,7 +19,7 @@ export const viewport: Viewport = { themeColor: '#101216', colorScheme: 'dark li
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} /></head>
       <body className={`${inter.variable} ${sora.variable}`}><ServiceWorkerRegistration />{children}</body>
     </html>

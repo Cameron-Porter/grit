@@ -48,6 +48,13 @@ export const useDialogFocusTrap = (active: boolean, containerRef: RefObject<HTML
 
   useEffect(() => {
     if (!active) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) return;
     const container = containerRef.current;
     if (!container) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;

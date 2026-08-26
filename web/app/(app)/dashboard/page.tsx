@@ -20,21 +20,27 @@ export default async function DashboardPage() {
   if (workoutError) throw new Error(`Could not load dashboard workouts: ${workoutError.message}`);
 
   const program = current as CurrentProgram | null;
-  let days: ProgramDay[] = [];
-  if (program) {
-    const { data, error } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', program.id).order('week_number').order('day_number');
-    if (error) throw new Error(`Could not load dashboard program days: ${error.message}`);
-    days = (data ?? []) as ProgramDay[];
-  }
-
   const workoutRows = (workouts ?? []) as WorkoutRow[];
   const workoutIds = workoutRows.map(workout => workout.id);
+
+  // program_days and workout_sets depend only on the results above, not on each other -
+  // fetch both concurrently instead of chaining two more sequential round-trips.
+  const [daysResult, setsResult] = await Promise.all([
+    program
+      ? supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', program.id).order('week_number').order('day_number')
+      : Promise.resolve({ data: [] as ProgramDay[], error: null }),
+    workoutIds.length
+      ? supabase.from('workout_sets').select('workout_id,exercise_name,weight,reps,completed,equipment').in('workout_id', workoutIds).eq('completed', true)
+      : Promise.resolve({ data: [] as WorkoutSetRow[], error: null }),
+  ]);
+  if (daysResult.error) throw new Error(`Could not load dashboard program days: ${daysResult.error.message}`);
+  if (setsResult.error) throw new Error(`Could not load dashboard progress: ${setsResult.error.message}`);
+  const days = (daysResult.data ?? []) as ProgramDay[];
+
   let progressSets: ProgressSet[] = [];
   if (workoutIds.length) {
-    const { data, error } = await supabase.from('workout_sets').select('workout_id,exercise_name,weight,reps,completed,equipment').in('workout_id', workoutIds).eq('completed', true);
-    if (error) throw new Error(`Could not load dashboard progress: ${error.message}`);
     const dates = new Map(workoutRows.map(workout => [workout.id, workout.completed_at ?? workout.created_at ?? new Date(0).toISOString()]));
-    progressSets = ((data ?? []) as WorkoutSetRow[]).map(set => ({
+    progressSets = ((setsResult.data ?? []) as WorkoutSetRow[]).map(set => ({
       exerciseName: set.exercise_name,
       weight: Number(set.weight ?? 0),
       reps: Number(set.reps ?? 0),

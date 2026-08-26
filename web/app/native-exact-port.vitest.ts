@@ -74,7 +74,9 @@ describe('exact native app port contracts', () => {
     expect(logger).toContain('Skip set');
     expect(logger).toContain('closeWorkoutMenus');
     expect(css).toContain('.native-modal-menu[open]::before');
-    expect(css).toContain('position:fixed!important;z-index:80');
+    // z-index bumped from 80 to 150 so the sheet backdrop renders above .app-nav
+    // (z-index:100) instead of being covered by it - see native-workout-screen fix.
+    expect(css).toContain('position:fixed!important;z-index:150');
     expect(css).toContain('backdrop-filter:blur(8px)');
     expect(css).toContain('border-radius:26px 26px 0 0');
   });
