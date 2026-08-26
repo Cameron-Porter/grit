@@ -1,13 +1,30 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { appendedExercisePrescription, buildWorkoutPayload, clearWorkoutLocalState, closeWorkoutMenus, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { appendedExercisePrescription, buildWorkoutPayload, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
 
 describe('createInitialDraft',()=>{
-  it('creates exactly the prescribed sets with safe incomplete defaults',()=>{
-    expect(createInitialDraft(workout)).toEqual([[{reps:8,weight:100,reportedRir:null,complete:false},{reps:8,weight:100,reportedRir:null,complete:false},{reps:8,weight:100,reportedRir:null,complete:false}]]);
+  it('creates exactly the prescribed sets with safe incomplete defaults and reps left as a placeholder',()=>{
+    expect(createInitialDraft(workout)).toEqual([[{reps:0,weight:100,reportedRir:null,complete:false},{reps:0,weight:100,reportedRir:null,complete:false},{reps:0,weight:100,reportedRir:null,complete:false}]]);
+  });
+});
+describe('reps placeholder commits on set completion',()=>{
+  it('fills the prescribed rep target when the user never typed a value',()=>expect(completedSetReps(0,8)).toBe(8));
+  it('keeps a user-entered rep count untouched',()=>expect(completedSetReps(6,8)).toBe(6));
+});
+describe('weight auto-fills down to later sets',()=>{
+  const sets=[{reps:0,weight:0,reportedRir:null,complete:false},{reps:0,weight:0,reportedRir:null,complete:false},{reps:0,weight:0,reportedRir:null,complete:false}];
+  it('propagates an edited weight to every later incomplete set',()=>{
+    expect(cascadeWeight(sets,0,135)).toEqual([{reps:0,weight:135,reportedRir:null,complete:false},{reps:0,weight:135,reportedRir:null,complete:false},{reps:0,weight:135,reportedRir:null,complete:false}]);
+  });
+  it('does not overwrite a set that is already complete',()=>{
+    const partiallyDone=[sets[0],{...sets[1],weight:120,complete:true},sets[2]];
+    expect(cascadeWeight(partiallyDone,0,135)).toEqual([{reps:0,weight:135,reportedRir:null,complete:false},{reps:0,weight:120,reportedRir:null,complete:true},{reps:0,weight:135,reportedRir:null,complete:false}]);
+  });
+  it('does not push a later edit backward onto earlier sets',()=>{
+    expect(cascadeWeight(sets,1,95)).toEqual([{reps:0,weight:0,reportedRir:null,complete:false},{reps:0,weight:95,reportedRir:null,complete:false},{reps:0,weight:95,reportedRir:null,complete:false}]);
   });
 });
 describe('empty set inputs',()=>{it('renders a zero weight as an empty controlled value so typing does not prepend zero',()=>{expect(weightInputValue(0)).toBe('');expect(weightInputValue(207)).toBe(207)})});
@@ -17,9 +34,9 @@ describe('bodyweight workout loads',()=>{
   it('applies body weight when replacing an exercise with a bodyweight movement',()=>expect(replacementPrescription(workout.exercises[0],{id:'2',name:'Pull-Up',muscleGroup:'Back',equipment:'Bodyweight',repsMin:5,repsMax:10},185).weight).toBe(185));
   it('refreshes a restored bodyweight draft from the current profile weight',()=>{const bodyweightWorkout={...workout,exercises:[{...workout.exercises[0],equipment:'Bodyweight',weight:0}]};const saved={exercises:bodyweightWorkout.exercises,sets:[[{reps:8,weight:175,reportedRir:null,complete:false}]]};expect(reconcileSavedDraft(bodyweightWorkout,saved).sets[0][0].weight).toBe(185)});
 });
-describe('saved workout recovery',()=>{it('does not let a stale zero-weight draft erase a recovered prescription',()=>{const saved={exercises:workout.exercises.map(exercise=>({...exercise,weight:0})),sets:[[{reps:8,weight:0,reportedRir:null,complete:false},{reps:9,weight:95,reportedRir:2,complete:true}]]};expect(reconcileSavedDraft(workout,saved).sets[0]).toEqual([{reps:8,weight:100,reportedRir:null,complete:false},{reps:9,weight:95,reportedRir:2,complete:true},{reps:8,weight:100,reportedRir:null,complete:false}])});it('ignores exercises left behind by a changed prescription',()=>{const saved={exercises:[{...workout.exercises[0],name:'Old Row'}],sets:[[{reps:12,weight:200,reportedRir:0,complete:true}]]};expect(reconcileSavedDraft(workout,saved).sets).toEqual(createInitialDraft(workout))})});
+describe('saved workout recovery',()=>{it('does not let a stale zero-weight draft erase a recovered prescription',()=>{const saved={exercises:workout.exercises.map(exercise=>({...exercise,weight:0})),sets:[[{reps:8,weight:0,reportedRir:null,complete:false},{reps:9,weight:95,reportedRir:2,complete:true}]]};expect(reconcileSavedDraft(workout,saved).sets[0]).toEqual([{reps:8,weight:100,reportedRir:null,complete:false},{reps:9,weight:95,reportedRir:2,complete:true},{reps:0,weight:100,reportedRir:null,complete:false}])});it('ignores exercises left behind by a changed prescription',()=>{const saved={exercises:[{...workout.exercises[0],name:'Old Row'}],sets:[[{reps:12,weight:200,reportedRir:0,complete:true}]]};expect(reconcileSavedDraft(workout,saved).sets).toEqual(createInitialDraft(workout))})});
 describe('discarded workout recovery',()=>{it('removes both the draft and queued finish so a skipped workout cannot sync later',()=>{const removeItem=vi.fn();clearWorkoutLocalState({removeItem},'draft-key','queue-key');expect(removeItem.mock.calls).toEqual([['queue-key'],['draft-key']])})});
-describe('safe exercise replacement',()=>{it('never carries execution data or load into a new movement',()=>{const replacement=replacementPrescription(workout.exercises[0],{id:'2',name:'Pull-Up',muscleGroup:'Back',equipment:'Bodyweight',repsMin:5,repsMax:10});expect(replacement.weight).toBe(0);expect(resetReplacementSets([{reps:12,weight:100,reportedRir:0,complete:true}],replacement)).toEqual([{reps:5,weight:0,reportedRir:null,complete:false}])});it('clears priority when the replacement changes muscle allocation',()=>expect(replacementPrescription(workout.exercises[0],{id:'3',name:'Curl',muscleGroup:'Biceps',equipment:'Dumbbell',repsMin:8,repsMax:12}).musclePriority).toBeNull())});
+describe('safe exercise replacement',()=>{it('never carries execution data or load into a new movement',()=>{const replacement=replacementPrescription(workout.exercises[0],{id:'2',name:'Pull-Up',muscleGroup:'Back',equipment:'Bodyweight',repsMin:5,repsMax:10});expect(replacement.weight).toBe(0);expect(resetReplacementSets([{reps:12,weight:100,reportedRir:0,complete:true}],replacement)).toEqual([{reps:0,weight:0,reportedRir:null,complete:false}])});it('clears priority when the replacement changes muscle allocation',()=>expect(replacementPrescription(workout.exercises[0],{id:'3',name:'Curl',muscleGroup:'Biceps',equipment:'Dumbbell',repsMin:8,repsMax:12}).musclePriority).toBeNull())});
 describe('staged muscle feedback',()=>{const twoExercises:WorkoutPrescription={...workout,exercises:[...workout.exercises,{...workout.exercises[0],name:'Pulldown',sets:1}]};it('recognizes the first completed set before the muscle is finished',()=>expect(muscleCompletionState(twoExercises.exercises,[[{reps:8,weight:100,reportedRir:null,complete:true}], [{reps:8,weight:100,reportedRir:null,complete:false}]],'Back')).toEqual({hasCompletedSet:true,allExercisesComplete:false}));it('waits for every set of every matching exercise before completion feedback',()=>expect(muscleCompletionState(twoExercises.exercises,[[{reps:8,weight:100,reportedRir:null,complete:true}],[{reps:8,weight:100,reportedRir:null,complete:true}]],'Back').allExercisesComplete).toBe(true))});
 describe('RIR prompt language',()=>{it('explains each effort value in plain language',()=>{expect(rirDescription(0)).toBe('No clean reps left');expect(rirDescription(3)).toBe('3 clean reps left');expect(rirDescription(5)).toBe('5+ clean reps left')})});
 describe('soreness prompt timing',()=>{it('does not automatically ask during week one',()=>{expect(shouldPromptSoreness(1,false,true,false)).toBe(false);expect(shouldPromptSoreness(2,false,true,false)).toBe(true)})});
