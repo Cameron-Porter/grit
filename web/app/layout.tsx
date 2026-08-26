@@ -1,6 +1,7 @@
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
 import { themeBootstrapScript } from '@/components/theme-select';
 import type { Metadata, Viewport } from 'next';
+import { inter, sora } from './fonts';
 import './globals.css';
 import './program-schedule-compact.css';
 import './program-schedule.css';
@@ -21,7 +22,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head><script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} /></head>
-      <body><ServiceWorkerRegistration />{children}</body>
+      <body className={`${inter.variable} ${sora.variable}`}><ServiceWorkerRegistration />{children}</body>
     </html>
   );
 }

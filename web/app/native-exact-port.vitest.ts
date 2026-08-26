@@ -5,11 +5,26 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe('exact native app port contracts', () => {
-  it('keeps the native teal Cool Slate palette and does not ship RP/red polish tokens', () => {
+  it('loads Inter for interface copy and Sora for headings', () => {
+    const layout = read('app/layout.tsx');
+    const fonts = read('app/fonts.ts');
     const css = read('app/globals.css');
-    expect(css).toContain('--primary:#78d58b');
-    expect(css).toContain('--highlight:#a5e5b2');
-    expect(css).toContain('--bg:#101216');
+    expect(fonts).toContain("Inter({");
+    expect(fonts).toContain("Sora({");
+    expect(layout).toContain('inter.variable');
+    expect(layout).toContain('sora.variable');
+    expect(css).toContain('font-family:var(--font-inter)');
+    expect(css).toContain('font-family:var(--font-sora)');
+  });
+
+  it('uses the shared jade and gold brand palette without RP/red polish tokens', () => {
+    const css = read('app/globals.css');
+    // Intentional brand update: these values now match the my-website palette.
+    expect(css).toContain('--primary:#2fbf8f');
+    expect(css).toContain('--highlight:#e8b84b');
+    expect(css).toContain('--bg:#0b0d10');
+    expect(css).toContain('--primary:#0e7a54');
+    expect(css).toContain('--highlight:#93690f');
     expect(css).not.toContain('--rp-action');
     expect(css).not.toContain('#e73d3b');
   });
@@ -26,6 +41,8 @@ describe('exact native app port contracts', () => {
     expect(profile).toContain('native-profile-page native-gradient-background');
     expect(profile).toContain('native-profile-hero');
     expect(profile).toContain('native-settings-group');
+    expect(profile).toContain('auto_match_weight');
+    expect(profile).toContain('autoMatchWeight');
     expect(profile).toContain('<AiKeySettings/>');
   });
 
