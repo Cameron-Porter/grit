@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { appendedExercisePrescription, buildWorkoutPayload, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -41,6 +41,18 @@ describe('staged muscle feedback',()=>{const twoExercises:WorkoutPrescription={.
 describe('RIR prompt language',()=>{it('explains each effort value in plain language',()=>{expect(rirDescription(0)).toBe('No clean reps left');expect(rirDescription(3)).toBe('3 clean reps left');expect(rirDescription(5)).toBe('5+ clean reps left')})});
 describe('soreness prompt timing',()=>{it('does not automatically ask during week one',()=>{expect(shouldPromptSoreness(1,false,true,false)).toBe(false);expect(shouldPromptSoreness(2,false,true,false)).toBe(true)})});
 describe('automatic rest timer',()=>{it('starts after a completed set except the final workout set',()=>{expect(shouldStartRestTimer(1,8)).toBe(true);expect(shouldStartRestTimer(8,8)).toBe(false);expect(shouldStartRestTimer(0,8)).toBe(false)})});
+describe('finishing requires every set complete',()=>{
+  it('blocks finishing while any set is still open',()=>{expect(canFinishWorkout(2,3)).toBe(false);expect(canFinishWorkout(0,3)).toBe(false)});
+  it('allows finishing once every set is complete',()=>expect(canFinishWorkout(3,3)).toBe(true));
+  it('blocks finishing a workout with no sets at all',()=>expect(canFinishWorkout(0,0)).toBe(false));
+});
+describe('feedback prompts cannot be skipped',()=>{
+  it('requires a soreness answer before continuing',()=>{expect(canContinueFeedback('soreness',{jointPain:'',pump:'',volume:'',soreness:''})).toBe(false);expect(canContinueFeedback('soreness',{jointPain:'',pump:'',volume:'',soreness:'Still sore'})).toBe(true)});
+  it('requires pump, volume, and joint pain before continuing a completion prompt',()=>{
+    expect(canContinueFeedback('completion',{jointPain:'',pump:'Good',volume:'About right',soreness:''})).toBe(false);
+    expect(canContinueFeedback('completion',{jointPain:'None',pump:'Good',volume:'About right',soreness:''})).toBe(true);
+  });
+});
 describe('local draft recovery copy',()=>{it('describes local draft recovery and queued finish retry without implying full offline support',()=>{expect(workoutRecoveryCopy()).toEqual({heading:'Local draft recovery',body:'Your sets are saved on this device, not synced offline. Finish still needs a connection — if it drops mid-request, the workout stays queued and retries automatically.'})})});
 describe('explicit workout sync state copy',()=>{it('labels each local-to-synced state distinctly',()=>{expect(workoutSyncStateCopy('local')).toMatchObject({label:'Local draft',tone:'neutral'});expect(workoutSyncStateCopy('queued')).toMatchObject({label:'Queued retry',tone:'warning'});expect(workoutSyncStateCopy('syncing')).toMatchObject({label:'Syncing…',tone:'info'});expect(workoutSyncStateCopy('synced')).toMatchObject({label:'Synced',tone:'success'})})});
 describe('local storage keys for a null-day Quick Workout',()=>{

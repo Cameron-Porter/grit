@@ -4,17 +4,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { createGuidedProgram } from '@/app/(app)/programs/actions';
 import { CustomSelect } from './custom-select';
 import { filterExercisesByMuscleGroup, stagedDefaultsForExercise, uniqueMuscleGroups, validateStagedExerciseInput, type CatalogExercise, type StagedExerciseInput } from '@/lib/programs/day-template-payload';
+import { muscleFeedbackTrend, recommendedExerciseIds, withRecommendedOptions, type MuscleFeedbackRow } from '@/lib/exercises/recommendations';
 
 type Props = {
   catalog: CatalogExercise[];
   equipmentPreferenceEnabled: boolean;
   preferredEquipment: string[];
+  muscleFeedback?: MuscleFeedbackRow[];
 };
 
 const weekOptions = Array.from({ length:15 },(_,index) => ({ value:String(index + 2),label:`${index + 2} weeks` }));
 const dayOptions = Array.from({ length:7 },(_,index) => ({ value:String(index + 1),label:`${index + 1} ${index === 0 ? 'day' : 'days'} per week` }));
 
-export function GuidedProgramBuilder({ catalog, equipmentPreferenceEnabled, preferredEquipment }: Props) {
+export function GuidedProgramBuilder({ catalog, equipmentPreferenceEnabled, preferredEquipment, muscleFeedback = [] }: Props) {
   const [name, setName] = useState('');
   const [weeks, setWeeks] = useState('5');
   const [days, setDays] = useState('4');
@@ -50,6 +52,7 @@ export function GuidedProgramBuilder({ catalog, equipmentPreferenceEnabled, pref
     <ProgramDayExercisePanel
       dayIndex={activeDay}
       catalog={catalog}
+      muscleFeedback={muscleFeedback}
       staged={stagedByDay[activeDay] ?? []}
       setStaged={(items)=>setStagedByDay(current=>current.map((day,index)=>index===activeDay?items:day))}
     />
@@ -65,11 +68,12 @@ export function GuidedProgramBuilder({ catalog, equipmentPreferenceEnabled, pref
   </details>;
 }
 
-function ProgramDayExercisePanel({ dayIndex, catalog, staged, setStaged }: { dayIndex: number; catalog: CatalogExercise[]; staged: StagedExerciseInput[]; setStaged: (items: StagedExerciseInput[]) => void }) {
+function ProgramDayExercisePanel({ dayIndex, catalog, muscleFeedback, staged, setStaged }: { dayIndex: number; catalog: CatalogExercise[]; muscleFeedback: MuscleFeedbackRow[]; staged: StagedExerciseInput[]; setStaged: (items: StagedExerciseInput[]) => void }) {
   const catalogById = useMemo(() => new Map(catalog.map(exercise => [exercise.id, exercise])), [catalog]);
   const muscleGroups = useMemo(() => uniqueMuscleGroups(catalog), [catalog]);
   const [muscleFilter, setMuscleFilter] = useState('all');
   const filtered = useMemo(() => filterExercisesByMuscleGroup(catalog, muscleFilter), [catalog, muscleFilter]);
+  const recommendedIds = useMemo(() => muscleFilter === 'all' ? [] : recommendedExerciseIds(filtered.map(exercise => ({ id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,movementCategory:exercise.movement_category })),{ muscleGroup:muscleFilter,feedbackTrend:muscleFeedbackTrend(muscleFeedback,muscleFilter) }), [filtered, muscleFilter, muscleFeedback]);
   const [exerciseId, setExerciseId] = useState(filtered[0]?.id ?? '');
   const selected = catalogById.get(exerciseId);
   const defaults = selected ? stagedDefaultsForExercise(selected) : { sets: 3, repsMin: 8, repsMax: 12, weight: 0, rir: 2 };
@@ -109,7 +113,7 @@ function ProgramDayExercisePanel({ dayIndex, catalog, staged, setStaged }: { day
     <header><div><div className="eyebrow">DAY {dayIndex + 1}</div><h2 id={`guided-day-${dayIndex}`}>Choose exercises and editable targets</h2></div>{selected?.suggestion&&<span className="pill">History suggested</span>}</header>
     <div className="form-grid add-exercise-card">
       <label>Muscle group<CustomSelect ariaLabel="Filter by muscle group" value={muscleFilter} onChange={setMuscleFilter} options={[{ value: 'all', label: 'All muscle groups' }, ...muscleGroups.map(group => ({ value: group, label: group }))]} /></label>
-      <label>Exercise<CustomSelect ariaLabel="Exercise" value={exerciseId} onChange={setExerciseId} options={exerciseOptions.length ? exerciseOptions : [{ value: '', label: 'No exercises available', disabled: true }]} /></label>
+      <label>Exercise<CustomSelect ariaLabel="Exercise" value={exerciseId} onChange={setExerciseId} options={exerciseOptions.length ? withRecommendedOptions(exerciseOptions,recommendedIds) : [{ value: '', label: 'No exercises available', disabled: true }]} /></label>
       <label>Sets<input type="number" min="1" max="10" value={sets} onChange={event => setSets(event.target.value)} /></label>
       <label>Rep minimum<input type="number" min="1" max="100" value={repsMin} onChange={event => setRepsMin(event.target.value)} /></label>
       <label>Rep maximum<input type="number" min="1" max="100" value={repsMax} onChange={event => setRepsMax(event.target.value)} /></label>

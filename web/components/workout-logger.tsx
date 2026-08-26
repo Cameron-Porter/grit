@@ -6,15 +6,17 @@ import type { WebWorkoutPayload, WorkoutDayUpdate } from '@/lib/workout/payload'
 import { useDialogFocusTrap } from '@/lib/hooks/use-dialog-focus-trap';
 import { useConfirmDialog } from './confirm-dialog';
 import { CustomSelect, type SelectOption } from './custom-select';
+import { classifyMovement } from '@grit/data/movementClassMap';
+import { recommendedExerciseIds, withRecommendedOptions } from '@/lib/exercises/recommendations';
 
 type ExercisePrescription = { name:string; muscleGroup:string|null; musclePriority:string|null; equipment:string|null; sets:number; repsMin:number; repsMax:number; weight:number; rir:number };
 export type WorkoutPrescription = { dayId:string|null; templateDayId:string|null; bodyWeight:number; programName:string; week:number|null; day:number|null; label:string; exercises:ExercisePrescription[] };
-export type ExerciseOption = { id:string; name:string; muscleGroup:string|null; equipment:string|null; repsMin:number|null; repsMax:number|null };
+export type ExerciseOption = { id:string; name:string; muscleGroup:string|null; equipment:string|null; repsMin:number|null; repsMax:number|null; movementCategory?:string|null };
 type LoggedSet = { reps:number; weight:number; reportedRir:number|null; complete:boolean };
 type ExerciseHistorySession = { date:string; sets:{ weight:number; reps:number; rir?:number }[] };
 type Draft = LoggedSet[][];
-type Feedback = { jointPain:string; pump:string; volume:string; soreness:string };
-type FeedbackPrompt = { muscle:string; stage:'soreness'|'completion' };
+export type Feedback = { jointPain:string; pump:string; volume:string; soreness:string };
+export type FeedbackPrompt = { muscle:string; stage:'soreness'|'completion' };
 type RirPrompt = { exerciseIndex:number; setIndex:number };
 type WorkoutSyncState = 'local'|'queued'|'syncing'|'synced';
 export type SavedDraft = { sets:Draft; exercises:ExercisePrescription[]; notes?:string[]; feedback?:Record<string,Feedback> };
@@ -42,6 +44,8 @@ export const muscleCompletionState = (exercises:ExercisePrescription[],draft:Dra
 export const rirDescription = (rir:number) => rir === 0 ? 'No clean reps left' : rir === 1 ? '1 clean rep left' : rir < 5 ? `${rir} clean reps left` : '5+ clean reps left';
 export const shouldPromptSoreness = (week:number,hadCompletedSet:boolean,hasCompletedSet:boolean,alreadyPrompted:boolean) => week > 1 && !hadCompletedSet && hasCompletedSet && !alreadyPrompted;
 export const shouldStartRestTimer = (completedSets:number,totalSets:number) => completedSets > 0 && completedSets < totalSets;
+export const canFinishWorkout = (completed:number,total:number):boolean => total > 0 && completed === total;
+export const canContinueFeedback = (stage:FeedbackPrompt['stage'],values:Feedback):boolean => stage === 'soreness' ? Boolean(values.soreness) : Boolean(values.pump && values.volume && values.jointPain);
 export const clearWorkoutLocalState = (storage:Pick<Storage,'removeItem'>,storageKey:string,queueKey:string) => {
   storage.removeItem(queueKey);
   storage.removeItem(storageKey);
@@ -71,15 +75,18 @@ export const skipWorkoutRequest = (dayId:string|null):WorkoutDayUpdate|null => d
 export const closeWorkoutMenus = (root:Pick<Document,'querySelectorAll'>=document) => root.querySelectorAll('details.native-modal-menu[open]').forEach((menu) => menu.removeAttribute('open'));
 export const moveWorkoutItem = <T,>(items:T[],from:number,to:number):T[] => {if(from===to||from<0||to<0||from>=items.length||to>=items.length)return items;const next=[...items],[item]=next.splice(from,1);next.splice(to,0,item);return next};
 
-const sorenessOptions:SelectOption[] = [{value:'',label:'Not reported'},{value:'Healed early',label:'Healed early'},{value:'Just in time',label:'Just in time'},{value:'Still sore',label:'Still sore'}];
-const pumpOptions:SelectOption[] = [{value:'',label:'Not reported'},{value:'None',label:'None'},{value:'Low',label:'Low'},{value:'Good',label:'Good'},{value:'Excellent',label:'Excellent'}];
-const volumeOptions:SelectOption[] = [{value:'',label:'Not reported'},{value:'Too little',label:'Too little'},{value:'About right',label:'About right'},{value:'Too much',label:'Too much'}];
-const jointPainOptions:SelectOption[] = [{value:'',label:'Not reported'},{value:'None',label:'None'},{value:'Mild',label:'Mild'},{value:'Moderate',label:'Moderate'},{value:'Severe',label:'Severe'}];
+const sorenessOptions:SelectOption[] = [{value:'',label:'Choose…',disabled:true},{value:'Healed early',label:'Healed early'},{value:'Just in time',label:'Just in time'},{value:'Still sore',label:'Still sore'}];
+const pumpOptions:SelectOption[] = [{value:'',label:'Choose…',disabled:true},{value:'None',label:'None'},{value:'Low',label:'Low'},{value:'Good',label:'Good'},{value:'Excellent',label:'Excellent'}];
+const volumeOptions:SelectOption[] = [{value:'',label:'Choose…',disabled:true},{value:'Too little',label:'Too little'},{value:'About right',label:'About right'},{value:'Too much',label:'Too much'}];
+const jointPainOptions:SelectOption[] = [{value:'',label:'Choose…',disabled:true},{value:'None',label:'None'},{value:'Mild',label:'Mild'},{value:'Moderate',label:'Moderate'},{value:'Severe',label:'Severe'}];
 
 function ReplaceExerciseSelect({ exercise, catalog, onReplace }:{ exercise:ExercisePrescription; catalog:ExerciseOption[]; onReplace:(optionId:string) => void }) {
   const [choice,setChoice] = useState('');
-  const options:SelectOption[] = [{value:'',label:'Choose…',disabled:true},...catalog.filter((option) => option.id && option.name !== exercise.name).map((option) => ({ value:option.id,label:`${option.name} — ${option.equipment}` }))];
-  return <CustomSelect ariaLabel={`Replace ${exercise.name}`} value={choice} onChange={(value) => { setChoice(value); onReplace(value); setChoice(''); }} options={options}/>;
+  const candidates = catalog.filter((option) => option.id && option.name !== exercise.name);
+  const options:SelectOption[] = candidates.map((option) => ({ value:option.id,label:`${option.name} — ${option.equipment}` }));
+  const originClass = classifyMovement(catalog.find((option) => option.name === exercise.name)?.movementCategory);
+  const recommendedIds = recommendedExerciseIds(candidates.map((option) => ({ id:option.id,name:option.name,muscleGroup:option.muscleGroup,movementCategory:option.movementCategory })),{ muscleGroup:exercise.muscleGroup,originMovementClass:originClass });
+  return <CustomSelect ariaLabel={`Replace ${exercise.name}`} value={choice} onChange={(value) => { setChoice(value); onReplace(value); setChoice(''); }} options={[{value:'',label:'Choose…',disabled:true},...withRecommendedOptions(options,recommendedIds)]}/>;
 }
 
 export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }:{ workout:WorkoutPrescription; userId:string; catalog:ExerciseOption[]; historyByExercise?:Record<string,ExerciseHistorySession[]> }) {
@@ -146,7 +153,6 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   },[timerRunning]);
   useEffect(() => { if (timerSeconds === 0) setTimerRunning(false); },[timerSeconds]);
   useEffect(() => { if(!rirPrompt&&!feedbackPrompt&&feedbackQueue.length){setFeedbackPrompt(feedbackQueue[0]);setFeedbackQueue((current)=>current.slice(1))} },[rirPrompt,feedbackPrompt,feedbackQueue]);
-  useEffect(()=>{if(!feedbackPrompt)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')setFeedbackPrompt(null)};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[feedbackPrompt]);
   useEffect(()=>{if(!rirPrompt)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')setRirPrompt(null)};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[rirPrompt]);
   useEffect(()=>{if(openExerciseMenu===null)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')closeWorkoutMenus()};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[openExerciseMenu]);
   useEffect(()=>{if(openSetMenu===null)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')closeWorkoutMenus()};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[openSetMenu]);
@@ -177,7 +183,7 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   });
 
   const finish = async() => {
-    if (completed === 0) { setMessage('Complete at least one set before finishing.'); return; }
+    if (!canFinishWorkout(completed,total)) { setMessage('Complete every set before finishing.'); return; }
     setSyncing(true); setSyncState('syncing'); setMessage(null);
     let payload = buildPayload();
     try {
@@ -273,9 +279,9 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
     </section>)}</div>
     {exercises.length === 0 && <section className="surface empty-state"><h2>No exercises scheduled</h2><p>This training day has no exercises yet. Add one below to get started.</p></section>}
     <section className="surface add-exercise-card"><label>Add an exercise<CustomSelect ariaLabel="Add an exercise" value={addExerciseChoice} onChange={value=>{setAddExerciseChoice(value);addExercise(value);setAddExerciseChoice('')}} options={[{value:'',label:'Choose an exercise…',disabled:true},...catalog.map(option=>({value:option.id,label:`${option.name} · ${option.equipment??'Equipment not listed'}`}))]}/></label></section>
-    <section className="surface migration-guard"><strong>{workoutRecoveryCopy().heading}</strong><p>{workoutRecoveryCopy().body}</p><p className={`sync-status ${workoutSyncStateCopy(syncState).tone}`} aria-live="polite"><span>{workoutSyncStateCopy(syncState).label}</span>{workoutSyncStateCopy(syncState).description}</p>{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions native-finish-bar"><button className="quiet" disabled={syncing} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={syncing || completed === 0} onClick={finish}>{syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
+    <section className="surface migration-guard"><strong>{workoutRecoveryCopy().heading}</strong><p>{workoutRecoveryCopy().body}</p><p className={`sync-status ${workoutSyncStateCopy(syncState).tone}`} aria-live="polite"><span>{workoutSyncStateCopy(syncState).label}</span>{workoutSyncStateCopy(syncState).description}</p>{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions native-finish-bar"><button className="quiet" disabled={syncing} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={syncing || !canFinishWorkout(completed,total)} onClick={finish}>{syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
     {rirPrompt&&<div className="modal-backdrop rir-backdrop" role="presentation"><section ref={(node)=>{rirDialogRef.current=node}} tabIndex={-1} className="feedback-modal rir-modal" role="dialog" aria-modal="true" aria-labelledby="rir-title"><div className="eyebrow">SET COMPLETE</div><h2 id="rir-title">How many reps were left?</h2><p>RIR means “reps in reserve”: the number of clean reps you could still have completed with good form.</p><div className="rir-options">{[0,1,2,3,4,5].map(rir=><button type="button" className="quiet" key={rir} onClick={()=>{updateSet(rirPrompt.exerciseIndex,rirPrompt.setIndex,{reportedRir:rir});setRirPrompt(null)}}><strong>{rir}</strong><span>{rirDescription(rir)}</span></button>)}</div><button type="button" className="rir-skip" onClick={()=>setRirPrompt(null)}>Not sure — skip</button></section></div>}
-    {feedbackPrompt&&<div className="modal-backdrop" role="presentation"><section ref={(node)=>{feedbackDialogRef.current=node}} tabIndex={-1} className="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title"><div className="eyebrow">{feedbackPrompt.muscle.toUpperCase()}</div><h2 id="feedback-title">{feedbackPrompt.stage==='soreness'?'How sore were you before training?':'How did that muscle work feel?'}</h2><p>{feedbackPrompt.stage==='soreness'?'This early check helps prevent adding work while you are still recovering.':'You finished every exercise for this muscle. This feedback shapes its next prescription.'}</p>{feedbackPrompt.stage==='soreness'?<label>Soreness<CustomSelect ariaLabel="Soreness" autoFocus value={feedback[feedbackPrompt.muscle]?.soreness??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'soreness',value)} options={sorenessOptions}/></label>:<div className="feedback-modal-fields"><label>Pump<CustomSelect ariaLabel="Pump" autoFocus value={feedback[feedbackPrompt.muscle]?.pump??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'pump',value)} options={pumpOptions}/></label><label>Volume<CustomSelect ariaLabel="Volume" value={feedback[feedbackPrompt.muscle]?.volume??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'volume',value)} options={volumeOptions}/></label><label>Joint pain<CustomSelect ariaLabel="Joint pain" value={feedback[feedbackPrompt.muscle]?.jointPain??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'jointPain',value)} options={jointPainOptions}/></label></div>}<div className="modal-actions"><button className="quiet" onClick={()=>setFeedbackPrompt(null)}>Skip</button><button className="primary" onClick={()=>setFeedbackPrompt(null)}>Continue</button></div></section></div>}
+    {feedbackPrompt&&<div className="modal-backdrop" role="presentation"><section ref={(node)=>{feedbackDialogRef.current=node}} tabIndex={-1} className="feedback-modal" role="dialog" aria-modal="true" aria-labelledby="feedback-title"><div className="eyebrow">{feedbackPrompt.muscle.toUpperCase()}</div><h2 id="feedback-title">{feedbackPrompt.stage==='soreness'?'How sore were you before training?':'How did that muscle work feel?'}</h2><p>{feedbackPrompt.stage==='soreness'?'This early check helps prevent adding work while you are still recovering.':'You finished every exercise for this muscle. This feedback shapes its next prescription.'}</p>{feedbackPrompt.stage==='soreness'?<label>Soreness<CustomSelect ariaLabel="Soreness" autoFocus value={feedback[feedbackPrompt.muscle]?.soreness??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'soreness',value)} options={sorenessOptions}/></label>:<div className="feedback-modal-fields"><label>Pump<CustomSelect ariaLabel="Pump" autoFocus value={feedback[feedbackPrompt.muscle]?.pump??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'pump',value)} options={pumpOptions}/></label><label>Volume<CustomSelect ariaLabel="Volume" value={feedback[feedbackPrompt.muscle]?.volume??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'volume',value)} options={volumeOptions}/></label><label>Joint pain<CustomSelect ariaLabel="Joint pain" value={feedback[feedbackPrompt.muscle]?.jointPain??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'jointPain',value)} options={jointPainOptions}/></label></div>}<div className="modal-actions"><button className="primary" disabled={!canContinueFeedback(feedbackPrompt.stage,feedback[feedbackPrompt.muscle]??emptyFeedback())} onClick={()=>setFeedbackPrompt(null)}>Continue</button></div></section></div>}
     {confirmDialog}
   </div>;
 }

@@ -1,5 +1,5 @@
 export type StagedExerciseInput = { exerciseId: string; sets: number; repsMin: number; repsMax: number; weight: number; rir: number };
-export type CatalogExercise = { id: string; name: string; muscle_group: string | null; equipment: string | null; rep_range_min?: number | null; rep_range_max?: number | null; suggestion?: Partial<Omit<StagedExerciseInput, 'exerciseId'>> | null };
+export type CatalogExercise = { id: string; name: string; muscle_group: string | null; equipment: string | null; movement_category?: string | null; rep_range_min?: number | null; rep_range_max?: number | null; suggestion?: Partial<Omit<StagedExerciseInput, 'exerciseId'>> | null };
 export type ProgramExerciseInsertRow = { program_day_id: string; exercise_name: string; muscle_group: string | null; equipment: string | null; sort_order: number; target_sets: number; target_reps_min: number; target_reps_max: number; target_weight: number; rir: number };
 export type EquipmentPreference = { enabled: boolean; preferred: string[] };
 
