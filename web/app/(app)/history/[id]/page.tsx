@@ -45,9 +45,9 @@ export default async function WorkoutHistoryDetail({ params }: { params: Promise
       </div>
     </header>
     <div className="exercise-stack native-list-stack">
-      {[...grouped].map(([name, rows]) => <section className="surface exercise-card native-workout-card native-list-card" key={name}>
+      {[...grouped].map(([name, rows]) => <section className="surface exercise-card native-workout-card history-exercise-card" key={name}>
         <span className="native-muscle-stripe" aria-hidden="true" />
-        <div className="exercise-title">
+        <div className="exercise-title native-exercise-title">
           <div>
             <div className="cap native-muscle-label">{rows[0]?.muscle_group ?? 'Exercise'}</div>
             <h2>{name}</h2>
@@ -61,12 +61,18 @@ export default async function WorkoutHistoryDetail({ params }: { params: Promise
         </div>)}
       </section>)}
     </div>
-    {feedback?.length ? <section className="surface feedback-summary native-section native-settings-group">
-      <h2>Recovery feedback</h2>
-      {feedback.map((item) => <div className="native-settings-row" key={item.muscle_group}>
-        <strong>{item.muscle_group}</strong>
-        <span>{[item.soreness, item.joint_pain && `Pain: ${item.joint_pain}`, item.pump && `Pump: ${item.pump}`, item.volume].filter(Boolean).join(' · ')}</span>
-      </div>)}
+    {feedback?.length ? <section className="surface feedback-summary recovery-feedback">
+      <header><div><div className="eyebrow">RECOVERY</div><h2>Training feedback</h2></div><span>{feedback.length} {feedback.length === 1 ? 'muscle' : 'muscles'}</span></header>
+      <div className="recovery-feedback-list">{feedback.map((item) => <article className="native-workout-card recovery-feedback-item" key={item.muscle_group}>
+        <span className="native-muscle-stripe" aria-hidden="true" />
+        <header><div className="eyebrow">MUSCLE GROUP</div><h3>{item.muscle_group}</h3></header>
+        <dl>
+          <div><dt>Soreness</dt><dd>{item.soreness || 'Not reported'}</dd></div>
+          <div><dt>Joint pain</dt><dd>{item.joint_pain || 'Not reported'}</dd></div>
+          <div><dt>Pump</dt><dd>{item.pump || 'Not reported'}</dd></div>
+          <div><dt>Volume</dt><dd>{item.volume || 'Not reported'}</dd></div>
+        </dl>
+      </article>)}</div>
     </section> : null}
   </main>;
 }

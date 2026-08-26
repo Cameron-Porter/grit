@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireUser } from '@/lib/auth/require-user';
 import { buildProgressMetrics, type ProgressSet } from '@/lib/progress/metrics';
+import { titleCase } from '@/lib/text/title-case';
 
 type ProgramDay = { id: string; week_number: number; day_number: number; label: string | null; completed: boolean | null; skipped: boolean | null };
 type CurrentProgram = { id: string; name: string; total_weeks: number; days_per_week: number; focus: string | null };
@@ -71,7 +72,7 @@ export default async function DashboardPage() {
     </section>
 
     <section className="native-section" aria-labelledby="active-program-title">
-      <div className="native-section-title"><h2 id="active-program-title">Active program</h2><span>{program?.focus ?? 'Not selected'}</span></div>
+      <div className="native-section-title"><h2 id="active-program-title">Active program</h2><span>{program?.focus ? titleCase(program.focus) : 'Not selected'}</span></div>
       {program ? <Link className="native-list-card dashboard-program-card" href={`/programs/${program.id}`}><div><div className="native-row-title"><h2>{program.name}</h2><span className="native-badge solid">Active</span></div><p>{program.total_weeks} weeks · {program.days_per_week} days/week · {completedDays}/{days.length} days done</p></div><b aria-hidden="true">›</b></Link> : <section className="native-empty-state dashboard-inline-empty"><div aria-hidden="true">▣</div><h2>No active program</h2><p>Pick a template or create a program to make the dashboard actionable.</p><Link className="primary button-link" href="/programs/templates">Browse templates</Link></section>}
     </section>
 

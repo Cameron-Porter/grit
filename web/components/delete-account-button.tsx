@@ -21,5 +21,5 @@ export function DeleteAccountButton() {
     } catch(error) { setError(error instanceof Error ? error.message : 'Account deletion failed.'); }
     finally { setDeleting(false); }
   };
-  return <section className="danger-zone"><div><h2>Danger zone</h2><p>Permanently remove your account, programs, workout history, and subscription.</p></div><button className="secondary full danger" disabled={deleting} onClick={remove}>{deleting ? 'Deleting…' : 'Delete account'}</button>{error && <p className="notice error" role="alert">{error}</p>}{dialog}</section>;
+  return <section className="danger-zone"><div><h2>Danger zone</h2><p>Permanently remove your account, programs, workout history, and subscription.</p></div><button className="danger full" disabled={deleting} onClick={remove}>{deleting ? 'Deleting…' : 'Delete account'}</button>{error && <p className="notice error" role="alert">{error}</p>}{dialog}</section>;
 }

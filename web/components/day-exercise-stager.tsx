@@ -67,7 +67,7 @@ export function DayExerciseStager({ programId, dayId, catalog }: { programId: st
         const exercise = catalogById.get(item.exerciseId);
         return <article className="review-exercise" key={`${item.exerciseId}-${index}`}>
           <div><strong>{exercise?.name ?? 'Unknown exercise'}</strong><div className="review-exercise-chips">{exercise?.muscle_group&&<span className="chip chip-muscle">{exercise.muscle_group}</span>}{exercise?.equipment&&<span className="chip chip-equipment">{exercise.equipment}</span>}</div><p>{item.sets} × {item.repsMin}–{item.repsMax}{item.weight>0?` · ${item.weight} lb`:''} · RIR {item.rir}</p></div>
-          <div className="review-controls"><button type="button" className="secondary compact" onClick={() => removeStaged(index)}>Remove</button></div>
+          <div className="review-controls"><button type="button" className="danger compact" onClick={() => removeStaged(index)}>Remove</button></div>
         </article>;
       })}
     </div>}
