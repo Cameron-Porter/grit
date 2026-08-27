@@ -3,6 +3,7 @@ import { LegalPage, LegalSection } from '@/components/legal-page';
 import { contactEmail, legalEntityName } from '@/lib/legal/constants';
 
 export const metadata: Metadata = { title: 'Terms of Service' };
+export const revalidate = 86400;
 
 export default function TermsOfService() {
   return (
