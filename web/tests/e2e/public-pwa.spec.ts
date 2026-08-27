@@ -43,4 +43,17 @@ test.describe('public PWA acceptance', () => {
       expect(response?.status()).toBe(200);
     });
   }
+
+  test('login screen switches into selectable signup mode', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/login', { waitUntil: 'networkidle' });
+
+    await expect(page.getByRole('link', { name: 'Sign Up' })).toHaveAttribute('href', '/login?mode=signup');
+    await page.getByRole('link', { name: 'Sign Up' }).click();
+
+    await expect(page).toHaveURL(/\/login\?mode=signup$/);
+    await expect(page.getByRole('link', { name: 'Sign Up' })).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('input[name="password"]')).toHaveAttribute('autocomplete', 'new-password');
+    await expect(page.getByRole('button', { name: 'Create Account' })).toBeVisible();
+  });
 });
