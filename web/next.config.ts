@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   turbopack: { root: path.resolve(process.cwd(), '..') },
+  experimental: {
+    // Next 15+ defaults this to 0s, so every navigation to a dynamic (app) route
+    // always re-fetches and shows loading.tsx, even seconds after the last visit.
+    // 30s lets a revisit within that window reuse the client router cache instead -
+    // matches the dashboard's own server-side cache window (lib/dashboard/cache.ts).
+    // Every mutation that should invalidate a still-open tab already calls
+    // router.refresh() (workout-logger.tsx) or revalidatePath/revalidateTag
+    // (api/workouts, programs/actions.ts), which bypasses this regardless of staleness.
+    staleTimes: { dynamic: 30 },
+  },
   async headers() {
     return [{ source: '/(.*)', headers: [
       { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.openai.com https://generativelanguage.googleapis.com; frame-src https://checkout.stripe.com https://billing.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests" },

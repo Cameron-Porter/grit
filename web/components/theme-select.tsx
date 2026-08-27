@@ -8,6 +8,9 @@ export function storedDarkMode(saved: string | null, systemDark: boolean) {
   return systemDark;
 }
 
+/** Pure so the lazy useState initializer below can be tested without rendering. */
+export const initialDarkFromDataset = (theme: string | undefined) => theme === 'dark';
+
 /**
  * The exact inline script injected into the document head so the saved theme applies
  * before first paint. Kept as a single source string (rather than duplicated logic)
@@ -18,7 +21,11 @@ export function storedDarkMode(saved: string | null, systemDark: boolean) {
 export const themeBootstrapScript = `(function(){try{var saved=localStorage.getItem('grit-theme');var dark=saved==='dark'?true:saved==='light'?false:window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=dark?'dark':'light';}catch(e){}})();`;
 
 export function ThemeSelect() {
-  const [dark, setDark] = useState(false);
+  // themeBootstrapScript already set documentElement.dataset.theme before this component
+  // mounts (it's an inline <head> script that runs pre-hydration) - read that instead of
+  // always starting at false and correcting after mount, which visibly animated the
+  // switch sliding on every time dark mode happened to already be active.
+  const [dark, setDark] = useState(() => typeof document !== 'undefined' && initialDarkFromDataset(document.documentElement.dataset.theme));
 
   useEffect(() => {
     const enabled = storedDarkMode(localStorage.getItem('grit-theme'), window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -36,7 +43,7 @@ export function ThemeSelect() {
   return <div className="setting-row">
     <div><strong>Dark mode</strong><span>Use the darker color palette.</span></div>
     <label className="switch" aria-label="Dark mode">
-      <input type="checkbox" checked={dark} onChange={event => change(event.target.checked)} />
+      <input type="checkbox" checked={dark} suppressHydrationWarning onChange={event => change(event.target.checked)} />
       <span aria-hidden="true" />
     </label>
   </div>;

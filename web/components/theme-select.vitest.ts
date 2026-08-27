@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { storedDarkMode, themeBootstrapScript } from './theme-select';
+import { initialDarkFromDataset, storedDarkMode, themeBootstrapScript } from './theme-select';
 
 describe('dark mode toggle', () => {
   it('uses an explicit saved preference', () => {
@@ -10,6 +10,18 @@ describe('dark mode toggle', () => {
   it('uses the system preference when no explicit choice exists', () => {
     expect(storedDarkMode(null, true)).toBe(true);
     expect(storedDarkMode('system', false)).toBe(false);
+  });
+});
+
+describe('initial switch position', () => {
+  it('reads the theme already applied to the DOM instead of always starting false', () => {
+    // Regression guard: the switch previously always mounted unchecked, then flipped via
+    // an effect after mount, animating a visible slide-to-enabled whenever dark mode was
+    // already active. It must now derive its initial value from the attribute the
+    // pre-paint bootstrap script already set, matching on the very first render.
+    expect(initialDarkFromDataset('dark')).toBe(true);
+    expect(initialDarkFromDataset('light')).toBe(false);
+    expect(initialDarkFromDataset(undefined)).toBe(false);
   });
 });
 
