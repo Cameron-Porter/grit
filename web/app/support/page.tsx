@@ -3,6 +3,7 @@ import { LegalPage, LegalSection } from '@/components/legal-page';
 import { contactEmail } from '@/lib/legal/constants';
 
 export const metadata: Metadata = { title: 'Support' };
+export const revalidate = 3600;
 
 export default function Support() {
   return (

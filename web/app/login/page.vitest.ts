@@ -9,3 +9,18 @@ describe('login page OAuth actions', () => {
     expect(loginPageSource).toContain('formAction={signInWithGoogle} formNoValidate');
   });
 });
+
+describe('login page Sign Up tab', () => {
+  it('renders Sign Up as a real navigable control instead of inert text', () => {
+    // A bare `<span>Sign Up</span>` with no href/action is not selectable by
+    // click, tap, or keyboard. It must be a Link (or other actionable
+    // element) that actually switches the form into signup mode.
+    expect(loginPageSource).not.toMatch(/<span[^>]*>\s*Sign Up\s*<\/span>/);
+    expect(loginPageSource).toContain('href="/login?mode=signup"');
+  });
+
+  it('switches the password field to new-password autocomplete and shows the Create Account action in signup mode', () => {
+    expect(loginPageSource).toContain("isSignup ? 'new-password' : 'current-password'");
+    expect(loginPageSource).toContain('formAction={signup}');
+  });
+});
