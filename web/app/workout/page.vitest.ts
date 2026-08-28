@@ -32,11 +32,22 @@ describe('exercise history spans all programs', () => {
     // though workout_sets.exercise_name matched.
     const workoutsQueryMatch = workoutPageSource.match(/supabase\.from\('workouts'\)\.select\([^;]*?\.limit\(40\)/);
     expect(workoutsQueryMatch).not.toBeNull();
-    expect(workoutsQueryMatch![0]).not.toContain("program_day_id");
+    expect(workoutsQueryMatch![0]).not.toMatch(/\.in\('program_day_id'/);
     expect(workoutsQueryMatch![0]).toContain("eq('user_id',user.id)");
   });
 
   it('shows only the last 3 completed sessions per exercise', () => {
     expect(workoutPageSource).toContain('slice(0,3)');
+  });
+});
+
+describe('new-mesocycle seed avoids deload and bad-feedback sessions', () => {
+  it('tags each history session with whether it was a deload week', () => {
+    expect(workoutPageSource).toContain('isDeloadSession');
+  });
+
+  it('tags each history session with whether that muscle group had bad feedback (pain / flat pump / too-much volume)', () => {
+    expect(workoutPageSource).toContain('hasBadFeedback');
+    expect(workoutPageSource).toContain("joint_pain&&row.joint_pain!=='None'");
   });
 });

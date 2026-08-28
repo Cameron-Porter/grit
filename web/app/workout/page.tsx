@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
 
 type ActiveProgram = { id:string; name:string; muscle_priorities:Record<string,string|null>|null; total_weeks:number; focus:string|null };
 type ProgramDayRow = { id:string; week_number:number; day_number:number; label:string|null; completed:boolean; skipped:boolean };
+type HistorySession = SessionPerformance & { isDeloadSession?:boolean; hasBadFeedback?:boolean };
 
 export default async function Workout({ searchParams }:{ searchParams:Promise<Record<string,string|string[]|undefined>> }) {
   const { supabase, user } = await requireUser();
@@ -65,7 +66,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     supabase.from('program_day_targets').select('exercise_name,target_sets,target_reps_min,target_reps_max,target_weight,rir').eq('program_day_id',nextDay.id),
     supabase.from('exercises').select('id,name,muscle_group,equipment,movement_category,rep_range_min,rep_range_max').order('name'),
     supabase.from('user_profiles').select('experience_level,body_weight,use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle(),
-    supabase.from('workouts').select('id,completed_at').eq('user_id',user.id).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40),
+    supabase.from('workouts').select('id,completed_at,program_day_id').eq('user_id',user.id).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40),
   ]);
   if(exerciseError) throw new Error(`Could not load exercises: ${exerciseError.message}`);
   if(targetError) throw new Error(`Could not load progression targets: ${targetError.message}`);
@@ -74,8 +75,23 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   if(pastWorkoutError) throw new Error(`Could not load program workout history: ${pastWorkoutError.message}`);
   const workoutIds=(pastWorkouts??[]).map(item=>item.id),{data:pastSets,error:pastSetError}=workoutIds.length?await supabase.from('workout_sets').select('workout_id,exercise_name,weight,reps,reported_rir').in('workout_id',workoutIds).eq('completed',true).gt('reps',0):{data:[],error:null};
   if(pastSetError)throw new Error(`Could not load exercise history: ${pastSetError.message}`);
-  const workoutOrder=new Map((pastWorkouts??[]).map((item,index)=>[item.id,{index,date:item.completed_at}])),grouped=new Map<string,Map<string,SessionPerformance>>();
-  for(const set of pastSets??[]){const byWorkout=grouped.get(set.exercise_name)??new Map<string,SessionPerformance>(),meta=workoutOrder.get(set.workout_id);if(!meta)continue;const session:SessionPerformance=byWorkout.get(set.workout_id)??{date:meta.date,sets:[]};session.sets.push({weight:Number(set.weight),reps:set.reps,rir:set.reported_rir??undefined});byWorkout.set(set.workout_id,session);grouped.set(set.exercise_name,byWorkout)}
+  // HV-040 needs to seed a new mesocycle from the last *working* session, not
+  // a deload — deload weeks intentionally cut weight/reps, so treating one as
+  // "last completed" would regress the prescribed load instead of continuing it.
+  const pastDayIds=[...new Set((pastWorkouts??[]).map(item=>item.program_day_id).filter((id):id is string=>Boolean(id)))];
+  const {data:pastDays,error:pastDayError}=pastDayIds.length?await supabase.from('program_days').select('id,week_number,programs(total_weeks)').in('id',pastDayIds):{data:[],error:null};
+  if(pastDayError) throw new Error(`Could not load past program weeks: ${pastDayError.message}`);
+  const isDeloadByDay=new Map((pastDays??[]).map((day)=>[day.id,day.week_number===day.programs[0]?.total_weeks])),isDeloadByWorkout=new Map((pastWorkouts??[]).map((item)=>[item.id,item.program_day_id?isDeloadByDay.get(item.program_day_id)??false:false]));
+  // A session should only be used to seed a new mesocycle's starting weight/reps
+  // if it was actually a good one — reported joint pain, a flat pump, or "too
+  // much" volume feedback for that muscle group means the load isn't something
+  // to carry forward as-is.
+  const {data:pastFeedback,error:pastFeedbackError}=workoutIds.length?await supabase.from('workout_feedback').select('workout_id,muscle_group,joint_pain,pump,volume').in('workout_id',workoutIds):{data:[],error:null};
+  if(pastFeedbackError) throw new Error(`Could not load past workout feedback: ${pastFeedbackError.message}`);
+  const feedbackByWorkoutMuscle=new Map((pastFeedback??[]).map((row)=>[`${row.workout_id} ${row.muscle_group}`,row])),muscleGroupByExerciseName=new Map((catalog??[]).map((item)=>[item.name,item.muscle_group]));
+  const hasBadFeedback=(workoutId:string,exerciseName:string)=>{const muscleGroup=muscleGroupByExerciseName.get(exerciseName),row=muscleGroup?feedbackByWorkoutMuscle.get(`${workoutId} ${muscleGroup}`):undefined;if(!row)return false;return Boolean(row.joint_pain&&row.joint_pain!=='None')||Boolean(row.pump&&['None','Low'].includes(row.pump))||row.volume==='Too much'};
+  const workoutOrder=new Map((pastWorkouts??[]).map((item,index)=>[item.id,{index,date:item.completed_at}])),grouped=new Map<string,Map<string,HistorySession>>();
+  for(const set of pastSets??[]){const byWorkout=grouped.get(set.exercise_name)??new Map<string,HistorySession>(),meta=workoutOrder.get(set.workout_id);if(!meta)continue;const session:HistorySession=byWorkout.get(set.workout_id)??{date:meta.date,sets:[],isDeloadSession:isDeloadByWorkout.get(set.workout_id)??false,hasBadFeedback:hasBadFeedback(set.workout_id,set.exercise_name)};session.sets.push({weight:Number(set.weight),reps:set.reps,rir:set.reported_rir??undefined});byWorkout.set(set.workout_id,session);grouped.set(set.exercise_name,byWorkout)}
   const targetByExercise=new Map((targets??[]).map((target)=>[target.exercise_name,target]));
   for(const exercise of exercises??[]){const existing=targetByExercise.get(exercise.exercise_name);if(existing&&(Number(existing.target_weight)>0||exercise.equipment==='Bodyweight'))continue;const sessions=[...(grouped.get(exercise.exercise_name)?.entries()??[])].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,8),recovered=recoverMissingTarget(exercise,sessions,{experienceLevel:(profile?.experience_level??'intermediate')as ExperienceLevel,week:nextDay.week_number,totalWeeks:current.total_weeks,focus:(current.focus??'hypertrophy')as ProgramFocus});if(recovered)targetByExercise.set(exercise.exercise_name,{exercise_name:exercise.exercise_name,...recovered})}
   const historyByExercise=Object.fromEntries([...grouped].map(([name,sessions])=>[name,[...sessions.entries()].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,3)]));
