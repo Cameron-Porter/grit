@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -13,6 +13,10 @@ describe('createInitialDraft',()=>{
 describe('reps placeholder commits on set completion',()=>{
   it('fills the prescribed rep target when the user never typed a value',()=>expect(completedSetReps(0,8)).toBe(8));
   it('keeps a user-entered rep count untouched',()=>expect(completedSetReps(6,8)).toBe(6));
+});
+describe('rep range display',()=>{
+  it('collapses a fixed rep target to a single number instead of a 12–12 range',()=>expect(repRangeLabel(12,12)).toBe('12'));
+  it('keeps a real range as min–max',()=>expect(repRangeLabel(8,12)).toBe('8–12'));
 });
 describe('weight auto-fills down to later sets',()=>{
   const sets=[{reps:0,weight:0,reportedRir:null,complete:false},{reps:0,weight:0,reportedRir:null,complete:false},{reps:0,weight:0,reportedRir:null,complete:false}];
