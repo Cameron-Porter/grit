@@ -23,3 +23,20 @@ describe('blank Quick Workout launch', () => {
     expect(workoutPageSource).toContain('Start blank Quick Workout');
   });
 });
+
+describe('exercise history spans all programs', () => {
+  it('fetches past workouts without scoping to the active program\'s program_day_id', () => {
+    // Regression: history previously only looked at workouts whose program_day_id
+    // belonged to the currently active program, so switching programs (e.g. Fall
+    // Fitness after Mid Summer) hid all prior sessions of a shared exercise even
+    // though workout_sets.exercise_name matched.
+    const workoutsQueryMatch = workoutPageSource.match(/supabase\.from\('workouts'\)\.select\([^;]*?\.limit\(40\)/);
+    expect(workoutsQueryMatch).not.toBeNull();
+    expect(workoutsQueryMatch![0]).not.toContain("program_day_id");
+    expect(workoutsQueryMatch![0]).toContain("eq('user_id',user.id)");
+  });
+
+  it('shows only the last 3 completed sessions per exercise', () => {
+    expect(workoutPageSource).toContain('slice(0,3)');
+  });
+});

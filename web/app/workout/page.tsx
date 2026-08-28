@@ -65,7 +65,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     supabase.from('program_day_targets').select('exercise_name,target_sets,target_reps_min,target_reps_max,target_weight,rir').eq('program_day_id',nextDay.id),
     supabase.from('exercises').select('id,name,muscle_group,equipment,movement_category,rep_range_min,rep_range_max').order('name'),
     supabase.from('user_profiles').select('experience_level,body_weight,use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle(),
-    supabase.from('workouts').select('id,completed_at').eq('user_id',user.id).in('program_day_id',(days??[]).map(day=>day.id)).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40),
+    supabase.from('workouts').select('id,completed_at').eq('user_id',user.id).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40),
   ]);
   if(exerciseError) throw new Error(`Could not load exercises: ${exerciseError.message}`);
   if(targetError) throw new Error(`Could not load progression targets: ${targetError.message}`);
