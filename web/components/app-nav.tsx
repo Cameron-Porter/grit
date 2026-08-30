@@ -13,7 +13,7 @@ type AppNavLink = {
 };
 
 export const appNavLinks = [
-  { label: 'Home', href: '/dashboard', icon: 'home' },
+  { label: 'Home', href: '/today', icon: 'home' },
   { label: 'Workout', href: '/workout', icon: 'dumbbell' },
   { label: 'Programs', href: '/programs', icon: 'programs' },
   { label: 'Progress', href: '/history', icon: 'progress' },

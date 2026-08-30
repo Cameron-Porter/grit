@@ -11,7 +11,7 @@ describe('app navigation state', () => {
 
   it('matches the native five-tab primary navigation', () => {
     expect(appNavLinks.map(({ label, href }) => [label, href])).toEqual([
-      ['Home', '/dashboard'],
+      ['Home', '/today'],
       ['Workout', '/workout'],
       ['Programs', '/programs'],
       ['Progress', '/history'],
@@ -25,7 +25,7 @@ describe('app navigation state', () => {
   });
 
   it('uses a home icon for the dashboard tab and a dumbbell icon for workout', () => {
-    expect(appNavLinks[0]).toMatchObject({ label: 'Home', href: '/dashboard', icon: 'home' });
+    expect(appNavLinks[0]).toMatchObject({ label: 'Home', href: '/today', icon: 'home' });
     expect(appNavLinks[1]).toMatchObject({ label: 'Workout', href: '/workout', icon: 'dumbbell' });
   });
 });
