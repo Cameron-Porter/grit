@@ -11,7 +11,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
       <p>Your workout drafts remain stored on this device. Check your connection and try again.</p>
       <div className="error-actions">
         <button type="button" className="primary" onClick={() => reset()}>Try again</button>
-        <a className="quiet button-link" href="/dashboard">Go to Home</a>
+        <a className="quiet button-link" href="/workout">Go to Home</a>
       </div>
     </section>
   </main>;

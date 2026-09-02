@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import manifest from './manifest';
 
 describe('PWA manifest', () => {
-  it('opens the lightweight Today route without locking device orientation', () => {
+  it('opens straight into the active workout without locking device orientation', () => {
     const value = manifest();
 
-    expect(value.start_url).toBe('/today');
+    expect(value.start_url).toBe('/workout');
     expect(value.orientation).toBeUndefined();
   });
 

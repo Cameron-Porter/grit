@@ -1,5 +1,5 @@
 'use server';
-import{randomUUID}from'node:crypto';import{revalidatePath,updateTag}from'next/cache';import{redirect}from'next/navigation';import{requireUser}from'@/lib/auth/require-user';import{buildProgramExerciseRows,parseProgramDayExerciseItems,parseStagedExerciseItems,type CatalogExercise}from'@/lib/programs/day-template-payload';import{dashboardCacheTag}from'@/lib/dashboard/cache';
+import{randomUUID}from'node:crypto';import{revalidatePath,updateTag}from'next/cache';import{redirect}from'next/navigation';import{requireUser}from'@/lib/auth/require-user';import{buildProgramExerciseRows,parseProgramDayExerciseItems,parseStagedExerciseItems,type CatalogExercise}from'@/lib/programs/day-template-payload';import{dashboardCacheTag}from'@/lib/today/cache';
 const fail=(code:string):never=>redirect(`/programs?error=${encodeURIComponent(code)}`);
 type ProfileEquipment={use_preferred_equipment:boolean|null;preferred_equipment:unknown};
 const preferredEquipment=(profile:ProfileEquipment|null|undefined)=>({enabled:Boolean(profile?.use_preferred_equipment),preferred:Array.isArray(profile?.preferred_equipment)?profile.preferred_equipment.filter((item):item is string=>typeof item==='string'&&item.length>0):[]});

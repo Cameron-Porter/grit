@@ -7,7 +7,7 @@ vi.mock('next/navigation', () => ({
 const { default: Home } = await import('./page');
 
 describe('root route', () => {
-  it('redirects to the lightweight Today entry point for fast PWA launch', () => {
-    expect(() => Home()).toThrow('REDIRECT:/today');
+  it('redirects straight into the active workout on launch', () => {
+    expect(() => Home()).toThrow('REDIRECT:/workout');
   });
 });

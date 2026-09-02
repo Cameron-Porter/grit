@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@/lib/auth/require-user';
-import { dashboardCacheTag, DASHBOARD_CACHE_SECONDS } from '@/lib/dashboard/cache';
+import { dashboardCacheTag, DASHBOARD_CACHE_SECONDS } from '@/lib/today/cache';
 
 type ProgramDay = {
   id: string;
@@ -78,7 +78,7 @@ export default async function TodayPage() {
         <div>
           <div className="eyebrow">TODAY</div>
           <h1>Ready to train?</h1>
-          <p>Fast-launch into your next workout. Heavier stats stay on the dashboard.</p>
+          <p>Fast-launch into your next workout.</p>
         </div>
         <div className="native-header-actions">
           <Link className="native-pill-action" href={primaryHref}>{primaryLabel}</Link>
@@ -110,7 +110,6 @@ export default async function TodayPage() {
       <section className="native-section" aria-labelledby="quick-actions-title">
         <div className="native-section-title"><h2 id="quick-actions-title">Quick actions</h2><span>Open when needed</span></div>
         <div className="dashboard-action-grid">
-          <Link className="native-row" href="/dashboard"><div><h2>Full Dashboard</h2><p>Progress, PRs, recent workouts, and program details.</p></div><b aria-hidden="true">›</b></Link>
           <Link className="native-row" href="/history"><div><h2>History</h2><p>Review completed workouts.</p></div><b aria-hidden="true">›</b></Link>
           <Link className="native-row" href="/programs/templates"><div><h2>Templates</h2><p>Start from a curated structure.</p></div><b aria-hidden="true">›</b></Link>
           <Link className="native-row" href="/exercises"><div><h2>Exercises</h2><p>Catalog, details, and plate calculator.</p></div><b aria-hidden="true">›</b></Link>

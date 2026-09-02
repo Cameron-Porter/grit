@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'GRIT — Intelligent Training',
     short_name: 'GRIT',
     description: 'Adaptive hypertrophy programming and workout tracking.',
-    start_url: '/today',
+    start_url: '/workout',
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone'],
