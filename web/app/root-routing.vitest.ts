@@ -14,28 +14,19 @@ describe('authenticated landing route contract', () => {
     expect(read('app/(app)/error.tsx')).toContain('href="/workout"');
   });
 
-  it('has scrapped the dashboard page entirely', () => {
+  it('has scrapped the dashboard and today pages entirely', () => {
     expect(existsSync(resolve(process.cwd(), 'app/(app)/dashboard/page.tsx'))).toBe(false);
-    expect(read('app/(app)/today/page.tsx')).not.toContain('/dashboard');
-    expect(read('components/app-nav.tsx')).not.toContain('/dashboard');
-  });
-
-  it('adds Today as the primary native home tab while keeping workout as a deeper action', () => {
+    expect(existsSync(resolve(process.cwd(), 'app/(app)/today/page.tsx'))).toBe(false);
+    expect(existsSync(resolve(process.cwd(), 'lib/today/cache.ts'))).toBe(false);
     const nav = read('components/app-nav.tsx');
-    expect(nav).toContain("{ label: 'Home', href: '/today', icon: 'home' }");
-    expect(nav).toContain("{ label: 'Workout', href: '/workout', icon: 'dumbbell' }");
+    expect(nav).not.toContain('/dashboard');
+    expect(nav).not.toContain('/today');
   });
 
-  it('keeps the Today launch route focused on critical workout-start data only', () => {
-    const today = read('app/(app)/today/page.tsx');
-    expect(today).toContain('requireUser()');
-    expect(today).toContain("supabase.from('programs')");
-    expect(today).toContain("supabase.from('program_days')");
-    expect(today).toContain('Start Workout');
-    expect(today).toContain('/workout?quick=blank');
-    expect(today).not.toContain("supabase.from('workouts')");
-    expect(today).not.toContain("supabase.from('workout_sets')");
-    expect(today).not.toContain('buildProgressMetrics');
+  it('makes Workout the primary native tab with no separate home tab', () => {
+    const nav = read('components/app-nav.tsx');
+    expect(nav).toContain("{ label: 'Workout', href: '/workout', icon: 'dumbbell' }");
+    expect(nav).not.toContain("label: 'Home'");
   });
 
   it('delays offline workout reconciliation until the browser is idle', () => {

@@ -4,12 +4,10 @@ import type { WebWorkoutPayload } from '@/lib/workout/payload';
 const createClient = vi.fn();
 const computeProgression = vi.fn();
 const clearProgramIfComplete = vi.fn();
-const revalidateTag = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({ createClient }));
 vi.mock('@/lib/progression/compute', () => ({ computeProgression }));
 vi.mock('@/lib/workout/program-completion', () => ({ clearProgramIfComplete }));
-vi.mock('next/cache', () => ({ revalidateTag }));
 
 const payload: WebWorkoutPayload = {
   workoutId: '00000000-0000-4000-8000-000000000001',
@@ -72,7 +70,6 @@ describe('POST /api/workouts retry and partial-save handling', () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: 'Your workout could not be saved. Your local copy is still available.' });
     expect(computeProgression).not.toHaveBeenCalled();
-    expect(revalidateTag).not.toHaveBeenCalled();
   });
 
   it('saves a Quick Workout with no program day without checking ownership or computing progression', async () => {
@@ -87,16 +84,6 @@ describe('POST /api/workouts retry and partial-save handling', () => {
     expect(supabase.from).not.toHaveBeenCalledWith('program_days');
     expect(supabase.rpc).toHaveBeenCalledWith('save_web_workout', expect.objectContaining({ p_program_day_id: null }));
     expect(computeProgression).not.toHaveBeenCalled();
-  });
-
-  it('busts the cached dashboard read for this user on a successful save, so the next visit sees fresh stats', async () => {
-    const supabase = supabaseWithRpcResult('saved');
-    createClient.mockResolvedValue(supabase);
-    const { POST } = await import('./route');
-
-    await POST(request({ ...payload, programDayId: null }));
-
-    expect(revalidateTag).toHaveBeenCalledWith('dashboard-user-1', { expire: 0 });
   });
 
   it('checks whether the program is now fully complete after a successful save, and still runs progression', async () => {
@@ -192,7 +179,6 @@ describe('PATCH /api/workouts skip handling', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ updated: true });
     expect(clearProgramIfComplete).not.toHaveBeenCalled();
-    expect(revalidateTag).toHaveBeenCalledWith('dashboard-user-1', { expire: 0 });
   });
 
   it('returns a retryable partial-success response when clearing fails after a skip, without rolling back the skip', async () => {

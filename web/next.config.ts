@@ -21,11 +21,10 @@ const nextConfig: NextConfig = {
   experimental: {
     // Next 15+ defaults this to 0s, so every navigation to a dynamic (app) route
     // always re-fetches and shows loading.tsx, even seconds after the last visit.
-    // 30s lets a revisit within that window reuse the client router cache instead -
-    // matches the Today page's own server-side cache window (lib/today/cache.ts).
+    // 30s lets a revisit within that window reuse the client router cache instead.
     // Every mutation that should invalidate a still-open tab already calls
-    // router.refresh() (workout-logger.tsx) or revalidatePath/revalidateTag
-    // (api/workouts, programs/actions.ts), which bypasses this regardless of staleness.
+    // router.refresh() (workout-logger.tsx) or revalidatePath (programs/actions.ts),
+    // which bypasses this regardless of staleness.
     staleTimes: { dynamic: 30 },
   },
   async headers() {
