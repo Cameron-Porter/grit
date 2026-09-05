@@ -38,16 +38,28 @@ describe('exact native app port contracts', () => {
     for (const selectors of selectorsSuppressingOverscroll) expect(selectors).not.toContain('body');
   });
 
-  it('uses the shared jade and gold brand palette without RP/red polish tokens', () => {
+  it('uses the shared Blaze & Alpine brand palette without RP/red or jade polish tokens', () => {
     const css = read('app/globals.css');
     // Intentional brand update: these values now match the my-website palette.
-    expect(css).toContain('--primary:#2fbf8f');
-    expect(css).toContain('--highlight:#e8b84b');
-    expect(css).toContain('--bg:#0b0d10');
-    expect(css).toContain('--primary:#0e7a54');
-    expect(css).toContain('--highlight:#93690f');
+    expect(css).toContain('--primary:#ff7a2f'); // blaze, dark
+    expect(css).toContain('--highlight:#38bdf8'); // alpine, dark
+    expect(css).toContain('--bg:#0e1114');
+    expect(css).toContain('--primary:#b03a0a'); // blaze, light
+    expect(css).toContain('--highlight:#0369a1'); // alpine, light
     expect(css).not.toContain('--rp-action');
     expect(css).not.toContain('#e73d3b');
+    expect(css).not.toContain('#2fbf8f'); // retired jade
+    expect(css).not.toContain('#e8b84b'); // retired gold
+  });
+
+  it('ports the site signal motifs: blaze/alpine channels, ambient wash, edge bar, and hazard rule', () => {
+    const css = read('app/globals.css');
+    expect(css).toContain('--blaze-rgb:255 122 47');
+    expect(css).toContain('--alpine-rgb:56 189 248');
+    expect(css).toContain('--wash-ridge:');
+    expect(css).toContain('--glow-blaze:');
+    expect(css).toContain('.rule-speed{');
+    expect(css).toContain('.edge::before{');
   });
 
   it('defines web equivalents for native GradientBackground, grouped settings, row menus, and iOS controls', () => {

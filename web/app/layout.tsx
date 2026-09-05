@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   icons: { icon: '/plate-icon.png', apple: '/plate-icon.png' },
 };
 
-export const viewport: Viewport = { themeColor: '#101216', colorScheme: 'dark light', viewportFit: 'cover' };
+export const viewport: Viewport = { themeColor: '#0e1114', colorScheme: 'dark light', viewportFit: 'cover' };
 
 /**
  * iOS shows nothing but the manifest's flat background_color during the native launch

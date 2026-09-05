@@ -10,8 +10,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     display_override: ['window-controls-overlay', 'standalone'],
-    background_color: '#101216',
-    theme_color: '#101216',
+    background_color: '#0e1114',
+    theme_color: '#0e1114',
     categories: ['health', 'fitness', 'productivity'],
     shortcuts: [
       { name: 'Start workout', short_name: 'Workout', description: 'Open the active workout flow.', url: '/workout', icons: [{ src: '/icon-192.png', sizes: '192x192' }] },
