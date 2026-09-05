@@ -17,6 +17,27 @@ describe('exact native app port contracts', () => {
     expect(css).toContain('font-family:var(--font-sora)');
   });
 
+  /**
+   * body's overflow-x:hidden makes it a scroll container (html's overflow has
+   * already propagated to the viewport), and it exactly fits its own content.
+   * overscroll-behavior-y:none on body therefore blocks body->viewport scroll
+   * chaining and freezes wheel/touch scrolling app-wide. It belongs on html
+   * alone, where it propagates to the viewport and suppresses rubber-banding.
+   * tests/e2e/public-pwa.spec.ts asserts the resulting behaviour in a browser;
+   * this guards the declaration itself in the default unit run.
+   */
+  it('scopes overscroll suppression to html so body never blocks scroll chaining', () => {
+    const css = read('app/globals.css');
+    expect(css).toContain('html{overscroll-behavior-y:none}');
+
+    const selectorsSuppressingOverscroll = css
+      .split('}')
+      .filter((rule) => rule.includes('overscroll-behavior-y:none'))
+      .map((rule) => rule.slice(0, rule.indexOf('{')).split(',').map((part) => part.trim()));
+    expect(selectorsSuppressingOverscroll.length).toBeGreaterThan(0);
+    for (const selectors of selectorsSuppressingOverscroll) expect(selectors).not.toContain('body');
+  });
+
   it('uses the shared jade and gold brand palette without RP/red polish tokens', () => {
     const css = read('app/globals.css');
     // Intentional brand update: these values now match the my-website palette.

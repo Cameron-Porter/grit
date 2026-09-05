@@ -44,6 +44,41 @@ test.describe('public PWA acceptance', () => {
     });
   }
 
+  /**
+   * Regression guard for the app-wide scroll freeze: html's overflow-x:hidden
+   * propagates to the viewport, which leaves body's own overflow-x:hidden in
+   * force and makes body a scroll container that exactly fits its content.
+   * Adding overscroll-behavior-y:none to body then blocks body->viewport scroll
+   * chaining, so wheel and touch scroll nothing at all while window.scrollTo()
+   * still works. Assert real input scrolling, not just that the page is tall.
+   */
+  test('wheel input scrolls the document on a page taller than the viewport', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/login', { waitUntil: 'networkidle' });
+
+    // Public routes are short by design; give the document real overflow to scroll.
+    await page.evaluate(() => {
+      const filler = document.createElement('div');
+      filler.style.height = '3000px';
+      document.body.appendChild(filler);
+    });
+    expect(await page.evaluate(() => document.documentElement.scrollHeight > window.innerHeight + 1)).toBe(true);
+
+    // Real wheel input, not window.scrollTo - the programmatic API kept working
+    // throughout the bug because it addresses the viewport without chaining.
+    await page.mouse.move(195, 400);
+    await page.mouse.wheel(0, 500);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    // The suppression itself must survive: html keeps it, body must never have it.
+    const overscroll = await page.evaluate(() => ({
+      html: getComputedStyle(document.documentElement).overscrollBehaviorY,
+      body: getComputedStyle(document.body).overscrollBehaviorY,
+    }));
+    expect(overscroll.html).toBe('none');
+    expect(overscroll.body).not.toBe('none');
+  });
+
   test('login screen switches into selectable signup mode', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login', { waitUntil: 'networkidle' });
