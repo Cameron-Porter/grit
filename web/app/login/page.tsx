@@ -29,6 +29,11 @@ export default async function Login({
         )}
         <div className="native-divider"><span />or<span /></div>
         <button className="quiet social-button" formAction={signInWithGoogle} formNoValidate><span aria-hidden="true">G</span>Continue with Google</button>
+        {/* Local-dev shortcut to /dev-login. NODE_ENV is 'production' in every
+            built/deployed environment, so this never renders outside dev. */}
+        {process.env.NODE_ENV === 'development' && (
+          <Link className="quiet button-link full" href="/dev-login">Dev sign-in (localhost only)</Link>
+        )}
       </form>
     </main>
   );
