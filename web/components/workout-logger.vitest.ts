@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -211,5 +211,65 @@ describe('menuPlacementStyle', () => {
     const style = menuPlacementStyle(null) as Record<string, unknown>;
     expect(style).toEqual({});
     expect(style.visibility).toBeUndefined();
+  });
+});
+
+describe('skipping a set', () => {
+  const set = (over:Partial<{reps:number;weight:number;reportedRir:number|null;complete:boolean;skipped:boolean}> = {}) =>
+    ({ reps: 10, weight: 100, reportedRir: null, complete: false, ...over });
+
+  it('blanks the set in place instead of removing it', () => {
+    const sets = [set(), set(), set()];
+    const next = toggleSetSkipped(sets, 1);
+    expect(next).toHaveLength(3);
+    expect(next[1].skipped).toBe(true);
+    expect(next[0].skipped).toBeFalsy();
+  });
+
+  it('clears completion and reported RIR so a skipped set cannot count as done', () => {
+    const next = toggleSetSkipped([set({ complete: true, reportedRir: 2 })], 0);
+    expect(next[0].complete).toBe(false);
+    expect(next[0].reportedRir).toBeNull();
+  });
+
+  it('is reversible, restoring the logged reps and weight', () => {
+    const skipped = toggleSetSkipped([set({ reps: 8, weight: 135 })], 0);
+    const restored = toggleSetSkipped(skipped, 0);
+    expect(restored[0].skipped).toBe(false);
+    expect(restored[0]).toMatchObject({ reps: 8, weight: 135 });
+  });
+
+  it('drops out of the counts, so a workout finishes with a set skipped', () => {
+    const sets = [set({ complete: true }), set({ complete: true }), set({ skipped: true })];
+    expect(countedSets(sets)).toHaveLength(2);
+    const completed = sets.filter((entry) => isCountedSet(entry) && entry.complete).length;
+    expect(canFinishWorkout(completed, countedSets(sets).length)).toBe(true);
+    // Without the filter the skipped set would keep the workout permanently unfinishable.
+    expect(canFinishWorkout(completed, sets.length)).toBe(false);
+  });
+
+  it('does not block the per-muscle completion feedback prompt', () => {
+    const exercises = [{ name:'Bench', muscleGroup:'Chest', musclePriority:null, equipment:'Barbell', sets:3, repsMin:8, repsMax:12, weight:100, rir:2 }];
+    const draft = [[set({ complete: true }), set({ complete: true }), set({ skipped: true })]];
+    expect(muscleCompletionState(exercises, draft, 'Chest')).toEqual({ hasCompletedSet: true, allExercisesComplete: true });
+  });
+
+  it('is left out of the saved payload, exactly as a removed set was', () => {
+    const exercises = [{ name:'Bench', muscleGroup:'Chest', musclePriority:null, equipment:'Barbell', sets:3, repsMin:8, repsMax:12, weight:100, rir:2 }];
+    const payload = buildWorkoutPayload({
+      workoutId:'w1', programDayId:null, name:'Day 1', programName:'P', completedAt:'2026-09-05T00:00:00.000Z',
+      exercises, draft:[[set({ complete: true }), set({ skipped: true }), set({ complete: true })]],
+      notes:[''], feedback:{}, muscles:['Chest'],
+    });
+    expect(payload.exercises[0].sets).toHaveLength(2);
+    expect(payload.exercises[0].sets.every((entry) => entry.completed)).toBe(true);
+  });
+
+  it('does not cascade a weight change into a skipped set', () => {
+    const sets = [set({ weight: 100 }), set({ weight: 100, skipped: true }), set({ weight: 100 })];
+    const next = cascadeWeight(sets, 0, 145);
+    expect(next[0].weight).toBe(145);
+    expect(next[1].weight).toBe(100);
+    expect(next[2].weight).toBe(145);
   });
 });
