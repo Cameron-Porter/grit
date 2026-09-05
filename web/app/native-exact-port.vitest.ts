@@ -87,7 +87,7 @@ describe('exact native app port contracts', () => {
     expect(logger).toContain('native-muscle-stripe');
     expect(logger).toContain('native-set-row');
     expect(logger).toContain('native-finish-bar');
-    expect(logger).toContain('native-bottom-sheet');
+    expect(logger).toContain('native-command-menu');
     expect(logger).toContain('native-set-menu-cell');
     expect(logger).toContain('WEIGHT');
     expect(logger).toContain('RIR');
@@ -98,18 +98,42 @@ describe('exact native app port contracts', () => {
     expect(css).toContain('grid-template-columns:44px minmax(72px,1fr) minmax(72px,1fr) 54px 64px');
   });
 
-  it('opens workout exercise and set menus as dimmed bottom modal sheets', () => {
+  /**
+   * Intentional pattern change: the workout menus were full-width bottom sheets
+   * carrying an inline note textarea and replace dropdown. They are now compact
+   * command popovers anchored to their own vertical-dots trigger, and the two
+   * heavy controls moved into their own follow-up sheets. program-card still uses
+   * the bottom sheet, so the sheet CSS below must survive alongside the popover.
+   */
+  it('opens workout exercise and set menus as anchored command popovers', () => {
     const logger = read('components/workout-logger.tsx');
     const css = read('app/globals.css');
     expect(logger).toContain('native-modal-menu');
+    expect(logger).toContain('native-command-menu');
+    expect(logger).toContain('command-menu-panel');
+    expect(logger).toContain('command-menu-title');
     expect(logger).toContain('View history');
     expect(logger).toContain('native-exercise-history');
     expect(logger).toContain('Skip set');
+    expect(logger).toContain('Remove exercise');
     expect(logger).toContain('closeWorkoutMenus');
+    // Command rows carry an icon plus a text label, and the destructive row is toned.
+    expect(logger).toContain('<CommandRow icon="trash" tone="danger" label="Remove exercise"');
+    expect(logger).toContain('MENU_ICON_PATHS');
+    // The panel is fixed and JS-placed because .native-workout-card clips its children.
+    expect(css).toContain('.native-modal-menu.native-command-menu[open] .command-menu-panel{position:fixed!important');
+    expect(css).toContain('.command-row{');
+    expect(css).toContain('.command-row:disabled{');
+    expect(logger).toContain('menuPlacement');
+    // menuPlacement() clamps against the panel width, so the two must stay in sync.
+    expect(css).toContain('width:min(272px,calc(100vw - 16px))!important');
+    expect(logger).toContain('export const MENU_WIDTH = 272;');
+    // History sets render one row each rather than a single joined string.
+    expect(logger).toContain('history-set-rows');
+    expect(css).toContain('.history-set-rows>li{');
     expect(css).toContain('.native-modal-menu[open]::before');
-    // z-index bumped from 80 to 150 so the sheet backdrop renders above .app-nav
-    // (z-index:100) instead of being covered by it - see native-workout-screen fix.
     expect(css).toContain('position:fixed!important;z-index:150');
+    // program-card's bottom sheet is untouched by the workout-menu change.
     expect(css).toContain('backdrop-filter:blur(8px)');
     expect(css).toContain('border-radius:26px 26px 0 0');
   });

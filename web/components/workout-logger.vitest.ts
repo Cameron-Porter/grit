@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutRecoveryCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -114,5 +114,102 @@ describe('adding an exercise to an empty training day',()=>{
     expect(anchored.rir).toBe(workout.exercises[0].rir);
     expect(anchored.repsMin).toBe(workout.exercises[0].repsMin);
     expect(anchored.weight).toBe(0);
+  });
+});
+
+describe('menuPlacement', () => {
+  const viewport = { width: 390, height: 844 };
+
+  it('anchors its right edge to the trigger and opens downward from it', () => {
+    const placement = menuPlacement({ top: 247, bottom: 291, right: 367 }, viewport);
+    expect(placement.right).toBe(390 - 367);
+    expect(placement.top).toBe(291 + MENU_TRIGGER_GAP);
+    expect(placement.bottom).toBeNull();
+  });
+
+  it('opens upward from the trigger when there is more room above', () => {
+    const placement = menuPlacement({ top: 700, bottom: 744, right: 367 }, viewport);
+    expect(placement.top).toBeNull();
+    expect(placement.bottom).toBe(844 - 700 + MENU_TRIGGER_GAP);
+  });
+
+  /**
+   * The point of anchoring by edges: placement never consults the panel's own width
+   * or height, so it is correct in the render that opens the menu and needs no
+   * measure-then-reposition pass that could leave it briefly unpositioned.
+   */
+  it('needs no panel size, so identical triggers place identically', () => {
+    const anchor = { top: 100, bottom: 144, right: 367 };
+    expect(menuPlacement(anchor, viewport)).toEqual(menuPlacement(anchor, viewport));
+  });
+
+  it('caps the menu to the space available on the side it opens toward', () => {
+    const below = menuPlacement({ top: 100, bottom: 144, right: 367 }, viewport);
+    expect(below.maxHeight).toBe(844 - 144 - MENU_TRIGGER_GAP - MENU_VIEWPORT_MARGIN);
+    const above = menuPlacement({ top: 700, bottom: 744, right: 367 }, viewport);
+    expect(above.maxHeight).toBe(700 - MENU_TRIGGER_GAP - MENU_VIEWPORT_MARGIN);
+  });
+
+  /**
+   * The set menu's trigger is the leftmost cell of its row, so right-aligning to it
+   * alone would place the panel's left edge off-screen at roughly x:-215 on a phone.
+   */
+  it('keeps a left-hand trigger from pushing the panel off the left edge', () => {
+    const placement = menuPlacement({ top: 400, bottom: 444, right: 57 }, viewport);
+    const left = viewport.width - placement.right - menuWidth(viewport);
+    expect(left).toBeGreaterThanOrEqual(MENU_VIEWPORT_MARGIN);
+    expect(placement.right + menuWidth(viewport)).toBeLessThanOrEqual(viewport.width - MENU_VIEWPORT_MARGIN);
+  });
+
+  it('still right-aligns to a trigger that leaves room for the panel', () => {
+    const placement = menuPlacement({ top: 247, bottom: 291, right: 367 }, viewport);
+    expect(viewport.width - placement.right).toBe(367);
+  });
+
+  it('shrinks the panel width rather than overflowing a viewport narrower than the menu', () => {
+    expect(menuWidth({ width: 240 })).toBe(240 - MENU_VIEWPORT_MARGIN * 2);
+    expect(menuWidth({ width: 390 })).toBe(MENU_WIDTH);
+  });
+
+  it('keeps a trigger at the very edge inside the viewport margin', () => {
+    const placement = menuPlacement({ top: 10, bottom: 40, right: 390 }, viewport);
+    expect(placement.right).toBe(MENU_VIEWPORT_MARGIN);
+    expect(placement.maxHeight).toBeGreaterThan(0);
+  });
+
+  it('never returns a negative maxHeight for a trigger jammed against an edge', () => {
+    const placement = menuPlacement({ top: 0, bottom: 843, right: 367 }, { width: 390, height: 844 });
+    expect(placement.maxHeight).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('menuPlacementStyle', () => {
+  it('passes coordinates as custom properties, never as inline top/right', () => {
+    // An !important declaration always beats an inline style, and
+    // .native-workout-card .set-menu>div forces left/top with !important - inline
+    // top/right would be ignored and the menu would render pinned to the card's edge.
+    const style = menuPlacementStyle({ top: 296, bottom: null, right: 23, maxHeight: 500 }) as Record<string, unknown>;
+    expect(style['--menu-top']).toBe('296px');
+    expect(style['--menu-bottom']).toBe('auto');
+    expect(style['--menu-right']).toBe('23px');
+    expect(style['--menu-max-h']).toBe('500px');
+    expect(style.top).toBeUndefined();
+    expect(style.right).toBeUndefined();
+  });
+
+  it('emits auto for the edge it is not anchored to', () => {
+    const style = menuPlacementStyle({ top: null, bottom: 200, right: 23, maxHeight: 400 }) as Record<string, unknown>;
+    expect(style['--menu-top']).toBe('auto');
+    expect(style['--menu-bottom']).toBe('200px');
+  });
+
+  it('sets no coordinates at all when there is no placement', () => {
+    // The panel only lacks a placement while its <details> is closed, and a closed
+    // <details> already hides it - so it must not be hidden with visibility here:
+    // .focus() is a no-op on a visibility:hidden element and useDialogFocusTrap
+    // focuses the first row as soon as the menu opens.
+    const style = menuPlacementStyle(null) as Record<string, unknown>;
+    expect(style).toEqual({});
+    expect(style.visibility).toBeUndefined();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import type { WebWorkoutPayload, WorkoutDayUpdate } from '@/lib/workout/payload';
 import { useDialogFocusTrap } from '@/lib/hooks/use-dialog-focus-trap';
@@ -76,6 +76,81 @@ export const skipWorkoutRequest = (dayId:string|null):WorkoutDayUpdate|null => d
 export const closeWorkoutMenus = (root:Pick<Document,'querySelectorAll'>=document) => root.querySelectorAll('details.native-modal-menu[open]').forEach((menu) => menu.removeAttribute('open'));
 export const moveWorkoutItem = <T,>(items:T[],from:number,to:number):T[] => {if(from===to||from<0||to<0||from>=items.length||to>=items.length)return items;const next=[...items],[item]=next.splice(from,1);next.splice(to,0,item);return next};
 
+export type MenuAnchor = { top:number; bottom:number; right:number };
+export type MenuPlacement = { top:number|null; bottom:number|null; right:number; maxHeight:number };
+export const MENU_VIEWPORT_MARGIN = 8;
+export const MENU_TRIGGER_GAP = 6;
+/** Must match the panel width in globals.css; the port contract test asserts both. */
+export const MENU_WIDTH = 272;
+export const menuWidth = (viewport:{width:number}):number => Math.min(MENU_WIDTH,viewport.width - MENU_VIEWPORT_MARGIN * 2);
+
+/**
+ * Places an anchored command menu against its trigger. .native-workout-card sets
+ * overflow:hidden for the muscle stripe and rounded corners, which would clip an
+ * absolutely positioned panel, so the panel is position:fixed and positioned from
+ * the trigger's viewport rect.
+ *
+ * It anchors by EDGES - right to the trigger's right, and either top-to-bottom or
+ * bottom-to-top - so it never needs to measure the rendered panel. That means the
+ * placement is known during the render that opens the menu, with no measure-then-
+ * reposition pass: there is no frame in which the panel has no coordinates and
+ * collapses into the top-left corner. maxHeight caps it to the space actually
+ * available on the chosen side, so a long menu scrolls instead of overflowing.
+ */
+export const menuPlacement = (anchor:MenuAnchor,viewport:{width:number;height:number}):MenuPlacement => {
+  const margin=MENU_VIEWPORT_MARGIN,gap=MENU_TRIGGER_GAP;
+  // The set menu's trigger sits at the far left of its row, so right-aligning to it
+  // alone would push the panel off the left edge - cap the offset by the panel width.
+  const right=Math.min(Math.max(margin,viewport.width-anchor.right),Math.max(margin,viewport.width-menuWidth(viewport)-margin));
+  const spaceBelow=viewport.height-anchor.bottom-gap-margin;
+  const spaceAbove=anchor.top-gap-margin;
+  return spaceBelow>=spaceAbove
+    ? { top:Math.max(margin,anchor.bottom+gap), bottom:null, right, maxHeight:Math.max(0,spaceBelow) }
+    : { top:null, bottom:Math.max(margin,viewport.height-anchor.top+gap), right, maxHeight:Math.max(0,spaceAbove) };
+};
+
+/**
+ * Inline top/right cannot be used: an !important declaration always beats an inline
+ * style, and .native-workout-card .set-menu>div forces left/top with !important. The
+ * coordinates ride in as custom properties that the !important rule reads, and the
+ * CSS fallbacks resolve to a right-anchored panel so a missing value can never park
+ * it in the corner.
+ */
+export const menuPlacementStyle = (placement:MenuPlacement|null):CSSProperties => placement ? {
+  ['--menu-top' as string]:placement.top===null?'auto':`${placement.top}px`,
+  ['--menu-bottom' as string]:placement.bottom===null?'auto':`${placement.bottom}px`,
+  ['--menu-right' as string]:`${placement.right}px`,
+  ['--menu-max-h' as string]:`${placement.maxHeight}px`,
+} : {};
+
+/** Viewport-safe placement: menuAnchor is only ever set from a browser event. */
+const anchoredMenuStyle = (anchor:MenuAnchor|null):CSSProperties =>
+  menuPlacementStyle(anchor && typeof window !== 'undefined' ? menuPlacement(anchor,{ width:window.innerWidth,height:window.innerHeight }) : null);
+
+/* Stroke icons for the command rows. Decorative only - every row is also labelled. */
+const MENU_ICON_PATHS = {
+  note:'M7 3h7l4 4v14H7z|M14 3v4h4|M12.5 12v5|M10 14.5h5',
+  arrowUp:'M12 19V5|M6 11l6-6 6 6',
+  arrowDown:'M12 5v14|M6 13l6 6 6-6',
+  replace:'M4 8h13l-3-3|M20 16H7l3 3',
+  history:'M12 7v5l3 2|M4 12a8 8 0 1 0 2.5-5.8|M4 5v4h4',
+  addSet:'M4 6h11|M4 11h11|M4 16h6|M17 13v6|M14 16h6',
+  soreness:'M3 12h4l2-5 3 10 2-5h7',
+  training:'M5 19v-8|M12 19V5|M19 19v-5',
+  skip:'M6 5l9 7-9 7z|M18 5v14',
+  trash:'M4 7h16|M9 7V4h6v3|M6 7l1 13h10l1-13|M10 11v6|M14 11v6',
+} as const;
+type MenuIconName = keyof typeof MENU_ICON_PATHS;
+
+function CommandRow({ icon, label, onClick, disabled, tone }:{ icon:MenuIconName; label:string; onClick:() => void; disabled?:boolean; tone?:'danger' }) {
+  return <button type="button" className={`command-row${tone==='danger'?' danger':''}`} disabled={disabled} onClick={onClick}>
+    <svg className="command-row-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {MENU_ICON_PATHS[icon].split('|').map((path) => <path key={path} d={path}/>)}
+    </svg>
+    <span>{label}</span>
+  </button>;
+}
+
 const sorenessOptions = [{value:'Healed early',label:'Healed early'},{value:'Just in time',label:'Just in time'},{value:'Still sore',label:'Still sore'}];
 const pumpOptions = [{value:'None',label:'None'},{value:'Low',label:'Low'},{value:'Good',label:'Good'},{value:'Excellent',label:'Excellent'}];
 const volumeOptions = [{value:'Too little',label:'Too little'},{value:'About right',label:'About right'},{value:'Too much',label:'Too much'}];
@@ -114,7 +189,10 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   const [message,setMessage] = useState<string|null>(null);
   const [feedbackPrompt,setFeedbackPrompt] = useState<FeedbackPrompt|null>(null);
   const [rirPrompt,setRirPrompt] = useState<RirPrompt|null>(null);
-  const [historyExercise,setHistoryExercise] = useState<string|null>(null);
+  const [noteEditor,setNoteEditor] = useState<number|null>(null);
+  const [replacePicker,setReplacePicker] = useState<number|null>(null);
+  const [historySheet,setHistorySheet] = useState<number|null>(null);
+  const [menuAnchor,setMenuAnchor] = useState<MenuAnchor|null>(null);
   const [openExerciseMenu,setOpenExerciseMenu] = useState<number|null>(null);
   const [openSetMenu,setOpenSetMenu] = useState<string|null>(null);
   const [addExerciseChoice,setAddExerciseChoice] = useState('');
@@ -126,11 +204,17 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   const feedbackDialogRef = useRef<HTMLElement | null>(null);
   const exerciseMenuDialogRef = useRef<HTMLDivElement | null>(null);
   const setMenuDialogRef = useRef<HTMLDivElement | null>(null);
+  const noteDialogRef = useRef<HTMLElement | null>(null);
+  const replaceDialogRef = useRef<HTMLElement | null>(null);
+  const historyDialogRef = useRef<HTMLElement | null>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   useDialogFocusTrap(rirPrompt !== null, rirDialogRef);
   useDialogFocusTrap(feedbackPrompt !== null, feedbackDialogRef);
   useDialogFocusTrap(openExerciseMenu !== null, exerciseMenuDialogRef);
   useDialogFocusTrap(openSetMenu !== null, setMenuDialogRef);
+  useDialogFocusTrap(noteEditor !== null, noteDialogRef);
+  useDialogFocusTrap(replacePicker !== null, replaceDialogRef);
+  useDialogFocusTrap(historySheet !== null, historyDialogRef);
 
   useEffect(() => {
     try {
@@ -163,6 +247,7 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   },[timerRunning]);
   useEffect(() => { if (timerSeconds === 0) setTimerRunning(false); },[timerSeconds]);
   useEffect(() => { if(!rirPrompt&&!feedbackPrompt&&feedbackQueue.length){setFeedbackPrompt(feedbackQueue[0]);setFeedbackQueue((current)=>current.slice(1))} },[rirPrompt,feedbackPrompt,feedbackQueue]);
+  useEffect(()=>{if(openExerciseMenu===null&&openSetMenu===null)return;const reset=()=>{closeWorkoutMenus();setOpenExerciseMenu(null);setOpenSetMenu(null);setMenuAnchor(null)};window.addEventListener('resize',reset);window.addEventListener('orientationchange',reset);return()=>{window.removeEventListener('resize',reset);window.removeEventListener('orientationchange',reset)}},[openExerciseMenu,openSetMenu]);
   useEffect(()=>{if(!rirPrompt)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')setRirPrompt(null)};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[rirPrompt]);
   useEffect(()=>{if(openExerciseMenu===null)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape'){closeWorkoutMenus();setOpenExerciseMenu(null);}};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[openExerciseMenu]);
   useEffect(()=>{if(openSetMenu===null)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape'){closeWorkoutMenus();setOpenSetMenu(null);}};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[openSetMenu]);
@@ -223,8 +308,17 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   const addSet = (exerciseIndex:number) => setDraft((current) => current.map((sets,index) => index === exerciseIndex ? [...sets,{ reps:0,weight:sets.at(-1)?.weight ?? exercises[index].weight,reportedRir:null,complete:false }] : sets));
   const removeSet = (exerciseIndex:number,setIndex:number) => { closeWorkoutMenus(); setOpenSetMenu(null); setDraft((current) => current.map((sets,index) => index === exerciseIndex ? sets.filter((_,position) => position !== setIndex) : sets)); };
   const skipSet = (exerciseIndex:number,setIndex:number) => { removeSet(exerciseIndex,setIndex); setMessage('Set skipped for this workout.'); };
-  const closeExerciseMenu = () => { closeWorkoutMenus(); setOpenExerciseMenu(null); };
-  const closeSetMenu = () => { closeWorkoutMenus(); setOpenSetMenu(null); };
+  const closeExerciseMenu = () => { closeWorkoutMenus(); setOpenExerciseMenu(null); setMenuAnchor(null); };
+  const closeSetMenu = () => { closeWorkoutMenus(); setOpenSetMenu(null); setMenuAnchor(null); };
+  /* Each opener closes the menu and opens its sheet in one state batch, so the menu
+     backdrop unmounts in the same commit the sheet mounts - never two stacked. */
+  const openNoteEditor = (exerciseIndex:number) => { closeExerciseMenu(); setNoteEditor(exerciseIndex); };
+  const openReplacePicker = (exerciseIndex:number) => { closeExerciseMenu(); setReplacePicker(exerciseIndex); };
+  const openHistorySheet = (exerciseIndex:number) => { closeExerciseMenu(); setHistorySheet(exerciseIndex); };
+  const anchorFromTrigger = (details:HTMLDetailsElement):MenuAnchor|null => {
+    const rect = details.querySelector('summary')?.getBoundingClientRect();
+    return rect ? { top:rect.top, bottom:rect.bottom, right:rect.right } : null;
+  };
 
   const moveExercise = async(exerciseIndex:number,direction:-1|1) => {
     const targetIndex=exerciseIndex+direction;
@@ -283,9 +377,9 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
     <header className="page-header workout-heading native-page-header"><div>{workoutHeadingCopy(workout).eyebrow && <div className="eyebrow">{workoutHeadingCopy(workout).eyebrow}</div>}<h1>{workoutHeadingCopy(workout).title}</h1><p>{workoutHeadingCopy(workout).subtitle}</p></div><span className="status native-badge tint">{completed}/{total} sets</span></header>
     <section className={`surface timer-card rest-panel native-rest-timer ${timerRunning?'running':''}`} aria-label="Rest timer"><span className="native-rest-progress" style={{ inlineSize:`${Math.max(0,Math.min(100,(timerSeconds / 90) * 100))}%` }} aria-hidden="true"/><div className="rest-status"><span className="rest-icon" aria-hidden>◷</span><div><small>{timerRunning?'RESTING':'REST TIMER'}</small><strong aria-live="polite">{Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2,'0')}</strong></div></div><div className="rest-controls"><button className="quiet compact" onClick={() => { setTimerSeconds(90); setTimerRunning(true); }}>{timerSeconds===0?'Start':'Reset'}</button><button className="quiet compact" onClick={() => setTimerRunning(value => !value)} disabled={timerSeconds === 0}>{timerRunning ? 'Pause' : 'Resume'}</button><button className="timer-dismiss" aria-label="Clear rest timer" onClick={() => { setTimerSeconds(0); setTimerRunning(false); }} disabled={timerSeconds === 0}>Clear</button></div></section>
     <div className="exercise-stack">{exercises.map((exercise,exerciseIndex) => <section className="surface exercise-card native-workout-card" key={`${exerciseIndex}:${exercise.name}`}><span className="native-muscle-stripe" aria-hidden="true"/>
-      <div className="exercise-title native-exercise-title"><div><div className="cap native-muscle-label">{exercise.muscleGroup ?? 'Exercise'}</div><h2>{exercise.name}</h2><p>{exercise.equipment || 'Bodyweight'}</p>{notes[exerciseIndex]?.trim()&&<p className="exercise-note-preview"><span aria-hidden>✎</span>{notes[exerciseIndex].trim()}</p>}</div><details className="exercise-menu native-bottom-sheet native-modal-menu" onToggle={(event)=>setOpenExerciseMenu(event.currentTarget.open?exerciseIndex:(current)=>current===exerciseIndex?null:current)}><summary aria-label={`${exercise.name} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} menu`} onClick={()=>closeExerciseMenu()}/><div ref={openExerciseMenu===exerciseIndex?exerciseMenuDialogRef:undefined} className="exercise-menu-panel bottom-sheet" role="dialog" aria-modal="true" aria-label={`${exercise.name} actions`}><span className="sheet-handle" aria-hidden="true"/><div className="sheet-header"><strong>{exercise.name}</strong><button type="button" className="sheet-close" aria-label={`Close ${exercise.name} menu`} onClick={()=>closeExerciseMenu()}>×</button></div>{workout.templateDayId&&<div className="exercise-order-actions"><button className="quiet compact sheet-action-row" disabled={reordering||exerciseIndex===0} onClick={()=>void moveExercise(exerciseIndex,-1)}>Move up</button><button className="quiet compact sheet-action-row" disabled={reordering||exerciseIndex===exercises.length-1} onClick={()=>void moveExercise(exerciseIndex,1)}>Move down</button></div>}<button className="quiet compact sheet-action-row" onClick={() => setHistoryExercise(historyExercise===exercise.name?null:exercise.name)}>View history</button>{historyExercise===exercise.name&&<div className="native-exercise-history">{(historyByExercise[exercise.name]??[]).slice(0,3).length?(historyByExercise[exercise.name]??[]).slice(0,3).map((session)=><div key={session.date}><strong>{new Date(session.date).toLocaleDateString()}</strong><span>{session.sets.map(set=>`${set.weight}×${set.reps}${set.rir==null?'':` @${set.rir}RIR`}`).join(' · ')}</span></div>):<p>No recent history for this exercise.</p>}</div>}<button className="quiet compact sheet-action-row" onClick={() => addSet(exerciseIndex)}>+ Add Set</button><div className="exercise-feedback-actions"><button className="quiet compact sheet-action-row" onClick={()=>openFeedback(exercise.muscleGroup,'soreness')}>Soreness feedback</button><button className="quiet compact sheet-action-row" onClick={()=>openFeedback(exercise.muscleGroup,'completion')}>Training feedback</button></div><label>Exercise note<textarea value={notes[exerciseIndex] ?? ''} maxLength={500} onChange={(event) => setNotes((current) => current.map((note,index) => index === exerciseIndex ? event.target.value : note))} placeholder="Technique cue, setup, or pain note"/></label><label>Replace exercise<ReplaceExerciseSelect exercise={exercise} catalog={catalog} onReplace={(optionId) => replaceExercise(exerciseIndex,optionId)}/></label><button className="danger compact sheet-action-row" onClick={() => removeExercise(exerciseIndex)}>Remove exercise</button></div></details></div>
+      <div className="exercise-title native-exercise-title"><div><div className="cap native-muscle-label">{exercise.muscleGroup ?? 'Exercise'}</div><h2>{exercise.name}</h2><p>{exercise.equipment || 'Bodyweight'}</p>{notes[exerciseIndex]?.trim()&&<p className="exercise-note-preview"><span aria-hidden>✎</span>{notes[exerciseIndex].trim()}</p>}</div><details className="exercise-menu native-command-menu native-set-menu-cell native-modal-menu" onToggle={(event)=>{const opened=event.currentTarget.open;setMenuAnchor(opened?anchorFromTrigger(event.currentTarget):null);setOpenExerciseMenu(opened?exerciseIndex:(current)=>current===exerciseIndex?null:current)}}><summary aria-label={`${exercise.name} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} menu`} onClick={()=>closeExerciseMenu()}/><div ref={openExerciseMenu===exerciseIndex?exerciseMenuDialogRef:undefined} style={anchoredMenuStyle(openExerciseMenu===exerciseIndex?menuAnchor:null)} tabIndex={-1} className="command-menu-panel" role="dialog" aria-modal="true" aria-label={`${exercise.name} actions`}><div className="command-menu-title">Exercise</div><CommandRow icon="note" label={notes[exerciseIndex]?.trim()?'Edit note':'New note'} onClick={()=>openNoteEditor(exerciseIndex)}/><CommandRow icon="arrowUp" label="Move up" disabled={!workout.templateDayId||reordering||exerciseIndex===0} onClick={()=>void moveExercise(exerciseIndex,-1)}/><CommandRow icon="arrowDown" label="Move down" disabled={!workout.templateDayId||reordering||exerciseIndex===exercises.length-1} onClick={()=>void moveExercise(exerciseIndex,1)}/><CommandRow icon="replace" label="Replace" onClick={()=>openReplacePicker(exerciseIndex)}/><CommandRow icon="history" label="View history" onClick={()=>openHistorySheet(exerciseIndex)}/><CommandRow icon="addSet" label="Add set" onClick={()=>{closeExerciseMenu();addSet(exerciseIndex)}}/><CommandRow icon="soreness" label="Soreness feedback" disabled={!exercise.muscleGroup} onClick={()=>openFeedback(exercise.muscleGroup,'soreness')}/><CommandRow icon="training" label="Training feedback" disabled={!exercise.muscleGroup} onClick={()=>openFeedback(exercise.muscleGroup,'completion')}/><CommandRow icon="trash" tone="danger" label="Remove exercise" onClick={()=>removeExercise(exerciseIndex)}/></div></details></div>
       <div className="set-grid set-grid-header native-set-row" aria-hidden="true"><span /><span>WEIGHT</span><span>REPS</span><span>RIR</span><span>LOG</span></div>
-      {draft[exerciseIndex]?.map((set,setIndex) => {const setMenuId=`${exerciseIndex}:${setIndex}`;return <div className={`set-grid native-set-row ${set.complete ? 'set-complete' : ''}`} key={setIndex}><details className="set-menu native-bottom-sheet native-set-menu-cell native-modal-menu" onToggle={(event)=>setOpenSetMenu(event.currentTarget.open?setMenuId:(current)=>current===setMenuId?null:current)}><summary aria-label={`${exercise.name} set ${setIndex + 1} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} set ${setIndex + 1} menu`} onClick={()=>closeSetMenu()}/><div ref={openSetMenu===setMenuId?setMenuDialogRef:undefined} className="bottom-sheet" role="dialog" aria-modal="true" aria-label={`${exercise.name} set ${setIndex + 1} actions`}><span className="sheet-handle" aria-hidden="true"/><div className="sheet-header"><strong>Set {setIndex+1}</strong><button type="button" className="sheet-close" aria-label={`Close ${exercise.name} set ${setIndex + 1} menu`} onClick={()=>closeSetMenu()}>×</button></div><button className="quiet compact sheet-action-row" onClick={() => skipSet(exerciseIndex,setIndex)}>Skip set</button><button className="danger compact sheet-action-row" onClick={() => removeSet(exerciseIndex,setIndex)}>Remove set</button></div></details><input aria-label={`${exercise.name} set ${setIndex + 1} weight`} inputMode="decimal" type="number" min="0" step="0.5" value={weightInputValue(set.weight)} placeholder="0" onChange={(event) => updateSetWeight(exerciseIndex,setIndex,Number(event.target.value))}/><input aria-label={`${exercise.name} set ${setIndex + 1} reps`} inputMode="numeric" type="number" min="0" value={set.reps === 0 ? '' : set.reps} placeholder={repRangeLabel(exercise.repsMin,exercise.repsMax)} onChange={(event) => updateSet(exerciseIndex,setIndex,{ reps:Number(event.target.value) })}/><button type="button" className={`native-rir-button ${set.reportedRir===null?'empty':''}`} disabled={!set.complete} onClick={() => setRirPrompt({exerciseIndex,setIndex})} aria-label={`${exercise.name} set ${setIndex + 1} RIR`}>{set.reportedRir ?? '—'}</button><label className="set-check-wrap"><input className="set-check" aria-label={`${exercise.name} set ${setIndex + 1} complete`} type="checkbox" checked={set.complete} onChange={(event) => completeSet(exerciseIndex,setIndex,event.target.checked)}/></label></div>})}
+      {draft[exerciseIndex]?.map((set,setIndex) => {const setMenuId=`${exerciseIndex}:${setIndex}`;return <div className={`set-grid native-set-row ${set.complete ? 'set-complete' : ''}`} key={setIndex}><details className="set-menu native-command-menu native-set-menu-cell native-modal-menu" onToggle={(event)=>{const opened=event.currentTarget.open;setMenuAnchor(opened?anchorFromTrigger(event.currentTarget):null);setOpenSetMenu(opened?setMenuId:(current)=>current===setMenuId?null:current)}}><summary aria-label={`${exercise.name} set ${setIndex + 1} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} set ${setIndex + 1} menu`} onClick={()=>closeSetMenu()}/><div ref={openSetMenu===setMenuId?setMenuDialogRef:undefined} style={anchoredMenuStyle(openSetMenu===setMenuId?menuAnchor:null)} tabIndex={-1} className="command-menu-panel" role="dialog" aria-modal="true" aria-label={`${exercise.name} set ${setIndex + 1} actions`}><div className="command-menu-title">Set {setIndex+1}</div><CommandRow icon="skip" label="Skip set" onClick={()=>skipSet(exerciseIndex,setIndex)}/><CommandRow icon="trash" tone="danger" label="Remove set" onClick={()=>removeSet(exerciseIndex,setIndex)}/></div></details><input aria-label={`${exercise.name} set ${setIndex + 1} weight`} inputMode="decimal" type="number" min="0" step="0.5" value={weightInputValue(set.weight)} placeholder="0" onChange={(event) => updateSetWeight(exerciseIndex,setIndex,Number(event.target.value))}/><input aria-label={`${exercise.name} set ${setIndex + 1} reps`} inputMode="numeric" type="number" min="0" value={set.reps === 0 ? '' : set.reps} placeholder={repRangeLabel(exercise.repsMin,exercise.repsMax)} onChange={(event) => updateSet(exerciseIndex,setIndex,{ reps:Number(event.target.value) })}/><button type="button" className={`native-rir-button ${set.reportedRir===null?'empty':''}`} disabled={!set.complete} onClick={() => setRirPrompt({exerciseIndex,setIndex})} aria-label={`${exercise.name} set ${setIndex + 1} RIR`}>{set.reportedRir ?? '—'}</button><label className="set-check-wrap"><input className="set-check" aria-label={`${exercise.name} set ${setIndex + 1} complete`} type="checkbox" checked={set.complete} onChange={(event) => completeSet(exerciseIndex,setIndex,event.target.checked)}/></label></div>})}
       <button type="button" className="native-add-set-row" onClick={() => addSet(exerciseIndex)}>+ Add Set</button>
       <p className="prescription">Prescription: {exercise.sets} × {repRangeLabel(exercise.repsMin,exercise.repsMax)}{exercise.weight > 0 ? ` at ${exercise.weight} lb` : ''}</p>
     </section>)}</div>
@@ -294,6 +388,9 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
     <section className="surface migration-guard"><strong>{workoutRecoveryCopy().heading}</strong><p>{workoutRecoveryCopy().body}</p><p className={`sync-status ${workoutSyncStateCopy(syncState).tone}`} aria-live="polite"><span>{workoutSyncStateCopy(syncState).label}</span>{workoutSyncStateCopy(syncState).description}</p>{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions native-finish-bar"><button className="quiet" disabled={syncing} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={syncing || !canFinishWorkout(completed,total)} onClick={finish}>{syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
     {rirPrompt&&<div className="modal-backdrop rir-backdrop" role="presentation"><section ref={(node)=>{rirDialogRef.current=node}} tabIndex={-1} className="feedback-modal rir-modal" role="dialog" aria-modal="true" aria-labelledby="rir-title"><div className="eyebrow">SET COMPLETE</div><h2 id="rir-title">How many reps were left?</h2><p>RIR means “reps in reserve”: the number of clean reps you could still have completed with good form.</p><div className="rir-options">{[0,1,2,3,4,5].map(rir=><button type="button" className="quiet" key={rir} onClick={()=>{updateSet(rirPrompt.exerciseIndex,rirPrompt.setIndex,{reportedRir:rir});setRirPrompt(null)}}><strong>{rir}</strong><span>{rirDescription(rir)}</span></button>)}</div><button type="button" className="rir-skip" onClick={()=>setRirPrompt(null)}>Not sure — skip</button></section></div>}
     {feedbackPrompt&&<div className="feedback-sheet-backdrop" role="presentation"><section ref={(node)=>{feedbackDialogRef.current=node}} tabIndex={-1} className="feedback-sheet" role="dialog" aria-modal="true" aria-labelledby="feedback-title"><span className="sheet-handle" aria-hidden="true"/><h2 id="feedback-title">{feedbackPrompt.stage==='soreness'?'How sore were you?':'How did it go?'}</h2><p className="feedback-subtitle">{feedbackPrompt.muscle} · {feedbackPrompt.stage==='soreness'?'Check in before training':'Rate this session'}</p>{feedbackPrompt.stage==='soreness'?<FeedbackOptionGroup legend="Soreness" autoFocus options={sorenessOptions} value={feedback[feedbackPrompt.muscle]?.soreness??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'soreness',value)}/>:<><FeedbackOptionGroup legend="Joint pain" autoFocus options={jointPainOptions} value={feedback[feedbackPrompt.muscle]?.jointPain??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'jointPain',value)}/><FeedbackOptionGroup legend="Pump" options={pumpOptions} value={feedback[feedbackPrompt.muscle]?.pump??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'pump',value)}/><FeedbackOptionGroup legend="Adequate volume" options={volumeOptions} value={feedback[feedbackPrompt.muscle]?.volume??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'volume',value)}/></>}<button type="button" className="primary full" disabled={!canContinueFeedback(feedbackPrompt.stage,feedback[feedbackPrompt.muscle]??emptyFeedback())} onClick={()=>setFeedbackPrompt(null)}>Save Feedback</button></section></div>}
+    {noteEditor!==null&&<div className="modal-backdrop" role="presentation" onClick={()=>setNoteEditor(null)}><section ref={(node)=>{noteDialogRef.current=node}} tabIndex={-1} className="feedback-modal exercise-action-modal" role="dialog" aria-modal="true" aria-labelledby="note-title" onClick={(event)=>event.stopPropagation()} onKeyDown={(event)=>{if(event.key==='Escape')setNoteEditor(null)}}><h2 id="note-title">Exercise note</h2><p>{exercises[noteEditor]?.name}</p><label className="note-field">Note<textarea value={notes[noteEditor] ?? ''} maxLength={500} placeholder="Technique cue, setup, or pain note" onChange={(event)=>{const value=event.target.value;setNotes((current)=>current.map((note,index)=>index===noteEditor?value:note))}}/></label><div className="modal-actions"><button type="button" className="primary" onClick={()=>setNoteEditor(null)}>Done</button></div></section></div>}
+    {replacePicker!==null&&<div className="modal-backdrop" role="presentation" onClick={()=>setReplacePicker(null)}><section ref={(node)=>{replaceDialogRef.current=node}} tabIndex={-1} className="feedback-modal exercise-action-modal" role="dialog" aria-modal="true" aria-labelledby="replace-title" onClick={(event)=>event.stopPropagation()} onKeyDown={(event)=>{if(event.key==='Escape')setReplacePicker(null)}}><h2 id="replace-title">Replace exercise</h2><p>{exercises[replacePicker]?.name}</p><ReplaceExerciseSelect exercise={exercises[replacePicker]} catalog={catalog} onReplace={(optionId)=>{replaceExercise(replacePicker,optionId);setReplacePicker(null)}}/><div className="modal-actions"><button type="button" className="quiet" onClick={()=>setReplacePicker(null)}>Cancel</button></div></section></div>}
+    {historySheet!==null&&<div className="modal-backdrop" role="presentation" onClick={()=>setHistorySheet(null)}><section ref={(node)=>{historyDialogRef.current=node}} tabIndex={-1} className="feedback-modal exercise-action-modal" role="dialog" aria-modal="true" aria-labelledby="history-title" onClick={(event)=>event.stopPropagation()} onKeyDown={(event)=>{if(event.key==='Escape')setHistorySheet(null)}}><h2 id="history-title">Recent history</h2><p>{exercises[historySheet]?.name}</p><div className="native-exercise-history">{(historyByExercise[exercises[historySheet]?.name ?? '']??[]).slice(0,5).length?(historyByExercise[exercises[historySheet]?.name ?? '']??[]).slice(0,5).map((session)=><div key={session.date}><strong>{new Date(session.date).toLocaleDateString()}</strong><ul className="history-set-rows">{session.sets.map((set,index)=><li key={index}><span>Set {index+1}</span><span>{set.weight} lb</span><span>{set.reps} reps</span><span>{set.rir==null?'':`${set.rir} RIR`}</span></li>)}</ul></div>):<p>No recent history for this exercise.</p>}</div><div className="modal-actions"><button type="button" className="quiet" onClick={()=>setHistorySheet(null)}>Close</button></div></section></div>}
     {confirmDialog}
   </div>;
 }

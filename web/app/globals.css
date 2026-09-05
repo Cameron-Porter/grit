@@ -428,6 +428,52 @@ body,.native-gradient-background{background:var(--wash-ridge)}
 @keyframes nativeSheetUp{from{transform:translateY(18px);opacity:.92}to{transform:translateY(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){.native-modal-menu[open] :is(.bottom-sheet,.exercise-menu-panel){animation:none!important}}
 
+/* ─── Anchored command menu (workout ⋮ menus) ───────────────────────────────
+   Compact popover pinned to its own trigger instead of a full-width bottom
+   sheet. .native-workout-card sets overflow:hidden for the muscle stripe and
+   rounded corners, so an absolutely positioned panel would be clipped: the
+   panel is position:fixed and its top/left come from menuPlacement() in
+   workout-logger.tsx, which right-aligns it to the ⋮, flips it above when it
+   would overflow the bottom, and clamps it into the viewport. Scoped to
+   .native-command-menu so program-card keeps the bottom-sheet pattern. */
+.native-modal-menu.native-command-menu[open] .command-menu-panel{position:fixed!important;z-index:151!important;top:var(--menu-top,auto)!important;bottom:var(--menu-bottom,auto)!important;right:var(--menu-right,8px)!important;left:auto!important;width:min(272px,calc(100vw - 16px))!important;max-width:none!important;max-height:min(560px,var(--menu-max-h,70dvh))!important;overflow:auto!important;display:grid!important;gap:0!important;padding:6px!important;border:1px solid var(--glass-border)!important;border-radius:16px!important;background:var(--surface)!important;box-shadow:0 18px 48px rgba(0,0,0,.5)!important;animation:nativeMenuIn .14s ease-out}
+/* The trigger stays legible while its menu is open - only its hit area is off,
+   so a second menu can't be opened behind the backdrop. */
+.native-modal-menu.native-command-menu[open]>summary{opacity:1!important;filter:none!important}
+/* An anchored popover needs a lighter scrim than a bottom sheet: the card the
+   menu belongs to must stay readable behind it. */
+.native-command-menu .menu-backdrop{background:rgba(0,0,0,.34)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.command-menu-title{overflow:hidden;margin-bottom:4px;padding:9px 12px 10px;border-bottom:1px solid var(--separator);color:var(--muted);font-size:17px;font-weight:700;letter-spacing:-.1px;text-overflow:ellipsis;white-space:nowrap}
+.command-row{display:flex!important;width:100%;min-height:46px!important;align-items:center!important;justify-content:flex-start!important;gap:12px;padding:0 10px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:var(--text)!important;font-size:16px!important;font-weight:600!important;letter-spacing:-.1px;text-align:start!important;box-shadow:none!important;transition:background-color .14s ease,color .14s ease}
+.command-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.command-row-icon{flex:0 0 auto;color:var(--muted)}
+.command-row:is(:hover,:focus-visible){background:var(--surface2)!important}
+.command-row:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--secondary-accent)!important}
+.command-row:active{background:var(--surface3)!important}
+.command-row:disabled{opacity:.38;cursor:not-allowed}
+.command-row:disabled:is(:hover,:active){background:transparent!important}
+.command-row.danger,.native-workout-screen .command-row.danger{border:0!important;background:transparent!important;color:var(--error)!important}
+.command-row.danger .command-row-icon{color:var(--error)}
+.native-workout-screen .command-row.danger:is(:hover,:focus-visible){background:color-mix(in srgb,var(--error) 14%,transparent)!important}
+@keyframes nativeMenuIn{from{transform:scale(.97);opacity:0}to{transform:scale(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){.native-modal-menu.native-command-menu[open] .command-menu-panel{animation:none!important}}
+
+/* Follow-up sheets the command menu hands off to (note, replace, history). The
+   menu closes in the same state batch that opens these, so backdrops never stack. */
+.exercise-action-modal{display:grid;gap:12px}
+.exercise-action-modal h2{margin:0}
+.exercise-action-modal>p{margin:0;color:var(--muted);font-size:14px}
+.exercise-action-modal .note-field{margin-top:0}
+.exercise-action-modal .note-field textarea{min-height:120px}
+.exercise-action-modal .native-exercise-history{margin:0}
+/* One row per logged set - a single joined "15x7 - 15x7" string is unreadable. */
+.history-set-rows{display:grid;margin:6px 0 0;padding:0;list-style:none}
+.history-set-rows>li{display:grid;grid-template-columns:minmax(46px,auto) minmax(0,1fr) minmax(0,1fr) minmax(0,auto);align-items:center;gap:10px;min-height:34px;padding:6px 0;border-top:1px solid var(--separator)}
+.history-set-rows>li:first-child{border-top:0}
+.history-set-rows>li>span{color:var(--text);font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+.history-set-rows>li>span:first-child{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+.history-set-rows>li>span:last-child{color:var(--secondary-accent);font-size:11px;font-weight:700;text-align:end}
+
 
 /* Exercise action sheet: grouped surfaces matching the rest of the app. */
 .native-modal-menu[open] .exercise-menu-panel{display:grid!important;gap:10px!important;padding:10px 16px calc(20px + env(safe-area-inset-bottom))!important;background:color-mix(in srgb,var(--surface) 96%,var(--primary) 4%)!important}.exercise-menu-panel .sheet-header{margin:0 2px 2px;padding:0 0 8px;border-bottom:1px solid var(--separator)}.exercise-menu-panel .sheet-header>strong{font-size:18px;line-height:24px}.exercise-menu-panel .exercise-order-actions{gap:8px;padding:8px;border:1px solid var(--separator);border-radius:16px;background:var(--surface)}.exercise-menu-panel .exercise-order-actions .sheet-action-row{min-height:46px!important;padding:0 12px!important;border:0!important;border-radius:12px!important;background:var(--surface2)!important;color:var(--text)!important}.exercise-menu-panel .exercise-order-actions .sheet-action-row+button{border-left:0!important}.bottom-sheet>.sheet-action-row,.exercise-menu-panel .exercise-feedback-actions .sheet-action-row{min-height:50px!important;padding:0 14px!important;border:1px solid var(--separator)!important;border-radius:14px!important;background:var(--surface)!important;color:var(--text)!important}.exercise-menu-panel .exercise-feedback-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.exercise-menu-panel .exercise-feedback-actions .sheet-action-row{justify-content:center!important;text-align:center!important}.exercise-menu-panel>label{display:grid;gap:8px;padding:14px;border:1px solid var(--separator);border-radius:16px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}.exercise-menu-panel>label textarea,.exercise-menu-panel>label .custom-select-trigger{min-height:46px;border-color:var(--separator);border-radius:12px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:650;letter-spacing:0;text-transform:none}.bottom-sheet>.sheet-action-row.danger{margin-top:2px;border-color:color-mix(in srgb,var(--error) 42%,var(--separator))!important;background:color-mix(in srgb,var(--error) 12%,var(--surface))!important;color:var(--error)!important}.exercise-menu-panel .native-exercise-history{margin:0;padding:12px 14px;border:1px solid var(--separator);border-radius:14px;background:var(--surface)}

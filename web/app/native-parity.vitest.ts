@@ -46,7 +46,10 @@ describe('native UI parity contracts', () => {
   it('gives exercise and set menus explicit and outside-click dismissal', () => {
     const logger = read('components/workout-logger.tsx');
     expect(logger.match(/className="menu-backdrop"/g)?.length).toBeGreaterThanOrEqual(2);
-    expect(logger.match(/className="sheet-close"/g)?.length).toBeGreaterThanOrEqual(2);
+    // The menus are anchored command popovers rather than bottom sheets, so the
+    // sheet-close "x" is gone; dismissal is the backdrop, Escape, or picking a row.
+    expect(logger).toMatch(/openExerciseMenu===null.*Escape.*closeWorkoutMenus\(\)/s);
+    expect(logger).toMatch(/openSetMenu===null.*Escape.*closeWorkoutMenus\(\)/s);
     expect(logger).toContain('setMenuDialogRef');
     expect(logger).toMatch(/openFeedback\s*=.*closeWorkoutMenus\(\)/);
   });
