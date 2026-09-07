@@ -341,7 +341,8 @@ html,body{background:var(--bg);color:var(--text)}
 .rest-control:disabled:is(:hover,:focus-visible){border-color:var(--border)!important;background:transparent!important}
 /* Clear is an icon-only pill: three text pills do not fit a phone row, and the
    glyph lives in the markup so nothing has to fight the label's font-size. */
-.native-rest-timer .timer-dismiss{width:40px;padding:0!important;color:var(--muted)!important;font-size:20px!important;line-height:1!important}
+.native-rest-timer .timer-dismiss{display:grid!important;place-items:center!important;width:40px!important;min-width:40px;padding:0!important;color:var(--muted)!important;font-size:20px!important;line-height:1!important}
+.native-rest-timer .timer-dismiss>span{display:block;line-height:1}
 @media(prefers-reduced-motion:reduce){.native-rest-timer,.rest-control,.native-rest-timer .native-rest-progress{transition:none!important}}
 @media(max-width:400px){.native-rest-timer .rest-status strong{font-size:1.35rem}.rest-control{padding:0 11px!important;font-size:12px!important}}
 
@@ -597,3 +598,23 @@ body,.native-gradient-background{background:var(--wash-ridge)}
 .primary:not(:focus-visible),button.primary:not(:focus-visible){box-shadow:var(--glow-blaze-sm)}
 .primary:hover:not(:focus-visible),button.primary:hover:not(:focus-visible){box-shadow:var(--glow-blaze)}
 .primary:disabled,button.primary:disabled{box-shadow:none}
+
+/* ─── Accent restraint ──────────────────────────────────────────────────────
+   Blaze and alpine are accents, so they mark actions and active state - the
+   primary button, the running timer, the active tab, a completed set, a filled
+   RIR value. They had spread onto static labels (the week eyebrow, the muscle
+   name, the set counter, every card's stripe), which are read-only text and
+   repeat down the whole page, so the accent stopped reading as emphasis. These
+   demote that text to the muted token; nothing interactive changes colour. */
+.eyebrow,.native-workout-screen .eyebrow{color:var(--muted)}
+.native-muscle-label,.native-workout-card .native-muscle-label{color:var(--muted)}
+/* Status counter is information, not an action - accent only once it is done. */
+.native-badge.tint{border-color:color-mix(in srgb,var(--muted) 34%,transparent);background:color-mix(in srgb,var(--muted) 12%,transparent);color:var(--muted)}
+/* .ghost was re-coloured alpine further down the sheet; keep it neutral too. */
+.native-workout-screen .native-badge.ghost{border-color:color-mix(in srgb,var(--muted) 45%,transparent);color:var(--muted)}
+.native-badge.tint.complete{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+/* One thin stripe per card is fine; five full-strength bars down a page is not. */
+.native-workout-card .native-muscle-stripe{width:3px;background:color-mix(in srgb,var(--accent) 55%,transparent)}
+/* An empty RIR slot is a placeholder, not a value worth colouring. */
+.native-workout-screen .native-rir-button.empty{border-color:var(--border);background:transparent;color:var(--muted)}
+.history-set-rows>li>span:last-child{color:var(--muted)}
