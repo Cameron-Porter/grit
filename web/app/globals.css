@@ -314,6 +314,13 @@ html,body{background:var(--bg);color:var(--text)}
 .app-nav{position:fixed;z-index:100;left:max(24px,env(safe-area-inset-left));right:max(24px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:auto;max-width:390px;height:56px;margin-inline:auto;padding:4px;display:flex;align-items:center;justify-content:space-around;overflow:hidden;border:1px solid var(--glass-border);border-radius:var(--radius-pill);background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 8px 16px rgba(0,0,0,.28)}
 .app-nav a{position:relative;flex:1;min-width:0;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:var(--radius-pill);color:var(--tab-inactive);line-height:1;transition:color .16s ease,background-color .16s ease,transform .16s ease,box-shadow .16s ease}
 .app-nav-icon{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:transform .16s ease,color .16s ease}
+/* Full-viewport loading screen: fills the window and centres its content, so a
+   slow server render reads as a deliberate screen rather than a page that has
+   only half arrived. Uses dvh so mobile browser chrome cannot clip it. */
+.loading-screen{display:grid;place-items:center;width:100vw;min-height:100dvh;min-height:100vh;margin:0;padding:max(28px,env(safe-area-inset-top)) 24px max(28px,env(safe-area-inset-bottom));overflow:hidden}
+.loading-screen>section{display:grid;justify-items:center;gap:10px;max-width:min(100%,340px);text-align:center}
+.loading-screen h2{margin:0;font-size:20px;line-height:24px}
+.loading-screen p{margin:0;color:var(--muted);font-size:14px;line-height:21px}
 .loading-plate-icon{width:72px;height:72px;border-radius:18px;box-shadow:0 6px 20px rgba(0,0,0,.35);animation:loading-plate-pulse 1.8s ease-in-out infinite}
 @keyframes loading-plate-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.055);opacity:.82}}
 @media(prefers-reduced-motion:reduce){.loading-plate-icon{animation:none}}

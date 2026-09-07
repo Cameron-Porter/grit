@@ -152,9 +152,27 @@ describe('exact native app port contracts', () => {
     }
   });
 
-  it('uses native empty-state shells for app loading and error states', () => {
-    expect(read('app/(app)/loading.tsx')).toContain('native-empty-state');
-    expect(read('app/(app)/loading.tsx')).toContain('native-gradient-background');
+  /**
+   * Loading states moved from an inline native-empty-state into a shared
+   * full-viewport LoadingScreen. /workout is the landing route and sits outside
+   * the (app) group, so it inherited no loading.tsx at all and showed nothing
+   * for the whole server render - it needs its own.
+   */
+  it('uses a shared full-viewport loading screen, including on the /workout landing route', () => {
+    const screen = read('app/loading-screen.tsx');
+    expect(screen).toContain('loading-screen');
+    expect(screen).toContain('native-gradient-background');
+    expect(screen).toContain('aria-busy');
+    for (const route of ['app/(app)/loading.tsx', 'app/workout/loading.tsx']) {
+      expect(read(route)).toContain('LoadingScreen');
+    }
+    const css = read('app/globals.css');
+    expect(css).toContain('.loading-screen{');
+    expect(css).toContain('width:100vw');
+    expect(css).toContain('min-height:100dvh');
+  });
+
+  it('uses native empty-state shells for app error states', () => {
     expect(read('app/(app)/error.tsx')).toContain('native-empty-state');
     expect(read('app/(app)/error.tsx')).toContain('native-gradient-background');
   });
