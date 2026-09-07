@@ -5,6 +5,7 @@ import { WorkoutLogger, type ExerciseOption, type WorkoutPrescription } from '@/
 import { resolveExercisePrescription } from '@/lib/workout/prescription';
 import { recoverMissingTarget } from '@/lib/workout/recovery-target';
 import { filterExercisesByEquipmentPreference } from '@/lib/programs/day-template-payload';
+import { loadExerciseCatalog } from '@/lib/exercises/catalog';
 import type { ProgramFocus, SessionPerformance } from '@grit/rules/progressionEngine';
 import type { ExperienceLevel } from '@grit/types/program';
 
@@ -23,7 +24,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     if(profileError) throw new Error(`Could not load body weight: ${profileError.message}`);
     const workout:WorkoutPrescription={dayId:null,templateDayId:null,bodyWeight:Number(profile?.body_weight)||0,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[]};
     const preferred=Array.isArray(profile?.preferred_equipment)?profile.preferred_equipment.filter((item):item is string=>typeof item==='string'):[];
-    const visibleCatalog=filterExercisesByEquipmentPreference(catalog??[],{enabled:Boolean(profile?.use_preferred_equipment),preferred});
+    const visibleCatalog=filterExercisesByEquipmentPreference(catalog,{enabled:Boolean(profile?.use_preferred_equipment),preferred});
     const options:ExerciseOption[]=visibleCatalog.map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max,movementCategory:exercise.movement_category}));
     return <><main className="app-shell page-frame"><WorkoutLogger key="quick-workout" workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
   }
@@ -35,7 +36,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   // page from five sequential Supabase steps to three; the cost is that the two
   // early-return branches below fetch three rows they end up not using, which is
   // rare and costs no wall-clock time because it overlaps the program lookup.
-  const catalogPromise = Promise.resolve(supabase.from('exercises').select('id,name,muscle_group,equipment,movement_category,rep_range_min,rep_range_max').order('name'));
+  const catalogPromise = loadExerciseCatalog(supabase);
   const profilePromise = Promise.resolve(supabase.from('user_profiles').select('experience_level,body_weight,use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle());
   const pastWorkoutsPromise = Promise.resolve(supabase.from('workouts').select('id,completed_at,program_day_id').eq('user_id',user.id).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40));
 
@@ -74,7 +75,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   if(!templateDay) throw new Error('The program is missing its Week 1 exercise template.');
   const [
     [{data:exercises,error:exerciseError},{data:targets,error:targetError}],
-    [{data:catalog,error:catalogError},{data:profile,error:profileError},{data:pastWorkouts,error:pastWorkoutError}],
+    [catalog,{data:profile,error:profileError},{data:pastWorkouts,error:pastWorkoutError}],
   ]=await Promise.all([
     Promise.all([
       supabase.from('program_exercises').select('exercise_name,muscle_group,equipment,sort_order,target_sets,target_reps_min,target_reps_max,target_weight,rir,role').eq('program_day_id',templateDay.id).order('sort_order'),
@@ -84,7 +85,6 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   ]);
   if(exerciseError) throw new Error(`Could not load exercises: ${exerciseError.message}`);
   if(targetError) throw new Error(`Could not load progression targets: ${targetError.message}`);
-  if(catalogError) throw new Error(`Could not load exercise replacements: ${catalogError.message}`);
   if(profileError) throw new Error(`Could not load training experience: ${profileError.message}`);
   if(pastWorkoutError) throw new Error(`Could not load program workout history: ${pastWorkoutError.message}`);
   const workoutIds=(pastWorkouts??[]).map(item=>item.id);
@@ -105,7 +105,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   if(pastDayError) throw new Error(`Could not load past program weeks: ${pastDayError.message}`);
   if(pastFeedbackError) throw new Error(`Could not load past workout feedback: ${pastFeedbackError.message}`);
   const isDeloadByDay=new Map((pastDays??[]).map((day)=>[day.id,day.week_number===day.programs[0]?.total_weeks])),isDeloadByWorkout=new Map((pastWorkouts??[]).map((item)=>[item.id,item.program_day_id?isDeloadByDay.get(item.program_day_id)??false:false]));
-  const feedbackByWorkoutMuscle=new Map((pastFeedback??[]).map((row)=>[`${row.workout_id} ${row.muscle_group}`,row])),muscleGroupByExerciseName=new Map((catalog??[]).map((item)=>[item.name,item.muscle_group]));
+  const feedbackByWorkoutMuscle=new Map((pastFeedback??[]).map((row)=>[`${row.workout_id} ${row.muscle_group}`,row])),muscleGroupByExerciseName=new Map(catalog.map((item)=>[item.name,item.muscle_group]));
   const hasBadFeedback=(workoutId:string,exerciseName:string)=>{const muscleGroup=muscleGroupByExerciseName.get(exerciseName),row=muscleGroup?feedbackByWorkoutMuscle.get(`${workoutId} ${muscleGroup}`):undefined;if(!row)return false;return Boolean(row.joint_pain&&row.joint_pain!=='None')||Boolean(row.pump&&['None','Low'].includes(row.pump))||row.volume==='Too much'};
   const workoutOrder=new Map((pastWorkouts??[]).map((item,index)=>[item.id,{index,date:item.completed_at}])),grouped=new Map<string,Map<string,HistorySession>>();
   for(const set of pastSets??[]){const byWorkout=grouped.get(set.exercise_name)??new Map<string,HistorySession>(),meta=workoutOrder.get(set.workout_id);if(!meta)continue;const session:HistorySession=byWorkout.get(set.workout_id)??{date:meta.date,sets:[],isDeloadSession:isDeloadByWorkout.get(set.workout_id)??false,hasBadFeedback:hasBadFeedback(set.workout_id,set.exercise_name)};session.sets.push({weight:Number(set.weight),reps:set.reps,rir:set.reported_rir??undefined});byWorkout.set(set.workout_id,session);grouped.set(set.exercise_name,byWorkout)}
@@ -113,8 +113,5 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   for(const exercise of exercises??[]){const existing=targetByExercise.get(exercise.exercise_name);if(existing&&(Number(existing.target_weight)>0||exercise.equipment==='Bodyweight'))continue;const sessions=[...(grouped.get(exercise.exercise_name)?.entries()??[])].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,8),recovered=recoverMissingTarget(exercise,sessions,{experienceLevel:(profile?.experience_level??'intermediate')as ExperienceLevel,week:nextDay.week_number,totalWeeks:current.total_weeks,focus:(current.focus??'hypertrophy')as ProgramFocus});if(recovered)targetByExercise.set(exercise.exercise_name,{exercise_name:exercise.exercise_name,...recovered})}
   const historyByExercise=Object.fromEntries([...grouped].map(([name,sessions])=>[name,[...sessions.entries()].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,3)]));
   const workout:WorkoutPrescription={dayId:nextDay.id,templateDayId:templateDay.id,bodyWeight:Number(profile?.body_weight)||0,programName:current.name,week:nextDay.week_number,day:nextDay.day_number,label:nextDay.label??`Day ${nextDay.day_number}`,exercises:(exercises??[]).map((exercise)=>resolveExercisePrescription(exercise,targetByExercise.get(exercise.exercise_name),exercise.muscle_group?current.muscle_priorities?.[exercise.muscle_group]??null:null))};
-  const preferred=Array.isArray(profile?.preferred_equipment)?profile.preferred_equipment.filter((item):item is string=>typeof item==='string'):[];
-  const visibleCatalog=filterExercisesByEquipmentPreference(catalog??[],{enabled:Boolean(profile?.use_preferred_equipment),preferred});
-  const options:ExerciseOption[]=visibleCatalog.map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max,movementCategory:exercise.movement_category}));
-  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} catalog={options} historyByExercise={historyByExercise}/></main><AppNav /></>;
+  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} historyByExercise={historyByExercise}/></main><AppNav /></>;
 }

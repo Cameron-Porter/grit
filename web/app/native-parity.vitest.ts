@@ -37,10 +37,21 @@ describe('native UI parity contracts', () => {
     expect(history).toContain('recovery-feedback-item');
   });
 
-  it('applies preferred equipment to live workout exercise choices', () => {
+  /**
+   * The picker options moved out of the workout document and are fetched from
+   * /api/exercises after paint, so the equipment filter now lives in the shared
+   * helper both paths use. The contract is that every route producing picker
+   * options applies the preference - not that one file calls the filter N times.
+   */
+  it('applies preferred equipment to every source of live workout exercise choices', () => {
+    const options = read('lib/exercises/options.ts');
+    expect(options).toContain('filterExercisesByEquipmentPreference');
+    expect(options).toContain('use_preferred_equipment,preferred_equipment');
+    // The on-demand route and the quick-workout path both go through it.
+    expect(read('app/api/exercises/route.ts')).toContain('loadPickerOptions');
     const workout = read('app/workout/page.tsx');
     expect(workout).toContain('use_preferred_equipment,preferred_equipment');
-    expect(workout.match(/filterExercisesByEquipmentPreference/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(workout).toContain('filterExercisesByEquipmentPreference');
   });
 
   it('gives exercise and set menus explicit and outside-click dismissal', () => {
