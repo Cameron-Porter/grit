@@ -21,10 +21,33 @@ describe('requireUser', () => {
 
     const { user } = await requireUser();
 
-    expect(user).toEqual({ id: 'user-1', email: 'a@b.co' });
+    expect(user).toEqual({ id: 'user-1', email: 'a@b.co', name: null, avatarUrl: null });
     // The whole point: getUser() is a network call and must not be on the read path.
     expect(getUser).not.toHaveBeenCalled();
     expect(getClaims).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the provider profile out of the token, costing no extra request', () => {
+    // Google puts these in user_metadata; older sessions use avatar_url, newer picture.
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'u', email: 'a@b.co',
+      user_metadata: { full_name: 'Ada L', avatar_url: 'https://lh3.googleusercontent.com/x' } } }, error: null });
+    return load().then(async (requireUser) => {
+      const { user } = await requireUser();
+      expect(user).toMatchObject({ name: 'Ada L', avatarUrl: 'https://lh3.googleusercontent.com/x' });
+      expect(getUser).not.toHaveBeenCalled();
+    });
+  });
+
+  it('falls back to an initial when the provider supplies no photo, as Apple never does', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'u', email: 'a@b.co', user_metadata: { full_name: 'Ada L' } } }, error: null });
+    const requireUser = await load();
+    expect((await requireUser()).user).toMatchObject({ name: 'Ada L', avatarUrl: null });
+  });
+
+  it('treats a blank metadata string as absent rather than rendering an empty avatar', async () => {
+    getClaims.mockResolvedValue({ data: { claims: { sub: 'u', email: 'a@b.co', user_metadata: { full_name: '  ', avatar_url: '' } } }, error: null });
+    const requireUser = await load();
+    expect((await requireUser()).user).toMatchObject({ name: null, avatarUrl: null });
   });
 
   it('redirects to /login when the token fails verification', async () => {
@@ -47,7 +70,7 @@ describe('requireUser', () => {
     getClaims.mockResolvedValue({ data: { claims: { sub: 'user-1' } }, error: null });
     const requireUser = await load();
 
-    expect((await requireUser()).user).toEqual({ id: 'user-1', email: null });
+    expect((await requireUser()).user).toEqual({ id: 'user-1', email: null, name: null, avatarUrl: null });
   });
 
   /* The cache() dedupe of layout+page is deliberately not asserted here: React's

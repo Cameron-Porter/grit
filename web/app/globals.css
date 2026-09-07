@@ -692,3 +692,7 @@ button,.button-link,.primary,.secondary,.quiet,.danger,.native-pill-action,.nati
 .native-settings-link>strong{color:var(--muted);font-size:20px;line-height:1}
 .native-settings-link:is(:hover,:focus-visible){background:var(--surface2)}
 .native-settings-link:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--accent)}
+
+/* The avatar is either a provider photo or an initial, so it needs to work as
+   both: same circle, image cropped to fill rather than stretched. */
+img.native-avatar{object-fit:cover;padding:0;border:1px solid var(--card-border)}
