@@ -56,7 +56,10 @@ describe('exact native app port contracts', () => {
     const css = read('app/globals.css');
     expect(css).toContain('--blaze-rgb:255 122 47');
     expect(css).toContain('--alpine-rgb:56 189 248');
-    expect(css).toContain('--wash-ridge:');
+    // The page background is deliberately flat: the ambient blaze/alpine wash was
+    // dropped so the accents stay on actions rather than tinting every screen.
+    expect(css).toContain('body,.native-gradient-background{background:var(--bg)}');
+    expect(css).not.toContain('--wash-ridge');
     expect(css).toContain('--glow-blaze:');
     expect(css).toContain('.rule-speed{');
     expect(css).toContain('.edge::before{');

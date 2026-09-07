@@ -207,11 +207,10 @@ button:focus-visible,.button-link:focus-visible,.program-card:focus-visible,.his
   --placeholder:#9da8b2;
   --tab-active:#ff7a2f;
   --tab-inactive:#9da8b2;
-  /* Channel-only accents, so components can tint without restating the hex. */
+  /* Channel-only accents, so components can tint without restating the hex.
+     The page background itself is flat --bg; these are for component tints. */
   --blaze-rgb:255 122 47;
   --alpine-rgb:56 189 248;
-  --wash-ridge:radial-gradient(circle at 18% 0%,rgb(var(--blaze-rgb)/.2),transparent 34%),radial-gradient(circle at 82% 4%,rgb(var(--alpine-rgb)/.14),transparent 30%),linear-gradient(180deg,#0e1114 0%,#14181d 55%,#0e1114 100%);
-  --wash-drop:linear-gradient(115deg,rgb(var(--blaze-rgb)/.18),rgb(var(--alpine-rgb)/.1) 60%,transparent);
   --glow-blaze:0 0 32px rgb(var(--blaze-rgb)/.34);
   --glow-blaze-sm:0 0 14px rgb(var(--blaze-rgb)/.45);
   --radius-sm:6px;
@@ -263,8 +262,6 @@ button:focus-visible,.button-link:focus-visible,.program-card:focus-visible,.his
   --tab-inactive:#5d6772;
   --blaze-rgb:176 58 10;
   --alpine-rgb:3 105 161;
-  --wash-ridge:radial-gradient(circle at 18% 0%,rgb(var(--blaze-rgb)/.12),transparent 34%),radial-gradient(circle at 82% 4%,rgb(var(--alpine-rgb)/.09),transparent 30%),linear-gradient(180deg,#f6f7f8 0%,#eceef0 55%,#f6f7f8 100%);
-  --wash-drop:linear-gradient(115deg,rgb(var(--blaze-rgb)/.14),rgb(var(--alpine-rgb)/.08) 60%,transparent);
   --glow-blaze:0 0 32px rgb(var(--blaze-rgb)/.26);
   --glow-blaze-sm:0 0 14px rgb(var(--blaze-rgb)/.3);
 }}
@@ -302,14 +299,12 @@ button:focus-visible,.button-link:focus-visible,.program-card:focus-visible,.his
   --tab-inactive:#5d6772;
   --blaze-rgb:176 58 10;
   --alpine-rgb:3 105 161;
-  --wash-ridge:radial-gradient(circle at 18% 0%,rgb(var(--blaze-rgb)/.12),transparent 34%),radial-gradient(circle at 82% 4%,rgb(var(--alpine-rgb)/.09),transparent 30%),linear-gradient(180deg,#f6f7f8 0%,#eceef0 55%,#f6f7f8 100%);
-  --wash-drop:linear-gradient(115deg,rgb(var(--blaze-rgb)/.14),rgb(var(--alpine-rgb)/.08) 60%,transparent);
   --glow-blaze:0 0 32px rgb(var(--blaze-rgb)/.26);
   --glow-blaze-sm:0 0 14px rgb(var(--blaze-rgb)/.3);
 }
 .d1{font-size:36px;line-height:40px;font-weight:800;letter-spacing:-.5px}.d2{font-size:28px;line-height:32px;font-weight:800;letter-spacing:-.3px}.d3{font-size:22px;line-height:26px;font-weight:650;letter-spacing:-.2px}.h1{font-size:20px;line-height:24px;font-weight:700;letter-spacing:-.1px}.h2{font-size:17px;line-height:22px;font-weight:650;letter-spacing:-.1px}.h3{font-size:15px;line-height:20px;font-weight:650}.b1{font-size:15px;line-height:22px}.b2{font-size:13px;line-height:18px}.l1{font-size:12px;line-height:16px;font-weight:650;letter-spacing:.3px}.l2{font-size:11px;line-height:14px;font-weight:600;letter-spacing:.5px}.cap{font-size:10px;line-height:12px;font-weight:650;letter-spacing:1.5px;text-transform:uppercase}
 html,body{background:var(--bg);color:var(--text)}
-.page-frame{min-height:100dvh;padding-bottom:calc(80px + env(safe-area-inset-bottom));background:var(--wash-ridge)}
+.page-frame{min-height:100dvh;padding-bottom:calc(80px + env(safe-area-inset-bottom));background:var(--bg)}
 .content{padding:max(28px,env(safe-area-inset-top)) 16px 32px}
 .app-nav{position:fixed;z-index:100;left:max(24px,env(safe-area-inset-left));right:max(24px,env(safe-area-inset-right));bottom:max(24px,env(safe-area-inset-bottom));width:auto;max-width:390px;height:56px;margin-inline:auto;padding:4px;display:flex;align-items:center;justify-content:space-around;overflow:hidden;border:1px solid var(--glass-border);border-radius:var(--radius-pill);background:var(--glass);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 8px 16px rgba(0,0,0,.28)}
 .app-nav a{position:relative;flex:1;min-width:0;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:var(--radius-pill);color:var(--tab-inactive);line-height:1;transition:color .16s ease,background-color .16s ease,transform .16s ease,box-shadow .16s ease}
@@ -385,9 +380,10 @@ html,body{background:var(--bg);color:var(--text)}
 /* Exact native clone layer — React Native commit 23c804f ported to web. */
 /* body carries the same background as .native-gradient-background so nothing shows
    through outside that element's own box - no visible seam regardless of its width. */
-/* --wash-ridge is defined per theme, so the blaze/alpine ambient wash needs no
-   light-mode override here the way the old fixed gradient pair did. */
-body,.native-gradient-background{background:var(--wash-ridge)}
+/* Flat --bg per theme, so no light-mode override is needed here the way the old
+   fixed gradient pair required. The ambient blaze/alpine wash was dropped: the
+   accents belong on actions, not tinting every screen. */
+body,.native-gradient-background{background:var(--bg)}
 .native-screen-scroll{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--space-2);padding-bottom:calc(80px + env(safe-area-inset-bottom))}
 .native-settings-group{overflow:hidden;border:1px solid var(--glass-border)!important;border-radius:20px!important;background:var(--surface)!important;padding:0!important;box-shadow:0 1px 3px rgba(0,0,0,.18)}
 .native-settings-group :is(label,.setting-row),.native-settings-row{display:flex;min-height:58px;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-bottom:1px solid var(--separator);color:var(--text)}
