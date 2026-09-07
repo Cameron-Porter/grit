@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -270,5 +270,34 @@ describe('skipping a set', () => {
     expect(next[0].weight).toBe(145);
     expect(next[1].weight).toBe(100);
     expect(next[2].weight).toBe(145);
+  });
+});
+
+describe('setRepPlan', () => {
+  const session = (reps: number[]) => ({ date: '2026-01-08', sets: reps.map((r) => ({ weight: 135, reps: r })) });
+
+  it('turns last session into a per-set goal for this one', () => {
+    // The RP shape: total reps creep up one set at a time.
+    expect(setRepPlan([session([12, 12, 12])], 3, 8, 15)).toEqual([12, 12, 13]);
+    // And an uneven session brings its weakest set up first.
+    expect(setRepPlan([session([11, 12, 12])], 3, 8, 12)).toEqual([12, 12, 12]);
+  });
+
+  it('reads the most recent session, not an older one', () => {
+    expect(setRepPlan([session([12, 12, 12]), session([8, 8, 8])], 3, 8, 15)).toEqual([12, 12, 13]);
+  });
+
+  /**
+   * A first exposure has nothing to build on, so the caller keeps showing the
+   * prescribed range rather than inventing a per-set number.
+   */
+  it('returns null when there is no history to build on', () => {
+    expect(setRepPlan(undefined, 3, 8, 12)).toBeNull();
+    expect(setRepPlan([], 3, 8, 12)).toBeNull();
+    expect(setRepPlan([{ date: '2026-01-08', sets: [] }], 3, 8, 12)).toBeNull();
+  });
+
+  it('covers a set added since last session', () => {
+    expect(setRepPlan([session([12, 12, 12])], 4, 8, 15)).toHaveLength(4);
   });
 });
