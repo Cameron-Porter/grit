@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 const getClaims = vi.fn();
 const getUser = vi.fn();
-const redirect = vi.fn(() => { throw new Error('REDIRECT'); });
+const redirect = vi.fn((_path: string): never => { throw new Error('REDIRECT'); });
 
 vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({ auth: { getClaims, getUser } }) }));
 vi.mock('next/navigation', () => ({ redirect: (path: string) => redirect(path) }));

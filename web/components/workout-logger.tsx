@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { WebWorkoutPayload, WorkoutDayUpdate } from '@/lib/workout/payload';
 import { useDialogFocusTrap } from '@/lib/hooks/use-dialog-focus-trap';
 import { useConfirmDialog } from './confirm-dialog';
+import { createRestChime, restTimerJustFinished, REST_COMPLETE_VIBRATION, type RestChime } from '@/lib/workout/rest-chime';
 import { CustomSelect, type SelectOption } from './custom-select';
 import { classifyMovement } from '@grit/data/movementClassMap';
 import { recommendedExerciseIds, withRecommendedOptions } from '@/lib/exercises/recommendations';
@@ -196,6 +197,9 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
   const [restored,setRestored] = useState(false);
   const [timerSeconds,setTimerSeconds] = useState(0);
   const [timerRunning,setTimerRunning] = useState(false);
+  const restChime = useRef<RestChime|null>(null);
+  const previousTimerSeconds = useRef(0);
+  const timerCleared = useRef(false);
   const [syncing,setSyncing] = useState(false);
   const [syncState,setSyncState] = useState<WorkoutSyncState>('local');
   const [message,setMessage] = useState<string|null>(null);
@@ -258,6 +262,16 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
     return () => window.clearInterval(interval);
   },[timerRunning]);
   useEffect(() => { if (timerSeconds === 0) setTimerRunning(false); },[timerSeconds]);
+  useEffect(() => {
+    const previous = previousTimerSeconds.current;
+    previousTimerSeconds.current = timerSeconds;
+    const cancelled = timerCleared.current;
+    timerCleared.current = false;
+    if (!restTimerJustFinished(previous,timerSeconds,cancelled)) return;
+    restChime.current?.play();
+    // Not on iOS, and the caller cannot feature-detect a no-op, so just try.
+    try { navigator.vibrate?.(REST_COMPLETE_VIBRATION); } catch { /* optional */ }
+  },[timerSeconds]);
   useEffect(() => { if(!rirPrompt&&!feedbackPrompt&&feedbackQueue.length){setFeedbackPrompt(feedbackQueue[0]);setFeedbackQueue((current)=>current.slice(1))} },[rirPrompt,feedbackPrompt,feedbackQueue]);
   useEffect(()=>{if(openExerciseMenu===null&&openSetMenu===null)return;const reset=()=>{closeWorkoutMenus();setOpenExerciseMenu(null);setOpenSetMenu(null);setMenuAnchor(null)};window.addEventListener('resize',reset);window.addEventListener('orientationchange',reset);return()=>{window.removeEventListener('resize',reset);window.removeEventListener('orientationchange',reset)}},[openExerciseMenu,openSetMenu]);
   useEffect(()=>{if(!rirPrompt)return;const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape')setRirPrompt(null)};window.addEventListener('keydown',dismiss);return()=>window.removeEventListener('keydown',dismiss)},[rirPrompt]);
@@ -273,7 +287,7 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
     const exercise=exercises[exerciseIndex];
     const next=draft.map((sets,index)=>index===exerciseIndex?sets.map((set,position)=>position===setIndex?{...set,complete,reps:complete?completedSetReps(set.reps,exercise.repsMin):set.reps}:set):sets),muscle=exercise?.muscleGroup;
     setDraft(next);
-    if(complete){const nextCompleted=next.flat().filter(set=>set.complete).length;if(shouldStartRestTimer(nextCompleted,total)){setTimerSeconds(90);setTimerRunning(true)}else{setTimerSeconds(0);setTimerRunning(false)}setRirPrompt({exerciseIndex,setIndex});}
+    if(complete){restChime.current??=createRestChime();restChime.current.prime();const nextCompleted=next.flat().filter(set=>set.complete).length;if(shouldStartRestTimer(nextCompleted,total)){setTimerSeconds(90);setTimerRunning(true)}else{setTimerSeconds(0);setTimerRunning(false)}setRirPrompt({exerciseIndex,setIndex});}
     if(complete&&muscle){const before=muscleCompletionState(exercises,draft,muscle),after=muscleCompletionState(exercises,next,muscle),prompts:FeedbackPrompt[]=[];if(shouldPromptSoreness(workout.week ?? 1,before.hasCompletedSet,after.hasCompletedSet,promptedSoreness.current.has(muscle))){promptedSoreness.current.add(muscle);prompts.push({muscle,stage:'soreness'})}if(!before.allExercisesComplete&&after.allExercisesComplete&&!promptedCompletion.current.has(muscle)){promptedCompletion.current.add(muscle);prompts.push({muscle,stage:'completion'})}if(prompts.length)setFeedbackQueue((queue)=>[...queue,...prompts])}
   };
 
@@ -392,7 +406,7 @@ export function WorkoutLogger({ workout, userId, catalog, historyByExercise={} }
 
   return <div className="native-workout-screen">
     <header className="page-header workout-heading native-page-header"><div>{workoutHeadingCopy(workout).eyebrow && <div className="eyebrow">{workoutHeadingCopy(workout).eyebrow}</div>}<h1>{workoutHeadingCopy(workout).title}</h1><p>{workoutHeadingCopy(workout).subtitle}</p></div><span className="status native-badge tint">{completed}/{total} sets</span></header>
-    <section className={`surface timer-card rest-panel native-rest-timer ${timerRunning?'running':''}`} aria-label="Rest timer"><span className="native-rest-progress" style={{ inlineSize:`${Math.max(0,Math.min(100,(timerSeconds / 90) * 100))}%` }} aria-hidden="true"/><div className="rest-status"><span className="rest-icon" aria-hidden>◷</span><div><small>{timerRunning?'RESTING':'REST TIMER'}</small><strong aria-live="polite">{Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2,'0')}</strong></div></div><div className="rest-controls"><button className="quiet compact" onClick={() => { setTimerSeconds(90); setTimerRunning(true); }}>{timerSeconds===0?'Start':'Reset'}</button><button className="quiet compact" onClick={() => setTimerRunning(value => !value)} disabled={timerSeconds === 0}>{timerRunning ? 'Pause' : 'Resume'}</button><button className="timer-dismiss" aria-label="Clear rest timer" onClick={() => { setTimerSeconds(0); setTimerRunning(false); }} disabled={timerSeconds === 0}>Clear</button></div></section>
+    <section className={`surface timer-card rest-panel native-rest-timer ${timerRunning?'running':''}`} aria-label="Rest timer"><span className="native-rest-progress" style={{ inlineSize:`${Math.max(0,Math.min(100,(timerSeconds / 90) * 100))}%` }} aria-hidden="true"/><div className="rest-status"><span className="rest-icon" aria-hidden>◷</span><div><small>{timerRunning?'RESTING':'REST TIMER'}</small><strong aria-live="polite">{Math.floor(timerSeconds / 60)}:{String(timerSeconds % 60).padStart(2,'0')}</strong></div></div><div className="rest-controls"><button className="rest-control primary-tint" onClick={() => { restChime.current??=createRestChime(); restChime.current.prime(); setTimerSeconds(90); setTimerRunning(true); }}>{timerSeconds===0?'Start':'Reset'}</button><button className="rest-control" onClick={() => { restChime.current??=createRestChime(); restChime.current.prime(); setTimerRunning(value => !value); }} disabled={timerSeconds === 0}>{timerRunning ? 'Pause' : 'Resume'}</button><button className="rest-control timer-dismiss" aria-label="Clear rest timer" onClick={() => { timerCleared.current = true; setTimerSeconds(0); setTimerRunning(false); }} disabled={timerSeconds === 0}><span aria-hidden="true">×</span></button></div></section>
     <div className="exercise-stack">{exercises.map((exercise,exerciseIndex) => <section className="surface exercise-card native-workout-card" key={`${exerciseIndex}:${exercise.name}`}><span className="native-muscle-stripe" aria-hidden="true"/>
       <div className="exercise-title native-exercise-title"><div><div className="cap native-muscle-label">{exercise.muscleGroup ?? 'Exercise'}</div><h2>{exercise.name}</h2><p>{exercise.equipment || 'Bodyweight'}</p>{notes[exerciseIndex]?.trim()&&<p className="exercise-note-preview"><span aria-hidden>✎</span>{notes[exerciseIndex].trim()}</p>}</div><details className="exercise-menu native-command-menu native-set-menu-cell native-modal-menu" onToggle={(event)=>{const opened=event.currentTarget.open;setMenuAnchor(opened?anchorFromTrigger(event.currentTarget):null);setOpenExerciseMenu(opened?exerciseIndex:(current)=>current===exerciseIndex?null:current)}}><summary aria-label={`${exercise.name} menu`}>⋮</summary><button type="button" className="menu-backdrop" aria-label={`Close ${exercise.name} menu`} onClick={()=>closeExerciseMenu()}/><div ref={openExerciseMenu===exerciseIndex?exerciseMenuDialogRef:undefined} style={anchoredMenuStyle(openExerciseMenu===exerciseIndex?menuAnchor:null)} tabIndex={-1} className="command-menu-panel" role="dialog" aria-modal="true" aria-label={`${exercise.name} actions`}><div className="command-menu-title">Exercise</div><CommandRow icon="note" label={notes[exerciseIndex]?.trim()?'Edit note':'New note'} onClick={()=>openNoteEditor(exerciseIndex)}/><CommandRow icon="arrowUp" label="Move up" disabled={!workout.templateDayId||reordering||exerciseIndex===0} onClick={()=>void moveExercise(exerciseIndex,-1)}/><CommandRow icon="arrowDown" label="Move down" disabled={!workout.templateDayId||reordering||exerciseIndex===exercises.length-1} onClick={()=>void moveExercise(exerciseIndex,1)}/><CommandRow icon="replace" label="Replace" onClick={()=>openReplacePicker(exerciseIndex)}/><CommandRow icon="history" label="View history" onClick={()=>openHistorySheet(exerciseIndex)}/><CommandRow icon="addSet" label="Add set" onClick={()=>{closeExerciseMenu();addSet(exerciseIndex)}}/><CommandRow icon="soreness" label="Soreness feedback" disabled={!exercise.muscleGroup} onClick={()=>openFeedback(exercise.muscleGroup,'soreness')}/><CommandRow icon="training" label="Training feedback" disabled={!exercise.muscleGroup} onClick={()=>openFeedback(exercise.muscleGroup,'completion')}/><CommandRow icon="trash" tone="danger" label="Remove exercise" onClick={()=>removeExercise(exerciseIndex)}/></div></details></div>
       <div className="set-grid set-grid-header native-set-row" aria-hidden="true"><span /><span>WEIGHT</span><span>REPS</span><span>RIR</span><span>LOG</span></div>
