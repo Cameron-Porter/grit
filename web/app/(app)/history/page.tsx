@@ -8,7 +8,7 @@ export default async function History() {
   const weekAgo = Date.now() - 7 * 86400000;
   const thisWeek = data?.filter(w => new Date(w.completed_at ?? w.created_at).getTime() >= weekAgo).length ?? 0;
   return <main className="content native-page">
-    <header className="native-page-header"><h1>Progress</h1></header>
+    <header className="native-page-header"><div><h1>Progress</h1></div><Link className="native-pill-action" href="/progress">Personal records</Link></header>
     <section className="native-stats-row">
       <div className="native-stat-card"><strong>{thisWeek}</strong><span>sessions</span><small>This week</small></div>
       <div className="native-stat-card"><strong>{data?.length ?? 0}</strong><span>workouts</span><small>All time</small></div>

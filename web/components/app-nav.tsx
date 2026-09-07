@@ -15,16 +15,16 @@ type AppNavLink = {
 export const appNavLinks = [
   { label: 'Workout', href: '/workout', icon: 'dumbbell' },
   { label: 'Programs', href: '/programs', icon: 'programs' },
-  { label: 'Progress', href: '/progress', icon: 'progress' },
+  { label: 'Progress', href: '/history', icon: 'progress' },
   { label: 'Profile', href: '/profile', icon: 'profile' },
 ] as const satisfies readonly AppNavLink[];
 
 /**
  * Routes that belong under a tab but do not share its path prefix, so the tab
- * still reads as current while you are on them. Workout history is reached from
- * the Progress screen and has no tab of its own.
+ * still reads as current while you are on them. Personal records is linked from
+ * workout history rather than having a tab of its own.
  */
-const NESTED_ROUTES: Record<string, readonly string[]> = { '/progress': ['/history'] };
+const NESTED_ROUTES: Record<string, readonly string[]> = { '/history': ['/progress'] };
 
 export function isActiveAppNavLink(pathname: string, href: string): boolean {
   if (pathname === href || pathname.startsWith(`${href}/`)) return true;
@@ -81,7 +81,7 @@ export function AppNav() {
             aria-label={label}
           >
             <AppNavIcon icon={icon} className="app-nav-icon" />
-            <span className="app-nav-label">{label}</span>
+            <span className="sr-only">{label}</span>
             <span className="app-nav-dot" aria-hidden="true" />
           </Link>
         );

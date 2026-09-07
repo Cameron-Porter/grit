@@ -5,25 +5,22 @@ import { appNavLinks, isActiveAppNavLink } from './app-nav';
 
 describe('app navigation state', () => {
   /**
-   * The Progress tab pointed at /history, so /progress - Personal Records - had
-   * no link anywhere in the app and could only be reached by typing the URL.
+   * Personal records has no tab of its own, so it has to be linked from
+   * somewhere: previously nothing in the app pointed at /progress and it could
+   * only be reached by typing the URL. The tab bar stays icon-only by design.
    */
-  it('routes the Progress tab to personal records, not to workout history', () => {
-    expect(appNavLinks.find((link) => link.label === 'Progress')?.href).toBe('/progress');
+  it('links personal records from the pages that lead to it', () => {
+    const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
+    expect(read('app/(app)/history/page.tsx')).toContain('href="/progress"');
+    expect(read('app/(app)/profile/page.tsx')).toContain('href="/progress"');
+    // ...and personal records links back to workout history, so the pair is closed.
+    expect(read('app/(app)/progress/page.tsx')).toContain('href="/history"');
   });
 
-  it('keeps the Progress tab current on workout history, which lives under it', () => {
-    expect(isActiveAppNavLink('/history', '/progress')).toBe(true);
-    expect(isActiveAppNavLink('/history/abc', '/progress')).toBe(true);
-    // ...without leaking onto unrelated tabs.
-    expect(isActiveAppNavLink('/history', '/programs')).toBe(false);
-    expect(isActiveAppNavLink('/history', '/workout')).toBe(false);
-  });
-
-  it('labels every tab visibly, not only for screen readers', () => {
-    const source = readFileSync(resolve(process.cwd(), 'components/app-nav.tsx'), 'utf8');
-    expect(source).toContain('app-nav-label');
-    expect(source).not.toContain('className="sr-only">{label}');
+  it('keeps the Progress tab current while on personal records, which lives under it', () => {
+    expect(isActiveAppNavLink('/progress', '/history')).toBe(true);
+    expect(isActiveAppNavLink('/progress', '/programs')).toBe(false);
+    expect(isActiveAppNavLink('/progress', '/workout')).toBe(false);
   });
 
   it('marks a route and its nested pages active without matching siblings', () => {
@@ -37,7 +34,7 @@ describe('app navigation state', () => {
     expect(appNavLinks.map(({ label, href }) => [label, href])).toEqual([
       ['Workout', '/workout'],
       ['Programs', '/programs'],
-      ['Progress', '/progress'],
+      ['Progress', '/history'],
       ['Profile', '/profile'],
     ]);
   });
