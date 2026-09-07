@@ -442,20 +442,41 @@ function sessionPerf(session: SessionPerformance): Perf {
   };
 }
 
+// HV-044: when the rep ceiling was reached but reported effort blocked the load
+// increase, say so. The generic "aim for N next session" text repeats a target
+// the lifter has just hit and gives no clue why the weight is not moving.
+function effortHoldReason(reps: number, ceiling: number, weight: number, prescribedRir: number): string {
+  return `${reps}/${ceiling} reps at ${weight} lb, but reported RIR was below the ${prescribedRir} target — load holds until the same reps come back at ${prescribedRir}+ RIR.`;
+}
+
+// ─── HV-044: missing effort data must not block progression ───────────────
+//
+// ST-013 required *complete* RIR evidence before an intermediate or advanced
+// lifter could add load, and treated no evidence as disqualifying. Reporting
+// RIR is optional in the UI — the prompt has an explicit "Not sure — skip" —
+// so this silently froze progression: an advanced lifter who topped the rep
+// range was told to "aim for 12 next session" having just done 12, with no
+// mention of RIR anywhere in the reason. Repeating that identical session
+// three times then tripped plateau detection and *deloaded* them ~22%, for
+// failing to progress in a way the engine itself prevented. A beginner with
+// byte-identical history advanced normally.
+//
+// The intent was right — do not add load when the last session was already
+// harder than prescribed — but absence of evidence was being read as evidence
+// of maximal effort. It now holds only on positive evidence of over-reach,
+// which is also how RP autoregulates: their app progresses by default and uses
+// feedback to pull back, rather than refusing to move without it.
 function reportedEffortAllowsLoad(
   session: SessionPerformance,
   prescribedRir: number,
-  experienceLevel: ExperienceLevel,
 ): boolean {
-  const workingSets = session.sets;
-  const reported = workingSets.filter((set) => set.rir !== undefined);
-  // ST-013: intermediate/advanced load increases require complete effort
-  // evidence. Beginners retain the simpler whole-prescription rep gate so
-  // linear progression remains usable while they learn RIR reporting.
-  if (reported.length === 0) return experienceLevel === 'beginner';
-  // Partial reporting is not enough to certify the whole prescription.
-  return reported.length === workingSets.length
-    && reported.every((set) => (set.rir as number) >= prescribedRir);
+  const reported = session.sets.filter((set) => set.rir !== undefined);
+  // No effort data at all — defer to the rep-ceiling gate, which already
+  // requires the lifter to have topped the prescribed range to get here.
+  if (reported.length === 0) return true;
+  // Sets that were not reported cannot testify either way, so judge on the
+  // ones that were rather than discarding partial evidence entirely.
+  return reported.every((set) => (set.rir as number) >= prescribedRir);
 }
 
 // ST-013/ST-015: NSCA double progression assumes a completed straight-set
@@ -975,7 +996,7 @@ export function recommendProgression(
 
   const last = sessions[0];
   const lastPerf = sessionPerf(last);
-  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir, ctx.experienceLevel)
+  const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir)
     && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax, isBodyweight);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);
@@ -1298,9 +1319,12 @@ function evaluateBeginnerLinear(
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
   const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
   const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
-  const reason = repProgress
-    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
-    : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
+  const heldByEffort = lastPerf.completedReps >= effectiveRepsMax && !effortAllowsLoad;
+  const reason = heldByEffort
+    ? effortHoldReason(lastPerf.maxReps, effectiveRepsMax, lastPerf.weight, prescription.rir)
+    : repProgress
+      ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
+      : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
   return {
     ...base,
@@ -1407,9 +1431,12 @@ function evaluateDoubleProgression(
   // restating the full ceiling every week.
   const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
   const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
-  const reason = repProgress
-    ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
-    : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
+  const heldByEffort = lastPerf.completedReps >= effectiveRepsMax && !effortAllowsLoad;
+  const reason = heldByEffort
+    ? effortHoldReason(lastPerf.maxReps, effectiveRepsMax, lastPerf.weight, prescription.rir)
+    : repProgress
+      ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
+      : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
 
   return {
     ...base,

@@ -304,23 +304,62 @@ describe('ST-013 — whole-prescription and actual-effort load gate', () => {
     expect(rec.nextWeight).toBe(100);
   });
 
-  it('holds an intermediate load increase when no actual RIR was reported', () => {
+  /**
+   * HV-044 SUPERSEDES ST-013 here. This used to assert a HOLD: an intermediate
+   * or advanced lifter had to report RIR on every set before load could move.
+   * Reporting is optional in the UI ("Not sure - skip"), so that silently froze
+   * progression - the lifter was told to aim for the ceiling they had just hit,
+   * and three such identical sessions then tripped plateau detection and
+   * deloaded them ~22% for failing to progress in a way the engine prevented.
+   * Absence of optional evidence is no longer read as evidence of max effort.
+   */
+  it('advances an intermediate who topped the range but reported no RIR', () => {
     const sessions: SessionPerformance[] = [{
       date: '2026-08-13',
       sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
+    expect(rec.action).toBe('ADVANCE_LOAD');
+    expect(rec.nextWeight).toBeGreaterThan(100);
+  });
+
+  it('still holds on positive evidence that the session was already too hard', () => {
+    // Every set reported below the prescribed 2 RIR - real evidence of
+    // over-reach, which is what the gate is actually for.
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12, rir: 0 })),
     }];
     const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
     expect(rec.action).toBe('HOLD');
     expect(rec.nextWeight).toBe(100);
   });
 
-  it('holds when effort reporting is only partial', () => {
+  /**
+   * HV-044: partial reporting used to be discarded entirely and treated as a
+   * hold. Missing a single set's prompt should not outweigh the sets that were
+   * reported, so the reported ones decide it.
+   */
+  it('judges partial effort reporting on the sets that were actually reported', () => {
     const sessions: SessionPerformance[] = [{
       date: '2026-08-13',
       sets: [
         { weight: 100, reps: 12, rir: 2 },
         { weight: 100, reps: 12 },
         { weight: 100, reps: 12, rir: 2 },
+      ],
+    }];
+    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
+    expect(rec.action).toBe('ADVANCE_LOAD');
+  });
+
+  it('still holds when a reported set among partials shows over-reach', () => {
+    const sessions: SessionPerformance[] = [{
+      date: '2026-08-13',
+      sets: [
+        { weight: 100, reps: 12, rir: 2 },
+        { weight: 100, reps: 12 },
+        { weight: 100, reps: 12, rir: 0 },
       ],
     }];
     const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
