@@ -1,4 +1,5 @@
 import { getSlotRoleConfigs } from '../data/slotRoleConfig';
+import { applyMuscleRepBand } from '../data/muscleRepBands';
 import { getLandmark } from '../utils/volumeLandmarks';
 import { capSetsPerExercise, rampSets, rirForWeek } from './volumeRamp';
 import type {
@@ -346,8 +347,9 @@ export function buildDaySlots(
       role: spec.role as SlotRole,
       priority,
       sets,
-      repsMin: config.repsMin,
-      repsMax: config.repsMax,
+      // HV-043: the role/priority band is muscle-blind; raise it where the
+      // muscle cannot be trained productively that low (calves, abs, forearms).
+      ...applyMuscleRepBand(spec.muscle, config.repsMin, config.repsMax),
       rir,
       sortOrder: result.length,
     });
