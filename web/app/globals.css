@@ -685,3 +685,13 @@ button,.button-link,.primary,.secondary,.quiet,.danger,.native-pill-action,.nati
    lists rather than actions, so they keep their leading alignment. */
 .command-row,.sheet-action-row,.custom-select-trigger,.native-add-set-row,.exercise-order-actions .sheet-action-row{text-align:start}
 .custom-select-trigger{text-align:left}
+
+/* ─── Tab bar labels ────────────────────────────────────────────────────────
+   The labels were sr-only, so the bar was four unlabelled icons and the
+   Personal Records screen was effectively unfindable. Apple and Material both
+   label a tab bar; the row already lays out as icon-over-label. */
+.app-nav{height:60px}
+.app-nav a{gap:3px}
+.app-nav-label{font-size:10px;font-weight:700;letter-spacing:.2px;line-height:1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-nav a.active .app-nav-label{color:var(--tab-active)}
+@media(max-width:340px){.app-nav-label{font-size:9px}}
