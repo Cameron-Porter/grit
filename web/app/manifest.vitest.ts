@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import manifest from './manifest';
 
 describe('PWA manifest', () => {
-  it('opens straight into the active workout without locking device orientation', () => {
+  it('launches at the static entry route without locking device orientation', () => {
     const value = manifest();
 
-    expect(value.start_url).toBe('/workout');
+    // '/' paints instantly from cache and routes on to the workout; '/workout'
+    // is force-dynamic and left a cold launch on a black screen.
+    expect(value.start_url).toBe('/');
     expect(value.orientation).toBeUndefined();
   });
 

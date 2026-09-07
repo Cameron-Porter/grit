@@ -5,12 +5,25 @@ import { describe, expect, it } from 'vitest';
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
 describe('authenticated landing route contract', () => {
-  it('routes the root app entry straight into the active workout', () => {
-    expect(read('app/page.tsx')).toContain("redirect('/workout')");
+  /**
+   * Landing on the active workout is unchanged. What changed is the first frame:
+   * the entry route was a server redirect to a force-dynamic page, so a cold
+   * launch had no HTML to paint until a server function booted - seconds of the
+   * PWA's black background colour. The entry is now the static route, which the
+   * CDN and the service worker precache can serve instantly.
+   */
+  it('routes the root app entry into the active workout from a statically painted shell', () => {
+    const page = read('app/page.tsx');
+    expect(page).toContain('LoadingScreen');
+    expect(page).not.toContain("redirect('/workout')");
+    expect(read('app/enter-app.tsx')).toContain("router.replace('/workout')");
   });
 
-  it('sends the PWA start_url and error-boundary fallback to the active workout too', () => {
-    expect(read('app/manifest.ts')).toContain("start_url: '/workout'");
+  it('launches the PWA at the static entry route and precaches it', () => {
+    expect(read('app/manifest.ts')).toContain("start_url: '/'");
+    // Precaching the shell is what makes that first paint instant offline/cold.
+    expect(read('public/sw.js')).toContain("const SHELL='/'");
+    expect(read('public/sw.js')).toContain('navigationPreload');
     expect(read('app/(app)/error.tsx')).toContain('href="/workout"');
   });
 
