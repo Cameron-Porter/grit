@@ -204,6 +204,10 @@ function roundToRealisticIncrement(equipment: string | null | undefined): number
 // the reps axis forever.
 const EQUIPMENT_LIMITED_REP_BUFFER = 5;
 
+// HV-042: default ceiling on how large a single load jump may be as a share
+// of the current working weight, for categories that do not set their own.
+const MAX_PROPORTIONAL_JUMP = 0.10;
+
 interface LoadIncrementResult {
   amount: number;
   // True when loadIncrementStrategy is 'equipment_limited' and even the
@@ -221,7 +225,8 @@ export function getLoadIncrementAmount(
   if (currentWeight <= 0) return { amount: granularity, equipmentLimited: false };
 
   if (profile.loadIncrementStrategy === 'fixed_increment') {
-    return { amount: granularity, equipmentLimited: false };
+    // HV-042 applies here too: a 10 lb stack pin is a third of a 30 lb setting.
+    return gateProportionalJump(granularity, currentWeight, profile);
   }
   if (profile.loadIncrementStrategy === 'percentage_based') {
     // Rounded to 4 decimals before roundToIncrement to correct binary
@@ -229,13 +234,36 @@ export function getLoadIncrementAmount(
     // 12.5) that would otherwise push an exact tie-breaking case like
     // 12.5/5 = 2.5 to the wrong side of Math.round.
     const raw = Math.round(currentWeight * (profile.targetIncrementPct ?? 0.025) * 10000) / 10000;
-    return { amount: Math.max(granularity, roundToIncrement(raw, granularity)), equipmentLimited: false };
+    const amount = Math.max(granularity, roundToIncrement(raw, granularity));
+    return gateProportionalJump(amount, currentWeight, profile);
   }
   // equipment_limited ('none' — bodyweight — never reaches this function).
-  const asPct = granularity / currentWeight;
-  if (asPct <= (profile.maxAcceptableEquipmentLimitedPct ?? 0.10)) {
-    return { amount: granularity, equipmentLimited: false };
-  }
+  return gateProportionalJump(granularity, currentWeight, profile);
+}
+
+// ─── HV-042: no jump may be a large fraction of the current load ───────────
+//
+// The proportional gate used to apply only to the equipment_limited
+// categories (isolation, cable_accessory). Every other category took the
+// smallest hardware step regardless of how big that was relative to the
+// weight on the bar — so a dumbbell press at 30 lb took the 5 lb dumbbell
+// step, a 17% jump, every time the rep ceiling was hit.
+//
+// RP's own progression guidance is that load should climb slowly and that
+// dumbbells specifically should not climb every week: "Maybe 5lb on the bar
+// every week, maybe increasing dumbbell weights every 2 or 3 weeks"
+// (rpstrength.com, "Progressing for Hypertrophy"), because volume - not load
+// - is the primary hypertrophy driver. Holding load and letting reps
+// accumulate until the same step is a smaller share of the total is exactly
+// how that every-2-or-3-weeks cadence arises, so the gate now applies to
+// every loadable category rather than two of them.
+function gateProportionalJump(
+  amount: number,
+  currentWeight: number,
+  profile: ExerciseProgressionProfile,
+): LoadIncrementResult {
+  const ceiling = profile.maxAcceptableEquipmentLimitedPct ?? MAX_PROPORTIONAL_JUMP;
+  if (amount / currentWeight <= ceiling) return { amount, equipmentLimited: false };
   return { amount: 0, equipmentLimited: true };
 }
 
