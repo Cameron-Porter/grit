@@ -2,6 +2,7 @@ import type { ExerciseType, ExperienceLevel, SlotRole } from '../types/program';
 import type { ExerciseProgressionProfile } from '../data/exerciseProgressionProfiles';
 import { PROGRESSION_CATEGORY_PROFILES } from '../data/exerciseProgressionProfiles';
 import { rirForWeek } from './volumeRamp';
+import { loadIncrementFor } from '../data/loadIncrements';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -187,12 +188,13 @@ export interface ProgressionRecommendation {
 // strength-progression guidance that a load jump should be the smallest
 // increment that still represents genuine progress.
 
-// Sub-100lb plates/dumbbells commonly step in 2.5 lb pairs; 100lb+ gym
-// plates step in 5 lb — the realistic hardware granularity used both to size
-// a percentage-based jump and to know what "the smallest available
-// increment" means for equipment-limited exercises.
-function roundToRealisticIncrement(weight: number): number {
-  return weight < 100 ? 2.5 : 5;
+// HV-041: hardware granularity is a property of the equipment, not of how
+// heavy the weight happens to be. This used to return 2.5 below 100 lb and 5
+// above, which prescribed loads that do not exist — most visibly a 77.5 lb
+// dumbbell. See src/data/loadIncrements.ts for the per-equipment steps and
+// their sourcing.
+function roundToRealisticIncrement(equipment: string | null | undefined): number {
+  return loadIncrementFor(equipment) || 5;
 }
 
 // ST-011: an equipment-limited exercise (isolation/cable_accessory) that's
@@ -213,12 +215,13 @@ interface LoadIncrementResult {
 export function getLoadIncrementAmount(
   currentWeight: number,
   profile: ExerciseProgressionProfile,
+  equipment?: string | null,
 ): LoadIncrementResult {
-  if (currentWeight <= 0) return { amount: roundToRealisticIncrement(0), equipmentLimited: false };
-  const granularity = roundToRealisticIncrement(currentWeight);
+  const granularity = roundToRealisticIncrement(equipment);
+  if (currentWeight <= 0) return { amount: granularity, equipmentLimited: false };
 
   if (profile.loadIncrementStrategy === 'fixed_increment') {
-    return { amount: 5, equipmentLimited: false };
+    return { amount: granularity, equipmentLimited: false };
   }
   if (profile.loadIncrementStrategy === 'percentage_based') {
     // Rounded to 4 decimals before roundToIncrement to correct binary
@@ -275,9 +278,9 @@ function heldOrAdjustedWeight(
 // HV-035/ST-012: reductionPct is now caller-supplied — hypertrophy and
 // strength deloads use different percentages (see the deload branches
 // below) instead of a single baked-in flat 50%.
-function deloadWeightFor(lastWeight: number, isBodyweight: boolean, reductionPct: number): number {
+function deloadWeightFor(lastWeight: number, isBodyweight: boolean, reductionPct: number, equipment?: string | null): number {
   return heldOrAdjustedWeight(lastWeight, isBodyweight, (w) => {
-    const g = roundToRealisticIncrement(w);
+    const g = roundToRealisticIncrement(equipment);
     return Math.max(roundToIncrement(w * (1 - reductionPct), g), g);
   });
 }
@@ -292,10 +295,11 @@ function reducedWeightFor(
   lastWeight: number,
   isBodyweight: boolean,
   profile: ExerciseProgressionProfile,
+  equipment?: string | null,
 ): { weight: number; amount: number } {
   if (isBodyweight) return { weight: lastWeight, amount: 0 };
-  const g = roundToRealisticIncrement(lastWeight);
-  const { amount: gatedAmount } = getLoadIncrementAmount(lastWeight, profile);
+  const g = roundToRealisticIncrement(equipment);
+  const { amount: gatedAmount } = getLoadIncrementAmount(lastWeight, profile, equipment);
   const amount = Math.max(gatedAmount, g);
   return { weight: Math.max(roundToIncrement(lastWeight - amount, g), g), amount };
 }
@@ -604,7 +608,7 @@ export function recommendProgression(
   const baselineWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
   const { amount: increment, equipmentLimited } = isBodyweight
     ? { amount: 0, equipmentLimited: false }
-    : getLoadIncrementAmount(baselineWeight, profile);
+    : getLoadIncrementAmount(baselineWeight, profile, prescription.equipment);
 
   // Bug fix: this used to read ctx.trainingPhase, a field no call site ever
   // populates, so cut-phase behavior below was unreachable in production.
@@ -833,7 +837,7 @@ export function recommendProgression(
     const lastWeight = sessions.length > 0 ? sessionPerf(sessions[0]).weight : 0;
     const deloadLoadReductionPct = isStrength ? 0.20 : 0.225;
     // HV-028: bodyweight has no load to reduce — see heldOrAdjustedWeight.
-    const deloadWeight = deloadWeightFor(lastWeight, isBodyweight, deloadLoadReductionPct);
+    const deloadWeight = deloadWeightFor(lastWeight, isBodyweight, deloadLoadReductionPct, prescription.equipment);
     if (isStrength) {
       const scheduledDeloadSets = Math.max(2, Math.ceil(baseSetCount * 0.60));
       const recoverySets = sessions.length > 0 ? Math.max(1, Math.ceil(sessions[0].sets.length * 0.5)) : scheduledDeloadSets;
@@ -912,7 +916,7 @@ export function recommendProgression(
   if (repeatedRecoveryFailure) {
     const lastPerf = sessionPerf(sessions[0]);
     const recoveryReductionPct = isStrength ? 0.20 : 0.225;
-    const recoveryWeight = deloadWeightFor(lastPerf.weight, isBodyweight, recoveryReductionPct);
+    const recoveryWeight = deloadWeightFor(lastPerf.weight, isBodyweight, recoveryReductionPct, prescription.equipment);
     const recoverySets = Math.max(1, Math.ceil(sessions[0].sets.length * 0.5));
     return {
       ...base,
@@ -959,7 +963,7 @@ export function recommendProgression(
     // needs the same load relief a scheduled one gets. HV-028: bodyweight
     // has no load to reduce.
     const badSessionReductionPct = isStrength ? 0.20 : 0.225;
-    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, badSessionReductionPct);
+    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, badSessionReductionPct, prescription.equipment);
     return {
       ...base,
       nextWeight: deloadWeight,
@@ -996,7 +1000,7 @@ export function recommendProgression(
     const ceilingHit = lastPerf.completedReps >= effectiveRepsMax && lastPerf.weight > 0;
     if (ceilingHit && effortAllowsLoad && !isBodyweight && !volumeAdjustment.holdLoad && !volumeRecentlyIncreased) {
       const CUT_SPEED_FACTOR = 0.65;
-      const granularity = roundToRealisticIncrement(lastPerf.weight);
+      const granularity = roundToRealisticIncrement(prescription.equipment);
       const cutIncrement = roundToIncrement(increment * CUT_SPEED_FACTOR, granularity);
       if (cutIncrement > 0) {
         const nextWeight = roundToIncrement(lastPerf.weight + cutIncrement, granularity);
@@ -1132,7 +1136,7 @@ function resolveCeilingHit(
         reason: `Smallest available increment would be a >${Math.round((profile.maxAcceptableEquipmentLimitedPct ?? 0.10) * 100)}% jump at ${lastPerf.weight} lb — holding load, extending reps instead. Aim for ${nextTarget} next session.`,
       };
     }
-    const forced = roundToRealisticIncrement(lastPerf.weight);
+    const forced = roundToRealisticIncrement(prescription.equipment);
     const nextWeight = roundToIncrement(lastPerf.weight + forced, forced);
     return {
       ...base,
@@ -1149,7 +1153,7 @@ function resolveCeilingHit(
   // heavier weights), and rounding "weight + increment" to the nearest
   // *increment* step would drift the result to a value that isn't actually
   // weight + increment when weight isn't itself aligned to that step.
-  const nextWeight = roundToIncrement(lastPerf.weight + increment, roundToRealisticIncrement(lastPerf.weight));
+  const nextWeight = roundToIncrement(lastPerf.weight + increment, roundToRealisticIncrement(prescription.equipment));
   return {
     ...base,
     nextWeight,
@@ -1204,7 +1208,7 @@ function evaluateBeginnerLinear(
   if (stalls >= stallThreshold && !volumeRecentlyIncreased) {
     // HV-035: category-aware load reduction, same as the scheduled-deload
     // branch. HV-028: bodyweight has no load to reduce.
-    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225);
+    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225, prescription.equipment);
     return {
       ...base,
       nextWeight: deloadWeight,
@@ -1228,7 +1232,7 @@ function evaluateBeginnerLinear(
 
     if (twoConsecutiveBelow) {
       // HV-028: bodyweight has no load to reduce.
-      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile);
+      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile, prescription.equipment);
       return {
         ...base,
         nextWeight,
@@ -1311,7 +1315,7 @@ function evaluateDoubleProgression(
     // reason text already claims a "deload" (retest at load). The
     // true-plateau branch below has its own distinct 10%-reduction
     // recommendation, unchanged. HV-028: bodyweight has no load to reduce.
-    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225);
+    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225, prescription.equipment);
     return {
       ...base,
       nextWeight: fatigueLikely ? deloadWeight : lastPerf.weight,
@@ -1336,7 +1340,7 @@ function evaluateDoubleProgression(
 
     if (twoConsecutiveBelow) {
       // HV-028: bodyweight has no load to reduce.
-      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile);
+      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile, prescription.equipment);
       return {
         ...base,
         nextWeight,
