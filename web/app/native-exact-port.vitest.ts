@@ -66,6 +66,25 @@ describe('exact native app port contracts', () => {
     expect(css).toContain('.command-row,.sheet-action-row,.custom-select-trigger');
   });
 
+  /**
+   * Alpine's informational role is correct but almost never on screen, which left
+   * every page monochrome. It also carries one small piece of decoration per
+   * screen - a short rule under the page title, a ring on the profile avatar, the
+   * frame on full-screen empty/loading states - so the second colour is always
+   * present without ever becoming a signal.
+   */
+  it('gives every screen one small piece of alpine decoration', () => {
+    const css = read('app/globals.css');
+    expect(css).toContain(":is(.page-header,.native-page-header):not(.native-profile-hero) h1::after");
+    // Profile's title sits beside the avatar, so it takes the ring instead.
+    expect(css).toContain('.native-profile-hero .native-avatar{box-shadow');
+    // Screens with no header at all still get one.
+    expect(css).toContain('.native-empty-state>div{border-color');
+    expect(css).toContain('.loading-plate-icon{box-shadow');
+    // Decoration only: it must not be the sole carrier of any state.
+    expect(css).toContain('--secondary-accent');
+  });
+
   it('uses the shared Blaze & Alpine brand palette without RP/red or jade polish tokens', () => {
     const css = read('app/globals.css');
     // Intentional brand update: these values now match the my-website palette.

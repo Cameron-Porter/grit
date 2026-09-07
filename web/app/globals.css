@@ -654,7 +654,7 @@ body,.native-gradient-background{background:var(--bg)}
 .native-profile-page .native-profile-hero .eyebrow{color:var(--muted)}
 .native-profile-page>.settings-list{border-top-color:var(--glass-border)!important}
 .native-profile-page>.settings-list .native-settings-row:first-child strong{color:var(--text)}
-.program-card-menu-toggle{color:var(--muted)}
+.program-card-menu-toggle{color:var(--muted)!important}
 .day-preview-card .rir-target{background:color-mix(in srgb,var(--muted) 12%,transparent);color:var(--muted)}
 
 /* 3. Focus is an interaction affordance, not information, so it takes the tint
@@ -696,3 +696,21 @@ button,.button-link,.primary,.secondary,.quiet,.danger,.native-pill-action,.nati
 /* The avatar is either a provider photo or an initial, so it needs to work as
    both: same circle, image cropped to fill rather than stretched. */
 img.native-avatar{object-fit:cover;padding:0;border:1px solid var(--card-border)}
+
+/* ─── Alpine as page decor ──────────────────────────────────────────────────
+   Alpine's informational role is real but almost never on screen, which left
+   the app monochrome. This gives it one small, guaranteed appearance per
+   screen: a short rule under the page title. It is decoration - purely
+   presentational, aria-hidden by virtue of being a pseudo-element, and never
+   the only carrier of any meaning - so it adds colour without becoming a
+   signal that competes with blaze.
+
+   Kept off the profile hero, where the title sits beside the avatar and a rule
+   under it reads as a stray underline rather than a motif. */
+:is(.page-header,.native-page-header):not(.native-profile-hero) h1::after{content:'';display:block;width:28px;height:3px;margin-top:10px;border-radius:2px;background:var(--secondary-accent)}
+/* The hero gets its colour from the ring around the avatar instead. */
+.native-profile-hero .native-avatar{box-shadow:0 0 0 2px color-mix(in srgb,var(--secondary-accent) 55%,transparent)}
+/* Empty and loading states are whole screens with no header, so they carry it
+   on their icon frame instead of showing no alpine at all. */
+.native-empty-state>div{border-color:color-mix(in srgb,var(--secondary-accent) 42%,var(--glass-border))}
+.loading-plate-icon{box-shadow:0 6px 20px rgba(0,0,0,.35),0 0 0 2px color-mix(in srgb,var(--secondary-accent) 45%,transparent)}
