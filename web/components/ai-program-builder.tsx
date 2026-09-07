@@ -1,9 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { saveAiProgram } from '@/app/(app)/programs/ai/actions';
-import { AI_PROVIDER_STORAGE, GEMINI_KEY_STORAGE, GEMINI_MODEL_STORAGE, OPENAI_KEY_STORAGE, OPENAI_MODEL_STORAGE, type AiProvider } from './ai-key-settings';
 import { AI_PROGRAM_SCHEMA, AI_SPLITS, MUSCLES, buildAiProgramBase, buildAiPrompt, validateAiSelection, type AiBuilderInput, type AiCatalogExercise, type AiProgramSelection } from '@/lib/ai/program';
-import { requestStructuredProgram } from '@/lib/ai/providers';
 import { AI_PROGRAM_DRAFT_KEY } from '@/lib/ai/draft';
 import { CustomSelect } from './custom-select';
 type HistoryItem = { exerciseName: string; uses: number; lastWeight: number | null };
@@ -16,17 +14,17 @@ export function AiProgramBuilder({ experienceLevel, initialPriorities, catalog, 
   const [error, setError] = useState<string | null>(null);
   const update = <K extends keyof AiBuilderInput>(key: K, value: AiBuilderInput[K]) => { setInput(current => ({ ...current, [key]: value })); setSelection(null); };
   const generate = async () => {
-    const provider = (localStorage.getItem(AI_PROVIDER_STORAGE) as AiProvider) || 'openai';
-    const apiKey = localStorage.getItem(provider === 'openai' ? OPENAI_KEY_STORAGE : GEMINI_KEY_STORAGE)?.trim();
-    const model = localStorage.getItem(provider === 'openai' ? OPENAI_MODEL_STORAGE : GEMINI_MODEL_STORAGE) ?? (provider === 'openai' ? 'gpt-5.6-luna' : 'gemini-3.6-flash');
-    if (!apiKey) { setError(`Add and save your ${provider === 'openai' ? 'OpenAI' : 'Gemini'} API key in Profile first.`); return; }
     setGenerating(true); setError(null); setSelection(null);
     try {
       const program = buildAiProgramBase(input);
       if (!program.validation.valid) throw new Error(program.validation.issues.find(issue => issue.severity === 'error')?.message ?? 'This configuration does not pass the GRIT rules engine.');
-      const missingMuscle=program.days.flatMap(day=>day.slots).find(slot=>!catalog.some(exercise=>exercise.muscleGroup===slot.muscle));if(missingMuscle)throw new Error(`Your selected equipment has no eligible ${missingMuscle.muscle} exercise. Update Equipment availability in Profile.`);
-      const output = await requestStructuredProgram({ provider, apiKey, model, prompt: buildAiPrompt(input, program, catalog, history), schema: AI_PROGRAM_SCHEMA });
-      const validated=validateAiSelection(program, JSON.parse(output) as AiProgramSelection, catalog);setSelection(validated);sessionStorage.setItem(AI_PROGRAM_DRAFT_KEY,JSON.stringify({input,selection:validated}));window.location.assign('/programs/ai/review');
+      const missingMuscle=program.days.flatMap(day=>day.slots).find(slot=>!catalog.some(exercise=>exercise.muscleGroup===slot.muscle));if(missingMuscle)throw new Error(`Your selected equipment has no ${missingMuscle.muscle} exercises. Add equipment in Profile or pick a different split.`);
+      // Generation runs on the server against a shared key; nothing about the
+      // provider or its credentials exists in the browser any more.
+      const response = await fetch('/api/ai/program', { method:'POST', headers:{ 'content-type':'application/json' }, body: JSON.stringify({ input, catalog, history }) });
+      const body = await response.json() as { output?:string; error?:string };
+      if (!response.ok || !body.output) throw new Error(body.error ?? 'Program generation failed.');
+      const validated=validateAiSelection(program, JSON.parse(body.output) as AiProgramSelection, catalog);setSelection(validated);sessionStorage.setItem(AI_PROGRAM_DRAFT_KEY,JSON.stringify({input,selection:validated}));
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Program generation failed.'); } finally { setGenerating(false); }
   };
   const preview = selection ? buildAiProgramBase(input) : null;
@@ -42,7 +40,7 @@ export function AiProgramBuilder({ experienceLevel, initialPriorities, catalog, 
         <label>Days per week<CustomSelect value={String(input.daysPerWeek)} onChange={value => update('daysPerWeek', Number(value))} options={Array.from({length:7},(_,index)=>({value:String(index+1),label:`${index+1} ${index===0?'day':'days'} per week`}))} /></label>
       </div>
       <details className="priority-editor"><summary>Muscle priorities</summary><div className="priority-grid">{MUSCLES.map(muscle => <label key={muscle}>{muscle}<CustomSelect value={input.priorities[muscle] ?? 'maintain'} onChange={value => update('priorities', { ...input.priorities, [muscle]: value as 'maintain' | 'grow' | 'emphasize' })} options={[{value:'maintain',label:'Maintain'},{value:'grow',label:'Grow'},{value:'emphasize',label:'Emphasize'}]} /></label>)}</div></details>
-      <p className="privacy-note">Generation sends these choices, eligible exercise names, and a compact exercise-history summary directly from this browser to your selected provider. Your API key never passes through GRIT or Supabase.</p>
+      <p className="privacy-note">Generation sends these choices, eligible exercise names, and a compact exercise-history summary from GRIT&rsquo;s server to Google Gemini. No workout logs, personal records, or account details are included.</p>
       {error && <p className="notice error" role="alert">{error}</p>}
       <button className="primary full" type="button" disabled={generating || !input.name.trim()} onClick={generate}>{generating ? 'Generating and validating…' : 'Generate program'}</button>
     </section>

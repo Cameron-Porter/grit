@@ -126,7 +126,6 @@ describe('exact native app port contracts', () => {
     expect(profile).toContain('native-settings-group');
     expect(profile).toContain('auto_match_weight');
     expect(profile).toContain('autoMatchWeight');
-    expect(profile).toContain('<AiKeySettings/>');
   });
 
   it('ports workout surfaces to native workout card and sticky finish patterns', () => {

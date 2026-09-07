@@ -1,4 +1,4 @@
-import type { AiProvider } from '@/components/ai-key-settings';
+export type AiProvider = 'openai' | 'gemini';
 
 type StructuredRequest = { provider: AiProvider; apiKey: string; model: string; prompt: string; schema: Record<string, unknown> };
 
