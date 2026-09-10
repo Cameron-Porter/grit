@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, finishBlockedMessage, isRetryableSyncFailure, isRetryableSyncStatus, WorkoutSyncError, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -264,6 +264,42 @@ describe('skipping a set', () => {
     expect(payload.exercises[0].sets.every((entry) => entry.completed)).toBe(true);
   });
 
+  it('drops an exercise whose sets were all skipped, so the finish still validates', () => {
+    const exercises = [
+      { name:'Bench', muscleGroup:'Chest', musclePriority:null, equipment:'Barbell', sets:2, repsMin:8, repsMax:12, weight:100, rir:2 },
+      { name:'Fly', muscleGroup:'Chest', musclePriority:null, equipment:'Cable', sets:2, repsMin:8, repsMax:12, weight:20, rir:2 },
+    ];
+    const payload = buildWorkoutPayload({
+      workoutId:'00000000-0000-4000-8000-000000000001', programDayId:null, name:'Day 1', programName:'P', completedAt:'2026-09-05T00:00:00.000Z',
+      exercises, draft:[[set({ complete: true }), set({ complete: true })],[set({ skipped: true }), set({ skipped: true })]],
+      notes:['',''], feedback:{}, muscles:['Chest'],
+    });
+    // An exercise sent with an empty set list is rejected by validateWorkoutPayload, which
+    // made the whole workout unsubmittable once every set of one exercise was skipped.
+    expect(payload.exercises.map((entry) => entry.name)).toEqual(['Bench']);
+    expect(validateWorkoutPayload(payload)).toBe(true);
+  });
+
+  it('keeps each exercise note with its own exercise after a drop', () => {
+    const exercises = [
+      { name:'Fly', muscleGroup:'Chest', musclePriority:null, equipment:'Cable', sets:1, repsMin:8, repsMax:12, weight:20, rir:2 },
+      { name:'Bench', muscleGroup:'Chest', musclePriority:null, equipment:'Barbell', sets:1, repsMin:8, repsMax:12, weight:100, rir:2 },
+    ];
+    const payload = buildWorkoutPayload({
+      workoutId:'00000000-0000-4000-8000-000000000001', programDayId:null, name:'Day 1', programName:'P', completedAt:'2026-09-05T00:00:00.000Z',
+      exercises, draft:[[set({ skipped: true })],[set({ complete: true })]],
+      notes:['fly note','bench note'], feedback:{}, muscles:['Chest'],
+    });
+    expect(payload.exercises).toHaveLength(1);
+    expect(payload.exercises[0]).toMatchObject({ name:'Bench', note:'bench note' });
+  });
+
+  it('points at Skip workout once every set in the session is skipped', () => {
+    expect(canFinishWorkout(0,0)).toBe(false);
+    expect(finishBlockedMessage(0)).toContain('Skip workout');
+    expect(finishBlockedMessage(3)).toBe('Complete every set before finishing.');
+  });
+
   it('does not cascade a weight change into a skipped set', () => {
     const sets = [set({ weight: 100 }), set({ weight: 100, skipped: true }), set({ weight: 100 })];
     const next = cascadeWeight(sets, 0, 145);
@@ -299,5 +335,22 @@ describe('setRepPlan', () => {
 
   it('covers a set added since last session', () => {
     expect(setRepPlan([session([12, 12, 12])], 4, 8, 15)).toHaveLength(4);
+  });
+});
+
+describe('a rejected finish does not stay queued forever', () => {
+  it('treats a rejected payload as final and everything else as retryable', () => {
+    expect(isRetryableSyncStatus(400)).toBe(false);
+    expect(isRetryableSyncStatus(404)).toBe(false);
+    expect(isRetryableSyncStatus(500)).toBe(true);
+    expect(isRetryableSyncStatus(503)).toBe(true);
+  });
+
+  it('keeps retrying a transport failure but not a rejected payload', () => {
+    // A queued payload the server rejects would otherwise replay the same 400 on every
+    // reconnect, leaving the workout permanently unsyncable with no way out.
+    expect(isRetryableSyncFailure(new TypeError('Failed to fetch'))).toBe(true);
+    expect(isRetryableSyncFailure(new WorkoutSyncError('Workout sync failed.',true))).toBe(true);
+    expect(isRetryableSyncFailure(new WorkoutSyncError('Workout data is incomplete or invalid.',false))).toBe(false);
   });
 });

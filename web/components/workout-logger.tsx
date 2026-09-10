@@ -29,7 +29,8 @@ export const weightInputValue = (weight:number):number|'' => weight===0?'':weigh
  * A skipped set is blanked in place rather than deleted: the row stays visible so the
  * skip is legible and reversible, and it drops out of every count, every completion
  * check and the saved payload exactly as a removed set would. Its logged reps/weight
- * are kept so unskipping restores them.
+ * are kept so unskipping restores them. An exercise left with no counted sets drops out of
+ * the payload entirely - see buildWorkoutPayload.
  */
 export const isCountedSet = (set:LoggedSet):boolean => !set.skipped;
 export const countedSets = (sets:LoggedSet[]):LoggedSet[] => sets.filter(isCountedSet);
@@ -60,6 +61,11 @@ export const repRangeLabel = (repsMin:number,repsMax:number) => repsMin === reps
 export const shouldPromptSoreness = (week:number,hadCompletedSet:boolean,hasCompletedSet:boolean,alreadyPrompted:boolean) => week > 1 && !hadCompletedSet && hasCompletedSet && !alreadyPrompted;
 export const shouldStartRestTimer = (completedSets:number,totalSets:number) => completedSets > 0 && completedSets < totalSets;
 export const canFinishWorkout = (completed:number,total:number):boolean => total > 0 && completed === total;
+/* With every set skipped there is nothing to log, so point at Skip workout rather than
+   telling the lifter to complete sets that no longer exist. */
+export const finishBlockedMessage = (total:number):string => total === 0
+  ? 'Every set is skipped. Use Skip workout to close this day out.'
+  : 'Complete every set before finishing.';
 export const canContinueFeedback = (stage:FeedbackPrompt['stage'],values:Feedback):boolean => stage === 'soreness' ? Boolean(values.soreness) : Boolean(values.pump && values.volume && values.jointPain);
 export const clearWorkoutLocalState = (storage:Pick<Storage,'removeItem'>,storageKey:string,queueKey:string) => {
   storage.removeItem(queueKey);
@@ -82,9 +88,23 @@ export const workoutHeadingCopy = (workout:WorkoutPrescription) => ({
 });
 export const buildWorkoutPayload = (args:{workoutId:string;programDayId:string|null;name:string;programName:string;completedAt:string;exercises:ExercisePrescription[];draft:Draft;notes:string[];feedback:Record<string,Feedback>;muscles:string[]}):WebWorkoutPayload => ({
   workoutId:args.workoutId, programDayId:args.programDayId, name:args.name, programName:args.programName, completedAt:args.completedAt,
-  exercises:args.exercises.map((exercise,index) => ({ name:exercise.name,muscleGroup:exercise.muscleGroup,musclePriority:exercise.musclePriority,equipment:exercise.equipment,note:args.notes[index]?.trim() || null,sets:countedSets(args.draft[index] ?? []).map((set) => ({ reps:set.reps,weight:set.weight,reportedRir:set.reportedRir,completed:set.complete,rir:exercise.rir })) })),
+  /* An exercise with every set skipped is dropped whole rather than sent with an empty set
+     list: the payload contract requires at least one set per exercise, so sending it empty
+     fails validation and the finish can never sync. */
+  exercises:args.exercises.map((exercise,index) => ({ name:exercise.name,muscleGroup:exercise.muscleGroup,musclePriority:exercise.musclePriority,equipment:exercise.equipment,note:args.notes[index]?.trim() || null,sets:countedSets(args.draft[index] ?? []).map((set) => ({ reps:set.reps,weight:set.weight,reportedRir:set.reportedRir,completed:set.complete,rir:exercise.rir })) })).filter((exercise) => exercise.sets.length > 0),
   feedback:args.muscles.map((muscle) => ({ muscleGroup:muscle,jointPain:args.feedback[muscle]?.jointPain || null,pump:args.feedback[muscle]?.pump || null,volume:args.feedback[muscle]?.volume || null,soreness:args.feedback[muscle]?.soreness || null })),
 });
+/**
+ * A rejected payload is one the server will never accept, so replaying it from the queue only
+ * repeats the same failure and strands the workout. Those failures drop the queued copy and
+ * surface the error instead; transport and server faults stay queued for the next retry.
+ */
+export class WorkoutSyncError extends Error {
+  readonly retryable:boolean;
+  constructor(message:string,retryable:boolean){ super(message); this.name = 'WorkoutSyncError'; this.retryable = retryable; }
+}
+export const isRetryableSyncStatus = (status:number):boolean => status !== 400 && status !== 404;
+export const isRetryableSyncFailure = (error:unknown):boolean => !(error instanceof WorkoutSyncError) || error.retryable;
 export const skipWorkoutRequest = (dayId:string|null):WorkoutDayUpdate|null => dayId === null ? null : { programDayId:dayId, skipped:true };
 export const closeWorkoutMenus = (root:Pick<Document,'querySelectorAll'>=document) => root.querySelectorAll('details.native-modal-menu[open]').forEach((menu) => menu.removeAttribute('open'));
 export const moveWorkoutItem = <T,>(items:T[],from:number,to:number):T[] => {if(from===to||from<0||to<0||from>=items.length||to>=items.length)return items;const next=[...items],[item]=next.splice(from,1);next.splice(to,0,item);return next};
@@ -339,7 +359,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
   const syncPayload = useCallback(async(payload:WebWorkoutPayload) => {
     const response = await fetch('/api/workouts',{ method:'POST',headers:{ 'content-type':'application/json' },body:JSON.stringify(payload) });
     const result = await response.json() as { saved?:boolean; error?:string };
-    if (!response.ok) throw new Error(result.error ?? 'Workout sync failed.');
+    if (!response.ok) throw new WorkoutSyncError(result.error ?? 'Workout sync failed.',isRetryableSyncStatus(response.status));
     return result;
   },[]);
 
@@ -349,7 +369,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
   });
 
   const finish = async() => {
-    if (!canFinishWorkout(completed,total)) { setMessage('Complete every set before finishing.'); return; }
+    if (!canFinishWorkout(completed,total)) { setMessage(finishBlockedMessage(total)); return; }
     setSyncing(true); setSyncState('syncing'); setMessage(null);
     let payload = buildPayload();
     try {
@@ -358,7 +378,12 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
       else localStorage.setItem(queueKey,JSON.stringify(payload));
       await syncPayload(payload);
       localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); setSyncState('synced'); router.refresh();
-    } catch(error) { setSyncState('queued'); setMessage(error instanceof Error ? error.message : 'Workout sync failed. Your local copy is safe.'); }
+    } catch(error) {
+      const retryable = isRetryableSyncFailure(error);
+      if (!retryable) localStorage.removeItem(queueKey);
+      setSyncState(retryable ? 'queued' : 'local');
+      setMessage(error instanceof Error ? error.message : 'Workout sync failed. Your local copy is safe.');
+    }
     finally { setSyncing(false); }
   };
 
@@ -367,7 +392,11 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
       const raw = localStorage.getItem(queueKey); if (!raw) return;
       setSyncing(true); setSyncState('syncing');
       try { await syncPayload(JSON.parse(raw) as WebWorkoutPayload); localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); setSyncState('synced'); router.refresh(); }
-      catch { setSyncState('queued'); setMessage('Workout sync is still pending. Your local copy is safe.'); }
+      catch(error) {
+        if (isRetryableSyncFailure(error)) { setSyncState('queued'); setMessage('Workout sync is still pending. Your local copy is safe.'); return; }
+        localStorage.removeItem(queueKey); setSyncState('local');
+        setMessage(error instanceof Error ? error.message : 'Workout sync failed. Your local copy is safe.');
+      }
       finally { setSyncing(false); }
     };
     window.addEventListener('online',retry); if (navigator.onLine) void retry();
