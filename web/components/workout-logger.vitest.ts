@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, finishBlockedMessage, isRetryableSyncFailure, isRetryableSyncStatus, WorkoutSyncError, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { historySessionLabels, setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, finishBlockedMessage, isRetryableSyncFailure, isRetryableSyncStatus, WorkoutSyncError, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -13,6 +13,16 @@ describe('createInitialDraft',()=>{
 describe('reps placeholder commits on set completion',()=>{
   it('fills the prescribed rep target when the user never typed a value',()=>expect(completedSetReps(0,8)).toBe(8));
   it('keeps a user-entered rep count untouched',()=>expect(completedSetReps(6,8)).toBe(6));
+  it('logs the per-set target the empty field was showing, not the bottom of the rep range',()=>{
+    const history=[{date:'2026-08-26T18:00:00.000Z',sets:[{weight:0,reps:8},{weight:0,reps:8},{weight:0,reps:8}]}];
+    const plan=setRepPlan(history,3,6,12);
+    expect(plan).toEqual([8,8,9]);
+    // The placeholder and the checked-off value have to be the same number. Passing repsMin
+    // here is the old behaviour: the row showed 8 and logged 6, and that 6 then seeded the
+    // next session's target.
+    expect(completedSetReps(0,plan?.[0] ?? 6)).toBe(8);
+    expect(completedSetReps(0,6)).toBe(6);
+  });
 });
 describe('rep range display',()=>{
   it('collapses a fixed rep target to a single number instead of a 12–12 range',()=>expect(repRangeLabel(12,12)).toBe('12'));
@@ -352,5 +362,21 @@ describe('a rejected finish does not stay queued forever', () => {
     expect(isRetryableSyncFailure(new TypeError('Failed to fetch'))).toBe(true);
     expect(isRetryableSyncFailure(new WorkoutSyncError('Workout sync failed.',true))).toBe(true);
     expect(isRetryableSyncFailure(new WorkoutSyncError('Workout data is incomplete or invalid.',false))).toBe(false);
+  });
+});
+
+describe('history entries on the same date', () => {
+  const session = (date:string) => ({ date, sets:[{ weight:0, reps:8 }] });
+
+  it('appends the time only when a date repeats, so two same-day workouts are distinguishable', () => {
+    const labels = historySessionLabels([session('2026-08-26T18:30:00.000Z'), session('2026-08-26T02:15:00.000Z'), session('2026-08-24T18:00:00.000Z')]);
+    // One entry per logged workout, so a second workout on 8/26 is real data, not a repeat row.
+    expect(labels[0]).not.toBe(labels[1]);
+    expect(labels[0]).toContain(new Date('2026-08-26T18:30:00.000Z').toLocaleDateString());
+    expect(labels[2]).toBe(new Date('2026-08-24T18:00:00.000Z').toLocaleDateString());
+  });
+
+  it('leaves a plain date alone when nothing repeats', () => {
+    expect(historySessionLabels([session('2026-08-26T18:30:00.000Z')])).toEqual([new Date('2026-08-26T18:30:00.000Z').toLocaleDateString()]);
   });
 });
