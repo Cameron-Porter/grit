@@ -1,5 +1,14 @@
+import{canonicalExerciseName}from'@grit/data/exerciseNameAliases';
+
 export type WebWorkoutPayload={workoutId:string;programDayId:string|null;name:string;programName:string;completedAt:string;exercises:Array<{name:string;muscleGroup:string|null;musclePriority:string|null;equipment:string|null;note:string|null;sets:Array<{reps:number;weight:number;rir:number|null;reportedRir:number|null;completed:boolean}>}>;feedback:Array<{muscleGroup:string;jointPain:string|null;pump:string|null;volume:string|null;soreness:string|null}>};
 export type WorkoutDayUpdate={programDayId:string;skipped:boolean};
+
+// A payload built before a catalog rename (an open tab, an offline-queued save)
+// can still carry a retired exercise name; move it onto the kept one so the
+// catalog check accepts it and the sets join that exercise's history.
+export function canonicalizeWorkoutExerciseNames(payload:WebWorkoutPayload):WebWorkoutPayload{
+  return{...payload,exercises:payload.exercises.map(exercise=>({...exercise,name:canonicalExerciseName(exercise.name)}))};
+}
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const MAX_EXERCISES=50,MAX_SETS_PER_EXERCISE=20,MAX_FEEDBACK=40;

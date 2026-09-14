@@ -471,7 +471,7 @@ describe('VA-020 — repeated recovery failure', () => {
 
 describe('HV-013 — validateDayExercises: deadlift + barbell-row conflict', () => {
   it('fires an error for intermediate user with deadlift + barbell row', () => {
-    const issues = validateDayExercises(['Romanian Deadlift', 'Barbell Row'], 'intermediate');
+    const issues = validateDayExercises(['Romanian Deadlift (Barbell)', 'Barbell Row (Bent Over)'], 'intermediate');
     expect(issues).toHaveLength(1);
     expect(issues[0].severity).toBe('error');
   });
@@ -483,18 +483,18 @@ describe('HV-013 — validateDayExercises: deadlift + barbell-row conflict', () 
   });
 
   it('fires a warning (not error) for advanced user', () => {
-    const issues = validateDayExercises(['Romanian Deadlift', 'Barbell Row'], 'advanced');
+    const issues = validateDayExercises(['Romanian Deadlift (Barbell)', 'Barbell Row (Bent Over)'], 'advanced');
     expect(issues).toHaveLength(1);
     expect(issues[0].severity).toBe('warning');
   });
 
   it('no issues when deadlift + non-barbell row', () => {
-    const issues = validateDayExercises(['Romanian Deadlift', 'Seated Cable Row'], 'intermediate');
+    const issues = validateDayExercises(['Romanian Deadlift (Barbell)', 'Seated Cable Row'], 'intermediate');
     expect(issues).toHaveLength(0);
   });
 
   it('no issues when barbell row alone', () => {
-    const issues = validateDayExercises(['Barbell Row', 'Seated Cable Row'], 'beginner');
+    const issues = validateDayExercises(['Barbell Row (Bent Over)', 'Seated Cable Row'], 'beginner');
     expect(issues).toHaveLength(0);
   });
 
@@ -510,7 +510,7 @@ describe('HV-020 — validateProgram: tricep overhead extension coverage', () =>
   it('fires warning when 2+ tricep slots have no overhead extension', () => {
     const slots: ExerciseSlot[] = [
       makeSlot({ id: 't1', muscle: 'Triceps', role: 'Primary', selectedExercise: 'Tricep Rope Pushdown' }),
-      makeSlot({ id: 't2', muscle: 'Triceps', role: 'Secondary', selectedExercise: 'Cable Tricep Pushdown' }),
+      makeSlot({ id: 't2', muscle: 'Triceps', role: 'Secondary', selectedExercise: 'Tricep Pushdown (Bar)' }),
     ];
     const program = makeProgram([makeDay(slots)]);
     const result = validateProgram(program, []);
@@ -521,8 +521,8 @@ describe('HV-020 — validateProgram: tricep overhead extension coverage', () =>
 
   it('no warning when one of the tricep slots uses skull crusher', () => {
     const slots: ExerciseSlot[] = [
-      makeSlot({ id: 't1', muscle: 'Triceps', role: 'Primary', selectedExercise: 'Skull Crusher' }),
-      makeSlot({ id: 't2', muscle: 'Triceps', role: 'Secondary', selectedExercise: 'Cable Tricep Pushdown' }),
+      makeSlot({ id: 't1', muscle: 'Triceps', role: 'Primary', selectedExercise: 'Skull Crusher (Barbell)' }),
+      makeSlot({ id: 't2', muscle: 'Triceps', role: 'Secondary', selectedExercise: 'Tricep Pushdown (Bar)' }),
     ];
     const program = makeProgram([makeDay(slots)]);
     const result = validateProgram(program, []);
@@ -557,7 +557,7 @@ describe('HV-020 — validateProgram: tricep overhead extension coverage', () =>
 describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () => {
   it('fires warning when both back slots are vertical pull', () => {
     const slots: ExerciseSlot[] = [
-      makeSlot({ id: 'b1', muscle: 'Back', role: 'Primary', selectedExercise: 'Pull-Up' }),
+      makeSlot({ id: 'b1', muscle: 'Back', role: 'Primary', selectedExercise: 'Pull-Up (Normal Grip)' }),
       makeSlot({ id: 'b2', muscle: 'Back', role: 'Secondary', selectedExercise: 'Lat Pulldown' }),
     ];
     const program = makeProgram([makeDay(slots)]);
@@ -569,7 +569,7 @@ describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () 
 
   it('fires warning when both back slots are horizontal pull', () => {
     const slots: ExerciseSlot[] = [
-      makeSlot({ id: 'b1', muscle: 'Back', role: 'Primary', selectedExercise: 'Barbell Row' }),
+      makeSlot({ id: 'b1', muscle: 'Back', role: 'Primary', selectedExercise: 'Barbell Row (Bent Over)' }),
       makeSlot({ id: 'b2', muscle: 'Back', role: 'Secondary', selectedExercise: 'Seated Cable Row' }),
     ];
     const program = makeProgram([makeDay(slots)]);
@@ -581,7 +581,7 @@ describe('HV-004 — validateProgram: back horizontal/vertical pull parity', () 
 
   it('no warning when back has one vertical and one horizontal pull', () => {
     const slots: ExerciseSlot[] = [
-      makeSlot({ id: 'b1', muscle: 'Back', role: 'Primary', selectedExercise: 'Pull-Up' }),
+      makeSlot({ id: 'b1', muscle: 'Back', role: 'Primary', selectedExercise: 'Pull-Up (Normal Grip)' }),
       makeSlot({ id: 'b2', muscle: 'Back', role: 'Secondary', selectedExercise: 'Seated Cable Row' }),
     ];
     const program = makeProgram([makeDay(slots)]);

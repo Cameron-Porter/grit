@@ -25,10 +25,10 @@ function request(body: unknown) {
 
 const programId = '00000000-0000-4000-8000-000000000099';
 
-function supabaseWithRpcResult(saveResult: string | null) {
+function supabaseWithRpcResult(saveResult: string | null, catalogNames: string[] = ['Row']) {
   const tableResults = {
     program_days: { data: { id: payload.programDayId, program_id: programId }, error: null },
-    exercises: { data: [{ name: 'Row' }], error: null },
+    exercises: { data: catalogNames.map((name) => ({ name })), error: null },
     user_profiles: { data: { experience_level: 'intermediate' }, error: null },
   } as const;
   const from = vi.fn((table: keyof typeof tableResults) => ({
@@ -84,6 +84,19 @@ describe('POST /api/workouts retry and partial-save handling', () => {
     expect(supabase.from).not.toHaveBeenCalledWith('program_days');
     expect(supabase.rpc).toHaveBeenCalledWith('save_web_workout', expect.objectContaining({ p_program_day_id: null }));
     expect(computeProgression).not.toHaveBeenCalled();
+  });
+
+  it('saves a queued workout that still uses a retired exercise name under the kept catalog name', async () => {
+    const supabase = supabaseWithRpcResult('saved', ['Overhead Tricep Extension (Cable)']);
+    createClient.mockResolvedValue(supabase);
+    const { POST } = await import('./route');
+
+    const response = await POST(request({ ...payload, exercises: [{ ...payload.exercises[0], name: 'Cable Overhead Tricep Extension', muscleGroup: 'Triceps' }] }));
+
+    expect(response.status).toBe(200);
+    expect(supabase.rpc).toHaveBeenCalledWith('save_web_workout', expect.objectContaining({
+      p_exercises: [expect.objectContaining({ name: 'Overhead Tricep Extension (Cable)' })],
+    }));
   });
 
   it('checks whether the program is now fully complete after a successful save, and still runs progression', async () => {

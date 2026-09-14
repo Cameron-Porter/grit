@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { canonicalExerciseName } from '@grit/data/exerciseNameAliases';
 import { createClient } from '@/lib/supabase/server';
 import { unknownWorkoutExerciseNames } from '@/lib/workout/identity';
 import { validateManualPersonalRecordPayload } from '@/lib/personal-records/payload';
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
   try { payload = await request.json(); } catch { return NextResponse.json({ error: 'Invalid JSON.' }, { status: 400 }); }
   if (!validateManualPersonalRecordPayload(payload)) return NextResponse.json({ error: 'Personal record data is incomplete or invalid.' }, { status: 400 });
 
-  const exerciseName = payload.exerciseName.trim();
+  const exerciseName = canonicalExerciseName(payload.exerciseName);
   const { data: catalog, error: catalogError } = await supabase.from('exercises').select('name').eq('name', exerciseName);
   if (catalogError) return NextResponse.json({ error: 'Exercise identity could not be verified.' }, { status: 500 });
   const unknownExercises = unknownWorkoutExerciseNames([exerciseName], new Set((catalog ?? []).map((row: { name: string }) => row.name)));

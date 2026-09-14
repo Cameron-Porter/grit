@@ -29,7 +29,7 @@ describe('web progression persistence', () => {
       ],
       programs: [queryResult({ user_id: 'user-1', total_weeks: 6, focus: 'general', muscle_priorities: { Back: 'grow' } })],
       program_exercises: [queryResult([{
-        exercise_name: 'Pull-Up', muscle_group: 'Back', equipment: 'Bodyweight', target_sets: 3,
+        exercise_name: 'Pull-Up (Normal Grip)', muscle_group: 'Back', equipment: 'Bodyweight', target_sets: 3,
         target_reps_min: 8, target_reps_max: 12, target_weight: 0, rir: 2, role: 'Primary',
       }])],
       workout_feedback: [queryResult([])],
@@ -53,7 +53,7 @@ describe('web progression persistence', () => {
 
     expect(upsert).toHaveBeenCalledTimes(1);
     expect(upsert.mock.calls[0][0]).toEqual([
-      expect.objectContaining({ exercise_name: 'Pull-Up', target_weight: 0, target_reps_max: 13 }),
+      expect.objectContaining({ exercise_name: 'Pull-Up (Normal Grip)', target_weight: 0, target_reps_max: 13 }),
     ]);
   });
 });

@@ -28,8 +28,8 @@ function chainable(result: { data: unknown; error: unknown }) {
 
 function supabaseWith({
   authenticated = true,
-  catalog = { data: [{ name: 'Barbell Row' }], error: null },
-  write = { data: { id: 'rec-1', exercise_name: 'Barbell Row', weight: 185, reps: 5, achieved_at: '2026-08-21T00:00:00.000Z' }, error: null },
+  catalog = { data: [{ name: 'Seated Cable Row' }], error: null },
+  write = { data: { id: 'rec-1', exercise_name: 'Seated Cable Row', weight: 185, reps: 5, achieved_at: '2026-08-21T00:00:00.000Z' }, error: null },
 }: { authenticated?: boolean; catalog?: { data: unknown; error: unknown }; write?: { data: unknown; error: unknown } } = {}) {
   const from = vi.fn((table: string) => {
     if (table === 'exercises') return chainable(catalog);
@@ -49,7 +49,7 @@ describe('POST /api/personal-records', () => {
     createClient.mockResolvedValue(supabase);
     const { POST } = await import('./route');
 
-    const response = await POST(postRequest({ exerciseName: 'Barbell Row', weight: 185, reps: 5 }));
+    const response = await POST(postRequest({ exerciseName: 'Seated Cable Row', weight: 185, reps: 5 }));
 
     expect(response.status).toBe(401);
     expect(supabase.from).not.toHaveBeenCalled();
@@ -83,14 +83,29 @@ describe('POST /api/personal-records', () => {
     createClient.mockResolvedValue(supabase);
     const { POST } = await import('./route');
 
-    const response = await POST(postRequest({ exerciseName: 'Barbell Row', weight: 185, reps: 5 }));
+    const response = await POST(postRequest({ exerciseName: 'Seated Cable Row', weight: 185, reps: 5 }));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
       saved: true,
-      record: { id: 'rec-1', exercise_name: 'Barbell Row', weight: 185, reps: 5, achieved_at: '2026-08-21T00:00:00.000Z' },
+      record: { id: 'rec-1', exercise_name: 'Seated Cable Row', weight: 185, reps: 5, achieved_at: '2026-08-21T00:00:00.000Z' },
     });
     expect(supabase.from).toHaveBeenCalledWith('personal_records');
+  });
+
+  it('saves a record entered under a retired exercise name onto the kept catalog name', async () => {
+    const supabase = supabaseWith({ catalog: { data: [{ name: 'Overhead Tricep Extension (Cable)' }], error: null } });
+    createClient.mockResolvedValue(supabase);
+    const { POST } = await import('./route');
+
+    const response = await POST(postRequest({ exerciseName: 'Cable Overhead Tricep Extension', weight: 50, reps: 12 }));
+
+    expect(response.status).toBe(200);
+    const tables = supabase.from.mock.calls.map(([table]) => table);
+    const catalogQuery = supabase.from.mock.results[tables.indexOf('exercises')].value;
+    const recordWrite = supabase.from.mock.results[tables.indexOf('personal_records')].value;
+    expect(catalogQuery.eq).toHaveBeenCalledWith('name', 'Overhead Tricep Extension (Cable)');
+    expect(recordWrite.upsert).toHaveBeenCalledWith(expect.objectContaining({ exercise_name: 'Overhead Tricep Extension (Cable)' }), expect.anything());
   });
 
   it('surfaces a database failure as a 500', async () => {
@@ -98,7 +113,7 @@ describe('POST /api/personal-records', () => {
     createClient.mockResolvedValue(supabase);
     const { POST } = await import('./route');
 
-    const response = await POST(postRequest({ exerciseName: 'Barbell Row', weight: 185, reps: 5 }));
+    const response = await POST(postRequest({ exerciseName: 'Seated Cable Row', weight: 185, reps: 5 }));
 
     expect(response.status).toBe(500);
   });
