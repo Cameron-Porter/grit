@@ -27,8 +27,8 @@
 -- For each pair this migration:
 --   - copies catalog metadata the kept row is missing (e.g. hard_rir_floor and
 --     the 'deadlift' tag only ever landed on 'Romanian Deadlift'),
---   - repoints user_exercises, whose FK to exercises is ON DELETE CASCADE and
---     would otherwise silently drop those rows,
+--   - repoints every foreign key into exercises (found from the live schema),
+--     so a cascading reference cannot silently drop rows,
 --   - renames program_exercises, program_day_targets, workout_sets and
 --     personal_records onto the kept name, merging history,
 --   - deletes the retired catalog row.
@@ -148,15 +148,34 @@ where k.name = src.kept
   and k.equipment = src.equipment
   and coalesce(k.is_custom, false) = false;
 
--- ─── 2. Repoint user_exercises before the cascade can reach it ─────────────
-update user_exercises ue
-set exercise_id = k.id
-from exercise_name_merge m
-join exercises r
-  on r.name = m.retired and coalesce(r.is_custom, false) = false
-join exercises k
-  on k.name = m.kept and k.muscle_group = m.muscle_group and k.equipment = m.equipment and coalesce(k.is_custom, false) = false
-where ue.exercise_id = r.id;
+-- ─── 2. Repoint foreign keys before deleting retired rows ──────────────────
+-- The repo's 20260818120000 declares user_exercises.exercise_id with ON DELETE
+-- CASCADE, but that table predates the migration in production with a
+-- different shape (no exercise_id column). So the references are discovered
+-- from the live catalog instead of assumed: every single-column foreign key
+-- into exercises is moved onto the kept row, whatever table holds it.
+do $$
+declare fk record;
+begin
+  for fk in
+    select c.conrelid::regclass as tbl, a.attname as col
+    from pg_constraint c
+    join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+    where c.contype = 'f'
+      and c.confrelid = 'public.exercises'::regclass
+      and array_length(c.conkey, 1) = 1
+  loop
+    execute format(
+      'update %s t set %I = k.id
+       from exercise_name_merge m
+       join exercises r on r.name = m.retired and coalesce(r.is_custom, false) = false
+       join exercises k on k.name = m.kept and k.muscle_group = m.muscle_group
+                       and k.equipment = m.equipment and coalesce(k.is_custom, false) = false
+       where t.%I = r.id',
+      fk.tbl, fk.col, fk.col);
+    raise notice 'Repointed %.% onto kept exercises', fk.tbl, fk.col;
+  end loop;
+end $$;
 
 -- ─── 3. Program templates ──────────────────────────────────────────────────
 -- A day that already holds the kept exercise (or would receive it from two
@@ -186,9 +205,11 @@ from candidates c
 where pe.id = c.id and c.rn = 1;
 
 -- ─── 4. Per-day targets — unique (program_day_id, exercise_name) ───────────
+-- Rows are addressed by that unique pair (the key the app upserts on), not by
+-- an id column the app never relies on.
 with candidates as (
-  select t.id, m.kept,
-         row_number() over (partition by t.program_day_id, m.kept order by t.id) as rn
+  select t.program_day_id, t.exercise_name as retired, m.kept,
+         row_number() over (partition by t.program_day_id, m.kept order by m.retired) as rn
   from program_day_targets t
   join exercise_name_merge m on m.retired = t.exercise_name
   where not exists (
@@ -199,7 +220,9 @@ with candidates as (
 update program_day_targets t
 set exercise_name = c.kept
 from candidates c
-where t.id = c.id and c.rn = 1;
+where t.program_day_id = c.program_day_id
+  and t.exercise_name = c.retired
+  and c.rn = 1;
 
 -- ─── 5. Logged history ─────────────────────────────────────────────────────
 -- No uniqueness on workout_sets; every set moves so progression and PRs see
