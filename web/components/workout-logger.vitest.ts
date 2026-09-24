@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { validateWorkoutPayload } from '@/lib/workout/payload';
-import { historySessionLabels, setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, finishBlockedMessage, isRetryableSyncFailure, isRetryableSyncStatus, WorkoutSyncError, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
+import { historySessionLabels, setRepPlan, toggleSetSkipped, countedSets, isCountedSet, menuPlacement, menuPlacementStyle, menuWidth, MENU_WIDTH, MENU_TRIGGER_GAP, MENU_VIEWPORT_MARGIN, appendedExercisePrescription, buildWorkoutPayload, canContinueFeedback, canFinishWorkout, cascadeWeight, clearWorkoutLocalState, closeWorkoutMenus, completedSetReps, createInitialDraft, exerciseStartingWeight, isWorkoutFinishPending, moveWorkoutItem, muscleCompletionState, reconcileSavedDraft, replacementPrescription, repRangeLabel, resetReplacementSets, rirDescription, shouldPromptSoreness, shouldStartRestTimer, skipWorkoutRequest, finishBlockedMessage, isRetryableSyncFailure, isRetryableSyncStatus, WorkoutSyncError, weightInputValue, workoutHeadingCopy, workoutStorageKeys, workoutSyncStateCopy, type WorkoutPrescription } from './workout-logger';
 
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
@@ -68,6 +68,15 @@ describe('feedback prompts cannot be skipped',()=>{
   });
 });
 describe('explicit workout sync state copy',()=>{it('labels each local-to-synced state distinctly',()=>{expect(workoutSyncStateCopy('local')).toMatchObject({label:'Local draft',tone:'neutral'});expect(workoutSyncStateCopy('queued')).toMatchObject({label:'Queued retry',tone:'warning'});expect(workoutSyncStateCopy('syncing')).toMatchObject({label:'Syncing…',tone:'info'});expect(workoutSyncStateCopy('synced')).toMatchObject({label:'Synced',tone:'success'})})});
+describe('workout finish pending state',()=>{
+  it('stays pending after sync succeeds so the old workout cannot show Finish workout before refresh replaces it',()=>{
+    expect(isWorkoutFinishPending(false,'synced')).toBe(true);
+  });
+  it('does not keep failed or queued finishes disabled after syncing stops',()=>{
+    expect(isWorkoutFinishPending(false,'local')).toBe(false);
+    expect(isWorkoutFinishPending(false,'queued')).toBe(false);
+  });
+});
 describe('local storage keys for a null-day Quick Workout',()=>{
   it('uses a stable "quick" key instead of the literal string "null"',()=>{
     expect(workoutStorageKeys('user-1',null)).toEqual({storageKey:'grit-web-workout:user-1:quick',queueKey:'grit-web-workout-queue:user-1:quick'});
