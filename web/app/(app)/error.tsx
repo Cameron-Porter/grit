@@ -9,10 +9,10 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
       <div aria-hidden="true">!</div>
       <h2>We couldn&rsquo;t load this page</h2>
       <p>Your workout drafts remain stored on this device. Check your connection and try again.</p>
-      <div className="error-actions">
+      <nav className="error-actions" aria-label="Page recovery">
         <button type="button" className="primary" onClick={() => reset()}>Try again</button>
         <a className="quiet button-link" href="/workout">Go to Home</a>
-      </div>
+      </nav>
     </section>
   </main>;
 }

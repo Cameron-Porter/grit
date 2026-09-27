@@ -9,10 +9,10 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <div aria-hidden="true">!</div>
       <h2>Something went wrong</h2>
       <p>This page couldn&rsquo;t load. Try again, or head back to your workout.</p>
-      <div className="error-actions">
+      <nav className="error-actions" aria-label="Page recovery">
         <button type="button" className="primary" onClick={() => reset()}>Try again</button>
         <a className="quiet button-link" href="/workout">Go to Workout</a>
-      </div>
+      </nav>
     </section>
   </main>;
 }
