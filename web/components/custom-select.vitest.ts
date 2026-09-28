@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextEnabledOptionIndex, type SelectOption } from './custom-select';
+import { customSelectMenuPlacement, nextEnabledOptionIndex, type SelectOption } from './custom-select';
 
 const options: SelectOption[] = [
   { value: 'a', label: 'A', disabled: true },
@@ -18,5 +18,21 @@ describe('custom select keyboard navigation', () => {
   it('returns null when no option can be selected', () => {
     expect(nextEnabledOptionIndex([], 0, 1)).toBeNull();
     expect(nextEnabledOptionIndex(options.filter(option => option.disabled), 0, 1)).toBeNull();
+  });
+});
+
+describe('custom select menu placement', () => {
+  it('positions the menu in the viewport so modal overflow cannot clip it', () => {
+    const placement = customSelectMenuPlacement({ top: 420, bottom: 466, left: 24, width: 320 }, 800);
+
+    expect(placement.openUpward).toBe(false);
+    expect(placement.style).toMatchObject({ left: 24, top: 473, width: 320, maxHeight: 280 });
+  });
+
+  it('opens upward when there is more viewport room above the trigger', () => {
+    const placement = customSelectMenuPlacement({ top: 650, bottom: 696, left: 24, width: 320 }, 720);
+
+    expect(placement.openUpward).toBe(true);
+    expect(placement.style).toMatchObject({ left: 24, top: 'auto', bottom: 77, width: 320, maxHeight: 280 });
   });
 });
