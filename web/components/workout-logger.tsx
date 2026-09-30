@@ -48,6 +48,9 @@ export const cascadeWeight = (sets:LoggedSet[],setIndex:number,weight:number):Lo
 export const completedSetReps = (reps:number,plannedReps:number):number => reps === 0 ? plannedReps : reps;
 export const createInitialDraft = (workout:WorkoutPrescription):Draft => workout.exercises.map((exercise) => Array.from({ length:exercise.sets }, () => ({ reps:0, weight:exerciseStartingWeight(exercise,workout.bodyWeight), reportedRir:null, complete:false })));
 export const reconcileSavedDraft = (workout:WorkoutPrescription,saved:SavedDraft):SavedDraft => {
+  // Keep the session's order while still using current prescriptions and dropping stale exercises.
+  const savedOrder=new Map(saved.exercises.map((exercise,index)=>[exercise.name,index]));
+  workout={...workout,exercises:[...workout.exercises].sort((a,b)=>(savedOrder.get(a.name)??Infinity)-(savedOrder.get(b.name)??Infinity))};
   const currentSets=createInitialDraft(workout),savedByName=new Map(saved.exercises.map((exercise,index)=>[exercise.name,index]));
   const sets=currentSets.map((prescribedSets,exerciseIndex)=>{const exercise=workout.exercises[exerciseIndex],savedIndex=savedByName.get(exercise.name);if(savedIndex===undefined)return prescribedSets;return prescribedSets.map((prescribed,setIndex)=>{const prior=saved.sets[savedIndex]?.[setIndex];return prior?{...prior,weight:exercise.equipment==='Bodyweight'?prescribed.weight:prior.weight>0?prior.weight:prescribed.weight}:prescribed})});
   return {sets,exercises:workout.exercises,notes:workout.exercises.map(exercise=>{const index=savedByName.get(exercise.name);return index===undefined?'':saved.notes?.[index]??''}),feedback:saved.feedback};
@@ -451,7 +454,6 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
     const targetIndex=exerciseIndex+direction;
     if(targetIndex<0||targetIndex>=exercises.length||!workout.templateDayId||reordering)return;
     closeWorkoutMenus();setOpenExerciseMenu(null);setMessage(null);
-    const previousExercises=exercises,previousDraft=draft,previousNotes=notes;
     const nextExercises=moveWorkoutItem(exercises,exerciseIndex,targetIndex);
     setExercises(nextExercises);setDraft(moveWorkoutItem(draft,exerciseIndex,targetIndex));setNotes(moveWorkoutItem(notes,exerciseIndex,targetIndex));setReordering(true);
     try{
@@ -459,7 +461,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
       const result=await response.json() as {saved?:boolean;error?:string};
       if(!response.ok)throw new Error(result.error??'Exercise order could not be saved.');
       setMessage('Exercise order saved for future workouts on this day.');
-    }catch(error){setExercises(previousExercises);setDraft(previousDraft);setNotes(previousNotes);setMessage(error instanceof Error?error.message:'Exercise order could not be saved.');}
+    }catch(error){setMessage(`Order kept for this workout, but could not be saved for future workouts. ${error instanceof Error?error.message:'Please try again later.'}`);}
     finally{setReordering(false)}
   };
 
