@@ -21,13 +21,14 @@ const oneSession: SessionPerformance[] = [{ date: '2026-01-01', sets: [{ weight:
 
 describe('recommendProgression — HV-021 hypertrophyVolumeOverride', () => {
   it('training week: the override wins outright over the emphasize weekBonus formula', () => {
+    // Keep this override below HV-023 so the test still distinguishes it from the capped ramp.
     // emphasize weekBonus alone would give 3 + (mesoWeek-1=2) = 5 — the override must win.
     const rec = recommendProgression(
       makePrescription({ sets: 3 }),
       oneSession,
-      makeCtx({ musclePriority: 'emphasize', hypertrophyVolumeOverride: { trainingSets: 9, deloadSets: 4 } }),
+      makeCtx({ musclePriority: 'emphasize', hypertrophyVolumeOverride: { trainingSets: 2, deloadSets: 4 } }),
     );
-    expect(rec.nextSets).toBe(9);
+    expect(rec.nextSets).toBe(2);
   });
 
   it('training week: the override wins outright over the flat grow/maintain hold', () => {
@@ -35,9 +36,9 @@ describe('recommendProgression — HV-021 hypertrophyVolumeOverride', () => {
     const rec = recommendProgression(
       makePrescription({ sets: 3 }),
       oneSession,
-      makeCtx({ musclePriority: 'grow', hypertrophyVolumeOverride: { trainingSets: 11, deloadSets: 4 } }),
+      makeCtx({ musclePriority: 'grow', hypertrophyVolumeOverride: { trainingSets: 4, deloadSets: 4 } }),
     );
-    expect(rec.nextSets).toBe(11);
+    expect(rec.nextSets).toBe(4);
   });
 
   it('deload week: nextSets is the override\'s deloadSets, not 50% of the template', () => {
@@ -56,7 +57,7 @@ describe('recommendProgression — HV-021 hypertrophyVolumeOverride', () => {
       oneSession,
       makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, hypertrophyVolumeOverride: undefined }),
     );
-    expect(rec.nextSets).toBe(3 + 2); // baseSetCount + (mesoWeek - 1)
+    expect(rec.nextSets).toBe(4); // HV-023 now caps the engine output, including the legacy ramp.
   });
 
   it('falls back to the original flat-hold formula for grow when no override is present', () => {
@@ -75,7 +76,7 @@ describe('recommendProgression — HV-021 hypertrophyVolumeOverride', () => {
       makeCtx({
         programFocus: 'powerbuilding',
         musclePriority: 'grow',
-        hypertrophyVolumeOverride: { trainingSets: 99, deloadSets: 99 },
+        hypertrophyVolumeOverride: { trainingSets: 29, deloadSets: 99 },
       }),
     );
     expect(rec.nextSets).toBe(3);
@@ -88,7 +89,7 @@ describe('recommendProgression — HV-021 hypertrophyVolumeOverride', () => {
       makeCtx({
         programFocus: 'strength',
         isDeload: true,
-        hypertrophyVolumeOverride: { trainingSets: 99, deloadSets: 1 },
+        hypertrophyVolumeOverride: { trainingSets: 29, deloadSets: 1 },
       }),
     );
     // ST-012 (supersedes ST-004, 2026-08-04): strength deload now cuts sets

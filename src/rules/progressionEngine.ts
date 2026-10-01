@@ -1,7 +1,7 @@
 import type { ExerciseType, ExperienceLevel, SlotRole } from '../types/program';
 import type { ExerciseProgressionProfile } from '../data/exerciseProgressionProfiles';
 import { PROGRESSION_CATEGORY_PROFILES } from '../data/exerciseProgressionProfiles';
-import { rirForWeek } from './volumeRamp';
+import { capSetsPerExercise, rirForWeek } from './volumeRamp';
 import { loadIncrementFor } from '../data/loadIncrements';
 
 // ─── Public types ─────────────────────────────────────────────────────────────
@@ -134,6 +134,18 @@ export type ProgressionAction =
   | 'LENGTHENED_PARTIALS';
 
 export interface ProgressionRecommendation {
+  /** Identifies the branch actually taken, independently of user-facing prose. */
+  decisionCode: string;
+  doctrineTags: string[];
+  evidence: {
+    effectiveRepCeiling: number;
+    previousSets: number;
+    effectiveSets: number;
+    volumeHoldsLoad: boolean;
+    equipmentLimited: boolean;
+    reportedEffortSatisfied: boolean | null;
+    straightSetPrescriptionSatisfied: boolean | null;
+  };
   nextWeight: number;
   nextSets: number;
   nextRepsMin: number;
@@ -387,13 +399,17 @@ export interface InitialMesocycleTarget {
 // load-progression event: retain a successfully demonstrated load, clamp its
 // completed reps into the new slot's authored band, and never copy the old
 // session's larger set count into the Week-1 MEV prescription.
+// HV-028/HV-037 exception: bodyweight cannot trade those reps for more load.
+// Preserve demonstrated reps up to the existing difficulty ceiling instead
+// of resetting to a loaded-lift band. Source: RP Hypertrophy progression;
+// the bodyweight difficulty ladder remains governed by HV-037.
 export function recommendInitialMesocycleTarget(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
 ): InitialMesocycleTarget {
   const fallback: InitialMesocycleTarget = {
     weight: 0,
-    sets: prescription.sets,
+    sets: capSetsPerExercise(prescription.sets),
     repsMin: prescription.repsMin,
     repsMax: prescription.repsMax,
     rir: prescription.rir,
@@ -407,11 +423,14 @@ export function recommendInitialMesocycleTarget(
       && (prescription.equipment === 'Bodyweight' || set.weight > 0));
   if (!successful) return fallback;
   const demonstratedReps = Math.min(...latest.sets.map((set) => set.reps));
-  const seededReps = Math.max(prescription.repsMin, Math.min(prescription.repsMax, demonstratedReps));
+  const seedCeiling = prescription.equipment === 'Bodyweight'
+    ? prescription.profile?.bodyweightRepCeiling ?? PROGRESSION_CATEGORY_PROFILES.bodyweight.bodyweightRepCeiling!
+    : prescription.repsMax;
+  const seededReps = Math.min(seedCeiling, Math.max(prescription.repsMin, demonstratedReps));
   const demonstratedWeight = latest.sets[0].weight;
   return {
     weight: prescription.equipment === 'Bodyweight' ? 0 : demonstratedWeight,
-    sets: prescription.sets,
+    sets: capSetsPerExercise(prescription.sets),
     repsMin: seededReps,
     repsMax: seededReps,
     rir: prescription.rir,
@@ -643,11 +662,23 @@ export function recommendProgression(
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
 ): ProgressionRecommendation {
+  const recommendation = recommendProgressionUncapped(prescription, sessions, ctx);
+  // HV-023/HV-030: every return path (including recovery and maintenance)
+  // respects the exercise cap. Keep actual sets intact for deload arithmetic.
+  const nextSets = capSetsPerExercise(Math.min(recommendation.nextSets, prescription.profile?.maxEffectiveSetsPerSession ?? Infinity));
+  return { ...recommendation, nextSets, reason: nextSets === recommendation.nextSets ? recommendation.reason : `${recommendation.reason} The per-exercise limit reduces this to ${nextSets} sets.` };
+}
+
+function recommendProgressionUncapped(
+  prescription: SlotPrescription,
+  sessions: SessionPerformance[],
+  ctx: ProgressionContext,
+): ProgressionRecommendation {
 
   // HV-029/HV-030: defaults to heavy_compound when the caller doesn't
   // resolve one — the closest analog to the old implicit 'barbell-compound'
   // default, so callers/tests that don't pass a profile keep prior behavior.
-  const profile: ExerciseProgressionProfile = prescription.profile ?? PROGRESSION_CATEGORY_PROFILES.heavy_compound;
+  const profile: ExerciseProgressionProfile = prescription.profile ?? (prescription.equipment === 'Bodyweight' ? PROGRESSION_CATEGORY_PROFILES.bodyweight : PROGRESSION_CATEGORY_PROFILES.heavy_compound);
   // HV-028: see the doctrine comment on heldOrAdjustedWeight above.
   const isBodyweight = prescription.equipment === 'Bodyweight' || profile.category === 'bodyweight';
   // ST-011: increment sizing is now weight-dependent (percentage-based /
@@ -737,6 +768,9 @@ export function recommendProgression(
   if (ctx.restartAtVolumeAnchor) {
     effectiveSets = Math.max(1, Math.min(effectiveSets, baseSetCount));
   }
+  // HV-023/HV-030: compensate for the sets actually prescribed, not an
+  // uncapped muscle-volume request which this exercise cannot absorb.
+  effectiveSets = capSetsPerExercise(Math.min(effectiveSets, profile.maxEffectiveSetsPerSession));
 
   // HV-032: previous sets = last actual logged set count (no separate stored
   // field needed — sessions[0] IS last week's real performance). Falls back
@@ -744,10 +778,19 @@ export function recommendProgression(
   // will win before this matters).
   const previousSets = sessions.length > 0 ? sessions[0].sets.length : prescription.sets;
   const previousRir = sessions.length > 0 ? sessions[0].sets.find((s) => s.rir !== undefined)?.rir : undefined;
+  // HV-028/HV-037: preserve the reps axis when a static template is reused.
+  // Source: RP Hypertrophy progression, as in HV-040's bodyweight exception.
+  // Use the weakest completed set, not a single peak set. HV-032 can still
+  // reduce this baseline when added sets require a recovery adjustment.
+  const demonstratedBodyweightReps = isBodyweight && sessions[0]?.sets.length
+    ? Math.min(...sessions[0].sets.map(set => set.reps)) : 0;
+  const progressionCeiling = isBodyweight
+    ? Math.max(prescription.repsMax, Math.min(demonstratedBodyweightReps, profile.bodyweightRepCeiling ?? PROGRESSION_CATEGORY_PROFILES.bodyweight.bodyweightRepCeiling!))
+    : prescription.repsMax;
   const volumeAdjustment = calculateVolumeTransitionAdjustment(
     previousSets,
     effectiveSets,
-    { repsMin: prescription.repsMin, repsMax: prescription.repsMax },
+    { repsMin: prescription.repsMin, repsMax: progressionCeiling },
     profile,
     previousRir,
   );
@@ -777,6 +820,16 @@ export function recommendProgression(
   const badSessionThreshold = 2;
 
   const base = {
+    evidence: {
+      effectiveRepCeiling: effectiveRepsMax,
+      previousSets,
+      effectiveSets,
+      volumeHoldsLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad,
+      equipmentLimited,
+      // Earlier branches do not evaluate the load gates.
+      reportedEffortSatisfied: null as boolean | null,
+      straightSetPrescriptionSatisfied: null as boolean | null,
+    },
     nextSets: effectiveSets,
     nextRepsMin: effectiveRepsMin,
     nextRepsMax: prescription.repsMax,
@@ -897,6 +950,8 @@ export function recommendProgression(
         nextSets: deloadSets,
         nextRir: Math.max(3, prescription.rir),
         action: 'DELOAD',
+        decisionCode: 'scheduled_strength_deload',
+        doctrineTags: ['ST-012'],
         reason: isBodyweight
           ? `Strength deload — sets reduced to ${deloadSets} (pattern maintained, never dropped), bodyweight held at ${lastWeight} lb (no external load to reduce).`
           : `Strength deload — load reduced ${Math.round(deloadLoadReductionPct * 100)}% (${lastWeight} → ${deloadWeight} lbs), sets reduced to ${deloadSets} (pattern maintained, never dropped).`,
@@ -933,6 +988,8 @@ export function recommendProgression(
       nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * (1 - repReductionPct))),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD',
+      decisionCode: 'scheduled_deload',
+      doctrineTags: ['HV-035', 'HV-021'],
       reason: isBodyweight
         ? (hasVolumeOverride
           ? `Deload week — sets dropped to Maintenance Volume, reps reduced ${Math.round(repReductionPct * 100)}%, bodyweight held at ${lastWeight} lb (no external load to reduce), effort capped at RIR 4.`
@@ -954,6 +1011,8 @@ export function recommendProgression(
       ...base,
       nextWeight: 0,
       action: 'FIRST_SESSION',
+      decisionCode: 'first_session',
+      doctrineTags: [],
       reason: 'First session — enter your starting weight.',
     };
   }
@@ -975,6 +1034,8 @@ export function recommendProgression(
       nextRepsMax: Math.max(1, Math.ceil(prescription.repsMax * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD_NEEDED',
+      decisionCode: 'recovery_exposure',
+      doctrineTags: ['VA-020', 'RC-012'],
       reason: `Still sore for 2 consecutive exposures. Recovery session: ${recoverySets} sets, reduced load and reps, RIR 4. Resume from the starting volume anchor after recovery.`,
       isPlateauWarning: true,
     };
@@ -990,6 +1051,8 @@ export function recommendProgression(
       nextWeight: lastWeight,
       nextSets: baseSetCount,
       action: 'CUT_HOLD',
+      decisionCode: 'maintenance_hold',
+      doctrineTags: [],
       reason: `Maintenance focus — holding ${lastReps} reps × ${lastWeight} lbs. No auto-increment; maintaining muscle is the goal.`,
     };
   }
@@ -998,6 +1061,8 @@ export function recommendProgression(
   const lastPerf = sessionPerf(last);
   const effortAllowsLoad = reportedEffortAllowsLoad(last, prescription.rir)
     && completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax, isBodyweight);
+  base.evidence.reportedEffortSatisfied = reportedEffortAllowsLoad(last, prescription.rir);
+  base.evidence.straightSetPrescriptionSatisfied = completedStraightSetPrescription(last, prescription.sets, effectiveRepsMax, isBodyweight);
   const stalls = countConsecutiveStalls(sessions);
   const badSessions = countConsecutiveBadSessions(sessions);
 
@@ -1019,6 +1084,8 @@ export function recommendProgression(
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'DELOAD_NEEDED',
+      decisionCode: 'repeated_regression_deload',
+      doctrineTags: ['HV-035'],
       reason: isBodyweight
         ? `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — bodyweight held at ${lastPerf.weight} lb (no external load to reduce); this is accumulated fatigue, not a plateau.`
         : `${badSessions} consecutive sessions with fewer reps than the session before. Deload now — load reduced ${Math.round(badSessionReductionPct * 100)}% (${lastPerf.weight} → ${deloadWeight} lbs); this is accumulated fatigue, not a plateau.`,
@@ -1060,6 +1127,8 @@ export function recommendProgression(
           nextRepsMax: effectiveRepsMin,
           loadIncrement: cutIncrement,
           action: 'CUT_PROGRESS',
+          decisionCode: 'cut_load_progression',
+          doctrineTags: ['RC-011'],
           reason: `Hit ceiling during fat-loss phase — partial progression: +${cutIncrement} lb (~65% of the full +${increment} lb this would otherwise get).`,
         };
       }
@@ -1072,6 +1141,8 @@ export function recommendProgression(
       ...base,
       nextWeight: lastPerf.weight,
       action: 'CUT_HOLD',
+      decisionCode: 'cut_hold',
+      doctrineTags: ['RC-011'],
       reason: ceilingHit
         ? `Hit rep ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb) during fat-loss phase. Maintaining is still success.`
         : `Fat-loss phase — maintaining ${lastPerf.maxReps} reps × ${lastPerf.weight} lb is the target.`,
@@ -1139,6 +1210,8 @@ function resolveCeilingHit(
         nextWeight: lastPerf.weight,
         nextRepsMax: nextTarget,
         action: 'HOLD',
+        decisionCode: 'bodyweight_rep_progression',
+        doctrineTags: ['HV-037'],
         reason: `Bodyweight exercise — no load to add. ${lastPerf.maxReps} reps at ${lastPerf.weight} lb cleared the ${prescription.repsMax}-rep ceiling; climbing toward the ${ceiling}-rep ceiling before advancing difficulty. Aim for ${nextTarget} next session.`,
       };
     }
@@ -1147,6 +1220,8 @@ function resolveCeilingHit(
       nextWeight: lastPerf.weight,
       nextRepsMax: ceiling,
       action: 'ADVANCE_DIFFICULTY',
+      decisionCode: 'bodyweight_difficulty_progression',
+      doctrineTags: ['HV-037'],
       reason: `Reached the ${ceiling}-rep ceiling at bodyweight. Advance difficulty instead: tempo → range of motion → leverage (e.g. feet-elevated, single-limb) → external load (weighted vest/belt). Advisory only — pick the next variation yourself.`,
     };
   }
@@ -1170,6 +1245,8 @@ function resolveCeilingHit(
         nextWeight: lastPerf.weight,
         nextRepsMax: prescription.repsMax,
         action: 'LENGTHENED_PARTIALS',
+        decisionCode: 'equipment_limited_partials',
+        doctrineTags: ['RC-003', 'ST-011'],
         reason: `Hit the ${prescription.repsMax}-rep ceiling at ${lastPerf.weight} lb, but the next load jump is too large. Add 3–5 lengthened partials at the bottom of the final set instead of increasing load.`,
       };
     }
@@ -1182,6 +1259,8 @@ function resolveCeilingHit(
         nextWeight: lastPerf.weight,
         nextRepsMax: nextTarget,
         action: 'HOLD',
+        decisionCode: 'equipment_limited_reps',
+        doctrineTags: ['ST-011'],
         reason: `Smallest available increment would be a >${Math.round((profile.maxAcceptableEquipmentLimitedPct ?? 0.10) * 100)}% jump at ${lastPerf.weight} lb — holding load, extending reps instead. Aim for ${nextTarget} next session.`,
       };
     }
@@ -1193,6 +1272,8 @@ function resolveCeilingHit(
       nextRepsMax: effectiveRepsMin,
       loadIncrement: forced,
       action: 'ADVANCE_LOAD',
+      decisionCode: 'equipment_limit_exhausted',
+      doctrineTags: ['ST-011'],
       reason: `Forced load increase — proportional gate exhausted after ${EQUIPMENT_LIMITED_REP_BUFFER}+ reps past ceiling. Add ${forced} lb → target ${effectiveRepsMin} reps at new load.`,
     };
   }
@@ -1211,6 +1292,8 @@ function resolveCeilingHit(
     // again at a heavier weight.
     nextRepsMax: effectiveRepsMin,
     action: 'ADVANCE_LOAD',
+    decisionCode: 'ceiling_load_progression',
+    doctrineTags: ['ST-007', 'ST-013', 'ST-015', 'HV-044'],
     reason: progressionLabel === 'Linear progression'
       ? `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Linear progression: add ${increment} lb.`
       : `Hit ceiling (${lastPerf.maxReps} reps × ${lastPerf.weight} lb). Double progression: add ${increment} lb → target ${effectiveRepsMin} reps at new load.`,
@@ -1233,7 +1316,7 @@ interface EvalInputs {
   equipmentLimited: boolean;
   effectiveRepsMin: number;
   effectiveRepsMax: number;
-  base: Omit<ProgressionRecommendation, 'nextWeight' | 'action' | 'reason'>;
+  base: Omit<ProgressionRecommendation, 'nextWeight' | 'action' | 'reason' | 'decisionCode' | 'doctrineTags'>;
   isBodyweight: boolean;
   profile: ExerciseProgressionProfile;
   volumeRecentlyIncreased: boolean;
@@ -1264,6 +1347,8 @@ function evaluateBeginnerLinear(
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'PLATEAU_DELOAD',
+      decisionCode: 'plateau_deload',
+      doctrineTags: ['HV-034', 'HV-035'],
       reason: isBodyweight
         ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is the most likely cause. Retest reps after deload.`
         : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.`,
@@ -1287,6 +1372,8 @@ function evaluateBeginnerLinear(
         nextWeight,
         nextRepsMax: effectiveRepsMin,
         action: 'REDUCE_LOAD',
+        decisionCode: 'repeated_below_floor',
+        doctrineTags: ['ST-007'],
         reason: isBodyweight
           ? `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild reps from the floor at bodyweight.`
           : `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild from new base.`,
@@ -1301,6 +1388,8 @@ function evaluateBeginnerLinear(
       nextWeight: lastPerf.weight,
       nextRepsMax: nextTarget,
       action: 'HOLD',
+      decisionCode: 'below_floor_rep_progression',
+      doctrineTags: ['ST-007'],
       reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
     };
   }
@@ -1331,6 +1420,8 @@ function evaluateBeginnerLinear(
     nextWeight: lastPerf.weight,
     nextRepsMax: nextTarget,
     action: 'HOLD',
+    decisionCode: 'within_band_hold',
+    doctrineTags: ['ST-007', 'ST-015', 'HV-044', 'HV-032'],
     reason,
   };
 }
@@ -1374,6 +1465,8 @@ function evaluateDoubleProgression(
       nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
       nextRir: Math.max(4, prescription.rir),
       action: 'PLATEAU_DELOAD',
+      decisionCode: 'plateau_deload',
+      doctrineTags: ['HV-034', 'HV-035'],
       reason: fatigueLikely
         ? (isBodyweight
           ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest reps after deload.`
@@ -1398,6 +1491,8 @@ function evaluateDoubleProgression(
         nextWeight,
         nextRepsMax: effectiveRepsMin,
         action: 'REDUCE_LOAD',
+        decisionCode: 'repeated_below_floor',
+        doctrineTags: ['ST-007'],
         reason: isBodyweight
           ? `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild to ${effectiveRepsMin} reps at bodyweight before advancing.`
           : `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild to ${effectiveRepsMin} reps before advancing.`,
@@ -1412,6 +1507,8 @@ function evaluateDoubleProgression(
       nextWeight: lastPerf.weight,
       nextRepsMax: nextTarget,
       action: 'HOLD',
+      decisionCode: 'below_floor_rep_progression',
+      doctrineTags: ['ST-007'],
       reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
     };
   }
@@ -1443,6 +1540,8 @@ function evaluateDoubleProgression(
     nextWeight: lastPerf.weight,
     nextRepsMax: nextTarget,
     action: 'HOLD',
+    decisionCode: 'within_band_hold',
+    doctrineTags: ['ST-007', 'ST-015', 'HV-044', 'HV-032'],
     reason,
   };
 }

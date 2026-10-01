@@ -14,10 +14,14 @@
     "dev": "npm --prefix web run dev --",
     "build": "npm --prefix web run build",
     "typecheck": "npm --prefix web run typecheck",
-    "test:rules": "npm --prefix web exec -- vitest run --config web/vitest.rules.config.mts",
+    "test:rules": "node scripts/build-explanation-corpus.mjs --check && npm --prefix web exec -- vitest run --config web/vitest.rules.config.mts",
     "pwa:e2e": "npm --prefix web run test:e2e",
     "test:unit": "npm --prefix web run test:unit",
     "audit": "npm --prefix web run audit",
-    "quality": "npm --prefix web run quality"
+    "quality": "npm --prefix web run quality",
+    "ai:corpus": "node scripts/build-explanation-corpus.mjs",
+    "ai:corpus:check": "node scripts/build-explanation-corpus.mjs --check",
+    "ai:index": "node --env-file=web/.env.local scripts/index-explanation-corpus.mjs",
+    "ai:check": "node --env-file=web/.env.local scripts/check-local-ai.mjs"
   }
 }

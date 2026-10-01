@@ -5,6 +5,23 @@ import { historySessionLabels, setRepPlan, toggleSetSkipped, countedSets, isCoun
 const workout: WorkoutPrescription = { dayId:'day-1',templateDayId:'template-1',bodyWeight:185,programName:'Mid Summer',week:4,day:2,label:'Pull',exercises:[{name:'Row',muscleGroup:'Back',musclePriority:'grow',equipment:'Cable',sets:3,repsMin:8,repsMax:12,weight:100,rir:2}] };
 const quickWorkout: WorkoutPrescription = { dayId:null,templateDayId:null,bodyWeight:185,programName:'Quick Workout',week:null,day:null,label:'Quick Workout',exercises:[] };
 
+describe('restoring drafts after the automatic set cap changes',()=>{
+  const capped={...workout,exercises:[{...workout.exercises[0],sets:4}]};
+  const old={...workout.exercises[0],sets:5};
+  const blank={reps:0,weight:100,reportedRir:null,complete:false};
+  it('removes an untouched fifth automatic row',()=>{
+    expect(reconcileSavedDraft(capped,{exercises:[old],sets:[Array.from({length:5},()=>({...blank}))]}).sets[0]).toHaveLength(4);
+  });
+  it('preserves reps already entered in the fifth row',()=>{
+    const sets=Array.from({length:5},()=>({...blank}));sets[4]={...blank,reps:20,complete:true};
+    const restored=reconcileSavedDraft(capped,{exercises:[old],sets:[sets]});
+    expect(restored.sets[0]).toHaveLength(5);expect(restored.sets[0][4]).toEqual(sets[4]);
+  });
+  it('preserves a manually added fifth row even before reps are entered',()=>{
+    expect(reconcileSavedDraft(capped,{exercises:capped.exercises,sets:[Array.from({length:5},()=>({...blank}))]}).sets[0]).toHaveLength(5);
+  });
+});
+
 describe('createInitialDraft',()=>{
   it('creates exactly the prescribed sets with safe incomplete defaults and reps left as a placeholder',()=>{
     expect(createInitialDraft(workout)).toEqual([[{reps:0,weight:100,reportedRir:null,complete:false},{reps:0,weight:100,reportedRir:null,complete:false},{reps:0,weight:100,reportedRir:null,complete:false}]]);

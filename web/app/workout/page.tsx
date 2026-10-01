@@ -2,18 +2,13 @@ import { notFound, redirect } from 'next/navigation';
 import { requireUser } from '@/lib/auth/require-user';
 import { AppNav } from '@/components/app-nav';
 import { WorkoutLogger, type ExerciseOption, type WorkoutPrescription } from '@/components/workout-logger';
-import { resolveExercisePrescription } from '@/lib/workout/prescription';
-import { recoverMissingTarget } from '@/lib/workout/recovery-target';
+import { loadWorkoutTargets } from '@/lib/workout/load-targets';
 import { filterExercisesByEquipmentPreference } from '@/lib/programs/day-template-payload';
-import { loadExerciseCatalog } from '@/lib/exercises/catalog';
-import type { ProgramFocus, SessionPerformance } from '@grit/rules/progressionEngine';
-import type { ExperienceLevel } from '@grit/types/program';
 
 export const dynamic = 'force-dynamic';
 
 type ActiveProgram = { id:string; name:string; muscle_priorities:Record<string,string|null>|null; total_weeks:number; focus:string|null };
 type ProgramDayRow = { id:string; week_number:number; day_number:number; label:string|null; completed:boolean; skipped:boolean };
-type HistorySession = SessionPerformance & { isDeloadSession?:boolean; hasBadFeedback?:boolean };
 
 export default async function Workout({ searchParams }:{ searchParams:Promise<Record<string,string|string[]|undefined>> }) {
   const { supabase, user } = await requireUser();
@@ -28,17 +23,6 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     const options:ExerciseOption[]=visibleCatalog.map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max,movementCategory:exercise.movement_category}));
     return <><main className="app-shell page-frame"><WorkoutLogger key="quick-workout" workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
   }
-
-  // The catalog, the profile and the workout history depend only on the signed-in
-  // user, not on which program is active, so they are started here and awaited
-  // after the program lookup instead of behind it. Promise.resolve() on a
-  // Postgrest builder is what actually issues the request. This collapses the
-  // page from five sequential Supabase steps to three; the cost is that the two
-  // early-return branches below fetch three rows they end up not using, which is
-  // rare and costs no wall-clock time because it overlaps the program lookup.
-  const catalogPromise = loadExerciseCatalog(supabase);
-  const profilePromise = Promise.resolve(supabase.from('user_profiles').select('experience_level,body_weight,use_preferred_equipment,preferred_equipment').eq('id',user.id).maybeSingle());
-  const pastWorkoutsPromise = Promise.resolve(supabase.from('workouts').select('id,completed_at,program_day_id').eq('user_id',user.id).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40));
 
   let current:ActiveProgram, days:ProgramDayRow[], nextDay:ProgramDayRow;
   if (dayParam) {
@@ -71,47 +55,8 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     }
     nextDay = foundNext;
   }
-  const templateDay=days.find((day)=>day.week_number===1&&day.day_number===nextDay.day_number);
-  if(!templateDay) throw new Error('The program is missing its Week 1 exercise template.');
-  const [
-    [{data:exercises,error:exerciseError},{data:targets,error:targetError}],
-    [catalog,{data:profile,error:profileError},{data:pastWorkouts,error:pastWorkoutError}],
-  ]=await Promise.all([
-    Promise.all([
-      supabase.from('program_exercises').select('exercise_name,muscle_group,equipment,sort_order,target_sets,target_reps_min,target_reps_max,target_weight,rir,role').eq('program_day_id',templateDay.id).order('sort_order'),
-      supabase.from('program_day_targets').select('exercise_name,target_sets,target_reps_min,target_reps_max,target_weight,rir').eq('program_day_id',nextDay.id),
-    ]),
-    Promise.all([catalogPromise,profilePromise,pastWorkoutsPromise]),
-  ]);
-  if(exerciseError) throw new Error(`Could not load exercises: ${exerciseError.message}`);
-  if(targetError) throw new Error(`Could not load progression targets: ${targetError.message}`);
-  if(profileError) throw new Error(`Could not load training experience: ${profileError.message}`);
-  if(pastWorkoutError) throw new Error(`Could not load program workout history: ${pastWorkoutError.message}`);
-  const workoutIds=(pastWorkouts??[]).map(item=>item.id);
-  const pastDayIds=[...new Set((pastWorkouts??[]).map(item=>item.program_day_id).filter((id):id is string=>Boolean(id)))];
-  const [{data:pastSets,error:pastSetError},{data:pastDays,error:pastDayError},{data:pastFeedback,error:pastFeedbackError}]=await Promise.all([
-    workoutIds.length?supabase.from('workout_sets').select('workout_id,exercise_name,weight,reps,reported_rir').in('workout_id',workoutIds).eq('completed',true).gt('reps',0):Promise.resolve({data:[],error:null}),
-    // HV-040 needs to seed a new mesocycle from the last *working* session, not
-    // a deload — deload weeks intentionally cut weight/reps, so treating one as
-    // "last completed" would regress the prescribed load instead of continuing it.
-    pastDayIds.length?supabase.from('program_days').select('id,week_number,programs(total_weeks)').in('id',pastDayIds):Promise.resolve({data:[],error:null}),
-    // A session should only be used to seed a new mesocycle's starting weight/reps
-    // if it was actually a good one — reported joint pain, a flat pump, or "too
-    // much" volume feedback for that muscle group means the load isn't something
-    // to carry forward as-is.
-    workoutIds.length?supabase.from('workout_feedback').select('workout_id,muscle_group,joint_pain,pump,volume').in('workout_id',workoutIds):Promise.resolve({data:[],error:null}),
-  ]);
-  if(pastSetError)throw new Error(`Could not load exercise history: ${pastSetError.message}`);
-  if(pastDayError) throw new Error(`Could not load past program weeks: ${pastDayError.message}`);
-  if(pastFeedbackError) throw new Error(`Could not load past workout feedback: ${pastFeedbackError.message}`);
-  const isDeloadByDay=new Map((pastDays??[]).map((day)=>[day.id,day.week_number===day.programs[0]?.total_weeks])),isDeloadByWorkout=new Map((pastWorkouts??[]).map((item)=>[item.id,item.program_day_id?isDeloadByDay.get(item.program_day_id)??false:false]));
-  const feedbackByWorkoutMuscle=new Map((pastFeedback??[]).map((row)=>[`${row.workout_id} ${row.muscle_group}`,row])),muscleGroupByExerciseName=new Map(catalog.map((item)=>[item.name,item.muscle_group]));
-  const hasBadFeedback=(workoutId:string,exerciseName:string)=>{const muscleGroup=muscleGroupByExerciseName.get(exerciseName),row=muscleGroup?feedbackByWorkoutMuscle.get(`${workoutId} ${muscleGroup}`):undefined;if(!row)return false;return Boolean(row.joint_pain&&row.joint_pain!=='None')||Boolean(row.pump&&['None','Low'].includes(row.pump))||row.volume==='Too much'};
-  const workoutOrder=new Map((pastWorkouts??[]).map((item,index)=>[item.id,{index,date:item.completed_at}])),grouped=new Map<string,Map<string,HistorySession>>();
-  for(const set of pastSets??[]){const byWorkout=grouped.get(set.exercise_name)??new Map<string,HistorySession>(),meta=workoutOrder.get(set.workout_id);if(!meta)continue;const session:HistorySession=byWorkout.get(set.workout_id)??{date:meta.date,sets:[],isDeloadSession:isDeloadByWorkout.get(set.workout_id)??false,hasBadFeedback:hasBadFeedback(set.workout_id,set.exercise_name)};session.sets.push({weight:Number(set.weight),reps:set.reps,rir:set.reported_rir??undefined});byWorkout.set(set.workout_id,session);grouped.set(set.exercise_name,byWorkout)}
-  const targetByExercise=new Map((targets??[]).map((target)=>[target.exercise_name,target]));
-  for(const exercise of exercises??[]){const existing=targetByExercise.get(exercise.exercise_name);if(existing&&(Number(existing.target_weight)>0||exercise.equipment==='Bodyweight'))continue;const sessions=[...(grouped.get(exercise.exercise_name)?.entries()??[])].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,8),recovered=recoverMissingTarget(exercise,sessions,{experienceLevel:(profile?.experience_level??'intermediate')as ExperienceLevel,week:nextDay.week_number,totalWeeks:current.total_weeks,focus:(current.focus??'hypertrophy')as ProgramFocus});if(recovered)targetByExercise.set(exercise.exercise_name,{exercise_name:exercise.exercise_name,...recovered})}
-  const historyByExercise=Object.fromEntries([...grouped].map(([name,sessions])=>[name,[...sessions.entries()].sort((a,b)=>(workoutOrder.get(a[0])?.index??999)-(workoutOrder.get(b[0])?.index??999)).map(([,session])=>session).slice(0,3)]));
-  const workout:WorkoutPrescription={dayId:nextDay.id,templateDayId:templateDay.id,bodyWeight:Number(profile?.body_weight)||0,programName:current.name,week:nextDay.week_number,day:nextDay.day_number,label:nextDay.label??`Day ${nextDay.day_number}`,exercises:(exercises??[]).map((exercise)=>resolveExercisePrescription(exercise,targetByExercise.get(exercise.exercise_name),exercise.muscle_group?current.muscle_priorities?.[exercise.muscle_group]??null:null))};
-  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} historyByExercise={historyByExercise}/></main><AppNav /></>;
+  const loaded=await loadWorkoutTargets(supabase,nextDay.id);
+  const historyByExercise=loaded.historyByExercise;
+  const workout:WorkoutPrescription={dayId:nextDay.id,templateDayId:loaded.templateDayId,bodyWeight:loaded.bodyWeight,programName:current.name,week:nextDay.week_number,day:nextDay.day_number,label:nextDay.label??`Day ${nextDay.day_number}`,exercises:loaded.resolved.map(item=>item.prescription)};
+  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} historyByExercise={historyByExercise} explanationsEnabled={process.env.GRIT_EXPLANATIONS_ENABLED==='1'}/></main><AppNav /></>;
 }

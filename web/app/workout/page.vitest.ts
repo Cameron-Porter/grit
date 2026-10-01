@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const workoutPageSource = readFileSync(resolve(process.cwd(), 'app/workout/page.tsx'), 'utf8');
+// Target loading is shared with the explanation endpoint after the provenance fix.
+const workoutPageSource = readFileSync(resolve(process.cwd(), 'app/workout/page.tsx'), 'utf8') + readFileSync(resolve(process.cwd(), 'lib/workout/load-targets.ts'), 'utf8');
 
 describe('blank Quick Workout launch', () => {
   it('reads searchParams so it can recognize ?quick=blank', () => {

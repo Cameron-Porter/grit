@@ -1,0 +1,1280 @@
+{
+  "version": 1,
+  "revision": "1422d5bfe864fcc45a33b023fdbbc3d64c613bac995acff1df4d2f3acd6fa684",
+  "chunks": [
+    {
+      "id": "dc1e954567e6bee9e171",
+      "file": "src/data/exerciseDatabase.ts",
+      "line": 17,
+      "tags": [
+        "HV-037"
+      ],
+      "content": "─── BACK ─────────────────────────────────────────────────────────────────\nHV-037: bodyweightRepCeiling overridden to 15 — the 30-rep category\ndefault (calibrated to pushup-style moves) is unrealistic for strict\npull-ups/chin-ups; a lifter clearing 15 clean reps should be prompted to\nadd difficulty (weighted, tempo, ROM) rather than keep chasing reps."
+    },
+    {
+      "id": "71d16d3c65820559dd31",
+      "file": "src/data/exerciseProgressionProfiles.ts",
+      "line": 52,
+      "tags": [
+        "HV-030",
+        "ST-010",
+        "ST-011",
+        "HV-001",
+        "HV-027"
+      ],
+      "content": "─── HV-030: Category profile table ────────────────────────────────────────\n\ntargetIncrementPct is set to the LOW end of each cited range (2.5% / 3% /\n1%-equivalent via the equipment_limited gate) rather than the midpoint —\nconservative-by-default minimizes disruptive jumps, consistent with\nNuckols-style general strength-progression guidance that per-session load\njumps should be the smallest increment that still represents genuine\nprogress. setAdditionRepPenaltyPct and the percentage ranges themselves\nare the user's own doctrine spec (2026-08-04, explicit override of\nST-010 — see progressionEngine.ts's ST-011 comment for the supersession).\nmaxEffectiveSetsPerSession: Dr. Mike Israetel / RP Hypertrophy \"Sets Per\nSession\" guidance — single-exercise stimulus diminishes past ~4-6 sets.\nfailurePolicy floors: RP Strength \"Hypertrophy Made Simple\" RIR-taper\nguidance + NSCA technical-breakdown-risk-near-failure for loaded\ncompounds — same citation lineage as HV-001/HV-027's taper."
+    },
+    {
+      "id": "c3a0273f6a2675aae0f4",
+      "file": "src/data/exerciseProgressionProfiles.ts",
+      "line": 135,
+      "tags": [
+        "HV-029"
+      ],
+      "content": "─── HV-029: Category derivation heuristic ─────────────────────────────────\n\nexerciseType alone is not a reliable compound/isolation signal — several\nsingle-joint movements are historically tagged 'barbell-compound'/\n'machine-compound' in exerciseDatabase.ts (Barbell Curl, EZ-Bar Curl,\nSkull Crusher, Preacher Curl, Cable Overhead Tricep Extension) because\nexerciseType only ever distinguished equipment + rough movement class, not\njoint count. movementPattern is ground truth for \"is this single-joint,\"\nso it's checked first for exercises exerciseType would otherwise\nmisclassify as compound."
+    },
+    {
+      "id": "d090ea033498e26aebb7",
+      "file": "src/data/exerciseProgressionProfiles.ts",
+      "line": 155,
+      "tags": [
+        "ST-001"
+      ],
+      "content": "Barbell movement patterns trained near-maximal (1-6 rep strength zone) per\nPrilepin's Chart / RP Strength \"Strength Training Made Simple\" — matches\nthe same movement-pattern set already implicitly treated as the \"big\nlifts\" by ST-001's Primary-slot doctrine."
+    },
+    {
+      "id": "20620665d758e4592e57",
+      "file": "src/data/exerciseProgressionProfiles.ts",
+      "line": 202,
+      "tags": [
+        "HV-028",
+        "HV-029"
+      ],
+      "content": "HV-028/HV-029: live catalog equipment identifies bodyweight exercises even\nwhen the small rules fixture has no corresponding name. It is not an\nequipment fallback: the caller supplies the actual Supabase equipment."
+    },
+    {
+      "id": "147896cfbf20196ea539",
+      "file": "src/data/exerciseProgressionProfiles.ts",
+      "line": 210,
+      "tags": [
+        "HV-037"
+      ],
+      "content": "HV-037: extend the existing strict pull-up/chin-up ceiling to live catalog\ngrip variants. Source: RP Hypertrophy reps-first progression and the\nexercise-specific difficulty ladder documented on the fixture definitions."
+    },
+    {
+      "id": "8c94a464eba3d8a92942",
+      "file": "src/data/loadIncrements.ts",
+      "line": 1,
+      "tags": [
+        "HV-041",
+        "HV-028"
+      ],
+      "content": "─── HV-041: Equipment load increments ─────────────────────────────────────\n\nLoad increments must match hardware that actually exists. The engine\npreviously sized every jump from the weight alone (2.5 lb under 100, 5 lb\nover), which produced prescriptions like a 77.5 lb dumbbell — a dumbbell\nthat exists in no gym.\n\nSources: the increments below are physical facts about standard commercial\ngym equipment, cross-checked against RP Hypertrophy's own exercise-type\ntaxonomy (Machine / Barbell / Smith machine / Dumbbell / Cable / Freemotion\n/ Bodyweight only / Bodyweight loadable / Machine assistance), which splits\nexercises along exactly these lines because each loads differently:\n\n  Barbell   — loaded in pairs. The smallest plate pair in general use is\n              2.5 lb (1.25 lb each side); 5 lb is the practical default\n              because 1.25s are not universally stocked.\n  Dumbbell  — fixed dumbbells step in 5 lb through the range commercial\n              racks cover. Confirmed against RP session logs, where every\n              dumbbell load lands on a 5 lb multiple (40, 50, 70 lb).\n  Machine   — selectorized stacks pin in 10 lb steps on most plate stacks.\n  Cable     — cable stacks are finer than machine stacks, commonly 5 lb.\n  Bodyweight— no external load; the engine progresses reps instead (HV-028).\n\nDeliberately conservative: where a gym has finer hardware (micro-plates,\n2.5 lb dumbbells) the worst case is a slightly larger jump, whereas being\ntoo fine prescribes a weight the user cannot physically select."
+    },
+    {
+      "id": "58c5a4f1e9b082b10d9d",
+      "file": "src/data/muscleRepBands.ts",
+      "line": 1,
+      "tags": [
+        "HV-043"
+      ],
+      "content": "─── HV-043: Per-muscle rep-band floors ────────────────────────────────────\n\nRep bands were derived from slot role × muscle priority alone, with no\nawareness of which muscle filled the slot. An emphasized Primary slot is\n5-10 reps, so putting calves or abs on one prescribed 5-rep calf raises and\n5-rep sit-ups - loads and rep counts that are not achievable, let alone\nproductive, for those muscles.\n\nSources:\n  - RP Hypertrophy is deliberately agnostic across 5-30 reps, \"only flagging\n    extremes beyond those boundaries\" (RP Help Center, \"What should my rep\n    range be?\"), so nothing here narrows a band - it only raises a floor that\n    was set too low for the muscle.\n  - RP recommends 10-20 reps for calves specifically, and groups calves and\n    forearms as muscles where heavy loading is impractical (RP Help Center,\n    \"Calves\"; rpstrength.com, \"How to Get Bigger Calves\").\n  - Abs sit in the same category: the movements are overwhelmingly bodyweight\n    or lightly loaded, so a low-rep prescription cannot be met with load and\n    just becomes an under-stimulating set.\n\nApplied as a floor, never a ceiling: a band already at or above these values\nis left exactly as the role/priority table set it."
+    },
+    {
+      "id": "7a7922bd4841e020f000",
+      "file": "src/data/programTemplates.ts",
+      "line": 465,
+      "tags": [
+        "PB-001",
+        "PB-002",
+        "PB-003"
+      ],
+      "content": "─── Kizen Powerbuilding 6x ────────────────────────────────────────────────\nRep/set schemes follow PB-001/PB-002/PB-003 (see slotRoleConfig.ts \"emphasize\"\ntier) — Kizen 16-Week + PHAT (Layne Norton). Each movement pattern gets one\nheavy/low-rep pass and one pump/high-rep pass per week."
+    },
+    {
+      "id": "07380208c3ed83060449",
+      "file": "src/data/programTemplates.ts",
+      "line": 539,
+      "tags": [
+        "ST-001",
+        "ST-002",
+        "ST-003"
+      ],
+      "content": "─── Strength 4x ───────────────────────────────────────────────────────────\nRep/set schemes follow ST-001/ST-002/ST-003 (see slotRoleConfig.ts \"emphasize\"\ntier) — Prilepin's Chart + NSCA guidelines. One heavy Primary lift per day\nin the 85-95% / 1-3 rep zone, with Secondary and Accessory work in the\nPrilepin bridge zones to add volume without blunting recovery for the next\nheavy day."
+    },
+    {
+      "id": "15ad51bd271f31285b66",
+      "file": "src/data/roleOverlap.ts",
+      "line": 3,
+      "tags": [
+        "VA-014",
+        "RC-008"
+      ],
+      "content": "VA-014: Secondary muscle stimulus per PRIMARY slot, expressed as a fraction\nof one direct working set.\n\nSource: Dr. Mike Israetel / RP Hypertrophy — secondary muscle stimulus\ncoefficients (used here for both weekly volume accounting in\nvolumeBudget.ts/validation.ts, and for overlap-avoidance day-spacing in\nassignment.ts — see RC-008).\n\nBasis (from literature on EMG and mechanical overlap):\n  0.50 — substantial: close to a direct working set\n          (biceps during rows, hamstrings during squats)\n  0.40 — meaningful: significant partial activation\n          (triceps during bench, glutes during RDLs)\n  0.25 — moderate: real but not the limiting factor\n          (hamstrings during hip thrust)\n  0.15 — minor: worth accounting at high volumes\n  0.10 — minimal: mostly MEV-level muscles\n\nRole multipliers are applied when the slot is not Primary:\n  Secondary  × 0.60\n  Accessory  × 0.30\n\nA handful of coefficients below (Shoulders→Chest 0.20, Shoulders→Triceps\n0.45, Glutes→Hamstrings 0.30) don't land exactly on one of the five named\ntiers above — they're interpolated between tiers for movements that don't\ncleanly match one of the five cited examples, not typos or tier\nviolations. Flagging inline at each one below."
+    },
+    {
+      "id": "9fc1f2ec347ae0c67453",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 10,
+      "tags": [
+        "HV-024",
+        "RC-012"
+      ],
+      "content": "─── Default: Hypertrophy / General ──────────────────────────────────────────\n\nPrimary   — main compound for the session's focus muscle; heaviest work\nSecondary — volume variation compound; moderate loading\nAccessory — isolation / detail work; higher reps, lower RIR\n\nRep ranges follow the hypertrophy research sweet spots:\n  5–10  at Primary emphasize = strength-hypertrophy overlap\n  8–15  at Secondary = mechanical tension + metabolic stress\n  10–25/30 at Accessory = pump / mind-muscle / isolation range (HV-024)\nRC-012: Minimum set floor — no working slot role is prescribed under 3 sets."
+    },
+    {
+      "id": "3077fa752d5f9caa08bb",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 34,
+      "tags": [
+        "HV-024"
+      ],
+      "content": "─── HV-024: Accessory rep ceiling — dumbbell/machine/isolation range ──────\n\nSource: RP Strength \"Hypertrophy Made Simple\" (2023) — rep range is split\nby exercise TYPE, not just slot role: \"antigravity compounds\" (rows,\nsquats, deadlifts) are stability-limited and stay in 5-15 reps, but\n\"dumbbell, machine, and isolation movements\" are prescribed 15-30 reps,\nwith a recommended set distribution of ~50% of sets in 10-20 reps, 25% in\n5-10, and 25% in 20-30. Accessory-role slots are, by definition, the\nisolation/detail work this guidance targets (Primary/Secondary carry the\nantigravity-compound work), so their ceiling moves from the old flat 20\nup toward this range: 25 for the higher-fatigue tiers (emphasize/grow/\nmaintain), 30 at `mev` where load is lightest and the highest-rep end is\nmost appropriate."
+    },
+    {
+      "id": "cbf62be9179616f0666d",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 55,
+      "tags": [
+        "ST-001"
+      ],
+      "content": "─── ST-001: Strength Primary — Prilepin 85-95% zone ─────────────────────────\n\nSources: Prilepin's Chart (Soviet weightlifting research, 1000+ athletes);\nRP Strength \"Strength Training Made Simple\" (2023) — \"Limit Strength\" zone\n(1-3 reps at 87.5%+ 1RM) for emphasize, bridging toward \"Basic Strength\"\n(3-6 reps at 82.5%+ 1RM) for grow. The 1-3/2-4 rep bands implemented below\nsit at the tight, CNS-conservative end of Prilepin's 85-95% zone (which\nitself spans 1-6 reps/set depending on exact %) rather than its 3-6 rep\nmidpoint — the Made Simple guide's explicit Limit-Strength definition is\nwhat actually justifies emphasize being 1-3, not a generic Prilepin cite.\n\nAt 85-95% 1RM, Prilepin's optimal total reps per session = 10 (range 6-14).\nWe target 5 sets × 1-3 reps for emphasize = 5-15 total, hitting the optimal\nrange while managing CNS cost per set.\n\nRIR 1: at near-max load you know you have one more rep but stop for technique."
+    },
+    {
+      "id": "45349d055f99dd0fd317",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 72,
+      "tags": [
+        "ST-002"
+      ],
+      "content": "─── ST-002: Strength Secondary — Prilepin 75-85% zone ───────────────────────\n\nAt 75-85% 1RM, Prilepin's optimal total reps = 15 (range 10-20). Reps span\n8-15 across the tier table below (emphasize tightest/lowest at 8-10,\nwidening toward mev at 12-15) — corrected 2026-08-03: the table previously\ncoded 4-8 reps here, which undershot even this section's own cited 75-85%\nzone. 8-15 keeps Secondary work in the \"myofibrillar hypertrophy\" zone\n(Prilepin/Norton reverse-engineering: higher-rep secondary volume work vs.\nthe low-rep max-strength Primary work above) while staying inside\nPrilepin's cited 10-20 total-rep range per session at this intensity."
+    },
+    {
+      "id": "08f95e293301164e4e88",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 83,
+      "tags": [
+        "ST-003",
+        "ST-004",
+        "ST-005"
+      ],
+      "content": "─── ST-003: Strength Accessory — 65-75% zone, assistance work ───────────────\n\nKept in 6-10 rep range (not the full 10-20 Prilepin endurance zone) to\nmaintain strength specificity. Assistance exercises at this intensity carry\nover directly to the main lift pattern without taxing CNS recovery.\n\nSee also: ST-004 in progressionEngine.ts (deload protocol).\n          ST-005 in progressionEngine.ts (load increment)."
+    },
+    {
+      "id": "883a6d5399c67bd0d246",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 112,
+      "tags": [
+        "PB-001"
+      ],
+      "content": "─── PB-001: Powerbuilding Primary — myofibrillar compound zone ───────────────\n\nSources: PHAT (Layne Norton) power days: 3-5 sets × 3-5 reps, long rest.\n         Kizen 16-Week: Day 4 = 3×5-6 @ 70-77.5% 1RM.\n\n3-7 reps sits in Prilepin's \"myofibrillar hypertrophy\" zone — builds the\nstrength base that drives long-term size gains without the full CNS cost of\nthe 1-3 rep max-strength zone."
+    },
+    {
+      "id": "e492ca843f4e387eb640",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 121,
+      "tags": [
+        "PB-002"
+      ],
+      "content": "─── PB-002: Powerbuilding Secondary — bridge zone ────────────────────────────\n\nSources: Kizen Day 2: 3×8-10 @ 55-67.5%; Kizen Day 6: 3×7-8 @ 55-65%.\n         PHAT assistance sets: 6-10 reps following power main lifts.\n\nEnough reps to accumulate metabolic stress and induce sarcoplasmic\nadaptation while staying close enough to strength loads to reinforce\nmovement pattern efficiency."
+    },
+    {
+      "id": "54667f2e39d92894aab3",
+      "file": "src/data/slotRoleConfig.ts",
+      "line": 130,
+      "tags": [
+        "PB-003",
+        "PB-004"
+      ],
+      "content": "─── PB-003: Powerbuilding Accessory — sarcoplasmic / pump zone ──────────────\n\nSources: PHAT hypertrophy days: 8-12, 12-15, 15-20 rep sets (1-2 min rest).\n         Kizen Days 1/3/5: 2-4 sets × 8-15 reps @ RPE 8-9 in superset pairs.\n\nIsolation and detail work at higher reps drives the size component of the\npowerbuilding adaptation — the counterpart to the strength-focused Primary.\n\nSee also: PB-004 in progressionEngine.ts (deload uses hypertrophy protocol)."
+    },
+    {
+      "id": "0fc4de8378c7f3e4c821",
+      "file": "src/rules/assignment.ts",
+      "line": 61,
+      "tags": [
+        "RC-008",
+        "VA-014"
+      ],
+      "content": "RC-008: max of both directions since PRIMARY_ROLE_OVERLAP is asymmetric\n(e.g. Chest -> Triceps 0.40 is listed, Triceps -> Chest is not).\nSource: Dr. Mike Israetel / RP Hypertrophy — secondary muscle stimulus\ncoefficients (see roleOverlap.ts VA-014)."
+    },
+    {
+      "id": "bcfc875f0f1926bf3caf",
+      "file": "src/rules/assignment.ts",
+      "line": 69,
+      "tags": [
+        "RC-008"
+      ],
+      "content": "RC-008: penalty for assigning `muscle` to `idx` given which other muscles\nalready occupy which days this week. Same-day overlap counts in full;\nadjacent-day overlap (residual fatigue, not lost recovery time) counts at\nhalf weight. Zero when there's no meaningful overlap (most muscle pairs)."
+    },
+    {
+      "id": "976812887cebc0eeff6e",
+      "file": "src/rules/assignment.ts",
+      "line": 91,
+      "tags": [
+        "RC-007"
+      ],
+      "content": "RC-007: how far idx is from the nearest already-chosen day for this same\nmuscle. Larger = better spacing. Infinity when nothing chosen yet (no\nspacing constraint to satisfy)."
+    },
+    {
+      "id": "c7d1a552fda087ec0e9a",
+      "file": "src/rules/assignment.ts",
+      "line": 99,
+      "tags": [
+        "RC-007",
+        "RC-008"
+      ],
+      "content": "RC-007/RC-008: greedily fill `needed` more slots from `candidates` (all in\nthe same SESSION_PREFERENCE tier, so preference rank can't discriminate\nbetween them), preferring day-indices that (a) avoid overlap with muscles\nalready assigned this week and (b) stay evenly spaced from this muscle's\nown already-chosen days (`seed`, e.g. picks from a more-preferred tier).\nSource: Dr. Mike Israetel / RP Hypertrophy — symmetrical weekly muscle\nspacing and overlap-aware scheduling."
+    },
+    {
+      "id": "11c0634790846383ef8f",
+      "file": "src/rules/assignment.ts",
+      "line": 142,
+      "tags": [
+        "RC-007",
+        "RC-008"
+      ],
+      "content": "Returns the day indices (within weekSessions) on which this muscle should\nreceive direct work, up to its sessionFrequency.\n\nWhen downsampling (more eligible sessions than frequency allows), sessions\nare ranked by SESSION_PREFERENCE so that e.g. Triceps always goes to Push\nbefore Upper. This keeps \"primary\" sessions focused and Upper/Lower sessions\nfrom becoming cluttered with tertiary accessory work. Within a preference\ntier (RC-007/RC-008), ties are broken by even spacing and overlap avoidance\nagainst muscles already assigned — not raw day-index order.\n\n`alreadyAssigned` should contain every muscle processed earlier in this\nweek's assignment loop (see programBuilder.ts, which iterates ALL_MUSCLES in\na fixed order and accumulates into the same map instance)."
+    },
+    {
+      "id": "de48e2d63c50310181ba",
+      "file": "src/rules/perSetTargets.ts",
+      "line": 1,
+      "tags": [
+        "HV-045"
+      ],
+      "content": "─── HV-045: Per-set rep targets ───────────────────────────────────────────\n\nThe engine prescribes one rep target for a whole exercise, and the logger\nshows the same range on every set row. Progress within a session is\ntherefore invisible: after 11, 12, 12 against a 12 ceiling the lifter is\ntold \"aim for 12\" — a number two of the three sets already hit — with no\nindication that the first set is the one to push.\n\nRP instead raises reps a set at a time, which is what produces the\n135x12, 135x12, 135x13 pattern: total reps creep up by one per session\nrather than every set jumping together. This distributes the next session's\nsingle extra rep the same way.\n\nRule: add the rep to the set with the fewest reps, breaking a tie in favour\nof the LAST such set. Uneven sets therefore converge upward first (11,12,12\n-> 12,12,12), and once level the trailing set leads (12,12,12 -> 12,12,13),\nwhich is exactly the observed RP shape. When every set is already at the\nceiling nothing is added — that is the double-progression trigger to raise\nload instead, and it stays owned by progressionEngine.\n\nSource: RP's own progression guidance treats volume as the primary driver\nand load as a slow, occasional change (rpstrength.com, \"Progressing for\nHypertrophy\"); a per-session single-rep increment is the smallest unit of\nthat volume progression."
+    },
+    {
+      "id": "8d435bdb808560d58cd3",
+      "file": "src/rules/programBuilder.ts",
+      "line": 58,
+      "tags": [
+        "RC-008"
+      ],
+      "content": "Step 3: Assign muscles to days.\nRC-008: muscleSessionMap is mutated in place as the loop progresses, so\neach call to assignMuscleSessions sees only the muscles already assigned\n(ALL_MUSCLES order below) — exactly what overlap-avoidance needs."
+    },
+    {
+      "id": "58fa99ccfb9e5cbd6ff4",
+      "file": "src/rules/programBuilder.ts",
+      "line": 77,
+      "tags": [
+        "HV-021"
+      ],
+      "content": "HV-021: keyed lookup so buildDaySlots can derive each muscle's own\nlandmark-anchored set targets (hypertrophy focus only — see slotBuilder.ts)."
+    },
+    {
+      "id": "814633ad3e4cabbcbf90",
+      "file": "src/rules/programBuilder.ts",
+      "line": 91,
+      "tags": [
+        "HV-026",
+        "HV-027"
+      ],
+      "content": "HV-026/HV-027: threaded through so applyWeekParams can use the gentler\nbeginner RIR taper floor instead of the intermediate/advanced one."
+    },
+    {
+      "id": "93f20934e3ac61003894",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 20,
+      "tags": [
+        "HV-028"
+      ],
+      "content": "HV-028: from the Supabase-sourced ProgramExercise.equipment column (per\nAGENTS.md — never the local exerciseDatabase.ts fixture). When\n'Bodyweight', every weight-adjustment branch below holds at the last\nlogged weight instead of adding/reducing/halving it — see HV-028's\ndoctrine comment further down for why."
+    },
+    {
+      "id": "d7203c8328ba1a82159e",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 26,
+      "tags": [
+        "HV-029",
+        "HV-030",
+        "ST-011",
+        "HV-032",
+        "HV-036"
+      ],
+      "content": "HV-029/HV-030: category-level Exercise Progression Profile, resolved by\nthe caller via getProgressionProfile(exerciseDef) in\nsrc/data/exerciseProgressionProfiles.ts. Drives load-increment sizing\n(ST-011), volume-transition rep compensation (HV-032), and RIR/failure\nfloors (HV-036). Defaults to the heavy_compound profile when omitted —\nthe closest analog to the old implicit 'barbell-compound' default —\nso callers/tests that don't pass one keep prior behavior."
+    },
+    {
+      "id": "0e77ba7e09006e5947cb",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 41,
+      "tags": [
+        "HV-033"
+      ],
+      "content": "HV-033: rir is optional user-reported actual RIR. Legacy sessions may\nproduction caller — workout_sets.rir stores only the prescribed RIR\nomit it; current sessions populate it through workout_sets.reported_rir.\nPlateau comparison uses it only when every set in both sessions reports\nRIR; partial effort data is not strong enough to classify a stall."
+    },
+    {
+      "id": "bd5bb67b6a052c557f50",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 74,
+      "tags": [
+        "VA-013"
+      ],
+      "content": "VA-013: soreness this muscle reported for the session just logged (the\none whose performance is in `sessions[0]`) — used to hold volume flat\nrather than progress it into next week. See getMuscleSorenessForWorkout\nin src/api/history.ts for where this is fetched from."
+    },
+    {
+      "id": "171cf826d5b627c905fb",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 79,
+      "tags": [
+        "VA-020"
+      ],
+      "content": "VA-020: consecutive program-scoped exposures where this muscle was still\nsore. Two signals trigger a recovery exposure rather than another ramp."
+    },
+    {
+      "id": "ee28d20b290a5b70014f",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 82,
+      "tags": [
+        "VA-020"
+      ],
+      "content": "VA-020: first productive exposure after two recovery failures restarts\nfrom MEV/MV rather than jumping back to the calendar ramp."
+    },
+    {
+      "id": "2ec7e451acba1a12d6ee",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 85,
+      "tags": [
+        "VA-018",
+        "VA-013"
+      ],
+      "content": "VA-018: when the caller (src/api/progression.ts's byMuscle loop) has\ncomputed a fatigue-weighted redistribution of the VA-013 soreness trim\nacross this muscle's sibling exercises (redistributeSorenessTrim in\nvolumeBudget.ts), this is that exercise's specific trim amount — used\ninstead of the flat 1-set trim below. Only progression.ts's muscle-level\ngrouping can compute this; quickWorkout.ts has no sibling-exercise\nvisibility and always leaves it unset, falling back to the flat trim."
+    },
+    {
+      "id": "bddf56d081877af2121d",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 93,
+      "tags": [
+        "HV-021"
+      ],
+      "content": "HV-021: pre-resolved landmark-driven weekly set target for this exercise's\nmuscle (RP Strength / Israetel et al. MV/MEV/MAV/MRV), computed by the\ncaller — see rampSets() in volumeRamp.ts and computeAndSaveProgressionTargets\nin src/api/progression.ts, which aggregates across all of this muscle's\nexercises before resolving each one's share. Present only for hypertrophy\nfocus where a landmark exists for the muscle; when set, it replaces the\nflat per-priority set math below for both training weeks and deload, so\nthis file and the generation-time path (slotBuilder.ts) run the exact\nsame volume philosophy instead of two independent ones."
+    },
+    {
+      "id": "0640f31d0a34630c196d",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 105,
+      "tags": [
+        "RC-011",
+        "HV-037",
+        "RC-003"
+      ],
+      "content": "── Actions ──────────────────────────────────────────────────────────────────\n\nEach action maps to a specific doctrine state and drives a distinct UI message.\n\nFIRST_SESSION     — no history; show empty weight field with starting cues\nDELOAD            — scheduled deload week; reduce sets + RIR, hold load\nADVANCE_LOAD      — rep ceiling hit cleanly → increase load next session\nHOLD              — rep progress is occurring or stable; stay at current load\nREDUCE_LOAD       — two consecutive sessions below rep floor → drop weight\nPLATEAU_DELOAD    — stall count exceeded threshold → deload before any load change\nDELOAD_NEEDED     — two consecutive bad sessions (reps regressed) → immediate deload\nCUT_HOLD          — maintenance focus: maintain current performance, no auto-increment\nCUT_PROGRESS      — RC-011: fat-loss phase, ceiling hit → reduced-speed load advance\nADVANCE_DIFFICULTY — HV-037: bodyweight exercise hit its rep ceiling → advance via\n                      tempo/ROM/leverage/external load instead of more reps\nLENGTHENED_PARTIALS — RC-003: experienced accessory isolation hits the rep ceiling\n                      but load is equipment-limited → extend the final set in the\n                      lengthened position instead of chasing an oversized jump"
+    },
+    {
+      "id": "b5545a3c588e9c48cb36",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 156,
+      "tags": [
+        "ST-011"
+      ],
+      "content": "Increment used to compute the load change (for display: \"Add 5 lb\").\nST-011: category- and weight-dependent — see getLoadIncrementAmount."
+    },
+    {
+      "id": "b87cc4159276c72fa480",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 203,
+      "tags": [
+        "HV-041"
+      ],
+      "content": "HV-041: hardware granularity is a property of the equipment, not of how\nheavy the weight happens to be. This used to return 2.5 below 100 lb and 5\nabove, which prescribed loads that do not exist — most visibly a 77.5 lb\ndumbbell. See src/data/loadIncrements.ts for the per-equipment steps and\ntheir sourcing."
+    },
+    {
+      "id": "94b95736c29d8209ec6b",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 212,
+      "tags": [
+        "ST-011"
+      ],
+      "content": "ST-011: an equipment-limited exercise (isolation/cable_accessory) that's\nproportionally too light for its own smallest increment climbs reps past\nits prescribed ceiling for up to this many reps before the engine forces\nthe jump anyway — otherwise a sufficiently light exercise could stall on\nthe reps axis forever."
+    },
+    {
+      "id": "185f47f49ebc8b94da49",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 219,
+      "tags": [
+        "HV-042"
+      ],
+      "content": "HV-042: default ceiling on how large a single load jump may be as a share\nof the current working weight, for categories that do not set their own."
+    },
+    {
+      "id": "5320f3b20f608be2d7a7",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 256,
+      "tags": [
+        "HV-042"
+      ],
+      "content": "─── HV-042: no jump may be a large fraction of the current load ───────────\n\nThe proportional gate used to apply only to the equipment_limited\ncategories (isolation, cable_accessory). Every other category took the\nsmallest hardware step regardless of how big that was relative to the\nweight on the bar — so a dumbbell press at 30 lb took the 5 lb dumbbell\nstep, a 17% jump, every time the rep ceiling was hit.\n\nRP's own progression guidance is that load should climb slowly and that\ndumbbells specifically should not climb every week: \"Maybe 5lb on the bar\nevery week, maybe increasing dumbbell weights every 2 or 3 weeks\"\n(rpstrength.com, \"Progressing for Hypertrophy\"), because volume - not load\n- is the primary hypertrophy driver. Holding load and letting reps\naccumulate until the same step is a smaller share of the total is exactly\nhow that every-2-or-3-weeks cadence arises, so the gate now applies to\nevery loadable category rather than two of them."
+    },
+    {
+      "id": "fbdd21ef75994bfd6ee2",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 291,
+      "tags": [
+        "HV-028"
+      ],
+      "content": "─── HV-028: Bodyweight has no external load to adjust ────────────────────────\n\nEvery branch below that changes `nextWeight` does so by adding, subtracting,\nor halving a fixed increment of the *previous logged weight*. That's a sound\nmodel when weight means \"plates/pins on an implement\" — it breaks down when\nweight means body weight, since a training decision can't add 5 lb to (or\ntake 50% off) someone's actual mass. Deload halving, bad-session/plateau\ndeload halving, REDUCE_LOAD, and ADVANCE_LOAD all hit this. For bodyweight\nequipment, weight holds at whatever was last logged in every one of those\ncases — the training decision still happens, just entirely on the reps\naxis (see advanceRepsForBodyweight below for the ADVANCE_LOAD case\nspecifically). Source: standard bodyweight/calisthenics progression model —\nreps-first progression, with external load only entering via a genuinely\nweighted variation (weighted vest/belt), which isn't something this app\ncan auto-detect from a rep-ceiling hit."
+    },
+    {
+      "id": "ab887a8e75194f2f9a62",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 318,
+      "tags": [
+        "HV-035",
+        "ST-012"
+      ],
+      "content": "HV-035/ST-012: reductionPct is now caller-supplied — hypertrophy and\nstrength deloads use different percentages (see the deload branches\nbelow) instead of a single baked-in flat 50%."
+    },
+    {
+      "id": "4e3fcbb8a8a4039f140f",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 347,
+      "tags": [
+        "HV-028"
+      ],
+      "content": "HV-028: the ADVANCE_LOAD counterpart — a bodyweight exercise past its rep\nceiling can't \"add load,\" so the rep target keeps climbing past the\nceiling (uncapped, unlike nextRepTarget's floor-to-ceiling nudge) instead\nof resetting to the floor at a heavier weight. The ceiling still means\nsomething (it's when this branch fires at all), it just isn't a hard cap\nonce there's no load to trade the extra reps in for."
+    },
+    {
+      "id": "3ff69323bb05aa2b88be",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 357,
+      "tags": [
+        "ST-007"
+      ],
+      "content": "ST-007: Double-progression rep target — advance the prescribed rep count by\n1 from last session's actual performance (capped at the exercise's rep\nceiling), rather than always prescribing the full band ceiling outright.\nClimbing one rep at a time before adding load is the standard double\nprogression method (NSCA Essentials of Strength Training and Conditioning).\nThis matters most where the band is wide relative to what's achievable\nsession to session — e.g. a bodyweight Pull-Up spanning an 8–15 rep band —\nwhere jumping straight to the ceiling reads as an unrealistic ask instead\nof a coached, week-over-week nudge."
+    },
+    {
+      "id": "5aee2a9be536d8e9135f",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 395,
+      "tags": [
+        "HV-040",
+        "HV-028",
+        "HV-037"
+      ],
+      "content": "─── HV-040: Known-performance seed for a new hypertrophy mesocycle ─────────\nSource: Dr. Mike Israetel / RP Hypertrophy — begin a new mesocycle at its\nconservative Week-1 volume and effort while using established exercise\nperformance to select a realistic working load. Starting a block is not a\nload-progression event: retain a successfully demonstrated load, clamp its\ncompleted reps into the new slot's authored band, and never copy the old\nsession's larger set count into the Week-1 MEV prescription.\nHV-028/HV-037 exception: bodyweight cannot trade those reps for more load.\nPreserve demonstrated reps up to the existing difficulty ceiling instead\nof resetting to a loaded-lift band. Source: RP Hypertrophy progression;\nthe bodyweight difficulty ladder remains governed by HV-037."
+    },
+    {
+      "id": "4827a797f6130ff9449b",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 441,
+      "tags": [
+        "ST-013"
+      ],
+      "content": "ST-013: A load increase requires the whole working-weight prescription to\nclear the rep ceiling, not one standout top set. Standard double progression\nadvances load only after all prescribed working sets reach the top of the\nrange with the intended effort (NSCA Essentials of Strength Training and\nConditioning). Using the minimum working-set reps also makes set-to-set\nfatigue visible instead of hiding it behind the best set."
+    },
+    {
+      "id": "d0a3c1756d9ad9baaf8b",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 464,
+      "tags": [
+        "HV-044"
+      ],
+      "content": "HV-044: when the rep ceiling was reached but reported effort blocked the load\nincrease, say so. The generic \"aim for N next session\" text repeats a target\nthe lifter has just hit and gives no clue why the weight is not moving."
+    },
+    {
+      "id": "b5917269617c2e9d8ad2",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 471,
+      "tags": [
+        "HV-044",
+        "ST-013"
+      ],
+      "content": "─── HV-044: missing effort data must not block progression ───────────────\n\nST-013 required *complete* RIR evidence before an intermediate or advanced\nlifter could add load, and treated no evidence as disqualifying. Reporting\nRIR is optional in the UI — the prompt has an explicit \"Not sure — skip\" —\nso this silently froze progression: an advanced lifter who topped the rep\nrange was told to \"aim for 12 next session\" having just done 12, with no\nmention of RIR anywhere in the reason. Repeating that identical session\nthree times then tripped plateau detection and *deloaded* them ~22%, for\nfailing to progress in a way the engine itself prevented. A beginner with\nbyte-identical history advanced normally.\n\nThe intent was right — do not add load when the last session was already\nharder than prescribed — but absence of evidence was being read as evidence\nof maximal effort. It now holds only on positive evidence of over-reach,\nwhich is also how RP autoregulates: their app progresses by default and uses\nfeedback to pull back, rather than refusing to move without it."
+    },
+    {
+      "id": "60367d296cb43633b6b5",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 501,
+      "tags": [
+        "ST-013",
+        "ST-015"
+      ],
+      "content": "ST-013/ST-015: NSCA double progression assumes a completed straight-set\nprescription. Until top and backoff sets are explicitly modeled, mixed\nloads or fewer-than-prescribed sets hold automatically."
+    },
+    {
+      "id": "e0822ce8277c44e204e4",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 512,
+      "tags": [
+        "HV-028"
+      ],
+      "content": "HV-028: bodyweight work uses zero to mean valid zero external load, not\nmissing performance. Loaded exercises still require a positive load."
+    },
+    {
+      "id": "5bef7b4b690f53ff2dd4",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 519,
+      "tags": [
+        "HV-033"
+      ],
+      "content": "─── HV-033: Comparable performance trend ────────────────────────────────────\n\nPlateau detection compares like-for-like sessions rather than collapsing\nload, reps, set count, and RIR into a directionally ambiguous tonnage score.\nA set-count change is not comparable. At identical output, higher reported\nRIR means the athlete achieved the work with more reserve and therefore\nimproved; lower or equal RIR is not improvement. Partial RIR histories are\nnot strong enough evidence to classify a plateau."
+    },
+    {
+      "id": "637a7e55c79c2ac7fb4a",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 547,
+      "tags": [
+        "HV-034"
+      ],
+      "content": "Count identical consecutive *pairs* (sessions[i] == sessions[i+1]) from the\nmost-recent session inward.\n\nHV-034: thresholds updated 2026-08-04 (SUPERSEDES the doctrine-5.3\nthresholds below — kept for history, not silently deleted):\n  Beginner    : 3 consecutive sessions = 2 pairs\n  Intermediate: 3 consecutive weeks    = 2 pairs\n  Advanced    : 2 consecutive weeks    = 1 pair (accommodation arrives faster)\nNew thresholds (beginner 4 exposures / 3 pairs, intermediate+advanced 3\nexposures / 2 pairs each) are applied where stallThreshold is computed in\nrecommendProgression — this function's pair-counting logic is unchanged,\nonly what counts as a \"stalled pair\" is stricter: HV-034 additionally\nrequires comparable set counts, whole-prescription reps, and no RIR\nimprovement, not just identical peak load+reps. The old\n\"advanced accommodates faster, so flag sooner\" rationale is explicitly\nretracted, not just renumbered — advanced now requires the same 2-pair\nconfirmation as intermediate before calling a plateau."
+    },
+    {
+      "id": "7566da6678aa6fb5036f",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 596,
+      "tags": [
+        "HV-032"
+      ],
+      "content": "─── HV-032: Volume transition compensation ────────────────────────────────\n\nThe core fix this file was reworked for: when the weekly volume ramp adds\na set to an exercise, the rep/load engine used to keep expecting the exact\nsame reps on the new, higher-fatigue set (3x10@200 -> a naive 4x10@200).\nThis lowers the rep ceiling for the one session where sets went up, sized\nby the exercise's category (setAdditionRepPenaltyPct — user doctrine spec\n2026-08-04) and how much fatigue was already in play (sets added, prior\nRIR). Example from the spec: 3x10@200 -> volume engine adds a set -> a\nhigh-fatigue compound should see something like 4x8-10@200, not 4x10@200\n— this function is what produces that lowered ceiling; the exact number in\nthat example (~20%) sits above even heavy_compound's cited 5-10% range, so\ntreat it as illustrative rather than a literal arithmetic target."
+    },
+    {
+      "id": "3f3d5949099e810ccfcb",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 640,
+      "tags": [
+        "HV-032",
+        "HV-034",
+        "RC-011"
+      ],
+      "content": "─── Main engine ──────────────────────────────────────────────────────────────\n\nsessions must be sorted newest-first (index 0 = most recent session).\nsessions must contain only completed working sets — no warm-ups, no skipped sets.\n\nDecision priority (doctrine Section 4.1, extended 2026-08-04 per HV-032/\nHV-034 — see those tags above):\n  1. DELOAD_ACTIVE (isDeload week) — no progression decisions\n  2. FIRST_SESSION (no history) — starter defaults. Checked before every\n     focus-specific branch below (maintenance, cut) so a brand-new exercise\n     always gets the \"enter your starting weight\" flow instead of a\n     focus-specific hold/deload message built from zeroed-out history.\n  3. Maintenance focus — hold performance, no auto-increment\n  4. BAD_SESSION threshold → DELOAD_NEEDED\n  5. Cut/fat-loss focus — RC-011: reduced-speed progression, not a hold\n  6. Experience-level dispatch (beginner linear / intermediate+advanced double)\n  7. Plateau resolution (inside the dispatch functions) — gated off when\n     volume recently increased (HV-034); that session's rep expectation is\n     already handled by HV-032's transition adjustment instead."
+    },
+    {
+      "id": "f72190f93991865cdfa8",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 666,
+      "tags": [
+        "HV-023",
+        "HV-030"
+      ],
+      "content": "HV-023/HV-030: every return path (including recovery and maintenance)\nrespects the exercise cap. Keep actual sets intact for deload arithmetic."
+    },
+    {
+      "id": "e739cb2128b48581bee1",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 678,
+      "tags": [
+        "HV-029",
+        "HV-030"
+      ],
+      "content": "HV-029/HV-030: defaults to heavy_compound when the caller doesn't\nresolve one — the closest analog to the old implicit 'barbell-compound'\ndefault, so callers/tests that don't pass a profile keep prior behavior."
+    },
+    {
+      "id": "cbcf11843faf39a84e5e",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 684,
+      "tags": [
+        "ST-011"
+      ],
+      "content": "ST-011: increment sizing is now weight-dependent (percentage-based /\nequipment-gated), computed once here off the most recent logged weight\n— every branch below that changes load operates on that same session,\nso the weight doesn't move mid-evaluation."
+    },
+    {
+      "id": "c960803689021f1dedc8",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 702,
+      "tags": [
+        "HV-021",
+        "VA-015",
+        "VA-013"
+      ],
+      "content": "Set-count progression within meso. HV-021: for hypertrophy with a\npre-resolved landmark target (see ProgressionContext.hypertrophyVolumeOverride),\nthat target wins outright — it's already muscle-level MEV/MAV/MRV-aware and\nMRV-capped. This includes 'maintain' priority: the override resolves to\nthat muscle's own Maintenance Volume landmark (flat, no ramp — see\nresolveMusclePerSessionAnchors in src/api/progression.ts), which can be\nhigher OR lower than whatever the template/last-actual set count was —\n\"maintain\" tracks true MV, not \"whatever you were already doing.\"\nConfirmed as intentional 2026-08-04 (a muscle at 2 sets/week jumping to\n5 after a refresh, because 2 sets was below that muscle's real MV, is\nexpected — not a bug to special-case around).\nEvery other focus (no landmark override available) keeps the original\nflat per-exercise doctrine:\n  emphasize → add 1 set per week above base (volume accumulation)\n  grow      → hold at template value\n  maintain  → never exceed template value\n\nVA-015: the emphasize ramp step itself is gated by this session's reported\nsoreness rather than advancing unconditionally with mesoWeek. Source:\nDr. Mike Israetel / RP Hypertrophy autoregulation (recovery.md; doctrine\n\"Response Indicators\" — muscle groups that recover within 24h and don't\nget pumped/sore from current volume grow better with more volume, while\nmuscle groups still sore at the next session have exceeded recoverable\nvolume). Implemented by shifting which week's ramp step applies:\n  Not sore     → take next week's step early (under-dosed, push further)\n  Healed early → normal ramp (unchanged)\n  Just in time → repeat last week's step (recovery and volume are\n                 matched — this is the MRV signal, don't advance further)\n  Still sore   → handled below by the existing VA-013 one-set trim\nOnly affects the flat per-exercise ramp — the HV-021 landmark override is\nalready muscle-level MRV-aware and isn't second-guessed here except by\nthe VA-013 safety trim, which still applies to both paths unchanged."
+    },
+    {
+      "id": "5c516575f4032fdd9f5d",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 744,
+      "tags": [
+        "VA-013",
+        "HV-021"
+      ],
+      "content": "VA-013: back off one set rather than progress it if this muscle reported\n'Still sore' walking into the session just logged — a full reset to\nbaseSetCount overcorrects for a single sore session; a one-set trim is\nthe modest autoregulation response doctrine calls for. Applied to\nrawEffectiveSets so this composes with both the flat weekBonus path and\nthe HV-021 landmark-override path without needing to special-case which\none produced the number. Never drops sets below baseSetCount — this\nholds volume down, it doesn't cut below where the meso started.\nSource: Dr. Mike Israetel / RP Hypertrophy — recovery autoregulation via\nsoreness feedback."
+    },
+    {
+      "id": "20c53a21d3931a0f5095",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 755,
+      "tags": [
+        "VA-018",
+        "VA-013"
+      ],
+      "content": "VA-018: when the caller has computed a fatigue-weighted per-exercise\ntrim (redistributeSorenessTrim in volumeBudget.ts), use that instead of\nthe flat 1-set trim — extends VA-013, doesn't replace its \"never below\nbaseSetCount\" invariant."
+    },
+    {
+      "id": "381cd8f5be9250c2e0ad",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 771,
+      "tags": [
+        "HV-023",
+        "HV-030"
+      ],
+      "content": "HV-023/HV-030: compensate for the sets actually prescribed, not an\nuncapped muscle-volume request which this exercise cannot absorb."
+    },
+    {
+      "id": "a5e5861a99501e88f700",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 775,
+      "tags": [
+        "HV-032"
+      ],
+      "content": "HV-032: previous sets = last actual logged set count (no separate stored\nfield needed — sessions[0] IS last week's real performance). Falls back\nto the prescription's own sets when there's no history yet (FIRST_SESSION\nwill win before this matters)."
+    },
+    {
+      "id": "49c87d2e715d34d3a0b8",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 781,
+      "tags": [
+        "HV-028",
+        "HV-037",
+        "HV-040",
+        "HV-032"
+      ],
+      "content": "HV-028/HV-037: preserve the reps axis when a static template is reused.\nSource: RP Hypertrophy progression, as in HV-040's bodyweight exception.\nUse the weakest completed set, not a single peak set. HV-032 can still\nreduce this baseline when added sets require a recovery adjustment."
+    },
+    {
+      "id": "1c8ac7fbd37a63edfa21",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 797,
+      "tags": [
+        "HV-034"
+      ],
+      "content": "HV-034: plateau branches gate off when volume just increased — that\nsession's rep expectation is already handled by volumeAdjustment above."
+    },
+    {
+      "id": "b34062ae7b46bd8d0cfd",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 805,
+      "tags": [
+        "HV-032"
+      ],
+      "content": "HV-032: this session's rep ceiling — lowered from the template's\nrepsMax when sets just increased; unchanged otherwise."
+    },
+    {
+      "id": "23549909e83d557240dc",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 809,
+      "tags": [
+        "HV-034"
+      ],
+      "content": "HV-034: stall threshold — exposures required before a plateau is called\n(SUPERSEDES the doctrine-5.3 thresholds referenced above — see\ncountConsecutiveStalls's doctrine comment for the full explanation,\nincluding the retracted \"advanced accommodates faster\" rationale).\n  Beginner            : 4 exposures = 3 pairs\n  Intermediate/Advanced: 3 exposures = 2 pairs each"
+    },
+    {
+      "id": "b927f25933749f24ed32",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 817,
+      "tags": [
+        "RC-011"
+      ],
+      "content": "Bad session threshold: how many consecutive regressions trigger an early\ndeload. RC-011: cut phase now matches the base threshold (2) instead of\nthe previous relaxed 3 — see the cut-phase branch below for why."
+    },
+    {
+      "id": "efd81367a96e9ad61df4",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 841,
+      "tags": [
+        "HV-001",
+        "HV-027",
+        "HV-026"
+      ],
+      "content": "HV-001: Intra-mesocycle RIR taper for non-deload weeks. Applied to\nemphasize/grow muscles: RIR drops by weeks remaining so effort peaks on\nthe final training week (weeksRemaining = 0).\nDeload overrides nextRir further below so this only affects working weeks.\n\nHV-027: previously this taper was gated off entirely for beginners\n(`ctx.experienceLevel !== 'beginner'`), but Hypertrophy Made Simple's\nbeginner RIR table still calls for a taper — just a gentler one, from\n4-5 RIR down to 2 RIR rather than all the way to failure, since beginner\ntechnique under fatigue is less reliable and doesn't yet warrant the\nintermediate/advanced 0-RIR peak week. So the floor is 2 for beginners\ninstead of 0, and the beginner exclusion is removed — beginners now taper\ntoward that higher floor instead of not tapering at all. Same floor value\nused by slotBuilder.ts's generation-time taper (HV-026) so the two paths\ncan't diverge.\nSource: RP Strength \"Hypertrophy Made Simple\" (2023)."
+    },
+    {
+      "id": "76b27d4c55c4e6496b9d",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 871,
+      "tags": [
+        "HV-019"
+      ],
+      "content": "HV-019: Hard RIR floor for deadlift-pattern exercises.\nApplied after the taper so the floor wins over any taper reduction."
+    },
+    {
+      "id": "dc49c9a5baae69e9ff03",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 877,
+      "tags": [
+        "HV-036",
+        "RC-011",
+        "HV-001",
+        "HV-027"
+      ],
+      "content": "HV-036: category failure-policy floor — composes with hardRirFloor via\nMath.max rather than a separate precedence rule, so hardRirFloor (more\nspecific, per-exercise) naturally wins whenever it's higher, and the\ncategory floor (e.g. heavy compounds never truly hit 0-RIR failure even\nat peak week) still applies to every exercise in that category, not just\nthe handful with an explicit hardRirFloor override. RC-011 bumps this\nfurther during a cut (below, before the taper's peak-week floor would\notherwise let effort run all the way to the category's normal floor).\nSource: RP Strength \"Hypertrophy Made Simple\" RIR-taper guidance + NSCA\ntechnical-breakdown-risk-near-failure for loaded compounds — same\ncitation lineage as HV-001/HV-027's taper."
+    },
+    {
+      "id": "39f962b6ce12686475bc",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 894,
+      "tags": [
+        "HV-038",
+        "HV-039"
+      ],
+      "content": "HV-038/HV-039: RP fatigue management reserves true failure for the final\ntraining week on failure-tolerant exercises with positive recovery. If\nsets rise or recovery is late, effort cannot intensify at the same time."
+    },
+    {
+      "id": "89e96240aa9a24fdb81a",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 960,
+      "tags": [
+        "PB-006",
+        "PB-004",
+        "HV-021",
+        "HV-035"
+      ],
+      "content": "PB-006: Powerbuilding deload still borrows the hypertrophy protocol\nwholesale — pointer-only supersession of PB-004, no numbers of its own.\nPHAT and Kizen both distribute CNS fatigue across power and\nhypertrophy days throughout the meso, so accumulated load is lower\nthan pure strength. Source: Kizen Week 9 deload structure.\n\nHV-021: hypertrophy focus with a resolved landmark target deloads sets\nto that muscle's own MV (Maintenance Volume) instead of a flat\npercentage — see ProgressionContext.hypertrophyVolumeOverride. Load\nreduction (HV-035) still applies uniformly regardless of which\nset-count path is used."
+    },
+    {
+      "id": "6b8f9f993a8aeeeabbd7",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 977,
+      "tags": [
+        "HV-035"
+      ],
+      "content": "HV-035: bodyweight deload reps soften 25% rather than the loaded-lift\n50% halving — reps are bodyweight's only progression axis, so halving\nthem every deload is disproportionate versus a loaded lift softening\non two axes (load + reps) simultaneously at once. Not explicit in the\nuser's spec; an interpolation from \"bodyweight: reduce sets/reps only.\""
+    },
+    {
+      "id": "ad91fc60ab6a9fcced4f",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1020,
+      "tags": [
+        "VA-020",
+        "RC-012"
+      ],
+      "content": "VA-020/RC-012: Dr. Mike Israetel / RP response indicators. A second\nconsecutive recovery failure becomes a temporary recovery exposure at\nhalf the last actual volume (minimum one), RIR 4, and the existing deload\nload reduction. MEV/MV are not floors for an unrecovered athlete."
+    },
+    {
+      "id": "80dc4bcc226b2436766c",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1069,
+      "tags": [
+        "RC-011"
+      ],
+      "content": "── Priority 4: Consecutive bad sessions → immediate deload ───────────────\nDoctrine 2.3 Trigger 2 / 3.3 Trigger 2: ≥2 consecutive bad sessions\nmeans accumulated fatigue or overreaching; deload before any load change.\nRC-011: badSessionThreshold is now 2 even during a cut (see its\ncomputation above) — this branch itself is otherwise unchanged."
+    },
+    {
+      "id": "a34e0ce6aa54c1a3205e",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1075,
+      "tags": [
+        "HV-035",
+        "HV-028"
+      ],
+      "content": "HV-035: same category-aware load reduction as the scheduled-deload\nbranch above — an immediate deload triggered by accumulated fatigue\nneeds the same load relief a scheduled one gets. HV-028: bodyweight\nhas no load to reduce."
+    },
+    {
+      "id": "c59923d964f066e4c9a1",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1096,
+      "tags": [
+        "RC-011"
+      ],
+      "content": "── Priority 5: Cut phase — reduced-speed progression, not a hold ────────\nRC-011 (2026-08-04, user doctrine spec) — SUPERSEDES the original\n\"fat-loss hold\" branch below (kept for history, not silently deleted).\n\nOriginal: During a cut, auto-increment was disabled entirely (doctrine\n4.4). Maintaining current performance was the success criterion. A load\nincrease was still surfaced if the user organically hit the ceiling, but\nas CUT_HOLD (informational) rather than the automatic ADVANCE_LOAD.\nbadSessionThreshold was also relaxed to 3 for cut specifically, reasoned\nas \"deficits cause 1-2 natural bad sessions.\"\n\nRC-011: cut no longer disables progression outright — it runs at 50-70%\nspeed (CUT_SPEED_FACTOR = 0.65 midpoint) instead. This directly reverses\nthe old badSessionThreshold leniency too: \"increase fatigue sensitivity\"\nmeans cut should catch real regression at least as fast as a normal\nweek, not slower — badSessionThreshold is computed as a flat 2 above,\nnot relaxed to 3 for cut anymore. Bodyweight exercises have no load axis\nto throttle, so their reps keep climbing unscaled during a cut — a\nreasonable interpretation, not explicit in the spec."
+    },
+    {
+      "id": "4131656ea85559ccd2aa",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1165,
+      "tags": [
+        "ST-011",
+        "HV-037"
+      ],
+      "content": "─── Shared ceiling-hit resolution ─────────────────────────────────────────\n\nST-011/HV-037: extracted because equipment-limited fallback and the\nbodyweight difficulty ladder are nontrivial branches that would otherwise\nduplicate identically between evaluateBeginnerLinear and\nevaluateDoubleProgression, which already handled a plain ceiling hit\nidentically (both reset to effectiveRepsMin at the new load — the only\ndifference was reason-text wording)."
+    },
+    {
+      "id": "dff4620a7e552179a2bc",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1229,
+      "tags": [
+        "ST-011"
+      ],
+      "content": "ST-011: equipment-limited exercise (isolation/cable_accessory) whose own\nsmallest realistic increment is still proportionally too large — hold\nload and extend reps past the ceiling instead, up to a rep buffer, then\nforce the jump anyway so it can't stall forever."
+    },
+    {
+      "id": "e9635160aa73c60f29a1",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1234,
+      "tags": [
+        "RC-003"
+      ],
+      "content": "RC-003: lengthened-position partials are reserved for experienced\nlifters on stable accessory/isolation work when the load jump is too\nlarge; the 3–5 partial-rep cue comes from the G.R.I.T. doctrine update\nciting the 2026 IJES lengthened-partials study."
+    },
+    {
+      "id": "36c5eb5c3c8d7deb7413",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1290,
+      "tags": [
+        "ST-007"
+      ],
+      "content": "ST-007: reset the rep target to the floor at the new load — double\nprogression restarts the climb, it doesn't ask for the old ceiling\nagain at a heavier weight."
+    },
+    {
+      "id": "038f6f626c68c65e3d44",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1303,
+      "tags": [
+        "HV-034"
+      ],
+      "content": "─── Beginner: Linear Progression ────────────────────────────────────────────\n\nDoctrine Section 1: Add load every session when reps complete the range\nwith clean technique. Intensity proxy = bar speed (approximated here by\nrep-ceiling hit — no barSpeedDropped field available yet).\n\nHV-034: Stall threshold: 4 exposures (3 pairs) for beginners."
+    },
+    {
+      "id": "a240c525d5bf688554fd",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1323,
+      "tags": [
+        "HV-032"
+      ],
+      "content": "HV-032: true when the transition-adjustment penalty was severe enough\nthat load should hold even if the (already-lowered) ceiling is hit."
+    },
+    {
+      "id": "da732abd0c5110ec72ec",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1336,
+      "tags": [
+        "HV-034",
+        "HV-032"
+      ],
+      "content": "Plateau detection — must deload before any load reduction (doctrine 1.2).\nHV-034: gated off when volume recently increased — that session's rep\nexpectation is already handled by the HV-032 transition adjustment, and\nan added set naturally producing lower reps isn't a plateau."
+    },
+    {
+      "id": "788182a31707739af870",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1341,
+      "tags": [
+        "HV-035",
+        "HV-028"
+      ],
+      "content": "HV-035: category-aware load reduction, same as the scheduled-deload\nbranch. HV-028: bodyweight has no load to reduce."
+    },
+    {
+      "id": "719a5e50a96f6e35502d",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1383,
+      "tags": [
+        "ST-007"
+      ],
+      "content": "ST-007: nudge toward the floor 1 rep at a time rather than restating the\nfull ceiling while still below the minimum."
+    },
+    {
+      "id": "e07eced9b37704b44493",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1397,
+      "tags": [
+        "HV-032"
+      ],
+      "content": "Rep ceiling hit with bar speed intact (approximated: reps ≥ ceiling).\nBeginner: advance load every session per linear progression. HV-032: the\nceiling checked here is effectiveRepsMax (lowered this session if\nvolume just increased), not the template's raw repsMax, and load holds\nwhen the transition penalty was severe enough (holdLoad)."
+    },
+    {
+      "id": "bc14fd9fceefd6c18910",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1406,
+      "tags": [
+        "ST-007"
+      ],
+      "content": "Within rep band — rep progress is occurring. ST-007: target last session's\nreps + 1 (capped at the ceiling) instead of restating the full ceiling."
+    },
+    {
+      "id": "f64624886d453d3c6f08",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1429,
+      "tags": [
+        "HV-034",
+        "ST-013"
+      ],
+      "content": "─── Intermediate + Advanced: Double Progression ──────────────────────────────\n\nDoctrine Sections 2–3:\n  - Accumulate reps within the target band at fixed load.\n  - When the rep ceiling is reached at the prescribed RIR, advance load.\n  - HV-034: Stall threshold: intermediate/advanced = 3 exposures (2 pairs) each.\n\nST-013: when actual per-set RIR is available, every working set must meet\nthe prescribed effort target before load advances. Legacy sessions without\nactual RIR retain the rep-based fallback."
+    },
+    {
+      "id": "aae17588fda97c59323e",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1449,
+      "tags": [
+        "HV-034"
+      ],
+      "content": "── Stall threshold exceeded → PLATEAU_DELOAD ─────────────────────────────\nMust deload before any load reduction (doctrine 2.2 Step 1 / 3.2 Step 1).\nPost-deload retest determines whether it was fatigue masking or true\nplateau. HV-034: gated off when volume recently increased."
+    },
+    {
+      "id": "1a80309cb8ad6aa1c005",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1456,
+      "tags": [
+        "HV-035",
+        "HV-028"
+      ],
+      "content": "HV-035: category-aware load reduction, same as the scheduled-deload\nbranch — only for the fatigue-masking case, since that's the one whose\nreason text already claims a \"deload\" (retest at load). The\ntrue-plateau branch below has its own distinct 10%-reduction\nrecommendation, unchanged. HV-028: bodyweight has no load to reduce."
+    },
+    {
+      "id": "defb0d747c66c84ee159",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1502,
+      "tags": [
+        "ST-007"
+      ],
+      "content": "ST-007: nudge toward the floor 1 rep at a time rather than restating the\nfull ceiling while still below the minimum."
+    },
+    {
+      "id": "d893cb8a84763c4a4df1",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1516,
+      "tags": [
+        "HV-032"
+      ],
+      "content": "── Rep ceiling hit → ADVANCE_LOAD ───────────────────────────────────────\nDouble progression: advance load, reset to rep floor.\n(Without reportedRir, ceiling hit alone is the gate — equivalent to doctrine's\n\"ceiling hit + RIR ≤ prescribedRir + 1\" assumption.) HV-032: the ceiling\nchecked here is effectiveRepsMax, not the template's raw repsMax, and\nload holds when the transition penalty was severe enough (holdLoad)."
+    },
+    {
+      "id": "875ab554f3400b7fb730",
+      "file": "src/rules/progressionEngine.ts",
+      "line": 1526,
+      "tags": [
+        "ST-007"
+      ],
+      "content": "── Within rep band — normal hold ────────────────────────────────────────\nST-007: target last session's reps + 1 (capped at the ceiling) instead of\nrestating the full ceiling every week."
+    },
+    {
+      "id": "f901988f1de9aab2b0ce",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 11,
+      "tags": [
+        "ST-009"
+      ],
+      "content": "ST-009: strength-focus session set cap — much more than ~15 heavy work sets\nin a single session drops most lifters below the minimum loading thresholds\n(75%/82.5%/87.5% 1RM for their rep zone), producing junk volume even if it\nstill feels heavy. 2-5 sets per movement type is the productive range; this\ncaps the whole session, not any single movement.\nSource: RP Strength \"Strength Training Made Simple\" (2023), \"Productive\nSets Per Session\" (2-5 sets/movement type, <15 sets/session)."
+    },
+    {
+      "id": "2bdde6f7c10b4a60dbb2",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 20,
+      "tags": [
+        "RC-006"
+      ],
+      "content": "RC-006: at 4+ training days/week, cap distinct muscle groups per session —\ntraining 7-8 muscle groups in one session guarantees the last few get\ninadequate stimulus regardless of how many exercise slots remain. Lower\nfrequencies (2-3 days/week) don't get this cap: a Full Body session at low\nfrequency is supposed to cover more ground per session.\nSource: Dr. Mike Israetel / RP Hypertrophy — session muscle-group limits at\nhigher training frequencies."
+    },
+    {
+      "id": "255d81422b10d5503eef",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 30,
+      "tags": [
+        "RC-009",
+        "RC-005"
+      ],
+      "content": "RC-009: per-role/-focus minute cost per set, replacing the flat 3.5 min/set\nconstant that only worked for hypertrophy-style rep ranges by coincidence.\nStrength-focus Primary work needs longer inter-set rest (heavy, low-rep\ncompounds); cut focus keeps the original flat estimate since RC-005's\nset/exercise caps are already conservative enough to stay well under the\n90-minute ceiling regardless of per-set rest time.\nSource: NSCA Essentials of Strength Training and Conditioning — rest\ninterval guidelines by training goal/intensity zone."
+    },
+    {
+      "id": "d6bdbc827a3677455d86",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 54,
+      "tags": [
+        "RC-010"
+      ],
+      "content": "RC-010: post-generation counterpart to enforceSessionCaps' Phase 2, for\ntrimming an already-computed set of progression targets back under the\nsession set cap. Deliberately narrower than generation-time trimming:\nthis never drops an exercise's sets below 1 or removes an exercise\nentirely — a program already in flight shouldn't suddenly lose a movement\nthe user has been training for weeks just because volume ramped high this\nweek. Same trim-priority order as enforceSessionCaps (lowest muscle\npriority first, then Accessory before Secondary before Primary, then most\nsets first) so the two paths can't diverge on *which* sets get trimmed,\nonly on how far they're willing to go."
+    },
+    {
+      "id": "63248bd942bcb996cb53",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 109,
+      "tags": [
+        "RC-010",
+        "HV-021",
+        "HV-023"
+      ],
+      "content": "RC-010: the whole-session set cap (SESSION_MAX_SETS/_CUT/_STRENGTH) is\nenforced by enforceSessionCaps at generation time, but progression\n(computeAndSaveProgressionTargets in src/api/progression.ts) recomputes\neach exercise's sets independently week-to-week via the landmark ramp\n(HV-021) capped only per-exercise (HV-023) — nothing re-checked the\nsession's new total against this same ceiling, so a session could\ngradually climb toward (or past) it as multiple muscles ramp toward MRV\nsimultaneously. Exposed here so progression.ts can reuse the exact same\ncap value instead of hard-coding a second copy of it."
+    },
+    {
+      "id": "f235206ddcf1ef106828",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 152,
+      "tags": [
+        "RC-006"
+      ],
+      "content": "RC-006: whether `muscle` is the only muscle (among `muscles`) representing\nits Full Body movement region — removing it would erase that region's\ncoverage for the session entirely."
+    },
+    {
+      "id": "211a83d287ba02d90a37",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 164,
+      "tags": [
+        "RC-006"
+      ],
+      "content": "RC-006: remove whole muscles (all of their slots together, not slot-by-slot)\nuntil distinct muscle-group count is at or below the high-frequency cap."
+    },
+    {
+      "id": "a7d7591567de0b8b5e42",
+      "file": "src/rules/sessionTrimmer.ts",
+      "line": 209,
+      "tags": [
+        "ST-009"
+      ],
+      "content": "ST-009: strength gets its own (tighter) set cap; cut's still wins if both\nwould apply, since programFocus is single-valued so this is never a\nsimultaneous conflict — cut and strength are mutually exclusive focuses."
+    },
+    {
+      "id": "ff50e8b38fdc8d994c24",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 165,
+      "tags": [
+        "HV-022"
+      ],
+      "content": "─── Priority-first ordering ──────────────────────────────────────────────────\n\nHV-022: move the session's emphasized muscle to the front of the slot order\nso it's trained with freshest neural drive/highest force capacity, rather\nthan always following the template's fixed anatomical order (see\nsessionTemplates.ts). Only fires when exactly one muscle in the session is\n'emphasize' — with zero or multiple emphasized muscles there's no single\nunambiguous \"priority\" to promote, so the template order (already tuned for\nfatigue management, e.g. compounds before isolation) is left untouched.\nNot applied to FullBody sessions: FullBody's fixed order encodes a separate,\ndistinct rationale (heavy lower-body compounds before upper-body fatigue\naffects balance/spinal stability under load) that would need to be explicitly\nreconciled with priority-first ordering rather than silently overridden.\nSource: RP Strength \"Hypertrophy Made Simple\" (2023) — Step 2 (\"Choosing\nand Ordering Exercises\") instructs training the muscle group you care most\nabout earliest in the session, while fatigue is lowest and force output/\nneural drive are highest, rather than defaulting to a fixed anatomical\norder. (Previously cited only generically to \"Dr. Mike Israetel / RP\nHypertrophy\" — this is the specific step in the specific guide that\nactually states the rule.)"
+    },
+    {
+      "id": "ae159b0ef06ef135e045",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 205,
+      "tags": [
+        "HV-021",
+        "HV-026",
+        "HV-027"
+      ],
+      "content": "─── Progressive week scaling ─────────────────────────────────────────────────\n\nHV-021: sets ramp linearly from a Week 1 anchor to a peak anchor across the\nmeso, then drop to a separate deload anchor. For hypertrophy, with a\nper-muscle AdjustedVolumeTarget + landmark available (see buildDaySlots),\nthose anchors are the muscle's own MEV/MV/MAV/MRV landmarks (RP Strength /\nIsraetel et al.) rather than a flat percentage of a role-generic number —\nsee resolveSetAnchors below. Every other case (non-hypertrophy focus, or no\nlandmark data) falls back to the original doctrine: 70 % of peak at Week 1\n→ 100 % at the last training week → 50 % on deload, which is exactly what\nweek1=0.7×peak / deload=0.5×peak reproduces through this same interpolation.\n\nRIR:   config.rir + 1 at Week 1 → decrements 1/week → min 0 (min 2 for\n       beginners, HV-026/HV-027) → 4 on deload.\n       Only applied to emphasize/grow muscles; maintain/mev stays at config.rir.\n\nExample for a 4-week meso (3 training + 1 deload), Primary emphasize (config.rir=2):\n  Week 1: sets=70%, rir=3  Week 2: sets=85%, rir=2  Week 3: sets=100%, rir=1\n  Week 4: sets=50%, rir=4"
+    },
+    {
+      "id": "dbc541cb0b2023974cc8",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 233,
+      "tags": [
+        "HV-023"
+      ],
+      "content": "HV-023: cap applies regardless of week type — a deload'd-down number is\nalready small, but this keeps both branches on the same ceiling rule."
+    },
+    {
+      "id": "1a9eea911c84c298daf0",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 241,
+      "tags": [
+        "HV-026",
+        "HV-001",
+        "HV-027"
+      ],
+      "content": "HV-026: taper floor unified with progressionEngine.ts's HV-001 (0 for\nintermediate/advanced) — this branch previously floored at 1 regardless\nof experience level, a real divergence between the two \"shared\" ramp\npaths (generation-time here vs. week-to-week in progressionEngine.ts).\nHV-027: beginners get a gentler floor of 2 instead of 0 — Hypertrophy\nMade Simple's beginner RIR table tapers 4-5 RIR down to 2 RIR, not to\nfailure, since beginners' technique under fatigue is less reliable.\nSource: RP Strength \"Hypertrophy Made Simple\" (2023)."
+    },
+    {
+      "id": "0d21912442ad28452f12",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 254,
+      "tags": [
+        "HV-021"
+      ],
+      "content": "HV-021: derives the Week 1 / peak / deload set anchors for one slot.\n\nHypertrophy, with a volume target + landmark for this muscle: the anchors\nare the muscle's own landmarks (RP Strength / Israetel et al.), split\nacross this muscle's included role-slots today in proportion to\nSLOT_ROLE_CONFIGS' existing sets numbers (now used as relative role\nweights, not absolute counts — e.g. Primary:Secondary = 4:3 at emphasize).\n  mev / maintain → flat at that tier's target all meso (already the floor /\n    maintenance volume — nothing to ramp toward)\n  grow           → Week 1 = MEV share → peak = MAV share (the sweet spot)\n  emphasize      → Week 1 = MEV share → peak = MRV share (the overreach ceiling)\n  deload (any)   → MV share, always\n\nEvery other case (non-hypertrophy focus, or a muscle with no landmark or no\ntarget) falls back to the pre-HV-021 behavior: peak = the flat role×priority\nnumber, Week 1 = 70 % of it, deload = 50 % of it."
+    },
+    {
+      "id": "8c09e4725b179cee884d",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 308,
+      "tags": [
+        "HV-021"
+      ],
+      "content": "HV-021: total role-weight per muscle among today's included slots, so a\nmuscle's per-session target can be split proportionally across whichever\nrole-slots (Primary/Secondary/Accessory) it actually has today."
+    },
+    {
+      "id": "88787d63154238fc9450",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 350,
+      "tags": [
+        "HV-043"
+      ],
+      "content": "HV-043: the role/priority band is muscle-blind; raise it where the\nmuscle cannot be trained productively that low (calves, abs, forearms)."
+    },
+    {
+      "id": "5294c1eb0a0160debead",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 360,
+      "tags": [
+        "HV-022",
+        "HV-008"
+      ],
+      "content": "HV-022: promote the emphasized muscle to the front of the session, if\nthere's exactly one and this isn't a FullBody session. Runs before HV-008\nbelow so Forearm placement always has final say over the result."
+    },
+    {
+      "id": "33c8c310a02d3243063a",
+      "file": "src/rules/slotBuilder.ts",
+      "line": 367,
+      "tags": [
+        "HV-008"
+      ],
+      "content": "HV-008: Forearm placement — always after the last Back/Biceps/Traps slot.\nThis enforces the rule at generation time regardless of template ordering."
+    },
+    {
+      "id": "5289357d069ef27eae6e",
+      "file": "src/rules/validation.ts",
+      "line": 17,
+      "tags": [
+        "VA-011"
+      ],
+      "content": "Not a doctrine tag — this is a validator-precision tolerance, not a\ntraining-science claim. The target it compares against (targetEffectiveSets)\nis the actual cited doctrine value (VA-011's landmark-derived MRV, or\nTARGET_EFFECTIVE_SETS for non-hypertrophy focuses — both in\nvolumeBudget.ts). Day-by-day set allocation involves rounding and\nsession-cap trimming (sessionTrimmer.ts), so hitting the target exactly\nevery week isn't realistic; 80% is the slack given before flagging the\ngenerator's own output as falling meaningfully short, not a claim that 80%\nof MRV is itself a meaningful training threshold."
+    },
+    {
+      "id": "c4f2c569480fc21a62d7",
+      "file": "src/rules/validation.ts",
+      "line": 28,
+      "tags": [
+        "RC-001"
+      ],
+      "content": "RC-001: Per-session per-muscle volume cap. Muscle protein synthesis appears\nto saturate around 6–8 direct sets for a muscle in one session; volume above\nthe top of that range is better distributed to another weekly exposure.\nSource: G.R.I.T. doctrine A-8, building_delts_hypertrophy.md."
+    },
+    {
+      "id": "eb9fdcecea08c7e9f766",
+      "file": "src/rules/validation.ts",
+      "line": 34,
+      "tags": [
+        "HV-013"
+      ],
+      "content": "─── HV-013: Intra-session deadlift + barbell-row compatibility check ─────────\n\nDeadlift-pattern + barbell-row on the same day creates excessive lumbar load.\nbeginner/intermediate → error; advanced → warning."
+    },
+    {
+      "id": "b9dc49df8da638f0b159",
+      "file": "src/rules/validation.ts",
+      "line": 105,
+      "tags": [
+        "VA-012"
+      ],
+      "content": "VA-012: advisory only (warning, never error) — daysPerWeek is still\nwhatever the user picked. Source: Dr. Mike Israetel / RP Hypertrophy —\ntraining frequency by experience level."
+    },
+    {
+      "id": "57f5ede661aa2808ec10",
+      "file": "src/rules/validation.ts",
+      "line": 207,
+      "tags": [
+        "HV-004"
+      ],
+      "content": "HV-004: Back plane parity — ensure both horizontal and vertical pulls are present.\nOnly fires when ≥2 Back slots have selectedExercise populated."
+    },
+    {
+      "id": "3955abdb74e12f9e6f37",
+      "file": "src/rules/validation.ts",
+      "line": 241,
+      "tags": [
+        "HV-020"
+      ],
+      "content": "HV-020: Tricep overhead extension coverage.\nFires when ≥2 Triceps slots have selectedExercise and none have overheadExtension tag."
+    },
+    {
+      "id": "09528ecf23e070525615",
+      "file": "src/rules/validation.ts",
+      "line": 265,
+      "tags": [
+        "HV-002"
+      ],
+      "content": "HV-002: Volume proportionality audit. Flags arm-dominant or\nquad-deficient programs — small muscles (biceps/triceps) accumulate\neffective sets quickly from indirect overlap credit (roleOverlap.ts)\non top of their own direct work, while Quads is one of the largest\nmuscle groups in the body and is systematically under-programmed when\na split skews toward upper-body/arm accessory work. The specific 8%/18%\nthresholds are this app's own guardrail calibration (a heuristic sanity\ncheck on the generator's own output), not figures published by a named\nsource — no RP/Israetel table gives an exact \"max acceptable arm volume\nshare\" percentage."
+    },
+    {
+      "id": "d1936daea134a1d615cf",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 14,
+      "tags": [
+        "ST-006",
+        "PB-005"
+      ],
+      "content": "─── Target effective sets per focus × priority ───────────────────────────────\n\nST-006: Strength weekly volume — lower than hypertrophy because each set\ncarries far higher CNS cost at 85-95% 1RM. Prilepin's optimal ~10 total reps\nper session × 2 sessions/week ÷ 2-5 reps/set ≈ 10-12 direct sets/week for\nemphasized muscles. Source: Prilepin's Chart.\n\nPB-005: Powerbuilding weekly volume — between strength (12/8) and hypertrophy\n(18/12), reflecting the concurrent adaptation goal. Kizen's 16-week program\nruns 3-6 compound sets + 6-12 accessory sets per session across 6 days;\ndirect weekly sets per muscle land in the 10-15 range for emphasized muscles.\nSource: Kizen 16-Week Powerbuilding; PHAT program volume audit."
+    },
+    {
+      "id": "187f327cab3bb7bb6a41",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 32,
+      "tags": [
+        "RC-005"
+      ],
+      "content": "RC-005: cut phase uses lower volume to match the 90-min session cap.\nTarget is ~70% of maintenance — enough stimulus to retain muscle under deficit."
+    },
+    {
+      "id": "8a1df8cdbf39f7a1f2a5",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 37,
+      "tags": [
+        "VA-017"
+      ],
+      "content": "VA-017: implementation floor, not a muscle-specific landmark citation —\neach muscle's real MEV already comes from its own landmark\n(volumeLandmarks.ts, used directly for hypertrophy focus in\nhypertrophyPriorityTarget below). This flat per-focus number exists only\nas a defensive minimum for uncappedDirectSetsNeeded's subtraction math\n(targetEffectiveSets - estimatedIndirectSets), so a muscle with heavy\nestimated indirect stimulus never gets rounded down to 0-1 direct sets —\nevery muscle still needs at least a token amount of direct, targeted work\nregardless of how much indirect credit the overlap math gives it."
+    },
+    {
+      "id": "98e9714cb687fb45ef82",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 62,
+      "tags": [
+        "VA-016"
+      ],
+      "content": "VA-016: co-emphasis fatigue discount. The underlying principle is sourced —\nDr. Mike Israetel / RP Hypertrophy: systemic recovery capacity is shared\nacross muscle groups, not purely local per muscle (see recovery.md,\n\"Mental and Physical Stress Draw from the Same Recovery Budget\"), so\nmultiple muscles in the same kinetic chain (e.g. Chest/Shoulders/Triceps\nall pushing) can't simultaneously sit at their own individual MRV without\nexceeding what the shared push-fatigue budget can actually recover from.\nThe specific decay curve (10% / 18% / 25% off target volume for 2/3/4+\nco-emphasized muscles) is this app's own calibration, not a number RP\npublishes directly — no source gives an exact percentage for this, so\ntreat these three constants as an engineering approximation of a sourced\nprinciple, not a directly-cited figure."
+    },
+    {
+      "id": "5a6d7bfd506cc76ea37f",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 119,
+      "tags": [
+        "VA-011"
+      ],
+      "content": "VA-011: hypertrophy-focus targets read straight from each muscle's own\nMV/MEV/MAV/MRV landmarks (RP Strength / Israetel et al., volumeLandmarks.ts)\ninstead of one flat number shared by every muscle. Mapping mirrors the\npriority tier names directly onto the matching landmark:\n  mev       → that muscle's own MEV (deprioritized — just enough for growth)\n  maintain  → that muscle's own MV (literally \"maintain\" = hold current size)\n  grow      → that muscle's own MAV (the textbook sweet spot)\n  emphasize → that muscle's own MAV (MRV stays a recovery boundary)\nScoped to hypertrophy only — strength/powerbuilding volume is already cited\nto Prilepin/NSCA (ST-XXX) and Kizen/PHAT (PB-XXX); swapping in RP/Israetel\nlandmarks there would contradict those tags rather than extend them. Falls\nback to the flat TARGET_EFFECTIVE_SETS table if a muscle has no landmark."
+    },
+    {
+      "id": "0e8c44fd71b7c71d90ae",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 140,
+      "tags": [
+        "VA-009"
+      ],
+      "content": "─── Public API ──────────────────────────────────────────────────────────────\nVA-009: beginners receive 0.8× volume across all muscles."
+    },
+    {
+      "id": "9650b0ee393eb26c8bf8",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 170,
+      "tags": [
+        "VA-010",
+        "VA-011"
+      ],
+      "content": "VA-010: cap weekly direct sets at the muscle's MRV (Maximum Recoverable\nVolume) — RP Strength / Israetel et al. landmarks in volumeLandmarks.ts.\nSince VA-011, hypertrophy's own targets already top out at each muscle's\nMRV by construction (emphasize defaults to MAV), so this is a no-op\nbackstop there — kept for safety against future data changes, and still\nfully load-bearing for strength/powerbuilding/general/maintenance/cut,\nwhich stay on the flat TARGET_EFFECTIVE_SETS table."
+    },
+    {
+      "id": "42647aadbc682e27f037",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 198,
+      "tags": [
+        "VA-018",
+        "VA-013"
+      ],
+      "content": "─── VA-018: Fatigue-weighted soreness-trim redistribution ────────────────────\n\nExtends VA-013 (progressionEngine.ts's \"Still sore -> trim a set\" rule)\nrather than replacing it. VA-013 trims one set from a single exercise in\nisolation, with no visibility into that muscle's sibling exercises within\nthe same session. This is the Exercise Intelligence Layer piece of the\n2026-08-04 doctrine spec: \"if chest recovery is poor, reduce bench volume\nbefore cable fly volume\" — a soreness-driven trim should come off the\nhighest-systemic-fatigue exercise first (heavy compounds), not be split\nevenly or land on whichever exercise happens to be listed first.\n\nOnly src/api/progression.ts's byMuscle grouping has visibility into all of\na muscle's exercises at once (see computeAndSaveProgressionTargets) — this\nfunction is the pure redistribution math it calls into; it has no\nSupabase/API awareness itself, staying consistent with the rest of\nsrc/rules/."
+    },
+    {
+      "id": "6522278034e9f6a8e31b",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 223,
+      "tags": [
+        "VA-013"
+      ],
+      "content": "Never trim an exercise below 1 set — matches VA-013's \"never drops\nsets below baseSetCount\" spirit of not eliminating the movement."
+    },
+    {
+      "id": "cce7ed6b63ae8880973c",
+      "file": "src/rules/volumeBudget.ts",
+      "line": 234,
+      "tags": [
+        "VA-012"
+      ],
+      "content": "VA-012: recommended weekly training-frequency range by training age.\nBeginners overestimate recoverable frequency before habit/technique are\nsolid; advanced lifters need more frequent stimulus to keep driving\nadaptation. This is advisory (see validation.ts's 'frequency' warning) —\ndaysPerWeek is still whatever the user picks, never hard-blocked.\nSource: Dr. Mike Israetel / RP Hypertrophy — training frequency by\nexperience level."
+    },
+    {
+      "id": "5899b5782f6fc6ed9269",
+      "file": "src/rules/volumeRamp.ts",
+      "line": 10,
+      "tags": [
+        "HV-001",
+        "HV-026",
+        "HV-027"
+      ],
+      "content": "HV-001/HV-026/HV-027: one RIR taper shared by program generation and\nweek-to-week progression. RP Hypertrophy Made Simple starts a mesocycle\nconservatively and approaches the experience/category floor over time."
+    },
+    {
+      "id": "bb62b06327a69572cdf4",
+      "file": "src/rules/volumeRamp.ts",
+      "line": 28,
+      "tags": [
+        "HV-021",
+        "VA-015",
+        "VA-013"
+      ],
+      "content": "HV-021: one shared ramp shape for how weekly sets move across a mesocycle —\nused both when a program is first generated (slotBuilder.ts) and when\ncomputing week-to-week progression for an already-running program\n(progressionEngine.ts / src/api/progression.ts), so the two paths can't\nsilently diverge into two different volume philosophies.\n\nTraining weeks: linear interpolation from the Week 1 anchor to the peak\nanchor across the meso. Deload: drops to a separate deload anchor\nregardless of position — deload is a distinct target (MV), not a\npercentage of wherever the ramp happened to be.\n\nVA-015: `soreness` is optional and only meaningful for the progression\npath (src/api/progression.ts) — slotBuilder.ts calls this at generation\ntime, before any session has been logged, and omits it. Same graduated\nresponse and source citation as progressionEngine.ts's per-exercise ramp\n(see that file's VA-015 comment): the week actually used for the ramp\nstep is shifted by the muscle's most recently reported soreness instead\nof always advancing with weekNumber. 'Still sore' is a modest correction\n(back off one set from this week's step), not a full reset — a hard drop\nto the Week 1 anchor overcorrects for a single sore session and can read\nas the app randomly cratering volume. Never drops below the Week 1\nanchor itself, mirroring VA-013's baseSetCount floor on the non-landmark\n(per-exercise) ramp path — this holds volume down, it doesn't cut below\nwhere the meso started."
+    },
+    {
+      "id": "a90633519859c7e94e48",
+      "file": "src/rules/volumeRamp.ts",
+      "line": 75,
+      "tags": [
+        "HV-023",
+        "HV-021",
+        "HV-030",
+        "ST-009"
+      ],
+      "content": "HV-023: hard ceiling on sets prescribed to a single exercise in one\nsession, regardless of how high a muscle's landmark-driven per-session\ntarget climbs. A muscle's own weekly MEV->MAV/MRV ramp is uncapped by\ndesign (that's the point of HV-021), but when a muscle has only one\nexercise in a given session, its entire per-session share concentrates\nonto that one movement — and past a handful of sets on a single exercise,\nsets stop landing close enough to true failure to carry real stimulus and\njust add fatigue instead (junk volume). This caps the final per-exercise\nnumber after any role/exercise-share split (see callers in slotBuilder.ts\nand src/api/progression.ts) — it's still the muscle's per-session target\nthat ramps freely; a second exercise for the same muscle that session can\nabsorb whatever this one doesn't.\nSource: RP Strength \"Hypertrophy Made Simple\" (2023) — per-session set\ncounts by training age (\"Beginner: can often be 1-5 sets per session...\nIntermediate: 2-10... Advanced: 3-12\"). Those ranges are a muscle's whole\nsession total, which can span more than one exercise. Four is a conservative\nproduct limit, matching HV-030's usual exercise cap and the user's preference\nagainst five-set prescriptions, not a universal physiological threshold.\nA single movement must never silently\nabsorb an entire muscle's session allotment on its own, regardless of\nexperience level. NOTE: the Strength Made Simple guide's \"2-5 sets per\nmovement type per session\" line was used for this constant previously —\nthat guide is scoped to the `strength` focus only (see ST-009 in\nsessionTrimmer.ts) and should not be cited for hypertrophy-focus doctrine\nlike this one."
+    }
+  ]
+}

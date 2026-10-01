@@ -47,17 +47,17 @@ describe('POST /api/workouts retry and partial-save handling', () => {
     clearProgramIfComplete.mockResolvedValue(false);
   });
 
-  it('treats an already-saved queued retry as idempotent without recomputing progression', async () => {
+  it('retries unfinished progression on an already-saved workout; the progression transaction owns idempotency', async () => {
     const supabase = supabaseWithRpcResult('already_saved');
     createClient.mockResolvedValue(supabase);
-    computeProgression.mockRejectedValue(new Error('would duplicate derived targets'));
+    // Saved workouts can still have pending targets. The transaction now checks its completion marker.
     const { POST } = await import('./route');
 
     const response = await POST(request(payload));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ saved: true, idempotent: true });
-    expect(computeProgression).not.toHaveBeenCalled();
+    expect(computeProgression).toHaveBeenCalledWith(supabase, 'user-1', payload.programDayId, 'intermediate', payload.workoutId);
   });
 
   it('surfaces an unexpected RPC result as a retryable save failure', async () => {

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it, afterEach } from 'vitest';
-import { geminiApiKey, AI_MODEL } from './config';
+import { geminiApiKey, AI_MODEL, programAiConfig } from './config';
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 
@@ -26,7 +26,7 @@ describe('shared AI key', () => {
 
   it('defaults to Gemini', () => {
     expect(AI_MODEL).toMatch(/^gemini/);
-    expect(read('app/api/ai/program/route.ts')).toContain("provider: 'gemini'");
+    expect(programAiConfig({ GEMINI_API_KEY: 'key' }).provider).toBe('gemini');
   });
 
   /**
@@ -52,5 +52,19 @@ describe('shared AI key', () => {
 
   it('keeps the real key out of the committed example file', () => {
     expect(read('.env.example')).toContain('GEMINI_API_KEY=your-gemini-api-key');
+  });
+});
+
+
+describe('program provider configuration', () => {
+  it('uses Qwen independently of the explanation flag and Gemini credentials', () => {
+    expect(programAiConfig({ GRIT_AI_PROGRAM_PROVIDER: 'local' })).toEqual({ provider: 'local', baseUrl: 'http://127.0.0.1:8080/v1', model: 'qwen', apiKey: '' });
+    expect(programAiConfig({ GRIT_AI_PROGRAM_PROVIDER: 'local', GRIT_AI_BASE_URL: 'https://model.example/v1/', GRIT_AI_MODEL: 'custom', GRIT_AI_API_KEY: 'secret' })).toEqual({ provider: 'local', baseUrl: 'https://model.example/v1', model: 'custom', apiKey: 'secret' });
+  });
+  it('rejects unknown providers and unsafe endpoint formats', () => {
+    expect(() => programAiConfig({ GRIT_AI_PROGRAM_PROVIDER: 'typo' })).toThrow('Unknown');
+    for (const url of ['file:///tmp/model', 'https://user:pass@example.com', 'https://example.com?key=secret']) {
+      expect(() => programAiConfig({ GRIT_AI_PROGRAM_PROVIDER: 'local', GRIT_AI_BASE_URL: url })).toThrow();
+    }
   });
 });

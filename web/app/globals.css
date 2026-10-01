@@ -731,3 +731,20 @@ img.native-avatar{object-fit:cover;padding:0;border:1px solid var(--card-border)
    onto a second row once the row became three columns again. */
 .history-exercise-card .history-set>span:last-child{grid-column:auto!important;text-align:end;overflow-wrap:break-word;color:var(--muted)}
 @media(max-width:360px){.history-exercise-card .history-set{column-gap:10px!important}}
+
+/* Explanation content reuses the exercise sheet and shared form controls. */
+.workout-explanation { overflow-wrap: anywhere; }
+.workout-explanation textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+.workout-explanation .note-field textarea { min-height: 88px; }
+.explanation-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: .75rem; }
+.explanation-actions > button { min-height: 44px; max-width: 100%; }
+.explanation-answer { line-height: 1.6; }
+.explanation-answer p { margin-block: .75rem; }
+.workout-explanation .explanation-actions { gap: .75rem; }
+.explanation-sources { margin-top: 1rem; color: var(--muted); }
+.explanation-sources summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; border-radius: 10px; }
+.explanation-sources summary:hover { background: var(--surface); }
+.explanation-sources summary:active { opacity: .8; }
+.explanation-sources summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.explanation-sources article { border-top: 1px solid var(--border); padding-block: .75rem; }
+.explanation-sources p { white-space: pre-wrap; font-size: .875rem; }

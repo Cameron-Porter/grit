@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requestStructuredProgram } from '@/lib/ai/providers';
-import { AI_MODEL, geminiApiKey } from '@/lib/ai/config';
+import { programAiConfig } from '@/lib/ai/config';
 import { AI_PROGRAM_SCHEMA, buildAiProgramBase, buildAiPrompt, type AiBuilderInput, type AiCatalogExercise } from '@/lib/ai/program';
 
 type Body = { input?: AiBuilderInput; catalog?: AiCatalogExercise[]; history?: { exerciseName: string; uses: number; lastWeight: number | null }[] };
+
+export const maxDuration = 150;
 
 /**
  * Generation used to run in the browser with the user's own API key. It now uses
@@ -37,9 +39,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: issue?.message ?? 'This configuration does not pass the GRIT rules engine.' }, { status: 400 });
     }
     const output = await requestStructuredProgram({
-      provider: 'gemini',
-      apiKey: geminiApiKey(),
-      model: AI_MODEL,
+      ...programAiConfig(),
       prompt: buildAiPrompt(input, program, catalog, history),
       schema: AI_PROGRAM_SCHEMA,
     });

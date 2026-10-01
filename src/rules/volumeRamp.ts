@@ -87,15 +87,17 @@ export function rampSets(anchors: SetAnchors, params: WeekParams, soreness?: Sor
 // Source: RP Strength "Hypertrophy Made Simple" (2023) — per-session set
 // counts by training age ("Beginner: can often be 1-5 sets per session...
 // Intermediate: 2-10... Advanced: 3-12"). Those ranges are a muscle's whole
-// session total, which can span more than one exercise — 5 is set at the low
-// end of even the Advanced range so a single movement can never silently
+// session total, which can span more than one exercise. Four is a conservative
+// product limit, matching HV-030's usual exercise cap and the user's preference
+// against five-set prescriptions, not a universal physiological threshold.
+// A single movement must never silently
 // absorb an entire muscle's session allotment on its own, regardless of
 // experience level. NOTE: the Strength Made Simple guide's "2-5 sets per
 // movement type per session" line was used for this constant previously —
 // that guide is scoped to the `strength` focus only (see ST-009 in
 // sessionTrimmer.ts) and should not be cited for hypertrophy-focus doctrine
 // like this one.
-export const MAX_SETS_PER_EXERCISE = 5;
+export const MAX_SETS_PER_EXERCISE = 4; // HV-023
 
 export function capSetsPerExercise(sets: number): number {
   return Math.min(MAX_SETS_PER_EXERCISE, sets);
