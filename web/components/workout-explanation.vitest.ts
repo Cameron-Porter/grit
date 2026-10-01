@@ -14,16 +14,16 @@ it('shows errors, retries, traps keyboard focus, and restores the trigger',async
   const container=document.createElement('div');document.body.append(container);const root=createRoot(container),close=vi.fn();
   try{
     await act(async()=>root.render(createElement(WorkoutExplanation,{context:{dayId:'00000000-0000-4000-8000-000000000001',exerciseName:'Row',displayed:{sets:3,repsMin:8,repsMax:12,weight:100,rir:2},setCount:3},onClose:close})));
-    expect(document.activeElement).toBe(container.querySelector('textarea'));
+    expect(document.activeElement).toBe(container.querySelector('.sheet-close'));
     await act(async()=>container.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
     expect(container.querySelector('[role="alert"]')?.textContent).toBe('Model is busy.');
     await act(async()=>container.querySelector('form')!.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
-    expect(container.textContent).toContain('Based on (1)');expect(container.querySelectorAll('.explanation-answer p')).toHaveLength(2);expect(container.textContent).toContain('Load held at 100 lb.');expect(container.textContent).toContain('Local AI is unavailable.');
+    expect(container.textContent).toContain('Based on (1 sources)');expect(container.querySelectorAll('.explanation-answer p')).toHaveLength(2);expect(container.textContent).toContain('Load held at 100 lb.');expect(container.textContent).toContain('Local AI is unavailable.');
     const dialog=container.querySelector('[role="dialog"]')!;
     const last=container.querySelector('summary')!;last.focus();
     await act(async()=>last.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true})));
-    expect(document.activeElement).toBe(container.querySelector('textarea'));
-    await act(async()=>container.querySelector('textarea')!.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true})));
+    expect(document.activeElement).toBe(container.querySelector('.sheet-close'));
+    await act(async()=>container.querySelector('.sheet-close')!.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true})));
     expect(document.activeElement).toBe(last);
     await act(async()=>dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
     expect(close).toHaveBeenCalledOnce();
