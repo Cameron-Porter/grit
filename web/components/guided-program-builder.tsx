@@ -38,13 +38,12 @@ export function GuidedProgramBuilder({ catalog, equipmentPreferenceEnabled, pref
       <section className="surface native-section-card">
         <div className="native-section-title">
           <h2>Program Details</h2>
-          <span>Set name and length</span>
         </div>
         {equipmentPreferenceEnabled && (
           <p className="notice">Showing preferred equipment: {preferredEquipment.join(', ')}.</p>
         )}
-        <div className="form-grid guided-program-basics">
-          <label>
+        <div className="guided-program-basics">
+          <label className="program-name-field">
             Name
             <input
               value={name}
@@ -54,14 +53,16 @@ export function GuidedProgramBuilder({ catalog, equipmentPreferenceEnabled, pref
               placeholder="e.g. 5-Day Push / Pull / Legs"
             />
           </label>
-          <label>
-            Duration
-            <CustomSelect value={weeks} onChange={setWeeks} options={weekOptions} />
-          </label>
-          <label>
-            Days/week
-            <CustomSelect value={days} onChange={setDays} options={dayOptions} />
-          </label>
+          <div className="program-structure-fields">
+            <label>
+              Duration
+              <CustomSelect value={weeks} onChange={setWeeks} options={weekOptions} />
+            </label>
+            <label>
+              Days/week
+              <CustomSelect value={days} onChange={setDays} options={dayOptions} />
+            </label>
+          </div>
         </div>
       </section>
 
@@ -210,50 +211,56 @@ function ProgramDayExercisePanel({
         <span>{staged.length} scheduled</span>
       </div>
 
-      <div className="form-grid add-exercise-card">
-        <label>
-          Muscle group
-          <CustomSelect
-            ariaLabel="Filter by muscle group"
-            value={muscleFilter}
-            onChange={setMuscleFilter}
-            options={[{ value: 'all', label: 'All muscle groups' }, ...muscleGroups.map(group => ({ value: group, label: group }))]}
-          />
-        </label>
-        <label>
-          Exercise
-          <CustomSelect
-            ariaLabel="Exercise"
-            value={exerciseId}
-            onChange={setExerciseId}
-            options={
-              exerciseOptions.length
-                ? withRecommendedOptions(exerciseOptions, recommendedIds)
-                : [{ value: '', label: 'No exercises available', disabled: true }]
-            }
-          />
-        </label>
-        <label>
-          Sets
-          <input type="number" min="1" max="10" value={sets} onChange={event => setSets(event.target.value)} />
-        </label>
-        <label>
-          Rep min
-          <input type="number" min="1" max="100" value={repsMin} onChange={event => setRepsMin(event.target.value)} />
-        </label>
-        <label>
-          Rep max
-          <input type="number" min="1" max="100" value={repsMax} onChange={event => setRepsMax(event.target.value)} />
-        </label>
-        <label>
-          Starting weight (lb)
-          <input type="number" min="0" step="0.5" value={weight} onChange={event => setWeight(event.target.value)} />
-        </label>
-        <label>
-          Target RIR
-          <input type="number" min="0" max="5" value={rir} onChange={event => setRir(event.target.value)} />
-        </label>
-        <button type="button" className="secondary" onClick={addToDay} disabled={!exerciseId}>
+      <div className="add-exercise-card">
+        <div className="add-exercise-header">
+          <label className="muscle-filter-field">
+            Muscle group
+            <CustomSelect
+              ariaLabel="Filter by muscle group"
+              value={muscleFilter}
+              onChange={setMuscleFilter}
+              options={[{ value: 'all', label: 'All muscle groups' }, ...muscleGroups.map(group => ({ value: group, label: group }))]}
+            />
+          </label>
+          <label className="exercise-picker-field">
+            Exercise
+            <CustomSelect
+              ariaLabel="Exercise"
+              value={exerciseId}
+              onChange={setExerciseId}
+              options={
+                exerciseOptions.length
+                  ? withRecommendedOptions(exerciseOptions, recommendedIds)
+                  : [{ value: '', label: 'No exercises available', disabled: true }]
+              }
+            />
+          </label>
+        </div>
+
+        <div className="builder-target-grid">
+          <label>
+            <span>Sets</span>
+            <input type="number" min="1" max="10" value={sets} onChange={event => setSets(event.target.value)} />
+          </label>
+          <label>
+            <span>Rep min</span>
+            <input type="number" min="1" max="100" value={repsMin} onChange={event => setRepsMin(event.target.value)} />
+          </label>
+          <label>
+            <span>Rep max</span>
+            <input type="number" min="1" max="100" value={repsMax} onChange={event => setRepsMax(event.target.value)} />
+          </label>
+          <label>
+            <span>Weight (lb)</span>
+            <input type="number" min="0" step="0.5" value={weight} onChange={event => setWeight(event.target.value)} />
+          </label>
+          <label>
+            <span>Target RIR</span>
+            <input type="number" min="0" max="5" value={rir} onChange={event => setRir(event.target.value)} />
+          </label>
+        </div>
+
+        <button type="button" className="secondary add-exercise-button" onClick={addToDay} disabled={!exerciseId}>
           + Add to Day {dayIndex + 1}
         </button>
       </div>

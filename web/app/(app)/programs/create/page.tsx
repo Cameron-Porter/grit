@@ -31,9 +31,9 @@ export default async function CreateProgramPage() {
   const preferredEquipment=Array.isArray(profile?.preferred_equipment)?profile.preferred_equipment.filter((item):item is string=>typeof item==='string'):[];
   const preference={enabled:Boolean(profile?.use_preferred_equipment),preferred:preferredEquipment};
   const builderCatalog=filterExercisesByEquipmentPreference(catalogWithSuggestions,preference);
-  return <main className="content native-page native-create-page">
-    <Link className="back-link" href="/programs">← My programs</Link>
-    <header className="native-page-header">
+  return <main className="content native-page native-gradient-background native-create-page">
+    <Link className="back-link" href="/programs">← Programs</Link>
+    <header className="page-header native-page-header">
       <div>
         <div className="eyebrow">PROGRAM BUILDER</div>
         <h1>Create Program</h1>
