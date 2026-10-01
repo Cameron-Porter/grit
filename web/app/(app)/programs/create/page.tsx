@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requireUser } from '@/lib/auth/require-user';
 import { GuidedProgramBuilder } from '@/components/guided-program-builder';
 import { filterExercisesByEquipmentPreference, type CatalogExercise } from '@/lib/programs/day-template-payload';
@@ -31,8 +32,14 @@ export default async function CreateProgramPage() {
   const preference={enabled:Boolean(profile?.use_preferred_equipment),preferred:preferredEquipment};
   const builderCatalog=filterExercisesByEquipmentPreference(catalogWithSuggestions,preference);
   return <main className="content native-page native-create-page">
-    <a className="back-link" href="/programs">← Programs</a>
-    <header className="native-page-header"><div><h1>New Program</h1><p>Build the week before saving, just like the native guided setup flow.</p></div></header>
+    <Link className="back-link" href="/programs">← My programs</Link>
+    <header className="native-page-header">
+      <div>
+        <div className="eyebrow">PROGRAM BUILDER</div>
+        <h1>Create Program</h1>
+        <p>Build your weekly structure and targets before saving.</p>
+      </div>
+    </header>
     {profileError&&<p className="notice error" role="alert">Could not load your equipment preferences. Showing the full exercise catalog.</p>}
     <GuidedProgramBuilder catalog={builderCatalog} equipmentPreferenceEnabled={preference.enabled&&preferredEquipment.length>0&&!profileError} preferredEquipment={preferredEquipment} muscleFeedback={feedbackRows??[]}/>
   </main>;

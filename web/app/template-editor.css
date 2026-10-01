@@ -1,4 +1,22 @@
 .equipment-toggle-grid label{justify-content:space-between;padding:8px 10px}.equipment-toggle-grid label>strong{color:var(--text);font-size:.78rem}.equipment-toggle-grid .equipment-switch{display:block!important;flex:0 0 50px}.equipment-toggle-grid .equipment-switch input{position:absolute;width:1px;height:1px;min-height:0;margin:0;padding:0;opacity:0}
 .staged-exercises{margin-top:16px}.stage-save-row{display:flex;justify-content:flex-end;margin-top:16px}
-.guided-program-builder{display:grid;gap:18px}.guided-builder-intro{display:grid;gap:10px}.guided-builder-intro strong,.guided-builder-intro span{display:block}.guided-builder-intro span{margin-top:4px;color:var(--muted);font-size:.9rem;line-height:1.45}.guided-program-basics{margin-top:6px}.day-stepper{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.day-stepper button{min-height:68px;align-items:flex-start;justify-content:center;gap:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text)}.day-stepper button.active{border-color:color-mix(in srgb,var(--accent) 65%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}.day-stepper button strong{color:var(--muted);font-size:.75rem}.guided-day-panel{display:grid;gap:14px}.guided-day-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.empty-day-copy{margin:0;color:var(--muted);font-size:.9rem}.guided-save-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:4px}.guided-save-row span{color:var(--muted);font-size:.86rem;font-weight:800}.review-exercise-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.chip{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:.66rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase}.chip-muscle{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}.chip-equipment{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
-@media(max-width:620px){.stage-save-row,.stage-save-row button,.guided-save-row,.guided-save-row button{width:100%}.guided-save-row{align-items:stretch;flex-direction:column}.guided-day-panel>header{align-items:flex-start;flex-direction:column}.day-stepper{grid-template-columns:1fr 1fr}}
+.guided-program-builder{display:grid;gap:16px}
+.day-stepper-tabs{display:flex;align-items:center;gap:6px;padding:4px;border-radius:14px;background:var(--surface);overflow-x:auto}
+.day-tab-button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 12px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:14px;font-weight:700;transition:background-color .15s ease,color .15s ease}
+.day-tab-button:hover{color:var(--text)}
+.day-tab-button.active{background:var(--accent);color:var(--on-accent,#0e1114)}
+.day-tab-count{font-size:11px;font-weight:800;padding:2px 7px;border-radius:999px;background:color-mix(in srgb,var(--muted) 24%,transparent);color:inherit}
+.day-tab-button.active .day-tab-count{background:rgba(0,0,0,.2);color:#0e1114}
+.guided-day-panel{display:grid;gap:16px}
+.staged-exercises-list{display:grid;gap:10px;margin-top:14px}
+.staged-exercise-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px}
+.staged-exercise-info{display:grid;gap:4px;flex:1;min-width:0}
+.empty-day-copy{margin:0;padding:20px;text-align:center;color:var(--muted);font-size:14px}
+.guided-save-panel{padding:16px!important}
+.guided-save-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.guided-save-row span{color:var(--muted);font-size:14px;font-weight:700}
+@media(max-width:620px){
+  .day-stepper-tabs{grid-template-columns:repeat(2,1fr);display:grid}
+  .guided-save-row{flex-direction:column;align-items:stretch}
+  .guided-save-row button{width:100%}
+}
