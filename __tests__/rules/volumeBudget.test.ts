@@ -16,20 +16,20 @@ describe('recommendedDaysPerWeekRange — VA-012', () => {
 
 describe('calculateVolumeBudget — VA-011 per-muscle hypertrophy targets', () => {
   it('mev priority targets the muscle\'s own MEV landmark, not a flat number', () => {
-    // Chest MEV=8, Back MEV=10 (volumeLandmarks.ts) — previously both got a
+    // Chest MEV=6, Back MEV=8 (volumeLandmarks.ts) — previously both got a
     // flat "4" regardless of muscle.
     const [chest] = calculateVolumeBudget('hypertrophy', {}, ['Chest'], []);
     const [back] = calculateVolumeBudget('hypertrophy', {}, ['Back'], []);
-    expect(chest.targetEffectiveSets).toBe(8);
-    expect(back.targetEffectiveSets).toBe(10);
+    expect(chest.targetEffectiveSets).toBe(6);
+    expect(back.targetEffectiveSets).toBe(8);
   });
 
   it('maintain priority targets the muscle\'s own MV (Maintenance Volume) landmark', () => {
-    // "maintain" should literally mean MV — Chest MV=6, Glutes MV=4.
+    // "maintain" should literally mean MV — Chest MV=6, Glutes MV=0.
     const [chest] = calculateVolumeBudget('hypertrophy', { Chest: 'maintain' }, ['Chest'], []);
     const [glutes] = calculateVolumeBudget('hypertrophy', { Glutes: 'maintain' }, ['Glutes'], []);
     expect(chest.targetEffectiveSets).toBe(6);
-    expect(glutes.targetEffectiveSets).toBe(4);
+    expect(glutes.targetEffectiveSets).toBe(0);
   });
 
   it('grow priority targets the muscle\'s own MAV (the sweet spot), differing by muscle', () => {
@@ -46,9 +46,9 @@ describe('calculateVolumeBudget — VA-011 per-muscle hypertrophy targets', () =
     it('emphasize priority targets the muscle\'s own MAV by default', () => {
     const [forearms] = calculateVolumeBudget('hypertrophy', { Forearms: 'emphasize' }, ['Forearms'], []);
     const [back] = calculateVolumeBudget('hypertrophy', { Back: 'emphasize' }, ['Back'], []);
-    expect(forearms.targetEffectiveSets).toBe(10);
+    expect(forearms.targetEffectiveSets).toBe(8);
     expect(back.targetEffectiveSets).toBe(18);
-    expect(forearms.directSetsNeeded).toBe(10);
+    expect(forearms.directSetsNeeded).toBe(8);
   });
 
   it('non-hypertrophy focus keeps the flat TARGET_EFFECTIVE_SETS table regardless of landmark', () => {
@@ -64,12 +64,12 @@ describe('calculateVolumeBudget — VA-011 per-muscle hypertrophy targets', () =
 describe('calculateVolumeBudget — VA-010 MRV backstop', () => {
     it('hypertrophy/emphasize remains bounded below MRV by the MAV default', () => {
     const [result] = calculateVolumeBudget('hypertrophy', { Forearms: 'emphasize' }, ['Forearms'], []);
-    expect(result.directSetsNeeded).toBe(10);
-    expect(result.weeklySets).toBe(10);
+    expect(result.directSetsNeeded).toBe(8);
+    expect(result.weeklySets).toBe(8);
   });
 
   it('leaves the target untouched when it is well under the MRV landmark', () => {
     const [result] = calculateVolumeBudget('hypertrophy', {}, ['Chest'], []);
-    expect(result.directSetsNeeded).toBe(8);
+    expect(result.directSetsNeeded).toBe(6);
   });
 });

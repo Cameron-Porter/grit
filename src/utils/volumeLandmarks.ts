@@ -26,19 +26,25 @@ export interface VolumeLandmark {
   mrv: number;
 }
 
+// TAG-VA-020: RP Hypertrophy Zendesk Volume Landmarks (2024-2026 revision)
+// Source: Renaissance Periodization Hypertrophy Training Guides
+// (hypertrophy.zendesk.com/hc/en-us/categories/18853549247383-Muscle-Group-Guides)
 const LANDMARKS: Record<string, VolumeLandmark> = {
-  Chest:      { mv: 6, mev: 8,  mav: 16, mrv: 22 },
-  Back:       { mv: 6, mev: 10, mav: 18, mrv: 25 },
-  Shoulders:  { mv: 6, mev: 6,  mav: 14, mrv: 20 },
-  Biceps:     { mv: 6, mev: 6,  mav: 14, mrv: 20 },
-  Triceps:    { mv: 6, mev: 6,  mav: 14, mrv: 18 },
-  Quads:      { mv: 6, mev: 8,  mav: 16, mrv: 22 },
-  Hamstrings: { mv: 6, mev: 6,  mav: 12, mrv: 18 },
-  Glutes:     { mv: 4, mev: 4,  mav: 12, mrv: 20 },
-  Traps:      { mv: 4, mev: 4,  mav: 12, mrv: 18 },
-  Calves:     { mv: 6, mev: 8,  mav: 16, mrv: 20 },
-  Abs:        { mv: 4, mev: 4,  mav: 16, mrv: 25 },
-  Forearms:   { mv: 4, mev: 4,  mav: 10, mrv: 16 },
+  Chest:        { mv: 6, mev: 6,  mav: 16, mrv: 22 },
+  Back:         { mv: 6, mev: 8,  mav: 18, mrv: 25 },
+  Shoulders:    { mv: 6, mev: 6,  mav: 16, mrv: 22 },
+  'Side Delts': { mv: 6, mev: 6,  mav: 18, mrv: 25 },
+  'Rear Delts': { mv: 0, mev: 4,  mav: 12, mrv: 25 },
+  'Front Delts':{ mv: 0, mev: 0,  mav: 8,  mrv: 16 },
+  Biceps:       { mv: 4, mev: 6,  mav: 14, mrv: 22 },
+  Triceps:      { mv: 4, mev: 4,  mav: 14, mrv: 20 },
+  Quads:        { mv: 6, mev: 6,  mav: 16, mrv: 22 },
+  Hamstrings:   { mv: 4, mev: 4,  mav: 12, mrv: 18 },
+  Glutes:       { mv: 0, mev: 4,  mav: 12, mrv: 20 },
+  Traps:        { mv: 0, mev: 0,  mav: 8,  mrv: 18 },
+  Calves:       { mv: 0, mev: 6,  mav: 12, mrv: 20 },
+  Abs:          { mv: 0, mev: 0,  mav: 12, mrv: 25 },
+  Forearms:     { mv: 0, mev: 0,  mav: 8,  mrv: 16 },
 };
 
 export type VolumeStatus = 'below_mev' | 'mev_to_mav' | 'mav_to_mrv' | 'above_mrv';

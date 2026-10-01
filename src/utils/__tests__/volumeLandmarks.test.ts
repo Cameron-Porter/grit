@@ -50,7 +50,7 @@ describe('classifyVolume', () => {
   it('flags below_mev when weekly sets are under the landmark floor', () => {
     const result = classifyVolume('Chest', 5);
     expect(result.status).toBe('below_mev');
-    expect(result.label).toContain('below MEV (8)');
+    expect(result.label).toContain('below MEV (6)');
   });
 
   it('reports productive range between MEV and MAV', () => {

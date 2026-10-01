@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "1422d5bfe864fcc45a33b023fdbbc3d64c613bac995acff1df4d2f3acd6fa684",
+  "revision": "4513e5e54c7eb29ed9320c5c0093b2e9f127ff40826184356e84603e07ab31a8",
   "chunks": [
     {
       "id": "dc1e954567e6bee9e171",
@@ -1275,6 +1275,15 @@
         "ST-009"
       ],
       "content": "HV-023: hard ceiling on sets prescribed to a single exercise in one\nsession, regardless of how high a muscle's landmark-driven per-session\ntarget climbs. A muscle's own weekly MEV->MAV/MRV ramp is uncapped by\ndesign (that's the point of HV-021), but when a muscle has only one\nexercise in a given session, its entire per-session share concentrates\nonto that one movement — and past a handful of sets on a single exercise,\nsets stop landing close enough to true failure to carry real stimulus and\njust add fatigue instead (junk volume). This caps the final per-exercise\nnumber after any role/exercise-share split (see callers in slotBuilder.ts\nand src/api/progression.ts) — it's still the muscle's per-session target\nthat ramps freely; a second exercise for the same muscle that session can\nabsorb whatever this one doesn't.\nSource: RP Strength \"Hypertrophy Made Simple\" (2023) — per-session set\ncounts by training age (\"Beginner: can often be 1-5 sets per session...\nIntermediate: 2-10... Advanced: 3-12\"). Those ranges are a muscle's whole\nsession total, which can span more than one exercise. Four is a conservative\nproduct limit, matching HV-030's usual exercise cap and the user's preference\nagainst five-set prescriptions, not a universal physiological threshold.\nA single movement must never silently\nabsorb an entire muscle's session allotment on its own, regardless of\nexperience level. NOTE: the Strength Made Simple guide's \"2-5 sets per\nmovement type per session\" line was used for this constant previously —\nthat guide is scoped to the `strength` focus only (see ST-009 in\nsessionTrimmer.ts) and should not be cited for hypertrophy-focus doctrine\nlike this one."
+    },
+    {
+      "id": "613359f630e2979e8e20",
+      "file": "src/utils/volumeLandmarks.ts",
+      "line": 29,
+      "tags": [
+        "VA-020"
+      ],
+      "content": "TAG-VA-020: RP Hypertrophy Zendesk Volume Landmarks (2024-2026 revision)\nSource: Renaissance Periodization Hypertrophy Training Guides\n(hypertrophy.zendesk.com/hc/en-us/categories/18853549247383-Muscle-Group-Guides)"
     }
   ]
 }
