@@ -29,20 +29,23 @@ export type CustomSelectMenuPlacement = {
 export function customSelectMenuPlacement(
   rect: Pick<DOMRect, 'top' | 'bottom' | 'left' | 'width'>,
   viewportHeight: number,
+  viewportWidth: number = typeof window !== 'undefined' ? window.innerWidth : 800,
 ): CustomSelectMenuPlacement {
   const spaceBelow = viewportHeight - rect.bottom - MENU_GAP - MENU_MARGIN;
   const spaceAbove = rect.top - MENU_GAP - MENU_MARGIN;
   const openUpward = spaceBelow < 160 && spaceAbove > spaceBelow;
   const available = openUpward ? spaceAbove : spaceBelow;
   const maxHeight = Math.max(120, Math.min(280, available));
+  const left = Math.max(8, Math.min(rect.left, viewportWidth - rect.width - 8));
+  const width = Math.min(rect.width, Math.max(120, viewportWidth - left - 8));
   return {
     openUpward,
     maxHeight,
     style: {
-      left: rect.left,
+      left,
       top: openUpward ? 'auto' : rect.bottom + MENU_GAP,
       bottom: openUpward ? viewportHeight - rect.top + MENU_GAP : 'auto',
-      width: rect.width,
+      width,
       maxHeight,
     },
   };
@@ -58,7 +61,7 @@ export function CustomSelect({ options, value, defaultValue, onChange, name, ari
   const positionMenu = () => {
     const rect = trigger.current?.getBoundingClientRect();
     if (rect) {
-      const placement = customSelectMenuPlacement(rect, window.innerHeight);
+      const placement = customSelectMenuPlacement(rect, window.innerHeight, window.innerWidth);
       setOpenUpward(placement.openUpward);
       setMenuStyle(placement.style);
     }

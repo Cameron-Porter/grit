@@ -73,7 +73,7 @@ export const PROGRESSION_CATEGORY_PROFILES: Record<ProgressionCategory, Exercise
     loadIncrementStrategy: 'percentage_based',
     targetIncrementPct: 0.025,
     setAdditionRepPenaltyPct: { min: 0.05, max: 0.10 },
-    maxEffectiveSetsPerSession: 5,
+    maxEffectiveSetsPerSession: 4, // HV-023: shared conservative per-exercise cap.
     failurePolicy: 'avoid',
   },
   hypertrophy_compound: {
@@ -198,11 +198,20 @@ export function deriveProgressionCategory(def: ExerciseDefinition): ProgressionC
   return 'isolation';
 }
 
-export function getProgressionProfile(def: ExerciseDefinition | undefined): ExerciseProgressionProfile {
-  const category = def ? deriveProgressionCategory(def) : 'heavy_compound';
+export function getProgressionProfile(def: ExerciseDefinition | undefined, catalog?: {name:string;equipment:string|null}): ExerciseProgressionProfile {
+  // HV-028/HV-029: live catalog equipment identifies bodyweight exercises even
+  // when the small rules fixture has no corresponding name. It is not an
+  // equipment fallback: the caller supplies the actual Supabase equipment.
+  const category = catalog?.equipment === 'Bodyweight' ? 'bodyweight' : def ? deriveProgressionCategory(def) : 'heavy_compound';
   const profile = PROGRESSION_CATEGORY_PROFILES[category];
   if (category === 'bodyweight' && def?.bodyweightRepCeiling !== undefined) {
     return { ...profile, bodyweightRepCeiling: def.bodyweightRepCeiling };
+  }
+  // HV-037: extend the existing strict pull-up/chin-up ceiling to live catalog
+  // grip variants. Source: RP Hypertrophy reps-first progression and the
+  // exercise-specific difficulty ladder documented on the fixture definitions.
+  if (category === 'bodyweight' && catalog && /^(?:pull[ -]?up|chin[ -]?up)s?(?:\s*\(|$)/i.test(catalog.name.trim())) {
+    return { ...profile, bodyweightRepCeiling: 15 }; // HV-037
   }
   return profile;
 }

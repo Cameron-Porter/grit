@@ -13,7 +13,9 @@
     "test:e2e": "playwright install chromium && playwright test",
     "lint": "eslint . --max-warnings=0",
     "audit": "npm audit --audit-level=moderate",
-    "quality": "npm run lint && npm run typecheck && npm run test:unit && npm run test:rules && npm run build"
+    "quality": "npm run lint && npm run typecheck && npm run test:unit && npm run test:rules && npm run build",
+    "pretest:rules": "node ../scripts/build-explanation-corpus.mjs --check",
+    "prebuild": "node ../scripts/build-explanation-corpus.mjs --check"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.70.0",
@@ -25,6 +27,8 @@
     "stripe": "^22.5.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@electric-sql/pglite-pgvector": "0.0.9",
     "@playwright/test": "^1.62.1",
     "@types/node": "24.10.1",
     "@types/react": "19.2.2",

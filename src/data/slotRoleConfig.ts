@@ -17,18 +17,19 @@ export interface SlotRoleConfig {
 //   5–10  at Primary emphasize = strength-hypertrophy overlap
 //   8–15  at Secondary = mechanical tension + metabolic stress
 //   10–25/30 at Accessory = pump / mind-muscle / isolation range (HV-024)
+// RC-012: Minimum set floor — no working slot role is prescribed under 3 sets.
 export const SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev', SlotRoleConfig>> = {
   Primary: {
     emphasize: { sets: 4, repsMin: 5,  repsMax: 10, rir: 2 },
     grow:      { sets: 3, repsMin: 6,  repsMax: 12, rir: 2 },
     maintain:  { sets: 3, repsMin: 8,  repsMax: 12, rir: 3 },
-    mev:       { sets: 2, repsMin: 8,  repsMax: 15, rir: 3 },
+    mev:       { sets: 3, repsMin: 8,  repsMax: 15, rir: 3 }, // RC-012
   },
   Secondary: {
     emphasize: { sets: 3, repsMin: 8,  repsMax: 12, rir: 2 },
     grow:      { sets: 3, repsMin: 8,  repsMax: 15, rir: 2 },
-    maintain:  { sets: 2, repsMin: 10, repsMax: 15, rir: 3 },
-    mev:       { sets: 2, repsMin: 10, repsMax: 20, rir: 3 },
+    maintain:  { sets: 3, repsMin: 10, repsMax: 15, rir: 3 }, // RC-012
+    mev:       { sets: 3, repsMin: 10, repsMax: 20, rir: 3 }, // RC-012
   },
   // ─── HV-024: Accessory rep ceiling — dumbbell/machine/isolation range ──────
   //
@@ -45,9 +46,9 @@ export const SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev', 
   // most appropriate.
   Accessory: {
     emphasize: { sets: 3, repsMin: 10, repsMax: 25, rir: 2 },
-    grow:      { sets: 2, repsMin: 12, repsMax: 25, rir: 2 },
-    maintain:  { sets: 2, repsMin: 12, repsMax: 25, rir: 3 },
-    mev:       { sets: 2, repsMin: 15, repsMax: 30, rir: 3 },
+    grow:      { sets: 3, repsMin: 12, repsMax: 25, rir: 2 }, // RC-012
+    maintain:  { sets: 3, repsMin: 12, repsMax: 25, rir: 3 }, // RC-012
+    mev:       { sets: 3, repsMin: 15, repsMax: 30, rir: 3 }, // RC-012
   },
 };
 
@@ -92,19 +93,19 @@ const STRENGTH_SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 'mev'
     emphasize: { sets: 5, repsMin: 1,  repsMax: 3,  rir: 1 },  // ST-001
     grow:      { sets: 4, repsMin: 2,  repsMax: 4,  rir: 1 },  // ST-001
     maintain:  { sets: 3, repsMin: 3,  repsMax: 5,  rir: 2 },
-    mev:       { sets: 2, repsMin: 3,  repsMax: 5,  rir: 2 },
+    mev:       { sets: 3, repsMin: 3,  repsMax: 5,  rir: 2 },  // RC-012
   },
   Secondary: {
     emphasize: { sets: 4, repsMin: 8,  repsMax: 10, rir: 1 },  // ST-002
     grow:      { sets: 3, repsMin: 9,  repsMax: 12, rir: 2 },  // ST-002
     maintain:  { sets: 3, repsMin: 10, repsMax: 13, rir: 2 },  // ST-002
-    mev:       { sets: 2, repsMin: 12, repsMax: 15, rir: 3 },  // ST-002
+    mev:       { sets: 3, repsMin: 12, repsMax: 15, rir: 3 },  // ST-002, RC-012
   },
   Accessory: {
     emphasize: { sets: 3, repsMin: 6,  repsMax: 10, rir: 2 },  // ST-003
     grow:      { sets: 3, repsMin: 6,  repsMax: 10, rir: 2 },  // ST-003
-    maintain:  { sets: 2, repsMin: 8,  repsMax: 12, rir: 3 },
-    mev:       { sets: 2, repsMin: 8,  repsMax: 12, rir: 3 },
+    maintain:  { sets: 3, repsMin: 8,  repsMax: 12, rir: 3 },  // RC-012
+    mev:       { sets: 3, repsMin: 8,  repsMax: 12, rir: 3 },  // RC-012
   },
 };
 
@@ -140,19 +141,19 @@ const POWERBUILDING_SLOT_ROLE_CONFIGS: Record<SlotRole, Record<MusclePriority | 
     emphasize: { sets: 4, repsMin: 3,  repsMax: 6,  rir: 2 },  // PB-001
     grow:      { sets: 4, repsMin: 4,  repsMax: 7,  rir: 2 },  // PB-001
     maintain:  { sets: 3, repsMin: 5,  repsMax: 8,  rir: 2 },
-    mev:       { sets: 2, repsMin: 5,  repsMax: 8,  rir: 3 },
+    mev:       { sets: 3, repsMin: 5,  repsMax: 8,  rir: 3 },  // RC-012
   },
   Secondary: {
     emphasize: { sets: 3, repsMin: 6,  repsMax: 10, rir: 2 },  // PB-002
     grow:      { sets: 3, repsMin: 6,  repsMax: 10, rir: 2 },  // PB-002
     maintain:  { sets: 3, repsMin: 8,  repsMax: 12, rir: 3 },
-    mev:       { sets: 2, repsMin: 8,  repsMax: 12, rir: 3 },
+    mev:       { sets: 3, repsMin: 8,  repsMax: 12, rir: 3 },  // RC-012
   },
   Accessory: {
     emphasize: { sets: 3, repsMin: 10, repsMax: 15, rir: 2 },  // PB-003
     grow:      { sets: 3, repsMin: 10, repsMax: 15, rir: 2 },  // PB-003
-    maintain:  { sets: 2, repsMin: 12, repsMax: 20, rir: 3 },
-    mev:       { sets: 2, repsMin: 12, repsMax: 20, rir: 3 },
+    maintain:  { sets: 3, repsMin: 12, repsMax: 20, rir: 3 },  // RC-012
+    mev:       { sets: 3, repsMin: 12, repsMax: 20, rir: 3 },  // RC-012
   },
 };
 

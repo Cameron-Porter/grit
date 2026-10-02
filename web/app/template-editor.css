@@ -1,4 +1,391 @@
 .equipment-toggle-grid label{justify-content:space-between;padding:8px 10px}.equipment-toggle-grid label>strong{color:var(--text);font-size:.78rem}.equipment-toggle-grid .equipment-switch{display:block!important;flex:0 0 50px}.equipment-toggle-grid .equipment-switch input{position:absolute;width:1px;height:1px;min-height:0;margin:0;padding:0;opacity:0}
 .staged-exercises{margin-top:16px}.stage-save-row{display:flex;justify-content:flex-end;margin-top:16px}
-.guided-program-builder{display:grid;gap:18px}.guided-builder-intro{display:grid;gap:10px}.guided-builder-intro strong,.guided-builder-intro span{display:block}.guided-builder-intro span{margin-top:4px;color:var(--muted);font-size:.9rem;line-height:1.45}.guided-program-basics{margin-top:6px}.day-stepper{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.day-stepper button{min-height:68px;align-items:flex-start;justify-content:center;gap:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text)}.day-stepper button.active{border-color:color-mix(in srgb,var(--accent) 65%,var(--border));box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 14%,transparent)}.day-stepper button strong{color:var(--muted);font-size:.75rem}.guided-day-panel{display:grid;gap:14px}.guided-day-panel>header{display:flex;align-items:center;justify-content:space-between;gap:12px}.empty-day-copy{margin:0;color:var(--muted);font-size:.9rem}.guided-save-row{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:4px}.guided-save-row span{color:var(--muted);font-size:.86rem;font-weight:800}.review-exercise-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.chip{display:inline-flex;align-items:center;border-radius:999px;padding:4px 10px;font-size:.66rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase}.chip-muscle{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent)}.chip-equipment{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
-@media(max-width:620px){.stage-save-row,.stage-save-row button,.guided-save-row,.guided-save-row button{width:100%}.guided-save-row{align-items:stretch;flex-direction:column}.guided-day-panel>header{align-items:flex-start;flex-direction:column}.day-stepper{grid-template-columns:1fr 1fr}}
+
+/* Native Create Program Page & Guided Builder spacing & layout */
+.native-create-page {
+  max-width: 760px;
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.guided-program-builder {
+  display: grid;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.guided-program-basics {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.program-name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  width: 100%;
+  min-width: 0;
+}
+
+.program-name-field input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.program-structure-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.program-structure-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  min-width: 0;
+}
+
+/* Day Stepper Tabs: flex strip that fits all 1-7 days seamlessly */
+.day-stepper-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--card-border, var(--border));
+  overflow-x: auto;
+  scrollbar-width: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+}
+.day-stepper-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.day-tab-button {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.day-tab-button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface2) 80%, transparent);
+}
+
+.day-tab-button.active {
+  background: var(--accent);
+  color: var(--on-accent, #0e1114);
+}
+
+.day-tab-count {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 24%, transparent);
+  color: inherit;
+}
+
+.day-tab-button.active .day-tab-count {
+  background: rgba(0, 0, 0, 0.22);
+  color: #0e1114;
+}
+
+.guided-day-panel {
+  display: grid;
+  gap: 20px;
+  padding: 20px !important;
+  border-radius: 20px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--card-border, var(--border)) !important;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.add-exercise-card {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.add-exercise-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.add-exercise-header label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+  min-width: 0;
+  width: 100%;
+}
+
+.add-exercise-header .custom-select,
+.add-exercise-header .custom-select-trigger {
+  width: 100%;
+  min-width: 0;
+}
+
+.add-exercise-header .custom-select-trigger > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  text-align: left;
+}
+
+/* Strict portal menu constraints so dropdown menus never overflow right */
+.custom-select-portal-menu,
+.custom-select-menu {
+  min-width: 0 !important;
+  max-width: calc(100vw - 16px) !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+.custom-select-portal-menu .custom-select-option,
+.custom-select-menu .custom-select-option {
+  width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+
+.custom-select-portal-menu .custom-select-option > span:first-child,
+.custom-select-menu .custom-select-option > span:first-child {
+  min-width: 0 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  flex: 1 !important;
+}
+
+.builder-target-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.builder-target-grid label {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-align: center;
+  min-width: 0;
+}
+
+.builder-target-grid label > span {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.builder-target-grid input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 6px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.add-exercise-button {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 4px;
+}
+
+.staged-exercises-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.staged-exercise-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px !important;
+  border-radius: 16px !important;
+  background: var(--surface) !important;
+  border: 1px solid var(--card-border, var(--border)) !important;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.staged-exercise-info {
+  display: grid;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.empty-day-copy {
+  margin: 0;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+}
+
+.guided-save-panel {
+  padding: 20px !important;
+  border-radius: 20px !important;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.guided-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.guided-save-row span {
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .add-exercise-header {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .builder-target-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .builder-target-grid label:nth-child(1),
+  .builder-target-grid label:nth-child(2),
+  .builder-target-grid label:nth-child(3) {
+    grid-column: span 2;
+  }
+  .builder-target-grid label:nth-child(4),
+  .builder-target-grid label:nth-child(5) {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 620px) {
+  .program-structure-fields {
+    grid-template-columns: 1fr;
+  }
+  .guided-save-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .guided-save-row button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .day-tab-button {
+    padding: 0 6px;
+    font-size: 12px;
+    gap: 4px;
+  }
+  .day-tab-count {
+    padding: 2px 5px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .builder-target-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .builder-target-grid label:nth-child(1),
+  .builder-target-grid label:nth-child(2),
+  .builder-target-grid label:nth-child(3),
+  .builder-target-grid label:nth-child(4) {
+    grid-column: span 1;
+  }
+  .builder-target-grid label:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+}

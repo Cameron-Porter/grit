@@ -33,5 +33,8 @@ example
 # generated agent worktrees
 .claude/worktrees/
 
+# Local browser verification artifacts
+/web/test-results/
+
 .env.local
 .vercel

@@ -83,7 +83,7 @@ describe('buildProgram — HV-021 per-muscle landmark-driven set counts', () => 
     expect(deloadSets).toBeLessThanOrEqual(week1Sets);
   });
 
-  it('non-hypertrophy focus is unaffected — Primary emphasize sets stay at the flat ST-001/PB-001 values regardless of muscle', () => {
+  it('non-hypertrophy focus remains muscle-independent within the exercise cap — Primary emphasize sets stay at the flat ST-001/PB-001 values regardless of muscle', () => {
     const strength = buildProgram({
       ...BASE_CONFIG,
       focus: 'strength',
@@ -104,7 +104,7 @@ describe('buildProgram — HV-021 per-muscle landmark-driven set counts', () => 
     // ST-001: Primary emphasize = 5 sets, identical for every muscle — landmark
     // data (Chest MRV=22 vs Back MRV=25) must not leak into strength focus.
     for (const sets of [...primarySets('Chest'), ...primarySets('Back')]) {
-      expect(sets).toBe(5);
+      expect(sets).toBe(4); // HV-023 now caps the ST-001 request of five sets.
     }
   });
 

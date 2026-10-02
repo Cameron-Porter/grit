@@ -138,7 +138,8 @@ describe('HV-040 — history-aware Week-1 mesocycle seed', () => {
   });
   it('keeps external load at zero for bodyweight work', () => {
     const target = recommendInitialMesocycleTarget({...prescription,equipment:'Bodyweight'},[{date:'2026-08-01',sets:[{weight:0,reps:12},{weight:0,reps:12}]}]);
-    expect(target.weight).toBe(0);expect(target.repsMin).toBe(10);expect(target.seededFromHistory).toBe(true);
+    // HV-040 bodyweight exception preserves demonstrated reps, rather than the loaded-lift cap.
+    expect(target.weight).toBe(0);expect(target.repsMin).toBe(12);expect(target.seededFromHistory).toBe(true);
   });
 });
 
@@ -838,12 +839,13 @@ describe('VA-012 — validateProgram frequency warning', () => {
 
 describe('VA-013 — soreness-based volume autoregulation', () => {
   it('backs off one set (not a full reset) when the muscle reported "Still sore"', () => {
+    // Use a below-cap example so removal of the soreness trim still fails.
     // musclePriority 'emphasize' + mesoWeek 3 would normally add weekBonus=2
-    // sets above baseSetCount (3) => 5. 'Still sore' trims one set off that
-    // (4), rather than resetting all the way back to baseSetCount (3).
+    // sets above baseSetCount (2) => 4. 'Still sore' trims one set off that
+    // (3), rather than resetting all the way back to baseSetCount (2).
     const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Still sore' });
-    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
-    expect(rec.nextSets).toBe(4);
+    const rec = recommendProgression(makePrescription({ sets: 2 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(3);
   });
 
   it('never drops "Still sore" below baseSetCount even when the trim would go lower', () => {
@@ -855,16 +857,16 @@ describe('VA-013 — soreness-based volume autoregulation', () => {
     expect(rec.nextSets).toBe(2);
   });
 
-  it('does not cap sets when soreness is anything other than "Still sore"', () => {
+  it('does not apply a soreness trim when soreness is anything other than "Still sore"', () => {
     const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Healed early' });
     const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
-    expect(rec.nextSets).toBe(5); // 3 + weekBonus(2), uncapped
+    expect(rec.nextSets).toBe(4); // HV-023 caps the ramp at four; soreness adds no trim.
   });
 
-  it('does not cap sets when soreness is not provided at all', () => {
+  it('does not apply a soreness trim when soreness is not provided at all', () => {
     const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3 });
     const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
-    expect(rec.nextSets).toBe(5);
+    expect(rec.nextSets).toBe(4); // HV-023 applies even without a soreness signal.
   });
 
   it('allows a temporary backoff below the previous actual set count when sore', () => {
@@ -894,15 +896,15 @@ describe('VA-015 — graduated soreness-based ramp step', () => {
   // based on soreness instead of always taking the mesoWeek-driven step.
 
   it('does not accelerate the ramp from "Not sore" alone', () => {
-    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Not sore' });
-    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
-    expect(rec.nextSets).toBe(5);
+    const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 2, soreness: 'Not sore' });
+    const rec = recommendProgression(makePrescription({ sets: 2 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(3); // Below HV-023: an extra ramp step would incorrectly prescribe four.
   });
 
   it('repeats last week\'s ramp step when the muscle reported "Just in time" (at the MRV ceiling)', () => {
     const ctx = makeCtx({ musclePriority: 'emphasize', mesoWeek: 3, soreness: 'Just in time' });
-    const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
-    expect(rec.nextSets).toBe(4); // 3 + weekBonus(1) — week 2's step, not week 3's
+    const rec = recommendProgression(makePrescription({ sets: 2 }), makeSessions(100, 10, 1), ctx);
+    expect(rec.nextSets).toBe(3); // 2 + weekBonus(1) — week 2's step, not week 3's
   });
 
   it('"Just in time" never drops the ramp step below week 1\'s baseline', () => {
@@ -923,10 +925,10 @@ describe('VA-015 — graduated soreness-based ramp step', () => {
       programFocus: 'hypertrophy',
       mesoWeek: 3,
       soreness: 'Not sore',
-      hypertrophyVolumeOverride: { trainingSets: 10, deloadSets: 5 },
+      hypertrophyVolumeOverride: { trainingSets: 2, deloadSets: 1 },
     });
     const rec = recommendProgression(makePrescription({ sets: 3 }), makeSessions(100, 10, 1), ctx);
-    expect(rec.nextSets).toBe(10); // override wins outright, untouched by the ramp shift
+    expect(rec.nextSets).toBe(2); // Below HV-023 so this still tests that the override wins.
   });
 });
 

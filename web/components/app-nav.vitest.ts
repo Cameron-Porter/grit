@@ -47,4 +47,10 @@ describe('app navigation state', () => {
   it('uses a dumbbell icon for workout, the primary tab', () => {
     expect(appNavLinks[0]).toMatchObject({ label: 'Workout', href: '/workout', icon: 'dumbbell' });
   });
+
+  it('uses the Grit plate icon image in the side panel brand logo', () => {
+    const content = readFileSync(resolve(process.cwd(), 'components/app-nav.tsx'), 'utf8');
+    expect(content).toContain('src="/plate-icon.png"');
+    expect(content).toContain('className="brand-logo"');
+  });
 });

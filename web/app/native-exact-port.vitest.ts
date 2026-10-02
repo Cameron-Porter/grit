@@ -217,7 +217,8 @@ describe('exact native app port contracts', () => {
     }
     const css = read('app/globals.css');
     expect(css).toContain('.loading-screen{');
-    expect(css).toContain('width:100vw');
+    // Constrained to width: 100% so the loading screen centers within page-frame without extending past the viewport edge.
+    expect(css).toContain('width:100%');
     expect(css).toContain('min-height:100dvh');
   });
 

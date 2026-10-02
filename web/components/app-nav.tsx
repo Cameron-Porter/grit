@@ -70,22 +70,28 @@ export function AppNav() {
 
   return (
     <nav className="app-nav" aria-label="Primary">
-      {appNavLinks.map(({ label, href, icon }) => {
-        const active = isActiveAppNavLink(pathname, href);
-        return (
-          <Link
-            key={href}
-            href={href}
-            className={active ? 'active' : undefined}
-            aria-current={active ? 'page' : undefined}
-            aria-label={label}
-          >
-            <AppNavIcon icon={icon} className="app-nav-icon" />
-            <span className="sr-only">{label}</span>
-            <span className="app-nav-dot" aria-hidden="true" />
-          </Link>
-        );
-      })}
+      <div className="app-nav-brand">
+        <img src="/plate-icon.png" alt="" aria-hidden="true" width={32} height={32} className="brand-logo" />
+        <span className="brand-title">GRIT</span>
+      </div>
+      <div className="app-nav-links">
+        {appNavLinks.map(({ label, href, icon }) => {
+          const active = isActiveAppNavLink(pathname, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={active ? 'active' : undefined}
+              aria-current={active ? 'page' : undefined}
+              aria-label={label}
+            >
+              <AppNavIcon icon={icon} className="app-nav-icon" />
+              <span className="app-nav-label">{label}</span>
+              <span className="app-nav-dot" aria-hidden="true" />
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

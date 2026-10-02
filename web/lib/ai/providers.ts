@@ -1,6 +1,6 @@
-export type AiProvider = 'openai' | 'gemini';
+export type AiProvider = 'openai' | 'gemini' | 'local';
 
-type StructuredRequest = { provider: AiProvider; apiKey: string; model: string; prompt: string; schema: Record<string, unknown> };
+type StructuredRequest = { provider: AiProvider; apiKey: string; model: string; prompt: string; schema: Record<string, unknown>; baseUrl?: string };
 
 function openAiText(result: any): string | undefined {
   if (typeof result?.output_text === 'string') return result.output_text;
@@ -38,7 +38,27 @@ async function requestGeminiFallback(apiKey: string, model: string, prompt: stri
   return output;
 }
 
-export async function requestStructuredProgram({ provider, apiKey, model, prompt, schema }: StructuredRequest): Promise<string> {
+export async function requestStructuredProgram({ provider, apiKey, model, prompt, schema, baseUrl }: StructuredRequest): Promise<string> {
+  if (provider === 'local') {
+    if (!baseUrl) throw new Error('Local AI endpoint is not configured.');
+    const response = await fetch(`${baseUrl}/chat/completions`, {
+      method: 'POST', redirect: 'error', cache: 'no-store', signal: AbortSignal.timeout(120_000),
+      headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) },
+      body: JSON.stringify({ model, temperature: 0, stream: false, max_tokens: 4096,
+        chat_template_kwargs: { enable_thinking: false },
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_schema', json_schema: { name: 'grit_program', strict: true, schema } },
+      }),
+    });
+    const result = await responseBody(response);
+    if (!response.ok) throw new Error('Local AI could not generate the program. Check llama.cpp availability and context capacity.');
+    const choice = result?.choices?.[0];
+    if (choice?.finish_reason === 'length') throw new Error('Local AI ran out of context or output space. Increase the llama.cpp context size and retry.');
+    const output = choice?.message?.content;
+    if (typeof output !== 'string' || !output.trim()) throw new Error('Local AI returned no program.');
+    try { JSON.parse(output); } catch { throw new Error('Local AI returned invalid program JSON.'); }
+    return output;
+  }
   const openai = provider === 'openai';
   const response = await fetch(openai ? 'https://api.openai.com/v1/responses' : 'https://generativelanguage.googleapis.com/v1beta/interactions', {
     method: 'POST',
