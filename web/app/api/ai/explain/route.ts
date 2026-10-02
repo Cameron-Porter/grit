@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { fetchStripeSubscriptionStatus } from '@/lib/billing/fetch-entitlement-profile';
+import { resolveEntitlement } from '@/lib/billing/entitlement';
 import { ExplanationError, loadExplanationEvidence } from '@/lib/explanations/load';
 import { localExplanation } from '@/lib/explanations/local-model';
 import { retrieveRules } from '@/lib/explanations/retrieval';
@@ -19,7 +21,19 @@ export async function POST(request:Request){
     let input:unknown;try{input=JSON.parse(raw)}catch{return reply({error:'Invalid question.'},400)}
     if(!isExplanationRequest(input))return reply({error:'Choose an exercise and enter a valid question.'},400);
     const db=await createClient();
-    const evidence=await loadExplanationEvidence(db,input);
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return reply({ error: 'Authentication required.' }, 401);
+    const [profileResult, stripeStatus] = await Promise.all([
+      db.from('user_profiles').select('role,subscription_status,experience_level,body_weight').eq('id',user.id).maybeSingle(),
+      fetchStripeSubscriptionStatus(db,user.id),
+    ]);
+    if(profileResult.error) throw new ExplanationError('Could not verify your membership. Please try again.',503);
+    const profile=profileResult.data;
+    const entitlementProfile=profile ? {...profile,stripe_subscription_status:stripeStatus} : null;
+    if (resolveEntitlement(entitlementProfile) !== 'pro') {
+      return reply({ error: 'GRIT Pro or VIP membership required for AI explanations.' }, 403);
+    }
+    const evidence=await loadExplanationEvidence(db,input,{userId:user.id,profile});
     if(active.has(evidence.userId)||active.size>=2)return reply({error:'Another explanation is running. Try again shortly.'},429);
     userId=evidence.userId;active.add(userId);
     const retrieved=await retrieveRules(db,`${input.question} ${evidence.tags.join(' ')}`,evidence.revision,request.signal);

@@ -5,10 +5,10 @@ import { decisionEvidence } from '@/lib/explanations/decision';
 const createClient=vi.fn();
 vi.mock('@/lib/supabase/server',()=>({createClient}));
 const input={dayId:'00000000-0000-4000-8000-000000000001',exerciseName:'Row',question:'Why did the weight stay the same?',displayed:{sets:3,repsMin:8,repsMax:12,weight:100,rir:2},setCount:3};
-function database({user=true,owned=true,target=null,error=false,pushup=false}:{user?:boolean;owned?:boolean;target?:unknown;error?:boolean;pushup?:boolean}={}){
+function database({user=true,pro=true,owned=true,target=null,error=false,pushup=false}:{user?:boolean;pro?:boolean;owned?:boolean;target?:unknown;error?:boolean;pushup?:boolean}={}){
   const rows:Record<string,unknown>={
     program_day_targets:target?[{exercise_name:pushup?'Push-Up':input.exerciseName,...target as object}]:[],
-    user_profiles:{experience_level:'intermediate',body_weight:206},
+    user_profiles:pro ? {experience_level:'intermediate',body_weight:206,role:'pro',subscription_status:'active'} : {experience_level:'intermediate',body_weight:206,role:'free',subscription_status:'canceled'},
     program_exercises:[{exercise_name:pushup?'Push-Up':'Row',muscle_group:pushup?'Chest':'Back',equipment:pushup?'Bodyweight':'Barbell',target_sets:3,target_reps_min:8,target_reps_max:12,target_weight:100,rir:pushup?4:2}],
     workouts:[{id:'w1',completed_at:'2026-09-30',program_day_id:'past-day'}],
     workout_sets:(pushup?[20,20,20,20]:[12,12,10]).map((reps,set_index)=>({workout_id:'w1',exercise_name:pushup?'Push-Up':'Row',weight:pushup?210:100,reps,set_index})),workout_feedback:[],
@@ -28,6 +28,10 @@ it('rejects unauthenticated reads before querying workout data',async()=>{
   const db=database({user:false});createClient.mockResolvedValue(db);
   expect((await post()).status).toBe(401);expect(db.from).not.toHaveBeenCalled();
 });
+it('rejects standard free accounts with 403 Forbidden',async()=>{
+  const db=database({pro:false});createClient.mockResolvedValue(db);
+  expect((await post()).status).toBe(403);
+});
 it('rejects another account’s day without retrieving targets',async()=>{
   const db=database({owned:false});createClient.mockResolvedValue(db);
   expect((await post()).status).toBe(404);expect(db.from).not.toHaveBeenCalledWith('program_day_targets');
@@ -41,6 +45,13 @@ it('reconstructs targets from saved inputs when a decision snapshot is missing',
 });
 it('surfaces database errors without claiming an AI answer',async()=>{
   createClient.mockResolvedValue(database({error:true}));expect((await post()).status).toBe(503);
+});
+it('reuses authenticated profile inputs without repeating auth or training-profile queries',async()=>{
+  const db=database();createClient.mockResolvedValue(db);
+  const response=await post();
+  expect(response.status).toBe(200);
+  expect(db.auth.getUser).toHaveBeenCalledTimes(1);
+  expect(db.from.mock.calls.filter(([table])=>table==='user_profiles')).toHaveLength(2);
 });
 it('keeps recorded evidence available when llama.cpp is down',async()=>{
   const prescription={sets:3,repsMin:8,repsMax:12,rir:2,equipment:'Barbell'};

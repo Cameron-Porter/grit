@@ -1,12 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { perSetRepTargets } from '@grit/rules/perSetTargets';
-import { loadWorkoutTargets, TargetLoadError } from '@/lib/workout/load-targets';
+import { loadWorkoutTargets, TargetLoadError, type WorkoutTargetOptions } from '@/lib/workout/load-targets';
 import type { ExplanationRequest } from './types';
 
 export { TargetLoadError as ExplanationError } from '@/lib/workout/load-targets';
 
-export async function loadExplanationEvidence(db:SupabaseClient,input:ExplanationRequest){
-  const loaded=await loadWorkoutTargets(db,input.dayId);
+export async function loadExplanationEvidence(db:SupabaseClient,input:ExplanationRequest, authenticated?:Pick<WorkoutTargetOptions,'userId'|'profile'>){
+  const loaded=await loadWorkoutTargets(db,input.dayId,authenticated);
   const resolved=loaded.resolved.find(item=>item.prescription.name===input.exerciseName);
   if(!resolved)throw new TargetLoadError('This exercise is not in the saved workout. Save the exercise change before asking about its targets.',404);
   const p=resolved.prescription,d=input.displayed;

@@ -7,19 +7,59 @@ import { recordedDecision, resolveScheduledTarget, type SavedTarget, type Target
 export class TargetLoadError extends Error { constructor(message:string,public status:number){super(message)} }
 const joined=<T,>(value:T|T[])=>Array.isArray(value)?value[0]:value;
 
+/** Server-only inputs already authenticated/ownership-checked by the caller. Never populate from request data. */
+export type WorkoutTargetOptions = {
+  userId?: string;
+  programId?: string;
+  totalWeeks?: number;
+  focus?: ProgramFocus | string | null;
+  musclePriorities?: Record<string, string | null> | null;
+  weekNumber?: number;
+  dayNumber?: number;
+  profile?: {
+    experience_level?: ExperienceLevel | string | null;
+    body_weight?: number | null;
+  } | null;
+};
+
 /** Authenticated, shared source of the workout display and its explanation. */
-export async function loadWorkoutTargets(supabase:SupabaseClient,dayId:string){
-  const {data:{user}}=await supabase.auth.getUser();
-  if(!user)throw new TargetLoadError('Sign in to view workout targets.',401);
-  const {data:day,error:dayError}=await supabase.from('program_days').select('id,program_id,week_number,day_number,programs!inner(user_id,deleted_at,total_weeks,focus,muscle_priorities)').eq('id',dayId).eq('programs.user_id',user.id).is('programs.deleted_at',null).maybeSingle();
-  if(dayError)throw new TargetLoadError('Could not load the program day.',503);
-  if(!day)throw new TargetLoadError('Workout not found.',404);
-  const program=joined(day.programs);
-  if(!program)throw new TargetLoadError('Program not found.',404);
-  const [{data:templateDay,error:templateError},{data:profile,error:profileError},{data:pastWorkouts,error:historyError}]=await Promise.all([
-    supabase.from('program_days').select('id').eq('program_id',day.program_id).eq('week_number',1).eq('day_number',day.day_number).maybeSingle(),
-    supabase.from('user_profiles').select('experience_level,body_weight').eq('id',user.id).maybeSingle(),
-    supabase.from('workouts').select('id,completed_at,program_day_id').eq('user_id',user.id).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40),
+export async function loadWorkoutTargets(supabase:SupabaseClient,dayId:string,options?:WorkoutTargetOptions){
+  let userId=options?.userId;
+  if(!userId){
+    const {data:{user}}=await supabase.auth.getUser();
+    if(!user)throw new TargetLoadError('Sign in to view workout targets.',401);
+    userId=user.id;
+  }
+
+  let programId=options?.programId;
+  let weekNumber=options?.weekNumber;
+  let dayNumber=options?.dayNumber;
+  let totalWeeks=options?.totalWeeks;
+  let focus=options?.focus;
+  let musclePriorities=options?.musclePriorities;
+
+  if(!programId||weekNumber===undefined||dayNumber===undefined||totalWeeks===undefined){
+    const {data:day,error:dayError}=await supabase.from('program_days').select('id,program_id,week_number,day_number,programs!inner(user_id,deleted_at,total_weeks,focus,muscle_priorities)').eq('id',dayId).eq('programs.user_id',userId).is('programs.deleted_at',null).maybeSingle();
+    if(dayError)throw new TargetLoadError('Could not load the program day.',503);
+    if(!day)throw new TargetLoadError('Workout not found.',404);
+    const program=joined(day.programs);
+    if(!program)throw new TargetLoadError('Program not found.',404);
+    programId=day.program_id;
+    weekNumber=day.week_number;
+    dayNumber=day.day_number;
+    totalWeeks=program.total_weeks;
+    focus=program.focus;
+    musclePriorities=program.muscle_priorities;
+  }
+
+  if (typeof weekNumber !== 'number' || typeof totalWeeks !== 'number' || !Number.isInteger(weekNumber) || !Number.isInteger(totalWeeks) || weekNumber < 1 || totalWeeks < weekNumber) {
+    throw new TargetLoadError('The workout schedule is incomplete. Reload the program and try again.',503);
+  }
+  const profile=options?.profile;
+  const [{data:templateDay,error:templateError},{data:profileData,error:profileError},{data:pastWorkouts,error:historyError}]=await Promise.all([
+    supabase.from('program_days').select('id').eq('program_id',programId).eq('week_number',1).eq('day_number',dayNumber).maybeSingle(),
+    profile !== undefined ? Promise.resolve({data:profile,error:null}) : supabase.from('user_profiles').select('experience_level,body_weight').eq('id',userId).maybeSingle(),
+    supabase.from('workouts').select('id,completed_at,program_day_id').eq('user_id',userId).is('deleted_at',null).order('completed_at',{ascending:false}).limit(40),
   ]);
   if(templateError||profileError||historyError)throw new TargetLoadError('Could not load target inputs.',503);
   if(!templateDay)throw new TargetLoadError('The workout exercise template is missing.',404);
@@ -36,7 +76,7 @@ export async function loadWorkoutTargets(supabase:SupabaseClient,dayId:string){
   const sourceIds=[...new Set(targets.flatMap(target=>{const e=recordedDecision(target);return e?[e.sourceWorkoutId,...e.sessions.map(s=>(s as {workoutId?:string}).workoutId).filter((id):id is string=>!!id)]:[]}))];
   let visibleIds=new Set<string>();
   if(sourceIds.length){
-    const {data,error}=await supabase.from('workouts').select('id').eq('user_id',user.id).is('deleted_at',null).in('id',sourceIds);
+    const {data,error}=await supabase.from('workouts').select('id').eq('user_id',userId).is('deleted_at',null).in('id',sourceIds);
     if(error)throw new TargetLoadError('Could not verify recorded workouts.',503);
     visibleIds=new Set((data??[]).map(w=>w.id));
   }
@@ -54,7 +94,7 @@ export async function loadWorkoutTargets(supabase:SupabaseClient,dayId:string){
       (historyByExercise[name]??=[]).push({date:workout.completed_at,sets,isDeloadSession:isDeloadByDay.get(workout.program_day_id)??false,hasBadFeedback});
     }
   }
-  const bodyWeight=Number(profile?.body_weight)||0;
-  const resolved=exercises.map(ex=>resolveScheduledTarget(ex,safeTargets.find(t=>t.exercise_name===ex.exercise_name),(historyByExercise[ex.exercise_name]??[]).slice(0,8),{experienceLevel:(profile?.experience_level??'intermediate') as ExperienceLevel,week:day.week_number,totalWeeks:program.total_weeks,focus:(program.focus??'hypertrophy') as ProgramFocus,bodyWeight,musclePriority:ex.muscle_group?program.muscle_priorities?.[ex.muscle_group]??null:null}));
-  return {userId:user.id,templateDayId:templateDay.id,bodyWeight,resolved,historyByExercise:Object.fromEntries(Object.entries(historyByExercise).map(([name,sessions])=>[name,sessions.slice(0,3)]))};
+  const bodyWeight=Number(profileData?.body_weight)||0;
+  const resolved=exercises.map(ex=>resolveScheduledTarget(ex,safeTargets.find(t=>t.exercise_name===ex.exercise_name),(historyByExercise[ex.exercise_name]??[]).slice(0,8),{experienceLevel:(profileData?.experience_level??'intermediate') as ExperienceLevel,week:weekNumber,totalWeeks,focus:(focus??'hypertrophy') as ProgramFocus,bodyWeight,musclePriority:ex.muscle_group?musclePriorities?.[ex.muscle_group]??null:null}));
+  return {userId,templateDayId:templateDay.id,bodyWeight,resolved,historyByExercise:Object.fromEntries(Object.entries(historyByExercise).map(([name,sessions])=>[name,sessions.slice(0,3)]))};
 }

@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server';
 import { requestStructuredProgram } from '@/lib/ai/providers';
 import { programAiConfig } from '@/lib/ai/config';
 import { AI_PROGRAM_SCHEMA, buildAiProgramBase, buildAiPrompt, type AiBuilderInput, type AiCatalogExercise } from '@/lib/ai/program';
+import { fetchEntitlementProfile } from '@/lib/billing/fetch-entitlement-profile';
+import { resolveEntitlement } from '@/lib/billing/entitlement';
 
 type Body = { input?: AiBuilderInput; catalog?: AiCatalogExercise[]; history?: { exerciseName: string; uses: number; lastWeight: number | null }[] };
 
@@ -22,6 +24,16 @@ export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+
+  let profile;
+  try {
+    profile = await fetchEntitlementProfile(supabase, user.id);
+  } catch {
+    return NextResponse.json({ error: 'Could not verify your membership. Please try again.' }, { status: 503 });
+  }
+  if (resolveEntitlement(profile) !== 'pro') {
+    return NextResponse.json({ error: 'GRIT Pro or VIP membership required for AI program generation.' }, { status: 403 });
+  }
 
   let body: Body;
   try { body = await request.json() as Body; }

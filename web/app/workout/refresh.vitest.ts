@@ -1,8 +1,8 @@
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Workout from './page';
 
-const state = vi.hoisted(() => ({ completed: false, belowFloor: false, pushup: false }));
+const state = vi.hoisted(() => ({ completed: false, belowFloor: false, pushup: false, errorTable: '', reads: [] as string[] }));
 vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ user: { id: 'user' }, supabase: {
   auth:{getUser:async()=>({data:{user:{id:'user'}}})},
   from(table: string) {
@@ -13,6 +13,8 @@ vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ user: { 
       limit() { return query; }, in() { return query; }, gt() { return query; },
       maybeSingle() { return query; },
       then(resolve: (value: unknown) => unknown) {
+        state.reads.push(`${table}:${selection}`);
+        if (table === state.errorTable) return Promise.resolve({ data: null, error: { message: 'database unavailable' } }).then(resolve);
         let data: unknown;
         if (table === 'programs') data = { id: 'program', name: 'Training', muscle_priorities: {}, total_weeks: 4, focus: 'hypertrophy' };
         else if (table === 'user_profiles') data = { body_weight: state.pushup?206:180, experience_level: 'intermediate' };
@@ -37,7 +39,24 @@ vi.mock('@/lib/auth/require-user', () => ({ requireUser: async () => ({ user: { 
     return query;
   },
 } }) }));
-beforeEach(() => { vi.stubGlobal('React', React); state.completed = false; state.belowFloor = false; state.pushup = false; });
+beforeEach(() => { vi.stubGlobal('React', React); vi.stubEnv('GRIT_EXPLANATIONS_ENABLED','0'); state.completed = false; state.belowFloor = false; state.pushup = false; state.errorTable = ''; state.reads = []; });
+afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+it.each([{ params: {}, table: 'programs', message: 'current program' }, { params: { day: 'next-day' }, table: 'program_days', message: 'that training day' }])('surfaces a failed $table read', async ({params,table,message}) => {
+  state.errorTable = table;
+  await expect(Workout({searchParams:Promise.resolve(params)})).rejects.toThrow(`Could not load ${message}: database unavailable`);
+});
+
+it('does not query billing status when explanations are disabled', async () => {
+  await Workout({searchParams:Promise.resolve({})});
+  expect(state.reads.filter(read=>read.startsWith('user_profiles:'))).toEqual(['user_profiles:role,subscription_status,experience_level,body_weight']);
+});
+
+it('loads billing status when explanations are enabled', async () => {
+  vi.stubEnv('GRIT_EXPLANATIONS_ENABLED','1');
+  await Workout({searchParams:Promise.resolve({})});
+  expect(state.reads).toContain('user_profiles:stripe_subscription_status');
+});
 describe('workout refresh after an edited session is saved', () => {
   it('loads a retained program exercise after the last session only logged push-ups and dips', async () => {
     state.belowFloor = true;

@@ -34,7 +34,7 @@ describe('exercise history spans all programs', () => {
     const workoutsQueryMatch = workoutPageSource.match(/supabase\.from\('workouts'\)\.select\([^;]*?\.limit\(40\)/);
     expect(workoutsQueryMatch).not.toBeNull();
     expect(workoutsQueryMatch![0]).not.toMatch(/\.in\('program_day_id'/);
-    expect(workoutsQueryMatch![0]).toContain("eq('user_id',user.id)");
+    expect(workoutsQueryMatch![0]).toMatch(/eq\('user_id',\s*(user\.id|userId)\)/);
   });
 
   it('shows only the last 3 completed sessions per exercise', () => {
