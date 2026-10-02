@@ -9,12 +9,12 @@ for (const boundary of ['app/error.tsx', 'app/(app)/error.tsx']) {
     for (const width of [320, 390, 1280]) {
       test(`${boundary}: readable recovery controls at ${width}px in ${theme}`, async ({ page }) => {
         await page.setViewportSize({ width, height: 800 });
-        const source = readFileSync(path.resolve(boundary), 'utf8');
+        const source = readFileSync(path.resolve(__dirname, '../../', boundary), 'utf8');
         const markup = source.slice(source.indexOf('return <main') + 7, source.indexOf('</main>') + 7)
           .replaceAll('className=', 'class=')
           .replace('onClick={() => reset()}', '');
         await page.setContent(`<html data-theme="${theme}"><body>${markup}</body></html>`);
-        await page.addStyleTag({ content: readFileSync(path.resolve('app/globals.css'), 'utf8').replace(/^@import[^;]+;/gm, '') });
+        await page.addStyleTag({ content: readFileSync(path.resolve(__dirname, '../../app/globals.css'), 'utf8').replace(/^@import[^;]+;/gm, '') });
         const actions = page.locator('.error-actions');
         const retry = actions.getByRole('button', { name: 'Try again' });
         const home = actions.getByRole('link');
