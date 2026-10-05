@@ -1,4 +1,4 @@
-const CACHE='grit-static-v6';
+const CACHE='grit-static-v7';
 // '/' is the launch route and is statically rendered, so it can be precached and
 // served instantly. Without it a cold launch waited on the network before the
 // browser had anything to paint, showing the PWA background colour - a black

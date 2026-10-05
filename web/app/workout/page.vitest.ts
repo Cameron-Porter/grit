@@ -6,6 +6,14 @@ import { describe, expect, it } from 'vitest';
 const workoutPageSource = readFileSync(resolve(process.cwd(), 'app/workout/page.tsx'), 'utf8') + readFileSync(resolve(process.cwd(), 'lib/workout/load-targets.ts'), 'utf8');
 
 describe('blank Quick Workout launch', () => {
+  it('offers quick workouts from the active program workout header', () => {
+    const logger = readFileSync(resolve(process.cwd(), 'components/workout-logger.tsx'), 'utf8');
+    expect(logger).toContain('workout.dayId && <a className="secondary button-link workout-quick-action" href="/workout?quick=blank">Quick Workout</a>');
+  });
+
+  it('uses the full-width workout frame for empty, complete, quick, and program views', () => {
+    expect(workoutPageSource.match(/className="app-shell page-frame workout-page/g)).toHaveLength(4);
+  });
   it('reads searchParams so it can recognize ?quick=blank', () => {
     expect(workoutPageSource).toContain('searchParams:Promise<Record<string,string|string[]|undefined>>');
     expect(workoutPageSource).toContain('await searchParams');
