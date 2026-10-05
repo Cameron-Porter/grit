@@ -325,10 +325,10 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
   },[queueKey,storageKey]);
 
   useEffect(() => {
-    if (!restored) return;
+    if (!restored || syncState === 'synced') return;
     try { window.localStorage.setItem(storageKey,JSON.stringify({ sets:draft,exercises,notes,feedback } satisfies SavedDraft)); }
     catch { /* The in-memory draft remains usable. */ }
-  },[draft,exercises,notes,feedback,restored,storageKey]);
+  },[draft,exercises,notes,feedback,restored,storageKey,syncState]);
 
   /**
    * Fetched once, after paint. The guard is a ref rather than catalogState: with
@@ -395,6 +395,14 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
     return result;
   },[]);
 
+  const completeSync = useCallback(() => {
+    clearWorkoutLocalState(localStorage,storageKey,queueKey);
+    setSyncState('synced');
+    // Quick Workouts have no next program day for refresh to render.
+    if (workout.dayId === null) router.replace('/history');
+    router.refresh();
+  },[queueKey,router,storageKey,workout.dayId]);
+
   const buildPayload = ():WebWorkoutPayload => buildWorkoutPayload({
     workoutId:crypto.randomUUID(), programDayId:workout.dayId, name:workout.label, programName:workout.programName, completedAt:new Date().toISOString(),
     exercises,draft,notes,feedback,muscles,
@@ -410,7 +418,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
       if (queued) payload = JSON.parse(queued) as WebWorkoutPayload;
       else localStorage.setItem(queueKey,JSON.stringify(payload));
       await syncPayload(payload);
-      localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); setSyncState('synced'); router.refresh();
+      completeSync();
     } catch(error) {
       const retryable = isRetryableSyncFailure(error);
       if (!retryable) localStorage.removeItem(queueKey);
@@ -424,7 +432,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
     const retry = async() => {
       const raw = localStorage.getItem(queueKey); if (!raw) return;
       setSyncing(true); setSyncState('syncing');
-      try { await syncPayload(JSON.parse(raw) as WebWorkoutPayload); localStorage.removeItem(queueKey); localStorage.removeItem(storageKey); setSyncState('synced'); router.refresh(); }
+      try { await syncPayload(JSON.parse(raw) as WebWorkoutPayload); completeSync(); }
       catch(error) {
         if (isRetryableSyncFailure(error)) { setSyncState('queued'); setMessage('Workout sync is still pending. Your local copy is safe.'); return; }
         localStorage.removeItem(queueKey); setSyncState('local');
@@ -434,7 +442,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
     };
     window.addEventListener('online',retry); if (navigator.onLine) void retry();
     return () => window.removeEventListener('online',retry);
-  },[queueKey,router,storageKey,syncPayload]);
+  },[queueKey,syncPayload,completeSync]);
 
   const updateFeedback = (muscle:string,key:keyof Feedback,value:string) => setFeedback((current) => ({ ...current,[muscle]:{ ...(current[muscle] ?? emptyFeedback()),[key]:value } }));
   const openFeedback = (muscle:string|null,stage:FeedbackPrompt['stage']) => {if(!muscle)return;closeWorkoutMenus();setOpenExerciseMenu(null);if(stage==='soreness')promptedSoreness.current.add(muscle);else promptedCompletion.current.add(muscle);setFeedbackPrompt({muscle,stage})};
@@ -522,7 +530,7 @@ export function WorkoutLogger({ workout, userId, catalog:initialCatalog=[], hist
     </section>)}</div>
     {exercises.length === 0 && <section className="surface empty-state"><h2>No exercises scheduled</h2><p>This training day has no exercises yet. Add one below to get started.</p></section>}
     <section className="surface add-exercise-card"><label>Add an exercise{catalogState==="error"&&<span className="notice error" role="alert">Exercise list unavailable — reload to try again.</span>}<CustomSelect ariaLabel="Add an exercise" value={addExerciseChoice} onChange={value=>{setAddExerciseChoice(value);addExercise(value);setAddExerciseChoice('')}} options={[{value:'',label:'Choose an exercise…',disabled:true},...catalog.map(option=>({value:option.id,label:`${option.name} · ${option.equipment??'Equipment not listed'}`}))]}/></label></section>
-    <section className="surface workout-finish-panel">{syncState === 'queued' && <p className={`sync-status ${workoutSyncStateCopy(syncState).tone}`} aria-live="polite"><span>{workoutSyncStateCopy(syncState).label}</span>{workoutSyncStateCopy(syncState).description}</p>}{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions native-finish-bar"><button className="quiet" disabled={finishPending} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={finishPending || !canFinishWorkout(completed,total)} onClick={finish}>{finishPending ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
+    <section className="surface workout-finish-panel">{syncState === 'queued' && <p className={`sync-status ${workoutSyncStateCopy(syncState).tone}`} aria-live="polite"><span>{workoutSyncStateCopy(syncState).label}</span>{workoutSyncStateCopy(syncState).description}</p>}{message && <p className="notice error" role="alert">{message}</p>}<div className="finish-actions native-finish-bar"><button className="quiet" disabled={finishPending} onClick={skipWorkout}>Skip workout</button><button className="primary" disabled={finishPending || !canFinishWorkout(completed,total)} onClick={finish}>{syncState === 'synced' ? 'Workout saved' : syncing ? 'Syncing…' : `Finish workout (${completed}/${total})`}</button></div></section>
     {rirPrompt&&<div className="modal-backdrop rir-backdrop" role="presentation"><section ref={(node)=>{rirDialogRef.current=node}} tabIndex={-1} className="feedback-modal rir-modal" role="dialog" aria-modal="true" aria-labelledby="rir-title"><div className="eyebrow">SET COMPLETE</div><h2 id="rir-title">How many reps were left?</h2><p>RIR means “reps in reserve”: the number of clean reps you could still have completed with good form.</p><div className="rir-options">{[0,1,2,3,4,5].map(rir=><button type="button" className="quiet" key={rir} onClick={()=>{updateSet(rirPrompt.exerciseIndex,rirPrompt.setIndex,{reportedRir:rir});setRirPrompt(null)}}><strong>{rir}</strong><span>{rirDescription(rir)}</span></button>)}</div><button type="button" className="rir-skip" onClick={()=>setRirPrompt(null)}>Not sure — skip</button></section></div>}
     {feedbackPrompt&&<div className="feedback-sheet-backdrop" role="presentation"><section ref={(node)=>{feedbackDialogRef.current=node}} tabIndex={-1} className="feedback-sheet" role="dialog" aria-modal="true" aria-labelledby="feedback-title"><span className="sheet-handle" aria-hidden="true"/><h2 id="feedback-title">{feedbackPrompt.stage==='soreness'?'How sore were you?':'How did it go?'}</h2><p className="feedback-subtitle">{feedbackPrompt.muscle} · {feedbackPrompt.stage==='soreness'?'Check in before training':'Rate this session'}</p>{feedbackPrompt.stage==='soreness'?<FeedbackOptionGroup legend="Soreness" autoFocus options={sorenessOptions} value={feedback[feedbackPrompt.muscle]?.soreness??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'soreness',value)}/>:<><FeedbackOptionGroup legend="Joint pain" autoFocus options={jointPainOptions} value={feedback[feedbackPrompt.muscle]?.jointPain??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'jointPain',value)}/><FeedbackOptionGroup legend="Pump" options={pumpOptions} value={feedback[feedbackPrompt.muscle]?.pump??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'pump',value)}/><FeedbackOptionGroup legend="Adequate volume" options={volumeOptions} value={feedback[feedbackPrompt.muscle]?.volume??''} onChange={(value)=>updateFeedback(feedbackPrompt.muscle,'volume',value)}/></>}<button type="button" className="primary full" disabled={!canContinueFeedback(feedbackPrompt.stage,feedback[feedbackPrompt.muscle]??emptyFeedback())} onClick={()=>setFeedbackPrompt(null)}>Save Feedback</button></section></div>}
     {noteEditor!==null&&<div className="modal-backdrop" role="presentation" onClick={()=>setNoteEditor(null)}><section ref={(node)=>{noteDialogRef.current=node}} tabIndex={-1} className="feedback-modal exercise-action-modal" role="dialog" aria-modal="true" aria-labelledby="note-title" onClick={(event)=>event.stopPropagation()} onKeyDown={(event)=>{if(event.key==='Escape')setNoteEditor(null)}}><h2 id="note-title">Exercise note</h2><p>{exercises[noteEditor]?.name}</p><label className="note-field">Note<textarea value={notes[noteEditor] ?? ''} maxLength={500} placeholder="Technique cue, setup, or pain note" onChange={(event)=>{const value=event.target.value;setNotes((current)=>current.map((note,index)=>index===noteEditor?value:note))}}/></label><div className="modal-actions"><button type="button" className="primary" onClick={()=>setNoteEditor(null)}>Done</button></div></section></div>}
