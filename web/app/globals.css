@@ -1,4 +1,9 @@
 @import './workout-controls.css';
+/* The frame fills the area beside the sidebar; its children constrain content. */
+.app-shell.workout-page{max-width:none}
+.workout-page>.empty-state{width:100%;max-width:680px;margin-inline:auto}
+.workout-page .workout-heading{flex-wrap:wrap}
+.workout-page .workout-heading .workout-quick-action{border-radius:999px;min-height:44px;padding:0 14px;font-size:13px}
 :root{color-scheme:dark;--bg:#0e1114;--surface:#191d21;--surface2:#22272c;--text:#f4f7f9;--muted:#9da8b2;--accent:#ff7a2f;--border:rgba(244,247,249,.11)}
 /* overscroll-behavior-y stays on html ALONE and must never be added to body.
    html's overflow-x:hidden propagates to the viewport (leaving html itself
@@ -372,7 +377,7 @@ html,body{background:var(--bg);color:var(--text)}
   .app-nav a:hover,.app-nav a:focus-visible{color:var(--text);background:var(--surface2)}
   .app-nav a.active{color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent)}
   .app-nav a.active .app-nav-icon{transform:none;color:var(--accent)}
-  .page-frame{margin-left:240px!important;width:calc(100% - 240px)!important;padding-left:0!important;padding-right:0!important;padding-top:0!important;padding-bottom:40px!important;min-height:100vh;min-height:100dvh;box-sizing:border-box}
+  .page-frame{margin-left:240px!important;width:calc(100% - 240px)!important;padding-left:0!important;padding-right:0!important;padding-bottom:40px!important;min-height:100vh;min-height:100dvh;box-sizing:border-box}
   .content,.app-shell,.native-page,.workout-logger,.native-workout-screen{max-width:680px;width:100%;margin-left:auto;margin-right:auto;padding-inline:24px;box-sizing:border-box}
   .exercise-stack{padding-inline:0!important;max-width:100%;width:100%}
   .exercise-card,.native-workout-card,.program-card,.surface{max-width:680px;box-sizing:border-box}

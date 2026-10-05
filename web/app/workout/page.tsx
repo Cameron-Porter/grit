@@ -23,7 +23,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     const preferred=Array.isArray(profile?.preferred_equipment)?profile.preferred_equipment.filter((item):item is string=>typeof item==='string'):[];
     const visibleCatalog=filterExercisesByEquipmentPreference(catalog,{enabled:Boolean(profile?.use_preferred_equipment),preferred});
     const options:ExerciseOption[]=visibleCatalog.map((exercise)=>({id:exercise.id,name:exercise.name,muscleGroup:exercise.muscle_group,equipment:exercise.equipment,repsMin:exercise.rep_range_min,repsMax:exercise.rep_range_max,movementCategory:exercise.movement_category}));
-    return <><main className="app-shell page-frame"><WorkoutLogger key="quick-workout" workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
+    return <><main className="app-shell page-frame workout-page"><WorkoutLogger key="quick-workout" workout={workout} userId={user.id} catalog={options}/></main><AppNav /></>;
   }
 
   const [profileResult, stripeStatus, programOrDayResult] = await Promise.all([
@@ -54,7 +54,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     nextDay = { id:dayRow.id, week_number:dayRow.week_number, day_number:dayRow.day_number, label:dayRow.label, completed:dayRow.completed, skipped:dayRow.skipped };
   } else {
     const currentProgram = programOrDayResult.data as ActiveProgram | null;
-    if (!currentProgram) return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
+    if (!currentProgram) return <><main className="app-shell page-frame workout-page native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>No active program</h1><p>Choose a program or start an ad hoc workout.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a><a className="secondary button-link" href="/programs">View programs</a></section></main><AppNav /></>;
     current = currentProgram;
     const { data: allDays, error: daysError } = await supabase.from('program_days').select('id,week_number,day_number,label,completed,skipped').eq('program_id', current.id).order('week_number').order('day_number');
     if (daysError) throw new Error(`Could not load program days: ${daysError.message}`);
@@ -63,7 +63,7 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
     if (!foundNext) {
       const { error: clearError } = await supabase.from('programs').update({ is_current: false }).eq('id', current.id).eq('user_id', user.id).eq('is_current', true);
       if (clearError) console.error('Could not clear completed program from active status.', clearError);
-      return <><main className="app-shell page-frame native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
+      return <><main className="app-shell page-frame workout-page native-page native-gradient-background"><section className="surface empty-state native-empty-state"><h1>Program complete</h1><p>You’ve completed every scheduled day in {current.name}.</p><a className="primary button-link" href="/workout?quick=blank">Start blank Quick Workout</a></section></main><AppNav /></>;
     }
     nextDay = foundNext;
   }
@@ -79,5 +79,5 @@ export default async function Workout({ searchParams }:{ searchParams:Promise<Re
   });
   const historyByExercise=loaded.historyByExercise;
   const workout:WorkoutPrescription={dayId:nextDay.id,templateDayId:loaded.templateDayId,bodyWeight:loaded.bodyWeight,programName:current.name,week:nextDay.week_number,day:nextDay.day_number,label:nextDay.label??`Day ${nextDay.day_number}`,exercises:loaded.resolved.map(item=>item.prescription)};
-  return <><main className="app-shell page-frame"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} historyByExercise={historyByExercise} explanationsEnabled={explanationsEnabled}/></main><AppNav /></>;
+  return <><main className="app-shell page-frame workout-page"><WorkoutLogger key={workout.dayId} workout={workout} userId={user.id} historyByExercise={historyByExercise} explanationsEnabled={explanationsEnabled}/></main><AppNav /></>;
 }
