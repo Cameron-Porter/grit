@@ -52,6 +52,30 @@ function makeSessions(weight = 100, reps = 10, count = 0, setsPerSession = 3): S
   }));
 }
 
+describe('experience-specific progression behavior', () => {
+  it.each(['beginner', 'intermediate', 'advanced'] as const)('%s preserves recent-deload plateau handling', experienceLevel => {
+    const beginner = experienceLevel === 'beginner';
+    const rec = recommendProgression(makePrescription(), makeSessions(100, 10, beginner ? 4 : 3),
+      makeCtx({ experienceLevel, weeksSinceLastDeload: 1 }));
+    expect(rec).toMatchObject({ action: 'PLATEAU_DELOAD', nextWeight: beginner ? 80 : 100, nextSets: 2, nextRir: 4 });
+    expect(rec.reason).toBe(beginner
+      ? '4 sessions unchanged at 100 lb × 10 reps. Deload first — load reduced 22.5% (100 → 80 lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.'
+      : '3 sessions unchanged at 100 lb × 10 reps after a recent deload. This may be a true plateau — consider a 10% load reduction and rebuild.');
+  });
+
+  it.each(['beginner', 'intermediate', 'advanced'] as const)('%s preserves below-floor reduction messages', experienceLevel => {
+    const beginner = experienceLevel === 'beginner';
+    for (const equipment of ['Barbell', 'Bodyweight']) {
+      const rec = recommendProgression(makePrescription({ equipment }), makeSessions(100, 6, 2), makeCtx({ experienceLevel }));
+      const bodyweight = equipment === 'Bodyweight';
+      expect(rec).toMatchObject({ action: 'REDUCE_LOAD', nextWeight: bodyweight ? 100 : 95, nextRepsMax: 8 });
+      expect(rec.reason).toBe(beginner
+        ? `Below rep floor (6 reps) for 2 sessions at 100 lb. ${bodyweight ? 'No external load to reduce — rebuild reps from the floor at bodyweight.' : 'Reducing by 5 lb — rebuild from new base.'}`
+        : `Below floor (6 reps) for 2 sessions at 100 lb. ${bodyweight ? 'No external load to reduce — rebuild to 8 reps at bodyweight before advancing.' : 'Reducing by 5 lb — rebuild to 8 reps before advancing.'}`);
+    }
+  });
+});
+
 function makeSlot(overrides: Partial<ExerciseSlot> = {}): ExerciseSlot {
   return {
     id: 'test-slot',

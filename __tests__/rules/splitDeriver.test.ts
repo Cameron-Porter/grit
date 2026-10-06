@@ -130,6 +130,16 @@ describe('deriveSplit — priority scoring and regional allocation', () => {
     expect(derivation.lowerDays).toBeGreaterThanOrEqual(1);
   });
 
+  it.each([
+    [3, {}, ['Push', 'Lower', 'Pull']],
+    [4, {}, ['Push', 'Lower', 'Pull', 'Lower']],
+    [5, {}, ['Push', 'Lower', 'Pull', 'Lower', 'Upper']],
+    [4, { Chest: 'grow' }, ['Push', 'Pull', 'Push', 'Pull']],
+    [4, { Quads: 'grow' }, ['Lower', 'Lower', 'Lower', 'Lower']],
+  ] as const)('preserves recovery ordering for %i days with %j', (days, priorities, expected) => {
+    expect(deriveSplit(days, priorities).sessionSequence).toEqual(expected);
+  });
+
   // ── Split label ─────────────────────────────────────────────────────────────
   it('splitType is a non-empty hyphenated string', () => {
     const { splitType } = deriveSplit(5, { Chest: 'emphasize', Quads: 'maintain' });

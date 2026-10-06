@@ -231,10 +231,10 @@ export function enforceSessionCaps(
     slots = slots.filter((s) => s.id !== victim.id);
   }
 
-  // ── Phase 2: set count cap ───────────────────────────────────────────────
+  // Phases 2–3 (RC-009): both caps share the trim order and generated-slot floor.
   let totalSets = slots.reduce((n, s) => n + s.sets, 0);
 
-  while (totalSets > maxSets) {
+  while (totalSets > maxSets || estimateSessionMinutes(slots, focus) > SESSION_MAX_MINUTES) {
     const sorted = byTrimPriority(slots, musclePriorities);
     const target = isFullBody
       ? sorted.find((s) => !isLastInRegion(s, slots))
@@ -252,27 +252,6 @@ export function enforceSessionCaps(
       ref.sets -= 1;
       totalSets -= 1;
     }
-  }
-
-  // ── Phase 3: session-duration cap (RC-009) ───────────────────────────────
-  let totalMinutes = estimateSessionMinutes(slots, focus);
-
-  while (totalMinutes > SESSION_MAX_MINUTES) {
-    const sorted = byTrimPriority(slots, musclePriorities);
-    const target = isFullBody
-      ? sorted.find((s) => !isLastInRegion(s, slots))
-      : sorted[0];
-    if (!target) break;
-
-    const ref = slots.find((s) => s.id === target.id)!;
-
-    // Same 1-set floor as Phase 2 — see comment there.
-    if (ref.sets <= 2) {
-      slots = slots.filter((s) => s.id !== ref.id);
-    } else {
-      ref.sets -= 1;
-    }
-    totalMinutes = estimateSessionMinutes(slots, focus);
   }
 
   // Renumber sort orders after any removals
