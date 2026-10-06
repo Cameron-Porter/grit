@@ -102,7 +102,7 @@ describe('HV-041 equipment load increments', () => {
   it('carries through to a real recommendation for dumbbells', () => {
     for (const weight of [75, 90, 120, 150]) {
       const result = recommendProgression(prescription('Dumbbell', weight), toppedOut(weight), ctx());
-      expect(result.nextWeight % 5).toBe(0);
+      expect(result).toMatchObject({ action: 'ADVANCE_LOAD', nextWeight: weight + 5, nextRepsMax: 8 });
     }
   });
 

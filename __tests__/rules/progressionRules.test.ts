@@ -126,27 +126,22 @@ function makeProgram(days: DayPlan[]): GeneratedProgram {
 
 // ─── HV-019: Deadlift RIR hard floor ─────────────────────────────────────────
 
-describe('HV-019 — deadlift RIR hard floor', () => {
-  it('floors nextRir to hardRirFloor when taper would go below it', () => {
-    const prescription = makePrescription({ rir: 0, hardRirFloor: 1 });
-    const ctx = makeCtx({ experienceLevel: 'advanced' });
-    const rec = recommendProgression(prescription, makeSessions(100, 10, 1), ctx);
-    expect(rec.nextRir).toBeGreaterThanOrEqual(1);
-  });
-
-  it('does not lower nextRir when rir is already above the floor', () => {
-    const prescription = makePrescription({ rir: 2, hardRirFloor: 1 });
-    const ctx = makeCtx({ experienceLevel: 'advanced' });
-    const rec = recommendProgression(prescription, makeSessions(100, 10, 1), ctx);
-    // nextRir should be >= 1 (floor) and the taper/hold logic applies normally
-    expect(rec.nextRir).toBeGreaterThanOrEqual(1);
-  });
-
-  it('deload week still produces high RIR regardless of floor', () => {
-    const prescription = makePrescription({ rir: 0, hardRirFloor: 1 });
-    const ctx = makeCtx({ isDeload: true, experienceLevel: 'advanced' });
-    const rec = recommendProgression(prescription, makeSessions(100, 10, 1), ctx);
-    expect(rec.nextRir).toBeGreaterThanOrEqual(4);
+describe('HV-019 — explicit RIR floor composes with taper and deload', () => {
+  it.each([
+    { rir: 0, hardRirFloor: 1, peak: false, isDeload: false, expected: 1 },
+    { rir: 2, hardRirFloor: 1, peak: false, isDeload: false, expected: 3 },
+    { rir: 0, hardRirFloor: 1, peak: false, isDeload: true, expected: 4 },
+    // Isolation at peak removes the category/taper floors that masked HV-019.
+    { rir: 2, hardRirFloor: undefined, peak: true, isDeload: false, expected: 0 },
+    { rir: 2, hardRirFloor: 1, peak: true, isDeload: false, expected: 1 },
+    { rir: 2, hardRirFloor: 2, peak: true, isDeload: false, expected: 2 },
+  ])('prescribes $expected RIR (floor=$hardRirFloor, peak=$peak, deload=$isDeload)', ({ rir, hardRirFloor, peak, isDeload, expected }) => {
+    const rec = recommendProgression(
+      makePrescription({ rir, hardRirFloor, ...(peak ? { profile: PROGRESSION_CATEGORY_PROFILES.isolation } : {}) }),
+      makeSessions(100, 10, 1),
+      makeCtx({ experienceLevel: 'advanced', isDeload, ...(peak ? { mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' as const } : {}) }),
+    );
+    expect(rec.nextRir).toBe(expected);
   });
 });
 
@@ -169,267 +164,143 @@ describe('HV-040 — history-aware Week-1 mesocycle seed', () => {
 
 // ─── HV-001: Intra-mesocycle RIR taper ───────────────────────────────────────
 
-describe('HV-001 — intra-mesocycle RIR taper', () => {
-  // HV-027: beginners now taper too (previously excluded entirely), but to a
-  // gentler floor of 2 instead of 0 — Hypertrophy Made Simple's beginner RIR
-  // table tapers 4-5 RIR down to 2 RIR, not to failure.
-  it('tapers for beginner users but stops at floor 2 where intermediate/advanced would continue to 1', () => {
-    // 6-week meso (5 training + 1 deload), week 1: trainingWeeks = 5,
-    // weeksRemaining = 5 - 1 = 4. Raw taper: 5 - 4 = 1.
-    // Beginner floor (HV-027) clamps this back up to 2; intermediate/advanced
-    // (floor 0) would let it through as 1 (see the intermediate test below).
-    const prescription = makePrescription({ rir: 2 });
-    const ctx = makeCtx({ experienceLevel: 'beginner', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 5 });
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(3);
-  });
-
-  it('same schedule taper for an intermediate user is not clamped at 2', () => {
-    const prescription = makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.isolation });
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' });
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(0);
-  });
-
-  it('does not taper beginners below their RIR-2 floor early in the meso', () => {
-    const prescription = makePrescription({ rir: 2 });
-    const ctx = makeCtx({ experienceLevel: 'beginner', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
-    // No sessions → FIRST_SESSION, which returns base nextRir unchanged
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(3);
-  });
-
-  it('does not taper for maintain priority muscles', () => {
-    const prescription = makePrescription({ rir: 2 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'maintain', mesoWeek: 1, totalMesoWeeks: 4 });
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(2);
-  });
-
-  it('applies taper for intermediate grow muscle in a 4-week meso (3 training + 1 deload)', () => {
-    // Week 1 of 4-week meso: trainingWeeks = 3, weeksRemaining = 3 - 1 = 2
-    // base.nextRir = 2 - 2 = 0 → Math.max(0, 0) = 0, then HV-036's category
-    // failure floor applies: makePrescription() carries no profile, so
-    // recommendProgression defaults to the heavy_compound profile
-    // (failurePolicy: 'avoid', floor 1) — true 0-RIR failure never applies
-    // to a heavy compound by default, even at peak week. See the
-    // 'isolation exercises can reach true 0-RIR' test below (HV-036) for the
-    // failurePolicy: 'allowed' counterpart that verifies the taper itself
-    // still reaches 0 pre-floor.
-    const prescription = makePrescription({ rir: 2 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(3);
-  });
-
-  it('taper on week 3 of 4-week meso produces 0 weeksRemaining', () => {
-    // Week 3: trainingWeeks = 3, weeksRemaining = 3 - 3 = 0 → nextRir = 2 - 0 = 2
-    const prescription = makePrescription({ rir: 2 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 3, totalMesoWeeks: 4 });
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(1);
-  });
-
-  it('deload week bypasses taper and caps at RIR 4', () => {
-    const prescription = makePrescription({ rir: 2 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', isDeload: true, mesoWeek: 4, totalMesoWeeks: 4 });
-    const rec = recommendProgression(prescription, makeSessions(100, 10, 1), ctx);
-    expect(rec.nextRir).toBeGreaterThanOrEqual(4);
-  });
-
-  it('integration: deadlift + taper to 0 is floored back to 1 by HV-019', () => {
-    // Week 1 of 4-week meso, grow, intermediate → taper reduces to 0, floor raises to 1
-    const prescription = makePrescription({ rir: 2, hardRirFloor: 1 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4 });
-    const rec = recommendProgression(prescription, [], ctx);
-    expect(rec.nextRir).toBe(3);
+describe('HV-001/HV-027/HV-036 — effort follows schedule, priority, and exercise safety', () => {
+  const scenarios: { name: string; prescription?: Partial<SlotPrescription>; context: Partial<ProgressionContext>; history?: boolean; expected: number }[] = [
+    {
+      name: 'beginner starts a five-week block conservatively',
+      context: { experienceLevel: 'beginner', totalMesoWeeks: 5 }, expected: 3,
+    },
+    {
+      name: 'beginner starts a four-week block conservatively',
+      context: { experienceLevel: 'beginner' }, expected: 3,
+    },
+    {
+      name: 'maintenance priority retains prescribed effort',
+      context: { musclePriority: 'maintain' }, expected: 2,
+    },
+    {
+      name: 'intermediate starts above peak effort',
+      context: {}, expected: 3,
+    },
+    {
+      name: 'heavy compound reaches one RIR at peak',
+      context: { mesoWeek: 3 }, expected: 1,
+    },
+    {
+      name: 'scheduled deload restores reserve',
+      context: { isDeload: true, mesoWeek: 4 }, history: true, expected: 4,
+    },
+    {
+      name: 'early taper remains above an explicit floor',
+      prescription: { hardRirFloor: 1 }, context: {}, expected: 3,
+    },
+    {
+      name: 'isolation can reach failure with positive recovery',
+      prescription: { profile: PROGRESSION_CATEGORY_PROFILES.isolation }, context: { mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' }, expected: 0,
+    },
+    {
+      name: 'heavy compound cannot reach failure with the same recovery',
+      prescription: { profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }, context: { mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' }, expected: 1,
+    },
+    {
+      name: 'cut starts with extra reserve',
+      prescription: { profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }, context: { programFocus: 'cut' }, expected: 3,
+    },
+    {
+      name: 'beginner isolation stops short of failure at peak',
+      prescription: { profile: PROGRESSION_CATEGORY_PROFILES.isolation }, context: { experienceLevel: 'beginner', mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' }, expected: 2,
+    },
+    {
+      name: 'cut retains extra reserve at peak',
+      prescription: { profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }, context: { programFocus: 'cut', mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' }, expected: 2,
+    },
+  ];
+  // Consolidates HV-001/HV-036's identical isolation case; distinct schedules remain.
+  it.each(scenarios)('$name', ({ prescription, context, history, expected }) => {
+    const rec = recommendProgression(makePrescription(prescription), history ? makeSessions(100, 10, 1) : [], makeCtx(context));
+    expect(rec.nextRir).toBe(expected);
   });
 });
 
 // ─── ST-007: Double-progression rep target climbs 1 rep at a time ────────────
 
-describe('ST-007 — rep target advances by 1, not straight to the ceiling', () => {
-  // Regression case: a wide-band bodyweight exercise (Pull-Up, 8–15 reps) that
-  // only got 8 reps last session must not prescribe 15 next session.
-  it('within-band hold targets last reps + 1, not the full ceiling', () => {
-    const prescription = makePrescription({ repsMin: 8, repsMax: 15 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate' });
-    const rec = recommendProgression(prescription, makeSessions(180, 8, 1), ctx);
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextRepsMax).toBe(9);
-    expect(rec.nextRepsMax).not.toBe(15);
-  });
-
-  it('below-floor hold targets last reps + 1, not the full ceiling', () => {
-    const prescription = makePrescription({ repsMin: 8, repsMax: 15 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate' });
-    const rec = recommendProgression(prescription, makeSessions(180, 6, 1), ctx);
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextRepsMax).toBe(7);
-  });
-
-  it('caps the target at the true ceiling instead of overshooting', () => {
-    const prescription = makePrescription({ repsMin: 8, repsMax: 12 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate' });
-    const rec = recommendProgression(prescription, makeSessions(100, 11, 1), ctx);
-    expect(rec.nextRepsMax).toBe(12);
-  });
-
-  it('resets the target to the floor after ADVANCE_LOAD, not the old ceiling', () => {
-    const prescription = makePrescription({ repsMin: 8, repsMax: 12 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate' });
-    const rec = recommendProgression(prescription, makeSessions(100, 12, 1), ctx);
-    expect(rec.action).toBe('ADVANCE_LOAD');
-    expect(rec.nextRepsMax).toBe(8);
-  });
-
-  it('resets the target to the floor after REDUCE_LOAD', () => {
-    const prescription = makePrescription({ repsMin: 8, repsMax: 12 });
-    const ctx = makeCtx({ experienceLevel: 'intermediate' });
-    const rec = recommendProgression(prescription, makeSessions(100, 6, 2), ctx);
-    expect(rec.action).toBe('REDUCE_LOAD');
-    expect(rec.nextRepsMax).toBe(8);
-  });
-
-  it('applies the same +1 targeting for beginner linear progression', () => {
-    const prescription = makePrescription({ repsMin: 8, repsMax: 15 });
-    const ctx = makeCtx({ experienceLevel: 'beginner' });
-    const rec = recommendProgression(prescription, makeSessions(180, 8, 1), ctx);
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextRepsMax).toBe(9);
+describe('ST-007 — rep progress and load changes keep attainable targets', () => {
+  it.each([
+    {
+      name: 'within band',
+      weight: 180, reps: 8, ceiling: 15, sessions: 1, beginner: false, action: 'HOLD', nextWeight: 180, nextRepsMax: 9,
+    },
+    {
+      name: 'below floor',
+      weight: 180, reps: 6, ceiling: 15, sessions: 1, beginner: false, action: 'HOLD', nextWeight: 180, nextRepsMax: 7,
+    },
+    {
+      name: 'ceiling boundary',
+      weight: 100, reps: 11, ceiling: 12, sessions: 1, beginner: false, action: 'HOLD', nextWeight: 100, nextRepsMax: 12,
+    },
+    {
+      name: 'earned load increase',
+      weight: 100, reps: 12, ceiling: 12, sessions: 1, beginner: false, action: 'ADVANCE_LOAD', nextWeight: 105, nextRepsMax: 8,
+    },
+    {
+      name: 'repeated below floor',
+      weight: 100, reps: 6, ceiling: 12, sessions: 2, beginner: false, action: 'REDUCE_LOAD', nextWeight: 95, nextRepsMax: 8,
+    },
+    {
+      name: 'beginner within band',
+      weight: 180, reps: 8, ceiling: 15, sessions: 1, beginner: true, action: 'HOLD', nextWeight: 180, nextRepsMax: 9,
+    },
+  ])('$name', ({ weight, reps, ceiling, sessions, beginner, action, nextWeight, nextRepsMax }) => {
+    const rec = recommendProgression(makePrescription({ repsMax: ceiling }), makeSessions(weight, reps, sessions),
+      makeCtx({ experienceLevel: beginner ? 'beginner' : 'intermediate' }));
+    expect(rec).toMatchObject({ action, nextWeight, nextRepsMax });
   });
 });
 
-describe('ST-013 — whole-prescription and actual-effort load gate', () => {
-  it('does not add load when only the best set reaches the ceiling', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: [
-        { weight: 20, reps: 18 },
-        { weight: 20, reps: 12 },
-        { weight: 20, reps: 12 },
-      ],
-    }];
-    const rec = recommendProgression(
-      makePrescription({ repsMin: 12, repsMax: 18, sets: 3 }),
-      sessions,
-      makeCtx({ musclePriority: 'maintain' }),
-    );
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextWeight).toBe(20);
-  });
-
-  it('holds when actual RIR shows the completed prescription was too hard', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12, rir: 0 })),
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx());
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextWeight).toBe(100);
-  });
-
-  /**
-   * HV-044 SUPERSEDES ST-013 here. This used to assert a HOLD: an intermediate
-   * or advanced lifter had to report RIR on every set before load could move.
-   * Reporting is optional in the UI ("Not sure - skip"), so that silently froze
-   * progression - the lifter was told to aim for the ceiling they had just hit,
-   * and three such identical sessions then tripped plateau detection and
-   * deloaded them ~22% for failing to progress in a way the engine prevented.
-   * Absence of optional evidence is no longer read as evidence of max effort.
-   */
-  it('advances an intermediate who topped the range but reported no RIR', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
-    expect(rec.action).toBe('ADVANCE_LOAD');
-    expect(rec.nextWeight).toBeGreaterThan(100);
-  });
-
-  it('still holds on positive evidence that the session was already too hard', () => {
-    // Every set reported below the prescribed 2 RIR - real evidence of
-    // over-reach, which is what the gate is actually for.
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12, rir: 0 })),
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextWeight).toBe(100);
-  });
-
-  /**
-   * HV-044: partial reporting used to be discarded entirely and treated as a
-   * hold. Missing a single set's prompt should not outweigh the sets that were
-   * reported, so the reported ones decide it.
-   */
-  it('judges partial effort reporting on the sets that were actually reported', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: [
-        { weight: 100, reps: 12, rir: 2 },
-        { weight: 100, reps: 12 },
-        { weight: 100, reps: 12, rir: 2 },
-      ],
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
-    expect(rec.action).toBe('ADVANCE_LOAD');
-  });
-
-  it('still holds when a reported set among partials shows over-reach', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: [
-        { weight: 100, reps: 12, rir: 2 },
-        { weight: 100, reps: 12 },
-        { weight: 100, reps: 12, rir: 0 },
-      ],
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'intermediate' }));
-    expect(rec.action).toBe('HOLD');
-  });
-
-  it('retains beginner linear progression when RIR has not been learned yet', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12 })),
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx({ experienceLevel: 'beginner' }));
-    expect(rec.action).toBe('ADVANCE_LOAD');
-  });
-
-  it('advances after every working set clears the ceiling at acceptable actual RIR', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: Array.from({ length: 3 }, () => ({ weight: 100, reps: 12, rir: 2 })),
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx());
-    expect(rec.action).toBe('ADVANCE_LOAD');
-  });
-
-  it('holds mixed top-set and backoff loading until set roles are modeled', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: [
-        { weight: 110, reps: 12, rir: 2 },
-        { weight: 100, reps: 12, rir: 2 },
-        { weight: 100, reps: 12, rir: 2 },
-      ],
-    }];
-    const rec = recommendProgression(makePrescription({ rir: 2 }), sessions, makeCtx());
-    expect(rec.action).toBe('HOLD');
-    expect(rec.nextWeight).toBe(110);
-  });
-
-  it('holds when fewer than the prescribed working sets were completed', () => {
-    const sessions: SessionPerformance[] = [{
-      date: '2026-08-13',
-      sets: [{ weight: 100, reps: 12, rir: 2 }, { weight: 100, reps: 12, rir: 2 }],
-    }];
-    const rec = recommendProgression(makePrescription({ sets: 3 }), sessions, makeCtx());
-    expect(rec.action).toBe('HOLD');
+describe('ST-013/HV-044 — completed sets and reported effort determine load progression', () => {
+  const set = (weight = 100, reps = 12, rir?: number) => ({ weight, reps, ...(rir === undefined ? {} : { rir }) });
+  const scenarios: { name: string; sets: SessionPerformance['sets']; prescription?: Partial<SlotPrescription>; context?: Partial<ProgressionContext>; action: string; nextWeight: number }[] = [
+    {
+      name: 'one standout set does not earn a load increase',
+      sets: [set(20, 18), set(20), set(20)], prescription: { repsMin: 12, repsMax: 18 }, context: { musclePriority: 'maintain' }, action: 'HOLD', nextWeight: 20,
+    },
+    // The former two over-effort tests had identical inputs; retain both assertions here.
+    {
+      name: 'reported over-effort holds load',
+      sets: Array.from({ length: 3 }, () => set(100, 12, 0)), action: 'HOLD', nextWeight: 100,
+    },
+    {
+      name: 'optional RIR is not required for intermediate progression',
+      sets: Array.from({ length: 3 }, () => set()), action: 'ADVANCE_LOAD', nextWeight: 105,
+    },
+    {
+      name: 'partial RIR accepts the reported evidence',
+      sets: [set(100, 12, 2), set(), set(100, 12, 2)], action: 'ADVANCE_LOAD', nextWeight: 105,
+    },
+    {
+      name: 'partial RIR does not hide over-effort',
+      sets: [set(100, 12, 2), set(), set(100, 12, 0)], action: 'HOLD', nextWeight: 100,
+    },
+    {
+      name: 'beginner can progress without RIR reporting',
+      sets: Array.from({ length: 3 }, () => set()), context: { experienceLevel: 'beginner' }, action: 'ADVANCE_LOAD', nextWeight: 105,
+    },
+    {
+      name: 'every set clears the ceiling at prescribed effort',
+      sets: Array.from({ length: 3 }, () => set(100, 12, 2)), action: 'ADVANCE_LOAD', nextWeight: 105,
+    },
+    {
+      name: 'mixed top-set and backoff weights hold',
+      sets: [set(110, 12, 2), set(100, 12, 2), set(100, 12, 2)], action: 'HOLD', nextWeight: 110,
+    },
+    {
+      name: 'incomplete prescription holds even at the ceiling',
+      sets: [set(100, 12, 2), set(100, 12, 2)], action: 'HOLD', nextWeight: 100,
+    },
+  ];
+  it.each(scenarios)('$name', ({ sets, prescription, context, action, nextWeight }) => {
+    const rec = recommendProgression(makePrescription(prescription), [{ date: '2026-08-13', sets }], makeCtx(context));
+    expect(rec).toMatchObject({ action, nextWeight });
   });
 });
 
@@ -716,14 +587,14 @@ describe('ST-012 — strength deload load/volume reduction (supersedes ST-004)',
     expect(rec.action).toBe('DELOAD');
   });
 
-  it('never drops sets below 2, even for a small template set count', () => {
+  it.each([1, 2])('retains two sets on strength deload from a %i-set template', sets => {
     const ctx = makeCtx({ programFocus: 'strength', isDeload: true });
     const rec = recommendProgression(
-      makePrescription({ sets: 2, repsMin: 3, repsMax: 6 }),
-      makeSessions(200, 5, 1, 2),
+      makePrescription({ sets, repsMin: 3, repsMax: 6 }),
+      makeSessions(200, 5, 1, sets),
       ctx,
     );
-    // ceil(2 * 0.60) = 2 — already at the floor, doesn't go lower.
+    // One starting set distinguishes the minimum from rounding alone.
     expect(rec.nextSets).toBe(2);
   });
 });
@@ -1264,39 +1135,5 @@ describe('HV-037 — bodyweight multi-dimension progression', () => {
     );
     expect(rec.action).toBe('ADVANCE_DIFFICULTY');
     expect(rec.nextRepsMax).toBe(15);
-  });
-});
-
-// ─── HV-036: Failure-policy RIR floor by category — required scenario 7 ──────
-
-describe('HV-036 — exercise fatigue profile changes the prescription (failure-policy RIR floor)', () => {
-  it('required scenario: a heavy compound never reaches true 0-RIR failure, even at peak week', () => {
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' });
-    const rec = recommendProgression(
-      makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }),
-      [],
-      ctx,
-    );
-    expect(rec.nextRir).toBe(1);
-  });
-
-  it('required scenario: an isolation exercise can reach true 0-RIR failure at peak week — same taper, different category floor', () => {
-    const ctx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 4, totalMesoWeeks: 5, soreness: 'Healed early' });
-    const rec = recommendProgression(
-      makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.isolation }),
-      [],
-      ctx,
-    );
-    expect(rec.nextRir).toBe(0);
-  });
-
-  it('a cut-phase heavy compound floors one RIR higher than a non-cut heavy compound', () => {
-    const cutCtx = makeCtx({ experienceLevel: 'intermediate', musclePriority: 'grow', mesoWeek: 1, totalMesoWeeks: 4, programFocus: 'cut' });
-    const rec = recommendProgression(
-      makePrescription({ rir: 2, profile: PROGRESSION_CATEGORY_PROFILES.heavy_compound }),
-      [],
-      cutCtx,
-    );
-    expect(rec.nextRir).toBeGreaterThanOrEqual(2);
   });
 });
