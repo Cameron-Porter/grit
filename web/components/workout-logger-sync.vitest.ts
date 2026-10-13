@@ -6,7 +6,16 @@ import { WorkoutLogger, workoutStorageKeys, type WorkoutPrescription } from './w
 
 const router = { refresh: vi.fn(), replace: vi.fn() };
 vi.mock('next/navigation', () => ({ useRouter: () => router }));
-afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); localStorage.clear(); });
+const memoryStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => { values.set(key, value); },
+    removeItem: (key: string) => { values.delete(key); },
+    clear: () => { values.clear(); },
+  } as Storage;
+};
+afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 it.each([
   { dayId: null, retry: false, status: 200 },
@@ -28,6 +37,7 @@ it.each([
     exercises: [{ name: 'Row', muscleGroup: 'Back', musclePriority: null, equipment: 'Cable', sets: 1, repsMin: 8, repsMax: 12, weight: 100, rir: 2 }],
   };
   const { storageKey, queueKey } = workoutStorageKeys('user', dayId);
+  vi.stubGlobal('localStorage', memoryStorage());
   localStorage.setItem(storageKey, JSON.stringify({ exercises: workout.exercises, sets: [[{ reps: 8, weight: 100, complete: true, reportedRir: 2 }]] }));
   if (retry) localStorage.setItem(queueKey, JSON.stringify({ workoutId: 'queued-workout' }));
   const container = document.createElement('div');
