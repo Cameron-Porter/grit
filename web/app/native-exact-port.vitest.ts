@@ -39,7 +39,7 @@ describe('exact native app port contracts', () => {
   });
 
   /**
-   * Light mode used to set color:#fff on the bare `button` selector, which
+   * Light mode used to set white text on the bare `button` selector, which
    * outranked .quiet/.secondary/.feedback-option - those override the background
    * but not the colour, so they rendered white text on a white sheet and were
    * unreadable. Filled buttons take their contrast from --on-accent per theme,
@@ -48,14 +48,14 @@ describe('exact native app port contracts', () => {
   it('never paints every button white, which made transparent buttons unreadable in light mode', () => {
     const css = read('app/globals.css');
     for (const rule of css.split('}')) {
-      if (!/color:\s*#fff/i.test(rule)) continue;
+      if (!/color:\s*(?:#fff|hsl\(0,\s*0%,\s*100%\))/i.test(rule)) continue;
       const selector = rule.slice(0, rule.indexOf('{'));
       const targetsEveryButton = selector.split(',').some((part) => /(^|\s)button$/.test(part.trim()));
       expect(targetsEveryButton).toBe(false);
     }
     // The per-theme token that filled buttons actually rely on must exist.
-    expect(css).toContain('--on-accent:#fff');
-    expect(css).toContain('--on-accent:#0e1114');
+    expect(css).toContain('--on-accent:hsl(0, 0%, 100%)');
+    expect(css).toContain('--on-accent:hsl(210, 18%, 7%)');
     expect(css).toContain('color:var(--on-accent');
   });
 
@@ -87,12 +87,13 @@ describe('exact native app port contracts', () => {
 
   it('uses the shared Blaze & Alpine brand palette without RP/red or jade polish tokens', () => {
     const css = read('app/globals.css');
-    // Intentional brand update: these values now match the my-website palette.
-    expect(css).toContain('--primary:#ff7a2f'); // blaze, dark
-    expect(css).toContain('--highlight:#38bdf8'); // alpine, dark
-    expect(css).toContain('--bg:#0e1114');
-    expect(css).toContain('--primary:#b03a0a'); // blaze, light
-    expect(css).toContain('--highlight:#0369a1'); // alpine, light
+    // Intentional brand update: these values match the my-website palette, encoded
+    // as HSL so the hue/lightness relationships are inspectable per Refactoring UI.
+    expect(css).toContain('--primary:hsl(22, 100%, 59%)'); // blaze, dark
+    expect(css).toContain('--highlight:hsl(198, 93%, 60%)'); // alpine, dark
+    expect(css).toContain('--bg:hsl(210, 18%, 7%)');
+    expect(css).toContain('--primary:hsl(17, 89%, 36%)'); // blaze, light
+    expect(css).toContain('--highlight:hsl(201, 96%, 32%)'); // alpine, light
     expect(css).not.toContain('--rp-action');
     expect(css).not.toContain('#e73d3b');
     expect(css).not.toContain('#2fbf8f'); // retired jade
