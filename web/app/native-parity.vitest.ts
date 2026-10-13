@@ -1,3 +1,4 @@
+import { readStylesheet } from '../tests/read-stylesheet';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -22,7 +23,7 @@ describe('native UI parity contracts', () => {
   });
 
   it('defines native page shell classes used across authenticated pages', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     for (const token of ['native-page-header', 'native-section-title', 'native-list-card', 'native-row', 'native-stat-card']) {
       expect(css).toContain(token);
     }
@@ -32,8 +33,8 @@ describe('native UI parity contracts', () => {
     const program = read('app/(app)/programs/[id]/page.tsx');
     const history = read('app/(app)/history/[id]/page.tsx');
     expect(program).toContain('className="delete-program-action"');
-    expect(history).toContain('history-exercise-card');
-    expect(history).toContain('native-exercise-title');
+    expect(history).toContain('workout-card--history');
+    expect(history).toContain('workout-card__header');
     expect(history).toContain('recovery-feedback-item');
   });
 

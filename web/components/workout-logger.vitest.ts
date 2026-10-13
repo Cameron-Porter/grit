@@ -221,7 +221,7 @@ describe('menuPlacement', () => {
 describe('menuPlacementStyle', () => {
   it('passes coordinates as custom properties, never as inline top/right', () => {
     // An !important declaration always beats an inline style, and
-    // .native-workout-card .set-menu>div forces left/top with !important - inline
+    // .workout-card .set-menu>div forces left/top with !important - inline
     // top/right would be ignored and the menu would render pinned to the card's edge.
     const style = menuPlacementStyle({ top: 296, bottom: null, right: 23, maxHeight: 500 }) as Record<string, unknown>;
     expect(style['--menu-top']).toBe('296px');

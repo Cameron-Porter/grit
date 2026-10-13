@@ -147,6 +147,17 @@ describe('ST-009 — strength-focus session set cap', () => {
 });
 
 describe('sessionTrimmer — existing invariants still hold', () => {
+  it('keeps full-body region anchors while trimming other slots to the set cap', () => {
+    const result = enforceSessionCaps(day([
+      slot('Chest', 'Primary', 8, 'push'), slot('Back', 'Primary', 8, 'pull'),
+      slot('Quads', 'Primary', 8, 'lower'), slot('Biceps', 'Accessory', 3, 'extra'),
+    ], 'FullBody'), {}, 'hypertrophy');
+    expect(result.slots.map(s => [s.id, s.sets, s.sortOrder])).toEqual([
+      ['push', 8, 0], ['pull', 8, 1], ['lower', 8, 2],
+    ]);
+    expect(result.totalSets).toBe(24);
+  });
+
   it('never exceeds SESSION_MAX_EXERCISES or SESSION_MAX_SETS', () => {
     const slots = Array.from({ length: 8 }, (_, i) =>
       slot((['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quads', 'Hamstrings', 'Abs'] as MuscleGroup[])[i], 'Primary', 4, `s${i}`),

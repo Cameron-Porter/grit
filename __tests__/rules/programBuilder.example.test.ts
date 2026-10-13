@@ -1,6 +1,9 @@
 import { buildProgram } from '../../src/rules/programBuilder';
-import { SESSION_MAX_EXERCISES, SESSION_MAX_SETS } from '../../src/rules/sessionTrimmer';
+import { getSessionMaxSets, SESSION_MAX_EXERCISES } from '../../src/rules/sessionTrimmer';
 import { LOWER_SESSION_TYPES } from '../../src/rules/splitDeriver';
+import { buildDaySlots } from '../../src/rules/slotBuilder';
+import { SESSION_TEMPLATES } from '../../src/data/sessionTemplates';
+import type { GeneratedProgram, ProgramConfig } from '../../src/types/program';
 
 const EXAMPLE_CONFIG = {
   name: '5-Day Hypertrophy',
@@ -23,126 +26,6 @@ const EXAMPLE_CONFIG = {
   experienceLevel: 'intermediate' as const,
 };
 
-describe('buildProgram — explicit user split',()=>{it('honors the requested session sequence while retaining rules-engine validation and caps',()=>{const program=buildProgram({...EXAMPLE_CONFIG,daysPerWeek:4,selectedDays:['Monday','Tuesday','Thursday','Friday'],requestedSessionSequence:['Upper','Lower','Upper','Lower'] as const,requestedSplitType:'upper-lower'});expect(program.days.map((day)=>day.sessionType)).toEqual(['Upper','Lower','Upper','Lower']);expect(program.splitType).toBe('upper-lower');expect(program.days.every((day)=>day.slots.length<=SESSION_MAX_EXERCISES&&day.totalSets<=SESSION_MAX_SETS)).toBe(true)});it('rejects a split that does not cover every selected day',()=>expect(()=>buildProgram({...EXAMPLE_CONFIG,requestedSessionSequence:['Push']})).toThrow('exactly one session'))});
-
-describe('buildProgram — 5-day Chest/Shoulders/Triceps emphasize example', () => {
-  const program = buildProgram(EXAMPLE_CONFIG);
-
-  it('returns valid: true', () => {
-    expect(program.validation.valid).toBe(true);
-  });
-
-  it(`never exceeds ${SESSION_MAX_EXERCISES} exercises per session`, () => {
-    for (const day of program.days) {
-      expect(day.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
-    }
-  });
-
-  it('never exceeds 24 sets per session', () => {
-    for (const day of program.days) {
-      expect(day.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
-    }
-  });
-
-  it('has no error-severity validation issues', () => {
-    const errors = program.validation.issues.filter((i) => i.severity === 'error');
-    expect(errors).toHaveLength(0);
-  });
-
-  it('has exactly 5 training days', () => {
-    expect(program.days).toHaveLength(5);
-  });
-
-  it('derives push-dominant upper split (4 upper + 1 lower days)', () => {
-    // All lower muscles are maintain-only → balance cap relaxed → natural ratio 4+1
-    expect(program.derivation.upperDays).toBe(4);
-    expect(program.derivation.lowerDays).toBe(1);
-    expect(program.derivation.pushScore).toBeGreaterThan(program.derivation.pullScore);
-  });
-
-  it('no day has more sets than exercises times 5 (sanity cap)', () => {
-    for (const day of program.days) {
-      expect(day.totalSets).toBeLessThanOrEqual(day.slots.length * 5);
-    }
-  });
-
-  it('emphasized muscles receive direct work', () => {
-    const weeklyDirect: Record<string, number> = {};
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        weeklyDirect[slot.muscle] = (weeklyDirect[slot.muscle] ?? 0) + slot.sets;
-      }
-    }
-    expect(weeklyDirect['Chest'] ?? 0).toBeGreaterThan(0);
-    expect(weeklyDirect['Shoulders'] ?? 0).toBeGreaterThan(0);
-    expect(weeklyDirect['Triceps'] ?? 0).toBeGreaterThan(0);
-  });
-
-  it('Primary slots appear before Accessory slots for the same muscle', () => {
-    for (const day of program.days) {
-      const muscleSlots = new Map<string, typeof day.slots>();
-      for (const slot of day.slots) {
-        const arr = muscleSlots.get(slot.muscle) ?? [];
-        arr.push(slot);
-        muscleSlots.set(slot.muscle, arr);
-      }
-      for (const [, slots] of muscleSlots) {
-        const lastPrimaryOrder = Math.max(
-          ...slots.filter((s) => s.role === 'Primary').map((s) => s.sortOrder),
-          -1,
-        );
-        const firstAccessoryOrder = Math.min(
-          ...slots.filter((s) => s.role === 'Accessory').map((s) => s.sortOrder),
-          Infinity,
-        );
-        if (lastPrimaryOrder >= 0 && firstAccessoryOrder < Infinity) {
-          expect(lastPrimaryOrder).toBeLessThan(firstAccessoryOrder);
-        }
-      }
-    }
-  });
-
-  it('Triceps weekly effective sets reflect overlap from pressing', () => {
-    const tricepsTarget = program.volumeTargets.find((t) => t.muscle === 'Triceps')!;
-    // With heavy pressing, triceps should receive significant indirect stimulus
-    expect(tricepsTarget.estimatedIndirectSets).toBeGreaterThan(4);
-    // And therefore need fewer direct sets than raw 18-set target
-    expect(tricepsTarget.directSetsNeeded).toBeLessThan(12);
-  });
-
-  it('Shoulders indirect sets account for chest pressing overlap', () => {
-    const shouldersTarget = program.volumeTargets.find((t) => t.muscle === 'Shoulders')!;
-    expect(shouldersTarget.estimatedIndirectSets).toBeGreaterThan(2);
-  });
-
-  it('prints program summary to console for manual inspection', () => {
-    console.log('\n═══ 5-Day Hypertrophy Example ═══');
-    console.log('Split:', program.splitType);
-    console.log('Validation:', program.validation.valid ? '✓ PASS' : '✗ FAIL');
-    for (const day of program.days) {
-      console.log(`\n${day.trainingDay} — ${day.splitName} (${day.slots.length} exercises, ${day.totalSets} sets, ~${day.estimatedMinutes}min)`);
-      for (const s of day.slots) {
-        console.log(`  ${s.sortOrder + 1}. [${s.muscle}] ${s.role} — ${s.sets}×${s.repsMin}-${s.repsMax} @RIR${s.rir}`);
-      }
-    }
-    console.log('\n── Weekly Effective Sets ──');
-    const eff = program.validation.weeklyEffectiveSets;
-    for (const t of program.volumeTargets) {
-      const e = eff[t.muscle] ?? 0;
-      console.log(`  ${t.muscle.padEnd(12)} ${e.toFixed(1).padStart(5)} eff  (target ${String(t.targetEffectiveSets).padStart(2)}, direct ${String(t.directSetsNeeded).padStart(2)}, ~${t.estimatedIndirectSets.toFixed(1)} indirect) [${t.priority}]`);
-    }
-    if (program.validation.issues.length > 0) {
-      console.log('\n── Validation Issues ──');
-      for (const i of program.validation.issues) {
-        console.log(`  [${i.severity}] ${i.message}`);
-      }
-    }
-    expect(true).toBe(true); // always passes — output is for inspection
-  });
-});
-
-// ─── Lower body emphasis example ─────────────────────────────────────────────
-
 const LOWER_EMPHASIS_CONFIG = {
   name: '5-Day Lower Emphasis',
   focus: 'hypertrophy' as const,
@@ -164,112 +47,6 @@ const LOWER_EMPHASIS_CONFIG = {
   experienceLevel: 'intermediate' as const,
 };
 
-describe('buildProgram — 5-day lower body emphasis example', () => {
-  const program = buildProgram(LOWER_EMPHASIS_CONFIG);
-
-  it('returns valid: true', () => {
-    expect(program.validation.valid).toBe(true);
-  });
-
-  it('allocates 3 lower days and 2 upper days', () => {
-    expect(program.derivation.lowerDays).toBe(3);
-    expect(program.derivation.upperDays).toBe(2);
-  });
-
-  it('uses LowerQuadFocus, LowerPosteriorChain and LowerGluteQuad session types', () => {
-    const types = program.days.map((d) => d.sessionType);
-    expect(types).toContain('LowerQuadFocus');
-    expect(types).toContain('LowerPosteriorChain');
-    expect(types).toContain('LowerGluteQuad');
-  });
-
-  it('lower days alternate with upper days (no back-to-back lower)', () => {
-    const types = program.days.map((d) => d.sessionType);
-    for (let i = 1; i < types.length; i++) {
-      const prevIsLower = LOWER_SESSION_TYPES.includes(types[i - 1]);
-      const currIsLower = LOWER_SESSION_TYPES.includes(types[i]);
-      expect(prevIsLower && currIsLower).toBe(false);
-    }
-  });
-
-  it(`never exceeds ${SESSION_MAX_EXERCISES} exercises per session`, () => {
-    for (const day of program.days) {
-      expect(day.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
-    }
-  });
-
-  it('never exceeds 24 sets per session', () => {
-    for (const day of program.days) {
-      expect(day.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
-    }
-  });
-
-  it('Quads, Hamstrings, Glutes each receive direct work', () => {
-    const weekly: Record<string, number> = {};
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        weekly[slot.muscle] = (weekly[slot.muscle] ?? 0) + slot.sets;
-      }
-    }
-    expect(weekly['Quads'] ?? 0).toBeGreaterThan(0);
-    expect(weekly['Hamstrings'] ?? 0).toBeGreaterThan(0);
-    expect(weekly['Glutes'] ?? 0).toBeGreaterThan(0);
-  });
-
-  it('lower muscles train across multiple sessions (≥ 2 each)', () => {
-    const muscleSessionCount = new Map<string, number>();
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        muscleSessionCount.set(slot.muscle, (muscleSessionCount.get(slot.muscle) ?? 0) + 1);
-      }
-    }
-    // With freq=3 for emphasized muscles they should appear in ≥2 sessions
-    expect(muscleSessionCount.get('Quads') ?? 0).toBeGreaterThanOrEqual(2);
-    expect(muscleSessionCount.get('Hamstrings') ?? 0).toBeGreaterThanOrEqual(2);
-    expect(muscleSessionCount.get('Glutes') ?? 0).toBeGreaterThanOrEqual(2);
-  });
-
-  it('splitType contains lower-specialized session slugs', () => {
-    expect(program.splitType).toContain('lower-quad');
-  });
-
-  it('no error-severity validation issues', () => {
-    const errors = program.validation.issues.filter((i) => i.severity === 'error');
-    expect(errors).toHaveLength(0);
-  });
-
-  it('prints program summary to console for manual inspection', () => {
-    console.log('\n═══ 5-Day Lower Emphasis Example ═══');
-    console.log('Split:', program.splitType);
-    console.log('Derivation: upper=%d lower=%d (scores U=%d L=%d)',
-      program.derivation.upperDays, program.derivation.lowerDays,
-      program.derivation.upperScore, program.derivation.lowerScore,
-    );
-    console.log('Validation:', program.validation.valid ? '✓ PASS' : '✗ FAIL');
-    for (const day of program.days) {
-      console.log(`\n${day.trainingDay} — ${day.splitName} (${day.slots.length} exercises, ${day.totalSets} sets, ~${day.estimatedMinutes}min)`);
-      for (const s of day.slots) {
-        console.log(`  ${s.sortOrder + 1}. [${s.muscle}] ${s.role} — ${s.sets}×${s.repsMin}-${s.repsMax} @RIR${s.rir}`);
-      }
-    }
-    console.log('\n── Weekly Effective Sets ──');
-    const eff = program.validation.weeklyEffectiveSets;
-    for (const t of program.volumeTargets) {
-      const e = eff[t.muscle] ?? 0;
-      console.log(`  ${t.muscle.padEnd(12)} ${e.toFixed(1).padStart(5)} eff  (target ${String(t.targetEffectiveSets).padStart(2)}, direct ${String(t.directSetsNeeded).padStart(2)}, ~${t.estimatedIndirectSets.toFixed(1)} indirect) [${t.priority}]`);
-    }
-    if (program.validation.issues.length > 0) {
-      console.log('\n── Validation Issues ──');
-      for (const i of program.validation.issues) {
-        console.log(`  [${i.severity}] ${i.message}`);
-      }
-    }
-    expect(true).toBe(true);
-  });
-});
-
-// ─── Strength focus example (ST-001 / ST-002 / ST-003) ───────────────────────
-
 const STRENGTH_CONFIG = {
   name: '4-Day Strength',
   focus: 'strength' as const,
@@ -289,141 +66,118 @@ const STRENGTH_CONFIG = {
   experienceLevel: 'intermediate' as const,
 };
 
-describe('buildProgram — 4-day strength focus', () => {
-  const program = buildProgram(STRENGTH_CONFIG);
-
-  it('returns valid: true', () => {
-    expect(program.validation.valid).toBe(true);
-  });
-
-  it('has no error-severity validation issues', () => {
-    expect(program.validation.issues.filter((i) => i.severity === 'error')).toHaveLength(0);
-  });
-
-  it(`never exceeds ${SESSION_MAX_EXERCISES} exercises or ${SESSION_MAX_SETS} sets per session`, () => {
-    for (const day of program.days) {
-      expect(day.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
-      expect(day.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
-    }
-  });
-
-  // ST-001: Primary emphasize slots must stay in the Prilepin 85-95% zone (1-3 reps)
-  it('ST-001: Primary emphasize slots have repsMax ≤ 5 (Prilepin strength zone)', () => {
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        if (slot.role === 'Primary' && slot.priority === 'emphasize') {
-          expect(slot.repsMax).toBeLessThanOrEqual(5);
-        }
-      }
-    }
-  });
-
-  // ST-002: Secondary slots stay in the myofibrillar zone (8-15 reps overall,
-  // emphasize tightest at 8-10 — see slotRoleConfig.ts)
-  it('ST-002: Secondary emphasize slots have repsMax ≤ 10 (Prilepin 75-85% zone)', () => {
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        if (slot.role === 'Secondary' && slot.priority === 'emphasize') {
-          expect(slot.repsMax).toBeLessThanOrEqual(10);
-        }
-      }
-    }
-  });
-
-  it('deload week has fewer sets than peak training week', () => {
-    const weeks = program.weeks;
-    const peakWeek = weeks[weeks.length - 2];
-    const deloadWeek = weeks[weeks.length - 1];
-    const peakTotal = peakWeek.days.reduce((n, d) => n + d.totalSets, 0);
-    const deloadTotal = deloadWeek.days.reduce((n, d) => n + d.totalSets, 0);
-    expect(deloadTotal).toBeLessThan(peakTotal);
-  });
-});
-
-// ─── Powerbuilding focus example (PB-001 / PB-002 / PB-003) ─────────────────
-
-const POWERBUILDING_CONFIG = {
-  name: '4-Day Powerbuilding',
-  focus: 'powerbuilding' as const,
-  daysPerWeek: 4,
+const POWERBUILDING_CONFIG = { ...STRENGTH_CONFIG, name: '4-Day Powerbuilding', focus: 'powerbuilding' as const };
+const EXPLICIT_CONFIG: ProgramConfig = {
+  ...EXAMPLE_CONFIG, name: 'Requested Upper/Lower', daysPerWeek: 4,
   selectedDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-  musclePriorities: {
-    Chest: 'emphasize' as const,
-    Back: 'emphasize' as const,
-    Quads: 'grow' as const,
-    Hamstrings: 'grow' as const,
-    Shoulders: 'maintain' as const,
-    Triceps: 'maintain' as const,
-    Biceps: 'maintain' as const,
-    Glutes: 'maintain' as const,
-  },
-  totalWeeks: 5,
-  experienceLevel: 'intermediate' as const,
+  requestedSessionSequence: ['Upper', 'Lower', 'Upper', 'Lower'], requestedSplitType: 'upper-lower',
 };
 
-describe('buildProgram — 4-day powerbuilding focus', () => {
-  const program = buildProgram(POWERBUILDING_CONFIG);
-
-  it('returns valid: true', () => {
-    expect(program.validation.valid).toBe(true);
-  });
-
-  it('has no error-severity validation issues', () => {
-    expect(program.validation.issues.filter((i) => i.severity === 'error')).toHaveLength(0);
-  });
-
-  it(`never exceeds ${SESSION_MAX_EXERCISES} exercises or ${SESSION_MAX_SETS} sets per session`, () => {
-    for (const day of program.days) {
+// Replaces repeated per-field tests and console-only examples with a shared
+// behavioral contract, checked across every week rather than only Week 1.
+function expectUsableProgram(program: GeneratedProgram, config: ProgramConfig) {
+  expect(program.validation.valid).toBe(true);
+  expect(program.validation.issues.filter(issue => issue.severity === 'error')).toEqual([]);
+  expect(program.days).toEqual(program.weeks[0].days);
+  expect(program.days).toHaveLength(config.daysPerWeek);
+  expect(program.weeks).toHaveLength(config.totalWeeks);
+  for (const week of program.weeks) {
+    expect(week.days.map(day => day.trainingDay)).toEqual(config.selectedDays);
+    for (const day of week.days) {
+      expect(day.slots.length).toBeGreaterThan(0);
       expect(day.slots.length).toBeLessThanOrEqual(SESSION_MAX_EXERCISES);
-      expect(day.totalSets).toBeLessThanOrEqual(SESSION_MAX_SETS);
-    }
-  });
-
-  // PB-001: Primary slots bridge strength and size — 3-7 rep range
-  it('PB-001: Primary emphasize slots land in 3-7 rep range (myofibrillar bridge zone)', () => {
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        if (slot.role === 'Primary' && slot.priority === 'emphasize') {
-          expect(slot.repsMin).toBeGreaterThanOrEqual(3);
-          expect(slot.repsMax).toBeLessThanOrEqual(7);
+      expect(day.totalSets).toBe(day.slots.reduce((sum, slot) => sum + slot.sets, 0));
+      expect(day.totalSets).toBeLessThanOrEqual(getSessionMaxSets(config.focus));
+      expect(day.totalSets).toBeLessThanOrEqual(day.slots.length * 5);
+      expect(day.estimatedMinutes).toBeLessThanOrEqual(90);
+      for (const accessory of day.slots.filter(slot => slot.role === 'Accessory')) {
+        for (const primary of day.slots.filter(slot => slot.muscle === accessory.muscle && slot.role === 'Primary')) {
+          expect(primary.sortOrder).toBeLessThan(accessory.sortOrder);
+        }
+      }
+      for (const forearm of day.slots.filter(slot => slot.muscle === 'Forearms')) { // HV-008
+        for (const pull of day.slots.filter(slot => ['Back', 'Biceps', 'Traps'].includes(slot.muscle))) {
+          expect(forearm.sortOrder).toBeGreaterThan(pull.sortOrder);
         }
       }
     }
-  });
+    for (const [muscle, priority] of Object.entries(config.musclePriorities)) {
+      if (priority !== 'emphasize') continue;
+      const directSets = week.days.flatMap(day => day.slots).filter(slot => slot.muscle === muscle);
+      expect(directSets.reduce((sum, slot) => sum + slot.sets, 0), `${muscle}, week ${week.weekNumber}`).toBeGreaterThan(0);
+    }
+  }
+  const peak = program.weeks.at(-2)!;
+  const deload = program.weeks.at(-1)!;
+  expect(deload.isDeload).toBe(true);
+  expect(deload.days.reduce((sum, day) => sum + day.totalSets, 0))
+    .toBeLessThan(peak.days.reduce((sum, day) => sum + day.totalSets, 0));
+}
 
-  // PB-003: Accessory slots drive sarcoplasmic adaptation — ≥ 10 reps
-  it('PB-003: Accessory emphasize slots use ≥ 10 reps (pump/hypertrophy zone)', () => {
-    for (const day of program.days) {
-      for (const slot of day.slots) {
-        if (slot.role === 'Accessory' && slot.priority === 'emphasize') {
-          expect(slot.repsMin).toBeGreaterThanOrEqual(10);
-        }
-      }
+describe('complete program behavior', () => {
+  it.each([
+    EXAMPLE_CONFIG, LOWER_EMPHASIS_CONFIG, STRENGTH_CONFIG, POWERBUILDING_CONFIG, EXPLICIT_CONFIG,
+    { ...STRENGTH_CONFIG, name: 'General fitness', focus: 'general' },
+    { ...STRENGTH_CONFIG, name: 'Maintenance', focus: 'maintenance' },
+    { ...STRENGTH_CONFIG, name: 'Cut', focus: 'cut' },
+    { ...EXAMPLE_CONFIG, name: 'Two-day beginner', daysPerWeek: 2, selectedDays: ['Monday', 'Thursday'], experienceLevel: 'beginner' },
+  ] satisfies ProgramConfig[])('$name stays valid, ordered, within caps, and deloads', config => {
+    const program = buildProgram(config);
+    expectUsableProgram(program, config);
+    if ('requestedSessionSequence' in config && config.requestedSessionSequence) {
+      expect(program.days.map(day => day.sessionType)).toEqual(config.requestedSessionSequence);
+      expect(program.splitType).toBe(config.requestedSplitType);
     }
   });
 
-  // PB-001 vs ST-001: powerbuilding Primary must use more reps than strength Primary
-  it('powerbuilding Primary repsMin > strength Primary repsMin for same priority', () => {
-    const pbPrimaryMin = Math.min(
-      ...program.days.flatMap((d) =>
-        d.slots.filter((s) => s.role === 'Primary' && s.priority === 'emphasize').map((s) => s.repsMin),
-      ),
-    );
-    const strengthProgram = buildProgram({ ...POWERBUILDING_CONFIG, focus: 'strength' as const });
-    const stPrimaryMin = Math.min(
-      ...strengthProgram.days.flatMap((d) =>
-        d.slots.filter((s) => s.role === 'Primary' && s.priority === 'emphasize').map((s) => s.repsMin),
-      ),
-    );
-    expect(pbPrimaryMin).toBeGreaterThan(stPrimaryMin);
+  it('rejects a requested split that does not cover every selected day', () => {
+    expect(() => buildProgram({ ...EXAMPLE_CONFIG, requestedSessionSequence: ['Push'] })).toThrow('exactly one session');
   });
 
-  it('deload week has fewer sets than peak training week', () => {
-    const weeks = program.weeks;
-    const peakWeek = weeks[weeks.length - 2];
-    const deloadWeek = weeks[weeks.length - 1];
-    const peakTotal = peakWeek.days.reduce((n, d) => n + d.totalSets, 0);
-    const deloadTotal = deloadWeek.days.reduce((n, d) => n + d.totalSets, 0);
-    expect(deloadTotal).toBeLessThan(peakTotal);
+  it('allocates upper emphasis to four upper days and accounts for pressing overlap', () => {
+    const program = buildProgram(EXAMPLE_CONFIG);
+    expect(program.derivation).toMatchObject({ upperDays: 4, lowerDays: 1 });
+    expect(program.derivation.pushScore).toBeGreaterThan(program.derivation.pullScore);
+    const triceps = program.volumeTargets.find(target => target.muscle === 'Triceps')!;
+    const shoulders = program.volumeTargets.find(target => target.muscle === 'Shoulders')!;
+    expect(triceps.estimatedIndirectSets).toBeGreaterThan(4);
+    expect(triceps.directSetsNeeded).toBeLessThan(12);
+    expect(shoulders.estimatedIndirectSets).toBeGreaterThan(2);
+  });
+
+  it('spreads lower emphasis across specialized, alternating sessions', () => {
+    const program = buildProgram(LOWER_EMPHASIS_CONFIG);
+    expect(program.derivation).toMatchObject({ upperDays: 2, lowerDays: 3 });
+    const types = program.days.map(day => day.sessionType);
+    expect(types).toEqual(expect.arrayContaining(['LowerQuadFocus', 'LowerPosteriorChain', 'LowerGluteQuad']));
+    expect(program.splitType).toContain('lower-quad');
+    for (let i = 1; i < types.length; i++) {
+      expect(LOWER_SESSION_TYPES.includes(types[i - 1]) && LOWER_SESSION_TYPES.includes(types[i])).toBe(false);
+    }
+    for (const muscle of ['Quads', 'Hamstrings', 'Glutes']) {
+      // Count sessions, not slots: two exercises on one day aren't two exposures.
+      expect(program.days.filter(day => day.slots.some(slot => slot.muscle === muscle)).length).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('prescribes distinct strength and powerbuilding rep ranges', () => {
+    const strength = buildProgram(STRENGTH_CONFIG).days.flatMap(day => day.slots);
+    const powerbuilding = buildProgram(POWERBUILDING_CONFIG).days.flatMap(day => day.slots);
+    const strengthPrimary = strength.filter(slot => slot.role === 'Primary' && slot.priority === 'emphasize');
+    const strengthSecondary = strength.filter(slot => slot.role === 'Secondary' && slot.priority === 'emphasize');
+    const powerPrimary = powerbuilding.filter(slot => slot.role === 'Primary' && slot.priority === 'emphasize');
+    // The full program trims these accessories; a sparse session actually exercises PB-003.
+    const powerAccessory = buildDaySlots(new Map([['Back', 'emphasize']]), SESSION_TEMPLATES.Pull, undefined, undefined, 'powerbuilding')
+      .filter(slot => slot.role === 'Accessory' && slot.priority === 'emphasize');
+    // Prevent an empty collection from silently passing the rep checks.
+    for (const [name, slots] of Object.entries({ strengthPrimary, strengthSecondary, powerPrimary, powerAccessory })) expect(slots.length, name).toBeGreaterThan(0);
+    for (const slot of strengthPrimary) expect(slot.repsMax).toBeLessThanOrEqual(5); // ST-001
+    for (const slot of strengthSecondary) expect(slot.repsMax).toBeLessThanOrEqual(10); // ST-002
+    for (const slot of powerPrimary) { // PB-001
+      expect(slot.repsMin).toBeGreaterThanOrEqual(3);
+      expect(slot.repsMax).toBeLessThanOrEqual(7);
+    }
+    for (const slot of powerAccessory) expect(slot.repsMin).toBeGreaterThanOrEqual(10); // PB-003
+    expect(Math.min(...powerPrimary.map(slot => slot.repsMin))).toBeGreaterThan(Math.min(...strengthPrimary.map(slot => slot.repsMin)));
   });
 });

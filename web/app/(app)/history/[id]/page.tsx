@@ -45,11 +45,11 @@ export default async function WorkoutHistoryDetail({ params }: { params: Promise
       </div>
     </header>
     <div className="exercise-stack native-list-stack">
-      {[...grouped].map(([name, rows]) => <section className="surface exercise-card native-workout-card history-exercise-card" key={name}>
-        <span className="native-muscle-stripe" aria-hidden="true" />
-        <div className="exercise-title native-exercise-title">
+      {[...grouped].map(([name, rows]) => <section className="surface workout-card--exercise workout-card workout-card--history" key={name}>
+        <span className="workout-card__stripe" aria-hidden="true" />
+        <div className="workout-card__header">
           <div>
-            <div className="cap native-muscle-label">{rows[0]?.muscle_group ?? 'Exercise'}</div>
+            <div className="cap workout-card__muscle">{rows[0]?.muscle_group ?? 'Exercise'}</div>
             <h2>{name}</h2>
             <p>{[rows[0]?.muscle_group, rows[0]?.equipment].filter(Boolean).join(' · ')}</p>
           </div>
@@ -63,8 +63,8 @@ export default async function WorkoutHistoryDetail({ params }: { params: Promise
     </div>
     {feedback?.length ? <section className="surface feedback-summary recovery-feedback">
       <header><div><div className="eyebrow">RECOVERY</div><h2>Training feedback</h2></div><span>{feedback.length} {feedback.length === 1 ? 'muscle' : 'muscles'}</span></header>
-      <div className="recovery-feedback-list">{feedback.map((item) => <article className="native-workout-card recovery-feedback-item" key={item.muscle_group}>
-        <span className="native-muscle-stripe" aria-hidden="true" />
+      <div className="recovery-feedback-list">{feedback.map((item) => <article className="workout-card recovery-feedback-item" key={item.muscle_group}>
+        <span className="workout-card__stripe" aria-hidden="true" />
         <header><div className="eyebrow">MUSCLE GROUP</div><h3>{item.muscle_group}</h3></header>
         <dl>
           <div><dt>Soreness</dt><dd>{item.soreness || 'Not reported'}</dd></div>

@@ -45,15 +45,15 @@ export default async function ProgramDay({ params }:{ params:Promise<{ id:string
     return <main className="content native-page native-gradient-background">
       <a className="back-link" href={`/programs/${id}`}>← Program</a>
       <header className="page-header native-page-header"><div><h1>{heading}</h1><p className="day-week-label">Week {day.week_number}</p></div><span className="native-badge solid">Completed</span></header>
-      <div className="exercise-stack native-workout-screen">{[...grouped].map(([name, rows]) => <section className="surface exercise-card native-workout-card" key={name}>
-        <span className="native-muscle-stripe" aria-hidden="true"/>
-        <div className="exercise-title native-exercise-title"><div><div className="cap native-muscle-label">{rows[0]?.muscle_group ?? 'Exercise'}</div><h2>{name}</h2><p>{rows[0]?.equipment || 'Bodyweight'}</p></div></div>
+      <div className="exercise-stack native-workout-screen">{[...grouped].map(([name, rows]) => <section className="surface workout-card--exercise workout-card" key={name}>
+        <span className="workout-card__stripe" aria-hidden="true"/>
+        <div className="workout-card__header"><div><div className="cap workout-card__muscle">{rows[0]?.muscle_group ?? 'Exercise'}</div><h2>{name}</h2><p>{rows[0]?.equipment || 'Bodyweight'}</p></div></div>
         <div className="set-grid set-grid-header native-set-row" aria-hidden="true"><span/><span>WEIGHT</span><span>REPS</span><span>LOG</span></div>
         {rows.map((set, index) => <div className="set-grid native-set-row set-complete" key={index}><span/><span>{set.weight}</span><span>{set.reps}</span><span className="set-check-wrap"><span className="set-check" aria-label="Set complete">✓</span></span></div>)}
       </section>)}</div>
       {feedback?.length ? <section className="surface recovery-feedback"><header><div><div className="eyebrow">SESSION FEEDBACK</div><h2>How it went</h2></div></header>
-        <div className="recovery-feedback-list">{feedback.map((item) => <article className="native-workout-card recovery-feedback-item" key={item.muscle_group}>
-          <span className="native-muscle-stripe" aria-hidden="true"/>
+        <div className="recovery-feedback-list">{feedback.map((item) => <article className="workout-card recovery-feedback-item" key={item.muscle_group}>
+          <span className="workout-card__stripe" aria-hidden="true"/>
           <header><div className="eyebrow">MUSCLE GROUP</div><h3>{item.muscle_group}</h3></header>
           <dl><div><dt>Pump</dt><dd>{item.pump || 'Not reported'}</dd></div><div><dt>Volume</dt><dd>{item.volume || 'Not reported'}</dd></div><div><dt>Joint pain</dt><dd>{item.joint_pain || 'Not reported'}</dd></div><div><dt>Soreness</dt><dd>{item.soreness || 'Not reported'}</dd></div></dl>
         </article>)}</div>
@@ -89,10 +89,10 @@ export default async function ProgramDay({ params }:{ params:Promise<{ id:string
     <a className="back-link" href={`/programs/${id}`}>← Program</a>
     <header className="page-header native-page-header"><div><h1>{heading}</h1><p className="day-week-label">Week {day.week_number}</p></div></header>
     <div className="exercise-stack native-list-stack">
-      {exercises.map((exercise) => <article className="surface exercise-card native-workout-card day-preview-card" key={exercise.id}>
-        <span className="native-muscle-stripe" aria-hidden="true"/>
-        <div className="exercise-title native-exercise-title">
-          <div><div className="cap native-muscle-label">{exercise.muscle_group ?? 'Exercise'}</div><h2>{exercise.exercise_name}</h2><p>{exercise.equipment || 'Bodyweight'}</p></div>
+      {exercises.map((exercise) => <article className="surface workout-card--exercise workout-card workout-card--preview" key={exercise.id}>
+        <span className="workout-card__stripe" aria-hidden="true"/>
+        <div className="workout-card__header">
+          <div><div className="cap workout-card__muscle">{exercise.muscle_group ?? 'Exercise'}</div><h2>{exercise.exercise_name}</h2><p>{exercise.equipment || 'Bodyweight'}</p></div>
           {isTemplateDay && <form action={removeProgramExercise}><input type="hidden" name="programId" value={id}/><input type="hidden" name="exerciseId" value={exercise.id}/><input type="hidden" name="returnTo" value={`/programs/${id}/day/${day.id}`}/><button type="submit" className="remove-set delete-exercise-button" aria-label={`Remove ${exercise.exercise_name}`}><TrashIcon/></button></form>}
         </div>
         <span className="pill rir-target">⚡ {exercise.prescription.sets}×{exercise.prescription.repsMin}–{exercise.prescription.repsMax} @ {exercise.prescription.rir} RIR</span>

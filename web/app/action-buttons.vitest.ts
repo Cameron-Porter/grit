@@ -1,8 +1,9 @@
+import { readStylesheet } from '../tests/read-stylesheet';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const globalsCss = readFileSync(resolve(process.cwd(), 'app/globals.css'), 'utf8');
+const globalsCss = readStylesheet('app/globals.css');
 const workoutPage = readFileSync(resolve(process.cwd(), 'app/workout/page.tsx'), 'utf8');
 const programsPage = readFileSync(resolve(process.cwd(), 'app/(app)/programs/page.tsx'), 'utf8');
 

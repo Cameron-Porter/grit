@@ -143,8 +143,7 @@ function selectLowerDayTypes(
   lowerDays: number,
   priorities: Partial<Record<MuscleGroup, MusclePriority>>,
 ): SessionType[] {
-  const anyLowerEmphasis = (['Quads', 'Hamstrings', 'Glutes', 'Calves', 'Abs'] as MuscleGroup[])
-    .some((m) => priorities[m] === 'emphasize');
+  const anyLowerEmphasis = LOWER_MUSCLES.some((m) => priorities[m] === 'emphasize');
 
   if (!anyLowerEmphasis) {
     return Array.from({ length: lowerDays }, (): SessionType => 'Lower');
@@ -189,12 +188,7 @@ function orderDaysForRecovery(
 
   if (lowerTypes.length === 1) {
     const midpoint = Math.floor(total / 2);
-    const result: SessionType[] = [];
-    let ui = 0;
-    for (let i = 0; i < total; i++) {
-      result.push(i === midpoint ? lowerTypes[0] : upperTypes[ui++]);
-    }
-    return result;
+    return [...upperTypes.slice(0, midpoint), lowerTypes[0], ...upperTypes.slice(midpoint)];
   }
 
   const result: SessionType[] = [];
@@ -203,9 +197,6 @@ function orderDaysForRecovery(
   const upperFirst = upperTypes.length >= lowerTypes.length;
 
   for (let i = 0; i < total; i++) {
-    const upperLeft = upperTypes.length - ui;
-    const lowerLeft = lowerTypes.length - li;
-
     let pickUpper: boolean;
 
     if (ui >= upperTypes.length) {
@@ -219,18 +210,8 @@ function orderDaysForRecovery(
       // the 3+2 case: L-U-L-U-L rather than U-L-U-L-L.
       pickUpper = upperFirst;
     } else {
-      const prevIsUpper = !LOWER_SESSION_TYPES.includes(result[result.length - 1]);
-
-      if (prevIsUpper && lowerLeft > 0) {
-        // Just did upper — switch to lower
-        pickUpper = false;
-      } else if (!prevIsUpper && upperLeft > 0) {
-        // Just did lower — switch to upper
-        pickUpper = true;
-      } else {
-        // Both equally due — pick the region with more remaining sessions
-        pickUpper = upperLeft > lowerLeft || (upperLeft === lowerLeft && upperFirst);
-      }
+      // Both regions still have sessions; alternate from the previous day.
+      pickUpper = LOWER_SESSION_TYPES.includes(result[result.length - 1]);
     }
 
     result.push(pickUpper ? upperTypes[ui++] : lowerTypes[li++]);

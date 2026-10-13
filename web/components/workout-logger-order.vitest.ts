@@ -6,7 +6,8 @@ import { WorkoutLogger, workoutStorageKeys, type WorkoutPrescription } from './w
 
 const router={refresh:vi.fn(),push:vi.fn()};
 vi.mock('next/navigation',()=>({useRouter:()=>router}));
-afterEach(()=>{vi.unstubAllGlobals();localStorage.clear()});
+const memoryStorage=()=>{const values=new Map<string,string>();return {getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{values.set(key,value)},removeItem:(key:string)=>{values.delete(key)},clear:()=>{values.clear()}} as Storage};
+afterEach(()=>{vi.unstubAllGlobals()});
 
 it.each([409,500,'offline'] as const)('keeps exercise order, sets, and notes when saving fails (%s)',async(failure)=>{
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT',true);
@@ -19,6 +20,7 @@ it.each([409,500,'offline'] as const)('keeps exercise order, sets, and notes whe
   const exercise={muscleGroup:'Back',musclePriority:null,equipment:'Cable',sets:1,repsMin:8,repsMax:12,weight:100,rir:2};
   const workout:WorkoutPrescription={dayId:'day',templateDayId:'template',bodyWeight:185,programName:'Program',week:1,day:1,label:'Pull',exercises:[{...exercise,name:'Row'},{...exercise,name:'Pulldown'}]};
   const {storageKey}=workoutStorageKeys('user','day');
+  vi.stubGlobal('localStorage',memoryStorage());
   localStorage.setItem(storageKey,JSON.stringify({exercises:workout.exercises,sets:[[{reps:8,weight:110,complete:true,reportedRir:2}],[{reps:10,weight:90,complete:false,reportedRir:null}]],notes:['Row note','Pulldown note']}));
   const container=document.createElement('div');document.body.append(container);
   let root=createRoot(container);
@@ -28,7 +30,7 @@ it.each([409,500,'offline'] as const)('keeps exercise order, sets, and notes whe
     await act(async()=>{menu.setAttribute('open','');menu.dispatchEvent(new Event('toggle'))});
     const move=[...container.querySelectorAll('button')].find(button=>button.textContent?.includes('Move up'))!;
     await act(async()=>move.click());
-    expect([...container.querySelectorAll('.exercise-title h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
+    expect([...container.querySelectorAll('.workout-card__header h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
     expect(container.textContent).toContain('Order kept for this workout');
     const saved=JSON.parse(localStorage.getItem(storageKey)!);
     expect(saved.notes).toEqual(['Pulldown note','Row note']);
@@ -36,6 +38,6 @@ it.each([409,500,'offline'] as const)('keeps exercise order, sets, and notes whe
     await act(async()=>root.unmount());
     root=createRoot(container);
     await act(async()=>root.render(createElement(WorkoutLogger,{workout,userId:'user'})));
-    expect([...container.querySelectorAll('.exercise-title h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
+    expect([...container.querySelectorAll('.workout-card__header h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
   }finally{await act(async()=>root.unmount());container.remove()}
 });

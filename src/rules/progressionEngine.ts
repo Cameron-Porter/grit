@@ -236,10 +236,6 @@ export function getLoadIncrementAmount(
   const granularity = roundToRealisticIncrement(equipment);
   if (currentWeight <= 0) return { amount: granularity, equipmentLimited: false };
 
-  if (profile.loadIncrementStrategy === 'fixed_increment') {
-    // HV-042 applies here too: a 10 lb stack pin is a third of a 30 lb setting.
-    return gateProportionalJump(granularity, currentWeight, profile);
-  }
   if (profile.loadIncrementStrategy === 'percentage_based') {
     // Rounded to 4 decimals before roundToIncrement to correct binary
     // floating-point drift (e.g. 500 * 0.025 = 12.499999999999998, not
@@ -249,7 +245,8 @@ export function getLoadIncrementAmount(
     const amount = Math.max(granularity, roundToIncrement(raw, granularity));
     return gateProportionalJump(amount, currentWeight, profile);
   }
-  // equipment_limited ('none' — bodyweight — never reaches this function).
+  // HV-042 also gates fixed increments: a 10 lb stack pin is a third of 30 lb.
+  // equipment_limited uses the same gate; bodyweight is handled by the caller.
   return gateProportionalJump(granularity, currentWeight, profile);
 }
 
@@ -369,20 +366,6 @@ function nextRepTarget(lastReps: number, ceiling: number): number {
 
 // ─── Session analysis helpers ─────────────────────────────────────────────────
 
-// Working weight = highest weight completed in the session.
-function workingWeight(session: SessionPerformance): number {
-  if (!session.sets.length) return 0;
-  return Math.max(...session.sets.map((s) => s.weight));
-}
-
-// Peak reps completed at the working weight.
-function peakRepsAtWorkingWeight(session: SessionPerformance): number {
-  if (!session.sets.length) return 0;
-  const ww = workingWeight(session);
-  const atWW = session.sets.filter((s) => s.weight === ww);
-  return atWW.length > 0 ? Math.max(...atWW.map((s) => s.reps)) : 0;
-}
-
 export interface InitialMesocycleTarget {
   weight: number;
   sets: number;
@@ -444,20 +427,16 @@ export function recommendInitialMesocycleTarget(
 // range with the intended effort (NSCA Essentials of Strength Training and
 // Conditioning). Using the minimum working-set reps also makes set-to-set
 // fatigue visible instead of hiding it behind the best set.
-function completedRepsAtWorkingWeight(session: SessionPerformance): number {
-  if (!session.sets.length) return 0;
-  const ww = workingWeight(session);
-  const atWW = session.sets.filter((s) => s.weight === ww);
-  return atWW.length > 0 ? Math.min(...atWW.map((s) => s.reps)) : 0;
-}
-
 interface Perf { weight: number; maxReps: number; completedReps: number }
 
 function sessionPerf(session: SessionPerformance): Perf {
+  // Working weight is the highest completed load; lighter sets do not set its rep targets.
+  const weight = session.sets.length ? Math.max(...session.sets.map(set => set.weight)) : 0;
+  const reps = session.sets.filter(set => set.weight === weight).map(set => set.reps);
   return {
-    weight: workingWeight(session),
-    maxReps: peakRepsAtWorkingWeight(session),
-    completedReps: completedRepsAtWorkingWeight(session),
+    weight,
+    maxReps: reps.length ? Math.max(...reps) : 0,
+    completedReps: reps.length ? Math.min(...reps) : 0,
   };
 }
 
@@ -652,8 +631,8 @@ export function calculateVolumeTransitionAdjustment(
 //   3. Maintenance focus — hold performance, no auto-increment
 //   4. BAD_SESSION threshold → DELOAD_NEEDED
 //   5. Cut/fat-loss focus — RC-011: reduced-speed progression, not a hold
-//   6. Experience-level dispatch (beginner linear / intermediate+advanced double)
-//   7. Plateau resolution (inside the dispatch functions) — gated off when
+//   6. Progression evaluation (beginner linear / intermediate+advanced double)
+//   7. Plateau resolution (inside the evaluator) — gated off when
 //      volume recently increased (HV-034); that session's rep expectation is
 //      already handled by HV-032's transition adjustment instead.
 
@@ -1151,25 +1130,15 @@ function recommendProgressionUncapped(
 
   // ── Priority 6: Experience-level dispatch ─────────────────────────────────
 
-  if (ctx.experienceLevel === 'beginner') {
-    return evaluateBeginnerLinear(prescription, sessions, ctx, {
-      lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad,
-    });
-  }
-
-  return evaluateDoubleProgression(prescription, sessions, ctx, {
+  return evaluateProgression(prescription, sessions, ctx, {
     lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad: volumeRecentlyIncreased || volumeAdjustment.holdLoad, effortAllowsLoad,
   });
 }
 
 // ─── Shared ceiling-hit resolution ─────────────────────────────────────────
 //
-// ST-011/HV-037: extracted because equipment-limited fallback and the
-// bodyweight difficulty ladder are nontrivial branches that would otherwise
-// duplicate identically between evaluateBeginnerLinear and
-// evaluateDoubleProgression, which already handled a plain ceiling hit
-// identically (both reset to effectiveRepsMin at the new load — the only
-// difference was reason-text wording).
+// ST-011/HV-037: equipment-limited fallback and the bodyweight difficulty
+// ladder share the same ceiling-hit resolution across experience levels.
 function resolveCeilingHit(
   prescription: SlotPrescription,
   lastPerf: Perf,
@@ -1300,14 +1269,6 @@ function resolveCeilingHit(
   };
 }
 
-// ─── Beginner: Linear Progression ────────────────────────────────────────────
-//
-// Doctrine Section 1: Add load every session when reps complete the range
-// with clean technique. Intensity proxy = bar speed (approximated here by
-// rep-ceiling hit — no barSpeedDropped field available yet).
-//
-// HV-034: Stall threshold: 4 exposures (3 pairs) for beginners.
-
 interface EvalInputs {
   lastPerf: Perf;
   stalls: number;
@@ -1326,124 +1287,26 @@ interface EvalInputs {
   effortAllowsLoad: boolean;
 }
 
-function evaluateBeginnerLinear(
-  prescription: SlotPrescription,
-  sessions: SessionPerformance[],
-  ctx: ProgressionContext,
-  { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad }: EvalInputs,
-): ProgressionRecommendation {
-
-  // Plateau detection — must deload before any load reduction (doctrine 1.2).
-  // HV-034: gated off when volume recently increased — that session's rep
-  // expectation is already handled by the HV-032 transition adjustment, and
-  // an added set naturally producing lower reps isn't a plateau.
-  if (stalls >= stallThreshold && !volumeRecentlyIncreased) {
-    // HV-035: category-aware load reduction, same as the scheduled-deload
-    // branch. HV-028: bodyweight has no load to reduce.
-    const deloadWeight = deloadWeightFor(lastPerf.weight, isBodyweight, 0.225, prescription.equipment);
-    return {
-      ...base,
-      nextWeight: deloadWeight,
-      nextSets: Math.max(1, Math.ceil(prescription.sets * 0.5)),
-      nextRir: Math.max(4, prescription.rir),
-      action: 'PLATEAU_DELOAD',
-      decisionCode: 'plateau_deload',
-      doctrineTags: ['HV-034', 'HV-035'],
-      reason: isBodyweight
-        ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is the most likely cause. Retest reps after deload.`
-        : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is the most likely cause. Retest at the reduced load after deload.`,
-      isPlateauWarning: true,
-    };
-  }
-
-  // Below rep floor — hold or reduce.
-  if (lastPerf.maxReps < effectiveRepsMin && (lastPerf.weight > 0 || isBodyweight)) {
-    const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
-    const twoConsecutiveBelow =
-      prev !== null &&
-      prev.maxReps < effectiveRepsMin &&
-      prev.weight === lastPerf.weight;
-
-    if (twoConsecutiveBelow) {
-      // HV-028: bodyweight has no load to reduce.
-      const { weight: nextWeight, amount: reduction } = reducedWeightFor(lastPerf.weight, isBodyweight, profile, prescription.equipment);
-      return {
-        ...base,
-        nextWeight,
-        nextRepsMax: effectiveRepsMin,
-        action: 'REDUCE_LOAD',
-        decisionCode: 'repeated_below_floor',
-        doctrineTags: ['ST-007'],
-        reason: isBodyweight
-          ? `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild reps from the floor at bodyweight.`
-          : `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild from new base.`,
-        isPlateauWarning: true,
-      };
-    }
-    // ST-007: nudge toward the floor 1 rep at a time rather than restating the
-    // full ceiling while still below the minimum.
-    const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
-    return {
-      ...base,
-      nextWeight: lastPerf.weight,
-      nextRepsMax: nextTarget,
-      action: 'HOLD',
-      decisionCode: 'below_floor_rep_progression',
-      doctrineTags: ['ST-007'],
-      reason: `${lastPerf.maxReps} reps at ${lastPerf.weight} lb — below floor of ${effectiveRepsMin}. Aim for ${nextTarget} next session.`,
-    };
-  }
-
-  // Rep ceiling hit with bar speed intact (approximated: reps ≥ ceiling).
-  // Beginner: advance load every session per linear progression. HV-032: the
-  // ceiling checked here is effectiveRepsMax (lowered this session if
-  // volume just increased), not the template's raw repsMax, and load holds
-  // when the transition penalty was severe enough (holdLoad).
-  if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Linear progression', ctx.experienceLevel);
-  }
-
-  // Within rep band — rep progress is occurring. ST-007: target last session's
-  // reps + 1 (capped at the ceiling) instead of restating the full ceiling.
-  const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
-  const repProgress = prev !== null && lastPerf.maxReps > prev.maxReps;
-  const nextTarget = nextRepTarget(lastPerf.maxReps, effectiveRepsMax);
-  const heldByEffort = lastPerf.completedReps >= effectiveRepsMax && !effortAllowsLoad;
-  const reason = heldByEffort
-    ? effortHoldReason(lastPerf.maxReps, effectiveRepsMax, lastPerf.weight, prescription.rir)
-    : repProgress
-      ? `Reps progressed ${prev!.maxReps} → ${lastPerf.maxReps} at ${lastPerf.weight} lb. Aim for ${nextTarget} next session (ceiling ${effectiveRepsMax}).`
-      : `${lastPerf.maxReps}/${effectiveRepsMax} reps at ${lastPerf.weight} lb. Aim for ${nextTarget} next session.`;
-
-  return {
-    ...base,
-    nextWeight: lastPerf.weight,
-    nextRepsMax: nextTarget,
-    action: 'HOLD',
-    decisionCode: 'within_band_hold',
-    doctrineTags: ['ST-007', 'ST-015', 'HV-044', 'HV-032'],
-    reason,
-  };
-}
-
-// ─── Intermediate + Advanced: Double Progression ──────────────────────────────
+// ─── Linear and double progression ───────────────────────────────────────────
 //
-// Doctrine Sections 2–3:
+// Doctrine Sections 1–3:
 //   - Accumulate reps within the target band at fixed load.
 //   - When the rep ceiling is reached at the prescribed RIR, advance load.
-//   - HV-034: Stall threshold: intermediate/advanced = 3 exposures (2 pairs) each.
+//   - HV-034: Stall threshold: beginners = 4 exposures (3 pairs);
+//     intermediate/advanced = 3 exposures (2 pairs).
 //
 // ST-013: when actual per-set RIR is available, every working set must meet
 // the prescribed effort target before load advances. Legacy sessions without
 // actual RIR retain the rep-based fallback.
 
-function evaluateDoubleProgression(
+function evaluateProgression(
   prescription: SlotPrescription,
   sessions: SessionPerformance[],
   ctx: ProgressionContext,
   { lastPerf, stalls, stallThreshold, increment, equipmentLimited, effectiveRepsMin, effectiveRepsMax, base, isBodyweight, profile, volumeRecentlyIncreased, holdLoad, effortAllowsLoad }: EvalInputs,
 ): ProgressionRecommendation {
 
+  const isBeginner = ctx.experienceLevel === 'beginner';
   const prev = sessions.length >= 2 ? sessionPerf(sessions[1]) : null;
 
   // ── Stall threshold exceeded → PLATEAU_DELOAD ─────────────────────────────
@@ -1452,7 +1315,10 @@ function evaluateDoubleProgression(
   // plateau. HV-034: gated off when volume recently increased.
   if (stalls >= stallThreshold && !volumeRecentlyIncreased) {
     const weeksSince = ctx.weeksSinceLastDeload;
-    const fatigueLikely = weeksSince === undefined || weeksSince >= 3;
+    const fatigueLikely = isBeginner || weeksSince === undefined || weeksSince >= 3;
+    const fatigueExplanation = isBeginner
+      ? 'the most likely cause'
+      : `probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}`;
     // HV-035: category-aware load reduction, same as the scheduled-deload
     // branch — only for the fatigue-masking case, since that's the one whose
     // reason text already claims a "deload" (retest at load). The
@@ -1469,8 +1335,8 @@ function evaluateDoubleProgression(
       doctrineTags: ['HV-034', 'HV-035'],
       reason: fatigueLikely
         ? (isBodyweight
-          ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest reps after deload.`
-          : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is probable${weeksSince ? ` (${weeksSince} weeks since last deload)` : ''}. Retest at the reduced load after deload.`)
+          ? `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Bodyweight held at ${lastPerf.weight} lb (no external load to reduce); fatigue masking is ${fatigueExplanation}. Retest reps after deload.`
+          : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps. Deload first — load reduced 22.5% (${lastPerf.weight} → ${deloadWeight} lbs); fatigue masking is ${fatigueExplanation}. Retest at the reduced load after deload.`)
         : `${stalls + 1} sessions unchanged at ${lastPerf.weight} lb × ${lastPerf.maxReps} reps after a recent deload. This may be a true plateau — consider a 10% load reduction and rebuild.`,
       isPlateauWarning: true,
     };
@@ -1494,8 +1360,12 @@ function evaluateDoubleProgression(
         decisionCode: 'repeated_below_floor',
         doctrineTags: ['ST-007'],
         reason: isBodyweight
-          ? `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild to ${effectiveRepsMin} reps at bodyweight before advancing.`
-          : `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild to ${effectiveRepsMin} reps before advancing.`,
+          ? (isBeginner
+            ? `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild reps from the floor at bodyweight.`
+            : `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. No external load to reduce — rebuild to ${effectiveRepsMin} reps at bodyweight before advancing.`)
+          : (isBeginner
+            ? `Below rep floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild from new base.`
+            : `Below floor (${lastPerf.maxReps} reps) for 2 sessions at ${lastPerf.weight} lb. Reducing by ${reduction} lb — rebuild to ${effectiveRepsMin} reps before advancing.`),
         isPlateauWarning: true,
       };
     }
@@ -1520,7 +1390,8 @@ function evaluateDoubleProgression(
   // checked here is effectiveRepsMax, not the template's raw repsMax, and
   // load holds when the transition penalty was severe enough (holdLoad).
   if (lastPerf.completedReps >= effectiveRepsMax && (lastPerf.weight > 0 || isBodyweight) && !holdLoad && effortAllowsLoad) {
-    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, 'Double progression', ctx.experienceLevel);
+    const label = isBeginner ? 'Linear progression' : 'Double progression';
+    return resolveCeilingHit(prescription, lastPerf, effectiveRepsMin, profile, isBodyweight, increment, equipmentLimited, base, label, ctx.experienceLevel);
   }
 
   // ── Within rep band — normal hold ────────────────────────────────────────
