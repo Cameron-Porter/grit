@@ -1,3 +1,4 @@
+import { readStylesheet } from '../tests/read-stylesheet';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -8,7 +9,7 @@ describe('exact native app port contracts', () => {
   it('loads Inter for interface copy and Sora for headings', () => {
     const layout = read('app/layout.tsx');
     const fonts = read('app/fonts.ts');
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(fonts).toContain("Inter({");
     expect(fonts).toContain("Sora({");
     expect(layout).toContain('inter.variable');
@@ -27,7 +28,7 @@ describe('exact native app port contracts', () => {
    * this guards the declaration itself in the default unit run.
    */
   it('scopes overscroll suppression to html so body never blocks scroll chaining', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(css).toContain('html{overscroll-behavior-y:none}');
 
     const selectorsSuppressingOverscroll = css
@@ -46,7 +47,7 @@ describe('exact native app port contracts', () => {
    * so no rule may colour every button again.
    */
   it('never paints every button white, which made transparent buttons unreadable in light mode', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     for (const rule of css.split('}')) {
       if (!/color:\s*(?:#fff|hsl\(0,\s*0%,\s*100%\))/i.test(rule)) continue;
       const selector = rule.slice(0, rule.indexOf('{'));
@@ -60,7 +61,7 @@ describe('exact native app port contracts', () => {
   });
 
   it('centres button labels, including wrapped ones, while list-style rows stay leading', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(css).toContain('.native-pill-action,.native-icon-action{text-align:center}');
     expect(css).toContain('.native-pill-action{white-space:nowrap}');
     expect(css).toContain('.command-row,.sheet-action-row,.custom-select-trigger');
@@ -74,7 +75,7 @@ describe('exact native app port contracts', () => {
    * present without ever becoming a signal.
    */
   it('gives every screen one small piece of alpine decoration', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(css).toContain(":is(.page-header,.native-page-header):not(.native-profile-hero) h1::after");
     // Profile's title sits beside the avatar, so it takes the ring instead.
     expect(css).toContain('.native-profile-hero .native-avatar{box-shadow');
@@ -101,7 +102,7 @@ describe('exact native app port contracts', () => {
   });
 
   it('ports the site signal motifs: blaze/alpine channels, ambient wash, edge bar, and hazard rule', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(css).toContain('--blaze-rgb:255 122 47');
     expect(css).toContain('--alpine-rgb:56 189 248');
     // The page background is deliberately flat: the ambient blaze/alpine wash was
@@ -114,7 +115,7 @@ describe('exact native app port contracts', () => {
   });
 
   it('defines web equivalents for native GradientBackground, grouped settings, row menus, and iOS controls', () => {
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     for (const contract of ['native-gradient-background', 'native-screen-scroll', 'native-settings-group', 'native-settings-row', 'native-inline-menu', 'native-switch']) {
       expect(css).toContain(contract);
     }
@@ -131,10 +132,10 @@ describe('exact native app port contracts', () => {
 
   it('ports workout surfaces to native workout card and sticky finish patterns', () => {
     const logger = read('components/workout-logger.tsx');
-    const css = read('app/globals.css') + read('app/rest-timer.css') + read('app/workout-controls.css');
+    const css = readStylesheet('app/globals.css') + read('app/rest-timer.css') + read('app/workout-controls.css');
     expect(logger).toContain('native-workout-screen');
-    expect(logger).toContain('native-workout-card');
-    expect(logger).toContain('native-muscle-stripe');
+    expect(logger).toContain('workout-card');
+    expect(logger).toContain('workout-card__stripe');
     expect(logger).toContain('native-set-row');
     expect(logger).toContain('native-finish-bar');
     expect(logger).toContain('native-command-menu');
@@ -157,7 +158,7 @@ describe('exact native app port contracts', () => {
    */
   it('opens workout exercise and set menus as anchored command popovers', () => {
     const logger = read('components/workout-logger.tsx');
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(logger).toContain('native-modal-menu');
     expect(logger).toContain('native-command-menu');
     expect(logger).toContain('command-menu-panel');
@@ -170,7 +171,7 @@ describe('exact native app port contracts', () => {
     // Command rows carry an icon plus a text label, and the destructive row is toned.
     expect(logger).toContain('<CommandRow icon="trash" tone="danger" label="Remove exercise"');
     expect(logger).toContain('MENU_ICON_PATHS');
-    // The panel is fixed and JS-placed because .native-workout-card clips its children.
+    // The panel is fixed and JS-placed because .workout-card clips its children.
     expect(css).toContain('.native-modal-menu.native-command-menu[open] .command-menu-panel{position:fixed!important');
     expect(css).toContain('.command-row{');
     expect(css).toContain('.command-row:disabled{');
@@ -216,7 +217,7 @@ describe('exact native app port contracts', () => {
     for (const route of ['app/(app)/loading.tsx', 'app/workout/loading.tsx']) {
       expect(read(route)).toContain('LoadingScreen');
     }
-    const css = read('app/globals.css');
+    const css = readStylesheet('app/globals.css');
     expect(css).toContain('.loading-screen{');
     // Constrained to width: 100% so the loading screen centers within page-frame without extending past the viewport edge.
     expect(css).toContain('width:100%');

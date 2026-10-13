@@ -30,7 +30,7 @@ it.each([409,500,'offline'] as const)('keeps exercise order, sets, and notes whe
     await act(async()=>{menu.setAttribute('open','');menu.dispatchEvent(new Event('toggle'))});
     const move=[...container.querySelectorAll('button')].find(button=>button.textContent?.includes('Move up'))!;
     await act(async()=>move.click());
-    expect([...container.querySelectorAll('.exercise-title h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
+    expect([...container.querySelectorAll('.workout-card__header h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
     expect(container.textContent).toContain('Order kept for this workout');
     const saved=JSON.parse(localStorage.getItem(storageKey)!);
     expect(saved.notes).toEqual(['Pulldown note','Row note']);
@@ -38,6 +38,6 @@ it.each([409,500,'offline'] as const)('keeps exercise order, sets, and notes whe
     await act(async()=>root.unmount());
     root=createRoot(container);
     await act(async()=>root.render(createElement(WorkoutLogger,{workout,userId:'user'})));
-    expect([...container.querySelectorAll('.exercise-title h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
+    expect([...container.querySelectorAll('.workout-card__header h2')].map(node=>node.textContent)).toEqual(['Pulldown','Row']);
   }finally{await act(async()=>root.unmount());container.remove()}
 });

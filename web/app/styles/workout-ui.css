@@ -1,0 +1,243 @@
+/* Native workout interaction refinements from subagent visual audit. */
+.native-rest-timer{position:relative;overflow:hidden;min-height:66px!important;padding:10px 14px!important;border:1px solid var(--card-border)!important;border-radius:24px!important;background:var(--surface)!important;box-shadow:0 1px 3px rgba(0,0,0,.18)!important;transition:border-color .18s ease,background-color .18s ease}
+.native-rest-timer .native-rest-progress{position:absolute;inset-block:0;inset-inline-start:0;z-index:0;max-inline-size:100%;background:color-mix(in srgb,var(--primary) 18%,transparent);transition:inline-size .2s linear}
+.native-rest-timer>*:not(.native-rest-progress){position:relative;z-index:1}
+.native-rest-timer .rest-icon{background:color-mix(in srgb,var(--primary) 16%,transparent);color:var(--primary)}
+.native-rest-timer .rest-controls button{min-height:36px;border-radius:12px}
+.workout-card__stripe{position:absolute;inset-block:0;inset-inline-start:0;width:4px;background:linear-gradient(180deg,var(--primary),var(--highlight))}
+.workout-card__muscle{margin-bottom:3px;color:var(--primary)}
+.workout-card .workout-card__header{padding-inline-start:4px}
+.workout-card .workout-card__actions{align-items:flex-start}
+.workout-card .rir-target{border-radius:10px;background:color-mix(in srgb,var(--primary) 16%,transparent);letter-spacing:.2px}
+.workout-card .set-check{width:28px;height:28px;border-radius:8px;accent-color:var(--primary)}
+.workout-card .set-menu>summary{width:44px;height:44px;border-radius:12px}
+.bottom-sheet{border-color:var(--glass-border)!important;background:var(--surface)!important}
+.sheet-handle{display:none}
+.sheet-action-row{display:flex!important;width:100%;min-height:50px!important;align-items:center!important;justify-content:flex-start!important;border:0!important;border-bottom:1px solid var(--separator)!important;border-radius:0!important;background:transparent!important;color:var(--text)!important;text-align:start!important;box-shadow:none!important}
+.sheet-action-row:last-child{border-bottom:0!important}
+.sheet-action-row.danger{color:var(--error)!important}
+@media(max-width:620px){.workout-card .workout-card__header{display:grid}
+.workout-card .workout-card__actions{display:flex;justify-content:space-between;flex-direction:row;align-items:center}
+.native-set-row{grid-template-columns:24px minmax(52px,1fr) minmax(52px,1fr) 52px 44px!important}}
+
+/* Native workout card parity pass: match React Native ExerciseCard/SetRow structure. */
+.workout-card{position:relative;overflow:hidden;border-radius:24px!important;padding:0!important;border:1px solid var(--card-border)!important;background:var(--surface)!important;box-shadow:0 1px 3px rgba(0,0,0,.18)!important}
+.workout-card .workout-card__stripe{position:absolute;inset-block:0px;inset-inline-start:0;width:4px;background:var(--primary)}
+.workout-card .workout-card__header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin:0 0 4px;padding:18px 16px 4px 20px}
+.workout-card .workout-card__header h2{margin:0;font-size:22px;line-height:27px;font-weight:750;letter-spacing:-.02em}
+.workout-card .workout-card__header p{margin:2px 0 0;color:var(--muted);font-size:14px;line-height:20px}
+.workout-card .workout-card__muscle{display:flex;align-items:center;gap:5px;margin-bottom:3px;color:var(--primary);font-size:11px;line-height:14px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.workout-card .exercise-menu>summary{width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--muted);font-size:22px;letter-spacing:0}
+.workout-card .set-grid{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 44px 52px;align-items:center;gap:0;padding:8px 0;border-bottom:1px solid var(--separator);border-radius:0!important}
+.workout-card .set-grid-header{min-height:28px;padding:0 0 4px;margin-top:8px;border-bottom:1px solid var(--separator);color:var(--muted);font-size:10px;line-height:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+.workout-card .set-grid-header>span{text-align:center}
+.native-set-menu-cell{display:grid;place-items:center;min-height:44px}
+.native-set-menu-cell>summary{width:44px;height:44px;border:0!important;background:transparent!important;color:var(--muted)!important}
+.workout-card .native-set-row input:not(.set-check){width:calc(100% - 8px);max-width:100px;min-height:44px;margin-inline:4px;padding:0 8px;border:0;border-radius:14px;background:var(--input-bg);color:var(--text);font-size:20px;font-weight:750;text-align:center}
+.native-rir-button{display:grid;width:34px;min-width:34px;height:34px;min-height:34px;margin:auto;padding:0;border:1px solid var(--secondary-accent);border-radius:999px;background:color-mix(in srgb,var(--secondary-accent) 12%,transparent);color:var(--secondary-accent);font-size:13px;font-weight:800}
+.native-rir-button.empty{border-color:var(--border);background:transparent;color:var(--muted)}
+.native-rir-button:disabled{opacity:.42}
+.workout-card .set-check-wrap{display:grid;width:52px;min-height:44px;place-items:center}
+.workout-card .set-check{width:40px;height:40px;border-radius:14px;accent-color:var(--set-complete,var(--primary))}
+.workout-card .native-set-row.set-complete{background:color-mix(in srgb,var(--set-complete,var(--primary)) 10%,transparent)}
+.native-add-set-row{display:flex!important;min-height:44px!important;width:100%;align-items:center!important;justify-content:flex-start!important;padding:0 16px!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--primary)!important;font-size:13px!important;font-weight:800!important;box-shadow:none!important}
+.workout-card .prescription{margin:0;padding:0 16px 18px 20px;color:var(--muted);font-size:13px;line-height:18px}
+.workout-card .workout-card__note{margin:8px 0 0!important;padding:10px 12px;border-radius:14px;background:var(--surface2);color:var(--muted)!important}
+@media(max-width:390px){.workout-card .workout-card__header{padding-inline:16px 10px}
+.workout-card .set-grid{grid-template-columns:40px minmax(0,1fr) minmax(0,1fr) 40px 48px!important}
+.workout-card .native-set-row input:not(.set-check){min-height:42px;font-size:18px}
+.native-rir-button{width:32px;min-width:32px;height:32px;min-height:32px}
+.workout-card .set-check{width:36px;height:36px}
+.workout-card .set-check-wrap{width:48px}}
+
+/* Workout card alignment/menu correction: keep inputs under headers, separate RIR/LOG, avoid clipped menus. */
+.workout-card{overflow:hidden!important}
+.workout-card .set-grid{grid-template-columns:44px minmax(72px,1fr) minmax(72px,1fr) 54px 64px!important;column-gap:6px!important;padding-inline:0!important}
+.workout-card .set-grid-header{padding-inline:0!important}
+.workout-card .native-set-row input:not(.set-check){width:100%!important;max-width:none!important;margin:0!important}
+.workout-card .native-rir-button{margin-left:auto!important;margin-right:8px!important}
+.workout-card .set-check-wrap{width:64px!important}
+.workout-card .set-menu,.workout-card .exercise-menu{z-index:20}
+.workout-card .set-menu[open],.workout-card .exercise-menu[open]{z-index:150}
+.workout-card .exercise-menu-panel,.workout-card .bottom-sheet{z-index:61!important}
+.workout-card .set-menu>div{right:auto!important;left:0!important;top:44px!important;width:168px!important}
+.workout-card .exercise-menu-panel{right:0!important;top:46px!important;width:min(340px,calc(100vw - 40px))!important;max-height:min(70dvh,520px);overflow:auto}
+.exercise-stack{overflow:visible!important}
+.native-workout-screen{overflow:visible!important}
+@media(max-width:430px){.workout-card .set-grid{grid-template-columns:40px minmax(62px,1fr) minmax(62px,1fr) 48px 58px!important;column-gap:4px!important}
+.workout-card .set-check-wrap{width:58px!important}
+.workout-card .native-rir-button{margin-right:6px!important}}
+
+/* Program detail and progress/history layout refinements. */
+.program-settings{display:block;padding:16px!important}
+.rename-program{display:grid!important;grid-template-columns:minmax(0,1fr) auto;align-items:end!important;gap:10px;width:100%}
+.program-settings .rename-program label{min-width:0;padding:0!important;border:0!important}
+.rename-program input{width:100%}
+.rename-program button{align-self:end;min-height:44px}
+.program-action-row{display:flex;justify-content:center;margin-top:16px}
+.delete-program-action{display:flex;justify-content:center;margin:32px auto 8px;padding-bottom:8px}
+.delete-program-action button{min-width:180px}
+.progress-history-list{gap:12px}
+.progress-history-list .history-row{min-height:78px;padding:18px 20px;border:1px solid var(--card-border);border-radius:var(--radius-lg);background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.workout-card--history{display:block!important;min-width:0}
+.workout-card--history .history-set{grid-template-columns:minmax(64px,.7fr) minmax(110px,1.3fr) minmax(110px,1fr);align-items:center;padding:14px 20px;border-top:1px solid var(--separator)}
+.workout-card--history .history-set>*{overflow-wrap:anywhere}
+.workout-card--history .history-set:last-child{padding-bottom:18px}
+.recovery-feedback{display:grid;gap:16px;margin-top:24px;padding:20px!important;border-color:var(--card-border)!important;border-radius:20px!important;background:var(--surface)!important}
+.recovery-feedback>header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.recovery-feedback h2{margin:3px 0 0}
+.recovery-feedback>header>span{color:var(--muted);font-size:12px}
+.recovery-feedback-list{display:grid;gap:12px}
+.recovery-feedback-item{position:relative;display:block!important;overflow:hidden!important;padding:0!important;border:1px solid var(--card-border)!important;border-radius:20px!important;background:var(--surface)!important}
+.recovery-feedback-item>header{padding:18px 20px 14px}
+.recovery-feedback-item h3{margin:3px 0 0;font-size:18px;text-transform:capitalize}
+.recovery-feedback-item dl{display:grid;grid-template-columns:1fr;margin:0}
+.recovery-feedback-item dl>div{display:grid;grid-template-columns:minmax(100px,.45fr) minmax(0,1fr);align-items:center;gap:16px;min-height:52px;padding:12px 20px;border-top:1px solid var(--separator)}
+.recovery-feedback-item dt{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
+.recovery-feedback-item dd{min-width:0;margin:0;color:var(--text);font-size:14px;line-height:1.4;font-weight:700;overflow-wrap:anywhere}
+@media(max-width:600px){.rename-program{grid-template-columns:minmax(0,1fr) auto!important}
+.rename-program button{width:auto;padding-inline:14px}
+.workout-card--history .history-set{grid-template-columns:64px minmax(0,1fr);gap:6px 12px}
+.workout-card--history .history-set span:last-child{grid-column:2;text-align:left}
+.progress-history-list .history-row{padding:17px 18px}
+.recovery-feedback{padding:16px!important}
+.recovery-feedback-item dl>div{grid-template-columns:88px minmax(0,1fr);gap:12px;padding-inline:16px}}
+
+.recovery-feedback>.recovery-feedback-list{display:grid!important;grid-template-columns:1fr!important;align-items:stretch!important;gap:12px!important;padding:0!important;border:0!important}
+.finish-actions.native-finish-bar{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;align-items:center!important;justify-items:stretch!important;width:100%!important;position:static!important;inset:auto!important;z-index:auto!important;margin-top:14px!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.finish-actions.native-finish-bar button{width:100%!important;margin-top:0!important;min-height:48px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;text-align:center!important}
+
+/* Workout menus as native bottom modal sheets with dimmed focus backdrop. */
+.native-modal-menu[open]::before{display:none}
+.menu-backdrop{position:fixed!important;z-index:150!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;padding:0!important;border:0!important;border-radius:0!important;background:rgba(0,0,0,.62)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:none!important}
+.sheet-header{display:flex;min-height:52px;align-items:center;justify-content:space-between;gap:12px;padding:2px 0 8px 4px}
+.sheet-header>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px}
+.sheet-close{display:grid!important;flex:0 0 auto;width:44px!important;height:44px!important;min-height:44px!important;place-items:center;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--text)!important;font-size:28px!important;line-height:1!important;box-shadow:none!important}
+.sheet-close:is(:hover,:active,:focus-visible){background:transparent!important;filter:none!important;transform:none!important}
+.exercise-order-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-block:1px solid var(--separator)}
+.exercise-order-actions .sheet-action-row{justify-content:center!important;border-bottom:0!important}
+.exercise-order-actions .sheet-action-row+button{border-left:1px solid var(--separator)!important}
+.native-modal-menu[open] :is(.bottom-sheet,.exercise-menu-panel){position:fixed!important;z-index:151!important;inset:auto 0 0 0!important;width:100%!important;max-width:none!important;max-height:min(76dvh,620px)!important;overflow:auto!important;padding:10px 18px calc(88px + env(safe-area-inset-bottom))!important;border:1px solid var(--glass-border)!important;border-bottom:0!important;border-radius:26px 26px 0 0!important;background:var(--surface)!important;box-shadow:0 -22px 70px rgba(0,0,0,.48)!important;animation:nativeSheetUp .18s ease-out}
+.native-modal-menu[open] .sheet-handle{display:block!important;width:44px;height:5px;margin:0 auto 10px;border-radius:999px;background:var(--surface3)}
+.native-modal-menu[open]>summary{position:relative;z-index:79;opacity:.25;filter:saturate(.35);pointer-events:none}
+.native-modal-menu[open] .sheet-action-row{min-height:54px!important;padding-inline:2px!important;font-size:15px!important}
+@keyframes nativeSheetUp{from{transform:translateY(18px);opacity:.92}
+to{transform:translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){.native-modal-menu[open] :is(.bottom-sheet,.exercise-menu-panel){animation:none!important}}
+
+/* ─── Anchored command menu (workout ⋮ menus) ───────────────────────────────
+   Compact popover pinned to its own trigger instead of a full-width bottom
+   sheet. .workout-card sets overflow:hidden for the muscle stripe and
+   rounded corners, so an absolutely positioned panel would be clipped: the
+   panel is position:fixed and its top/left come from menuPlacement() in
+   workout-logger.tsx, which right-aligns it to the ⋮, flips it above when it
+   would overflow the bottom, and clamps it into the viewport. Scoped to
+   .native-command-menu so program-card keeps the bottom-sheet pattern. */
+.native-modal-menu.native-command-menu[open] .command-menu-panel{position:fixed!important;z-index:151!important;top:var(--menu-top,auto)!important;bottom:var(--menu-bottom,auto)!important;right:var(--menu-right,8px)!important;left:auto!important;width:min(272px,calc(100vw - 16px))!important;max-width:none!important;max-height:min(560px,var(--menu-max-h,70dvh))!important;overflow:auto!important;display:grid!important;gap:0!important;padding:6px!important;border:1px solid var(--glass-border)!important;border-radius:16px!important;background:var(--surface)!important;box-shadow:0 18px 48px rgba(0,0,0,.5)!important;animation:nativeMenuIn .14s ease-out}
+/* The trigger stays legible while its menu is open - only its hit area is off,
+   so a second menu can't be opened behind the backdrop. */
+.native-modal-menu.native-command-menu[open]>summary{opacity:1!important;filter:none!important}
+/* An anchored popover needs a lighter scrim than a bottom sheet: the card the
+   menu belongs to must stay readable behind it. */
+.native-command-menu .menu-backdrop{background:rgba(0,0,0,.34)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.command-menu-title{overflow:hidden;margin-bottom:4px;padding:9px 12px 10px;border-bottom:1px solid var(--separator);color:var(--muted);font-size:17px;font-weight:700;letter-spacing:-.1px;text-overflow:ellipsis;white-space:nowrap}
+.command-row{display:flex!important;width:100%;min-height:46px!important;align-items:center!important;justify-content:flex-start!important;gap:12px;padding:0 10px!important;border:0!important;border-radius:10px!important;background:transparent!important;color:var(--text)!important;font-size:16px!important;font-weight:600!important;letter-spacing:-.1px;text-align:start!important;box-shadow:none!important;transition:background-color .14s ease,color .14s ease}
+.command-row>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.command-row-icon{flex:0 0 auto;color:var(--muted)}
+.command-row:is(:hover,:focus-visible){background:var(--surface2)!important}
+.command-row:focus-visible{outline:0;box-shadow:inset 0 0 0 2px var(--secondary-accent)!important}
+.command-row:active{background:var(--surface3)!important}
+.command-row:disabled{opacity:.38;cursor:not-allowed}
+.command-row:disabled:is(:hover,:active){background:transparent!important}
+.command-row.danger,.native-workout-screen .command-row.danger{border:0!important;background:transparent!important;color:var(--error)!important}
+.command-row.danger .command-row-icon{color:var(--error)}
+.native-workout-screen .command-row.danger:is(:hover,:focus-visible){background:color-mix(in srgb,var(--error) 14%,transparent)!important}
+@keyframes nativeMenuIn{from{transform:scale(.97);opacity:0}
+to{transform:scale(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){.native-modal-menu.native-command-menu[open] .command-menu-panel{animation:none!important}}
+
+/* Follow-up sheets the command menu hands off to (note, replace, history). The
+   menu closes in the same state batch that opens these, so backdrops never stack. */
+.exercise-action-modal{display:grid;gap:12px}
+.exercise-action-modal h2{margin:0}
+.exercise-action-modal>p{margin:0;color:var(--muted);font-size:14px}
+.exercise-action-modal .note-field{margin-top:0}
+.exercise-action-modal .note-field textarea{min-height:120px}
+.exercise-action-modal .native-exercise-history{margin:0}
+/* One row per logged set - a single joined "15x7 - 15x7" string is unreadable. */
+.history-set-rows{display:grid;margin:6px 0 0;padding:0;list-style:none}
+.history-set-rows>li{display:grid;grid-template-columns:minmax(46px,auto) minmax(0,1fr) minmax(0,1fr) minmax(0,auto);align-items:center;gap:10px;min-height:34px;padding:6px 0;border-top:1px solid var(--separator)}
+.history-set-rows>li:first-child{border-top:0}
+.history-set-rows>li>span{color:var(--text);font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+.history-set-rows>li>span:first-child{color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase}
+.history-set-rows>li>span:last-child{color:var(--secondary-accent);font-size:11px;font-weight:700;text-align:end}
+
+/* A skipped set stays in place, blanked and inert, so the skip reads as a deliberate
+   gap in the session rather than a set that silently vanished. */
+.workout-card .native-set-row.set-skipped{background:transparent}
+/* Hollow dashed fields rather than dimmed solid ones: a skipped set has to read
+   differently from a set that is merely still empty, and the outline carries that
+   without relying on dimming (which a low-contrast display flattens away). */
+.workout-card .native-set-row.set-skipped input:disabled{background:transparent!important;border:1px dashed var(--separator)!important;color:var(--muted);cursor:not-allowed}
+.workout-card .native-set-row.set-skipped :is(.native-rir-button,.set-check){opacity:.35}
+.workout-card .native-set-row.set-skipped .native-rir-button:disabled{border-style:dashed}
+
+/* Exercise action sheet: grouped surfaces matching the rest of the app. */
+.native-modal-menu[open] .exercise-menu-panel{display:grid!important;gap:10px!important;padding:10px 16px calc(20px + env(safe-area-inset-bottom))!important;background:color-mix(in srgb,var(--surface) 96%,var(--primary) 4%)!important}
+.exercise-menu-panel .sheet-header{margin:0 2px 2px;padding:0 0 8px;border-bottom:1px solid var(--separator)}
+.exercise-menu-panel .sheet-header>strong{font-size:18px;line-height:24px}
+.exercise-menu-panel .exercise-order-actions{gap:8px;padding:8px;border:1px solid var(--separator);border-radius:16px;background:var(--surface)}
+.exercise-menu-panel .exercise-order-actions .sheet-action-row{min-height:46px!important;padding:0 12px!important;border:0!important;border-radius:12px!important;background:var(--surface2)!important;color:var(--text)!important}
+.exercise-menu-panel .exercise-order-actions .sheet-action-row+button{border-left:0!important}
+.bottom-sheet>.sheet-action-row,.exercise-menu-panel .exercise-feedback-actions .sheet-action-row{min-height:50px!important;padding:0 14px!important;border:1px solid var(--separator)!important;border-radius:14px!important;background:var(--surface)!important;color:var(--text)!important}
+.exercise-menu-panel .exercise-feedback-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.exercise-menu-panel .exercise-feedback-actions .sheet-action-row{justify-content:center!important;text-align:center!important}
+.exercise-menu-panel>label{display:grid;gap:8px;padding:14px;border:1px solid var(--separator);border-radius:16px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
+.exercise-menu-panel>label textarea,.exercise-menu-panel>label .custom-select-trigger{min-height:46px;border-color:var(--separator);border-radius:12px;background:var(--surface2);color:var(--text);font-size:14px;font-weight:650;letter-spacing:0;text-transform:none}
+.bottom-sheet>.sheet-action-row.danger{margin-top:2px;border-color:color-mix(in srgb,var(--error) 42%,var(--separator))!important;background:color-mix(in srgb,var(--error) 12%,var(--surface))!important;color:var(--error)!important}
+.exercise-menu-panel .native-exercise-history{margin:0;padding:12px 14px;border:1px solid var(--separator);border-radius:14px;background:var(--surface)}
+.exercise-menu-panel .program-copy-name{display:grid;gap:8px;padding:14px;border:1px solid var(--separator);border-radius:16px;background:var(--surface);color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
+.exercise-menu-panel .program-copy-name input{min-height:46px;border:1px solid var(--separator);border-radius:12px;background:var(--surface2);color:var(--text);padding:0 12px;font-size:14px;font-weight:650;letter-spacing:0;text-transform:none}
+@media(max-width:430px){.exercise-menu-panel .exercise-feedback-actions{grid-template-columns:1fr}
+.exercise-menu-panel .exercise-feedback-actions .sheet-action-row{justify-content:flex-start!important;text-align:left!important}}
+.native-modal-menu[open] .exercise-menu-panel .sheet-header{padding:8px 10px 14px!important}
+.native-modal-menu[open] .bottom-sheet>.sheet-action-row{padding-inline:16px!important}
+.native-modal-menu[open] .bottom-sheet>.sheet-action-row.danger{justify-content:center!important;text-align:center!important}
+
+
+/* Workout menu history and confirmation layering. */
+.native-exercise-history{display:grid;gap:8px;margin:4px 0 8px;padding:12px;border:1px solid var(--separator);border-radius:16px;background:var(--surface2)}
+.native-exercise-history>div{display:grid;gap:3px;padding-bottom:8px;border-bottom:1px solid var(--separator)}
+.native-exercise-history>div:last-child{padding-bottom:0;border-bottom:0}
+.native-exercise-history strong{font-size:13px;color:var(--text)}
+.native-exercise-history span,.native-exercise-history p{margin:0;color:var(--muted);font-size:12px;line-height:17px}
+.confirm-backdrop{z-index:150!important}
+.confirm-backdrop .confirm-modal{z-index:151!important}
+
+/* Workout secondary accent: gold marks menus, timers, and optional actions. */
+.native-workout-screen .native-rest-timer .rest-icon{background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)}
+.native-workout-screen .native-rest-timer small{color:var(--muted)}
+.native-workout-screen .native-rest-timer.running .rest-icon{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.native-workout-screen .native-rest-timer.running small{color:var(--accent)}
+.native-workout-screen :is(.exercise-menu,.set-menu)>summary{border-color:color-mix(in srgb,var(--secondary-accent) 52%,var(--border));color:var(--secondary-accent)}
+.native-workout-screen .rest-controls .quiet{border-color:color-mix(in srgb,var(--secondary-accent) 46%,var(--border));color:var(--secondary-accent)}
+.native-workout-screen .native-rir-button.empty{border-color:color-mix(in srgb,var(--secondary-accent) 42%,var(--border));color:var(--secondary-accent)}
+.native-workout-screen .exercise-menu-panel .sheet-action-row:not(.danger):is(:hover,:focus-visible){border-color:color-mix(in srgb,var(--secondary-accent) 58%,var(--separator))!important;color:var(--secondary-accent)!important}
+.native-workout-screen .danger,.native-workout-screen .sheet-action-row.danger{border-color:color-mix(in srgb,var(--error) 48%,var(--border))!important;background:color-mix(in srgb,var(--error) 12%,var(--surface))!important;color:var(--error)!important}
+
+/* History uses gold for dates, totals, and drill-in cues while jade remains primary. */
+.progress-history-list .history-row{box-shadow:inset 3px 0 var(--secondary-accent),0 1px 3px rgba(0,0,0,.18)}
+.progress-history-list .history-row p,.progress-history-list .history-row>span{color:var(--secondary-accent)}
+.native-page>.native-stats-row .native-stat-card:last-child{border:1px solid color-mix(in srgb,var(--secondary-accent) 38%,var(--card-border));background:color-mix(in srgb,var(--secondary-accent) 7%,var(--surface))}
+.native-page>.native-stats-row .native-stat-card:last-child strong{color:var(--secondary-accent)}
+.workout-card--history{box-shadow:inset 3px 0 color-mix(in srgb,var(--secondary-accent) 82%,var(--primary))!important}
+.workout-card--history .history-set>span:first-child,.recovery-feedback>header>span{color:var(--secondary-accent)}
+.recovery-feedback{border-top-color:color-mix(in srgb,var(--secondary-accent) 55%,var(--card-border))!important}
+
+/* Profile carries a few gold identity cues near the account summary. */
+.native-profile-page .native-profile-hero{padding-bottom:16px;border-bottom:1px solid color-mix(in srgb,var(--secondary-accent) 38%,var(--separator))}
+.native-profile-page .native-profile-hero .eyebrow{color:var(--secondary-accent)}
+.native-profile-page>.settings-list{border-top-color:color-mix(in srgb,var(--secondary-accent) 58%,var(--glass-border))!important}
+.native-profile-page>.settings-list .native-settings-row:first-child strong{color:var(--secondary-accent)}
+.native-profile-page>.danger-zone .danger{border:1px solid #b42318!important;background:#b42318!important;color:#fff!important}
+.native-profile-page>.danger-zone .danger:is(:hover,:active){background:#c62b20!important;color:#fff!important}

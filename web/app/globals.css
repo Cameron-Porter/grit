@@ -1,3 +1,6 @@
+/* Cascade order is intentional: base styles, shared native UI, workout overrides,
+   then final appearance/accessibility refinements. Keep feature overrides in
+   layout.tsx after these imports; moving rules across files can change precedence. */
 @import './workout-controls.css';
 /* The frame fills the area beside the sidebar; its children constrain content. */
 .app-shell.workout-page{max-width:none}
